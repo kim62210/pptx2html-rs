@@ -1,0 +1,20 @@
+[package]
+name = "pptx2html-core"
+version = "0.1.0"
+edition = "2024"
+description = "ECMA-376 based pure Rust PPTX to HTML converter — core library"
+license = "MIT"
+repository = "https://github.com/hyungjoo-drb/pptx2html-rs"
+keywords = ["pptx", "html", "converter", "ooxml", "presentation"]
+categories = ["parser-implementations"]
+
+[dependencies]
+quick-xml = { version = "0.37", features = ["serialize"] }
+zip = "2"
+base64 = "0.22"
+thiserror = "2"
+log = "0.4"
+
+[dev-dependencies]
+pretty_assertions = "1"
+tempfile = "3"

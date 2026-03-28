@@ -1,0 +1,15 @@
+[package]
+name = "pptx2html-py"
+version = "0.1.0"
+edition = "2024"
+description = "PyO3 Python bindings for pptx2html"
+license = "MIT"
+repository = "https://github.com/hyungjoo-drb/pptx2html-rs"
+
+[lib]
+name = "pptx2html"
+crate-type = ["cdylib"]
+
+[dependencies]
+pptx2html-core = { path = "../pptx2html-core" }
+pyo3 = { version = "0.25", features = ["extension-module"] }

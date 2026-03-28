@@ -2,15 +2,15 @@
 
 mod fixtures;
 
-use pptx2html_rs::model::*;
+use pptx2html_core::model::*;
 
-fn parse_pptx(data: &[u8]) -> pptx2html_rs::model::Presentation {
-    pptx2html_rs::parser::PptxParser::parse_bytes(data).expect("PPTX parsing failed")
+fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
+    pptx2html_core::parser::PptxParser::parse_bytes(data).expect("PPTX parsing failed")
 }
 
 fn render_html(data: &[u8]) -> String {
     let pres = parse_pptx(data);
-    pptx2html_rs::renderer::HtmlRenderer::render(&pres).expect("HTML rendering failed")
+    pptx2html_core::renderer::HtmlRenderer::render(&pres).expect("HTML rendering failed")
 }
 
 // ── Basic parsing tests ──

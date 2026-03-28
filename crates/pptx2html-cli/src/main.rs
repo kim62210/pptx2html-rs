@@ -22,7 +22,7 @@ fn main() {
         cli.input.with_extension("html")
     });
 
-    match pptx2html_rs::convert_file(&cli.input) {
+    match pptx2html_core::convert_file(&cli.input) {
         Ok(html) => {
             if let Err(e) = std::fs::write(&output, &html) {
                 eprintln!("Failed to write output file: {e}");
