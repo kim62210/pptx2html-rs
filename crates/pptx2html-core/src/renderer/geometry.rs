@@ -212,6 +212,7 @@ pub fn preset_shape_svg(
         // Additional ECMA-376 ST_ShapeType shapes
         "flowChartOfflineStorage" => Some(flowchart_offline_storage_path(w, h)),
         "cross" => Some(plus_path(w, h, adjust_values)),
+        "straightConnector1" => Some(line_path(w, h)),
         "curvedConnector2" => Some(curved_connector2_path(w, h)),
         "curvedConnector3" => Some(curved_connector3_path(w, h)),
         "curvedConnector4" => Some(curved_connector4_path(w, h)),
@@ -219,6 +220,7 @@ pub fn preset_shape_svg(
         "bentConnector2" => Some(bent_connector2_path(w, h)),
         "bentConnector3" => Some(bent_connector3_path(w, h)),
         "bentConnector4" => Some(bent_connector4_path(w, h)),
+        "bentConnector5" => Some(bent_connector5_path(w, h)),
         _ => None,
     }
 }
@@ -401,6 +403,7 @@ fn curved_connector5_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},0 {
 fn bent_connector2_path(w: f64, h: f64) -> String { format!("M0,0 L{w:.1},0 L{w:.1},{h:.1}", w=w, h=h) }
 fn bent_connector3_path(w: f64, h: f64) -> String { let cx=w/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{h:.1} L{w:.1},{h:.1}", cx=cx, w=w, h=h) }
 fn bent_connector4_path(w: f64, h: f64) -> String { let cy=h/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{cy:.1} L{w:.1},{cy:.1} L{w:.1},{h:.1}", cx=w*0.33, cy=cy, w=w, h=h) }
+fn bent_connector5_path(w: f64, h: f64) -> String { let cy=h/2.0; format!("M0,0 L{x1:.1},0 L{x1:.1},{y1:.1} L{x2:.1},{y1:.1} L{x2:.1},{cy:.1} L{x3:.1},{cy:.1} L{x3:.1},{h:.1} L{w:.1},{h:.1}", x1=w*0.25, y1=h*0.25, x2=w*0.5, cy=cy, x3=w*0.75, h=h, w=w) }
 
 #[cfg(test)]
 mod tests {
