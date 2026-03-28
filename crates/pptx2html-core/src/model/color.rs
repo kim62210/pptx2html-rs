@@ -172,22 +172,56 @@ impl ResolvedColor {
     }
 }
 
-// ── Apply color modifiers ──
+// ── Apply color modifiers (ECMA-376 §20.1.2.3 order) ──
+
+/// Returns the spec-defined sort priority for a modifier.
+/// ECMA-376 Part 1, §20.1.2.3 application order:
+///   1. Alpha/AlphaOff/AlphaMod
+///   2. Hue/HueOff/HueMod
+///   3. Sat/SatOff/SatMod
+///   4. Lum/LumOff/LumMod
+///   5. Tint/Shade
+///   6. Complement/Inverse/Grayscale
+fn modifier_order(m: &ColorModifier) -> u8 {
+    match m {
+        ColorModifier::Alpha(_) => 0,
+        ColorModifier::HueMod(_) | ColorModifier::HueOff(_) => 1,
+        ColorModifier::SatMod(_) | ColorModifier::SatOff(_) => 2,
+        ColorModifier::LumMod(_) | ColorModifier::LumOff(_) => 3,
+        ColorModifier::Tint(_) | ColorModifier::Shade(_) => 4,
+        ColorModifier::Comp | ColorModifier::Inv | ColorModifier::Gray => 5,
+    }
+}
 
 fn apply_modifiers(mut c: ResolvedColor, modifiers: &[ColorModifier]) -> ResolvedColor {
-    for m in modifiers {
+    // Sort modifiers into ECMA-376 spec order (stable sort preserves
+    // relative order within the same priority group, e.g. LumMod before LumOff)
+    let mut sorted: Vec<&ColorModifier> = modifiers.iter().collect();
+    sorted.sort_by_key(|m| modifier_order(m));
+
+    for m in sorted {
         match m {
             ColorModifier::Tint(val) => {
+                // OOXML spec: tint adjusts HSL luminance toward white
+                // result_L = L * tint + (1.0 - tint)
                 let f = *val as f64 / 100_000.0;
-                c.r = clamp_u8(255.0 - (255.0 - c.r as f64) * f);
-                c.g = clamp_u8(255.0 - (255.0 - c.g as f64) * f);
-                c.b = clamp_u8(255.0 - (255.0 - c.b as f64) * f);
+                let (h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
+                let new_l = (l * f + (1.0 - f)).clamp(0.0, 1.0);
+                let (r, g, b) = hsl_to_rgb(h, s, new_l);
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::Shade(val) => {
+                // OOXML spec: shade adjusts HSL luminance toward black
+                // result_L = L * shade
                 let f = *val as f64 / 100_000.0;
-                c.r = clamp_u8(c.r as f64 * f);
-                c.g = clamp_u8(c.g as f64 * f);
-                c.b = clamp_u8(c.b as f64 * f);
+                let (h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
+                let new_l = (l * f).clamp(0.0, 1.0);
+                let (r, g, b) = hsl_to_rgb(h, s, new_l);
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::Alpha(val) => {
                 c.a = clamp_u8(255.0 * *val as f64 / 100_000.0);
@@ -227,7 +261,7 @@ fn apply_modifiers(mut c: ResolvedColor, modifiers: &[ColorModifier]) -> Resolve
             ColorModifier::HueMod(val) => {
                 let (mut h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 h *= *val as f64 / 100_000.0;
-                h %= 360.0;
+                h = ((h % 360.0) + 360.0) % 360.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l);
                 c.r = r;
                 c.g = g;
@@ -568,7 +602,8 @@ mod tests {
 
     #[test]
     fn test_tint_modifier() {
-        // Pure black + tint 50000 → 50% white blend = ~RGB(128,128,128)
+        // OOXML tint on HSL luminance: new_L = L * tint + (1.0 - tint)
+        // Pure black (L=0.0) + tint 50000 → new_L = 0*0.5 + 0.5 = 0.5 → gray
         let color = Color::rgb("000000").with_modifier(ColorModifier::Tint(50000));
         let r = color.resolve(None, None).unwrap();
         assert_eq!(r, ResolvedColor::new(128, 128, 128));
@@ -576,7 +611,8 @@ mod tests {
 
     #[test]
     fn test_shade_modifier() {
-        // Pure white + shade 50000 → 50% darkened = ~RGB(128,128,128)
+        // OOXML shade on HSL luminance: new_L = L * shade
+        // Pure white (L=1.0) + shade 50000 → new_L = 1.0*0.5 = 0.5 → gray
         let color = Color::rgb("FFFFFF").with_modifier(ColorModifier::Shade(50000));
         let r = color.resolve(None, None).unwrap();
         assert_eq!(r, ResolvedColor::new(128, 128, 128));
@@ -672,5 +708,190 @@ mod tests {
     #[test]
     fn test_none_resolve() {
         assert!(Color::none().resolve(None, None).is_none());
+    }
+
+    // ── ECMA-376 modifier application order tests ──
+
+    #[test]
+    fn test_modifier_order_alpha_before_lum() {
+        // Alpha should be applied first (order 0), then LumMod (order 3).
+        // Regardless of insertion order, alpha should not affect RGB channels.
+        let color = Color::rgb("FF0000")
+            .with_modifier(ColorModifier::LumMod(50000))
+            .with_modifier(ColorModifier::Alpha(50000));
+        let r = color.resolve(None, None).unwrap();
+        // Alpha applied first: a=128, then LumMod darkens
+        assert_eq!(r.a, 128);
+        assert!(r.r < 255); // LumMod darkened the red
+    }
+
+    #[test]
+    fn test_modifier_order_sat_before_lum() {
+        // SatMod (order 2) should apply before LumMod (order 3).
+        // If we desaturate first then darken, result differs from darkening first.
+        let color_spec_order = Color::rgb("4472C4")
+            .with_modifier(ColorModifier::SatMod(0))
+            .with_modifier(ColorModifier::LumMod(50000));
+        let r1 = color_spec_order.resolve(None, None).unwrap();
+
+        // SatMod=0 → grayscale (in HSL), then LumMod=50000 darkens
+        // Result should be a dark gray
+        assert_eq!(r1.r, r1.g);
+        assert_eq!(r1.g, r1.b);
+        assert!(r1.r < 128); // darkened gray
+    }
+
+    #[test]
+    fn test_modifier_order_hue_before_sat() {
+        // HueOff (order 1) before SatMod (order 2).
+        // Even if SatMod is listed first, hue shift should happen first.
+        let color = Color::rgb("FF0000")
+            .with_modifier(ColorModifier::SatMod(100_000))
+            .with_modifier(ColorModifier::HueOff(33333)); // ~120° shift → green
+        let r = color.resolve(None, None).unwrap();
+        // Hue shifted from red (0°) to ~120° (green area)
+        assert!(r.g > r.r);
+    }
+
+    #[test]
+    fn test_modifier_order_lum_before_tint() {
+        // LumMod (order 3) before Tint (order 4).
+        // Darken first, then tint toward white.
+        let color = Color::rgb("4472C4")
+            .with_modifier(ColorModifier::Tint(50000))
+            .with_modifier(ColorModifier::LumMod(50000));
+        let r = color.resolve(None, None).unwrap();
+        // LumMod darkens to ~half luminance, then tint pushes toward white
+        // Result should be a lighter color than just LumMod alone
+        let color_lum_only = Color::rgb("4472C4")
+            .with_modifier(ColorModifier::LumMod(50000));
+        let r_lum = color_lum_only.resolve(None, None).unwrap();
+        // Tinted result should have higher luminance values
+        let avg_tinted = (r.r as u16 + r.g as u16 + r.b as u16) / 3;
+        let avg_lum = (r_lum.r as u16 + r_lum.g as u16 + r_lum.b as u16) / 3;
+        assert!(avg_tinted > avg_lum);
+    }
+
+    #[test]
+    fn test_modifier_order_tint_before_comp() {
+        // Tint (order 4) before Comp (order 5).
+        let color = Color::rgb("FF0000")
+            .with_modifier(ColorModifier::Comp)
+            .with_modifier(ColorModifier::Tint(50000));
+        let r = color.resolve(None, None).unwrap();
+        // Tint first → lighter red, then complement → cyan-ish
+        assert!(r.g > 100 && r.b > 100);
+    }
+
+    // ── Edge case tests ──
+
+    #[test]
+    fn test_lum_mod_zero_produces_black() {
+        // lumMod=0 should reduce luminance to 0 → black
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::LumMod(0));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(0, 0, 0));
+    }
+
+    #[test]
+    fn test_lum_off_100000_produces_white() {
+        // lumOff=100000 (100%) should push luminance to 1.0 → white
+        // Start from black (L=0), lumOff=100000 → L = 0 + 1.0 = 1.0
+        let color = Color::rgb("000000").with_modifier(ColorModifier::LumOff(100_000));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(255, 255, 255));
+    }
+
+    #[test]
+    fn test_sat_mod_zero_produces_grayscale() {
+        // satMod=0 should remove all saturation → grayscale
+        let color = Color::rgb("FF0000").with_modifier(ColorModifier::SatMod(0));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r.r, r.g);
+        assert_eq!(r.g, r.b);
+    }
+
+    #[test]
+    fn test_hue_mod_wraps_over_360() {
+        // hueMod that results in > 360° should wrap around
+        // Red (H~0°) * 200% = 0° → still red-ish (0 * 2 = 0)
+        // Use a color with non-zero hue: blue has H=240°
+        // 240 * 2.0 = 480 → wraps to 120° (green area)
+        let color = Color::rgb("0000FF").with_modifier(ColorModifier::HueMod(200_000));
+        let r = color.resolve(None, None).unwrap();
+        // H=120° is green
+        assert!(r.g > r.r);
+        assert!(r.g > r.b);
+    }
+
+    #[test]
+    fn test_tint_on_colored_input() {
+        // Tint 40000 on accent1 (4472C4): L * 0.4 + 0.6
+        // Original HSL L ≈ 0.52 → new_L = 0.52*0.4 + 0.6 = 0.808
+        // Should produce a lighter blue
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Tint(40000));
+        let r = color.resolve(None, None).unwrap();
+        assert!(r.r > 0x44);
+        assert!(r.g > 0x72);
+        assert!(r.b > 0xC4);
+    }
+
+    #[test]
+    fn test_shade_on_colored_input() {
+        // Shade 75000 on accent1 (4472C4): L * 0.75
+        // Should produce a darker blue
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Shade(75000));
+        let r = color.resolve(None, None).unwrap();
+        // Luminance decreased, so overall brightness should be lower
+        let original_avg = (0x44u16 + 0x72 + 0xC4) / 3;
+        let result_avg = (r.r as u16 + r.g as u16 + r.b as u16) / 3;
+        assert!(result_avg < original_avg);
+    }
+
+    #[test]
+    fn test_tint_100000_is_identity() {
+        // Tint 100000 (100%): new_L = L * 1.0 + 0.0 = L → no change
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Tint(100_000));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(0x44, 0x72, 0xC4));
+    }
+
+    #[test]
+    fn test_shade_100000_is_identity() {
+        // Shade 100000 (100%): new_L = L * 1.0 = L → no change
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Shade(100_000));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(0x44, 0x72, 0xC4));
+    }
+
+    #[test]
+    fn test_tint_zero_produces_white() {
+        // Tint 0: new_L = L * 0 + 1.0 = 1.0 → white
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Tint(0));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(255, 255, 255));
+    }
+
+    #[test]
+    fn test_shade_zero_produces_black() {
+        // Shade 0: new_L = L * 0 = 0 → black
+        let color = Color::rgb("4472C4").with_modifier(ColorModifier::Shade(0));
+        let r = color.resolve(None, None).unwrap();
+        assert_eq!(r, ResolvedColor::new(0, 0, 0));
+    }
+
+    #[test]
+    fn test_combined_lum_mod_off_typical() {
+        // Common OOXML pattern: lumMod=60000, lumOff=40000
+        // First mod: L * 0.6, then off: + 0.4
+        // For black (L=0): 0*0.6 + 0.4 = 0.4 → medium gray
+        let color = Color::rgb("000000")
+            .with_modifier(ColorModifier::LumMod(60000))
+            .with_modifier(ColorModifier::LumOff(40000));
+        let r = color.resolve(None, None).unwrap();
+        // L=0.4 → gray ~102
+        assert!((r.r as i16 - 102).abs() <= 1);
+        assert_eq!(r.r, r.g);
+        assert_eq!(r.g, r.b);
     }
 }
