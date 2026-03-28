@@ -583,6 +583,16 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
+                    // ── Preset geometry (<a:prstGeom>) — Start variant ──
+                    // In real PPTX files, prstGeom is usually a Start event
+                    // (e.g., <a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>)
+                    "prstGeom" if current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            if let Some(prst) = xml_utils::attr_str(e, "prst") {
+                                sb.preset_geometry = Some(prst);
+                            }
+                        }
+                    }
                     // ── Custom geometry (<a:custGeom>) — Start variant ──
                     "custGeom" if in_sp_pr && current_shape.is_some() => {
                         in_cust_geom = true;
