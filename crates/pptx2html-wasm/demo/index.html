@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pptx2html WASM Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+.header { padding: 24px 32px; background: #fff; border-bottom: 1px solid #e0e0e0; }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header p { font-size: 14px; color: #666; margin-top: 4px; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.drop-zone {
+  border: 2px dashed #ccc; border-radius: 8px; padding: 48px; text-align: center;
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  background: #fff; margin-bottom: 24px;
+}
+.drop-zone.dragover { border-color: #4472C4; background: #f0f4ff; }
+.drop-zone p { font-size: 16px; color: #888; }
+.drop-zone .icon { font-size: 36px; margin-bottom: 12px; display: block; color: #bbb; }
+.status { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; display: none; }
+.status.info { display: block; background: #e8f4fd; color: #1565c0; }
+.status.error { display: block; background: #fdecea; color: #c62828; }
+.status.success { display: block; background: #e8f5e9; color: #2e7d32; }
+.meta { font-size: 13px; color: #666; margin-bottom: 16px; }
+.meta span { margin-right: 16px; }
+.output-frame {
+  width: 100%; min-height: 600px; border: 1px solid #e0e0e0;
+  border-radius: 8px; background: #fff; display: none;
+}
+input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>pptx2html WASM Demo</h1>
+  <p>Drop a PPTX file to convert it to HTML in your browser — no server required.</p>
+</div>
+<div class="container">
+  <div class="drop-zone" id="dropZone">
+    <span class="icon">&#128196;</span>
+    <p>Drop a .pptx file here or click to select</p>
+  </div>
+  <input type="file" id="fileInput" accept=".pptx">
+  <div class="status" id="status"></div>
+  <div class="meta" id="meta"></div>
+  <iframe class="output-frame" id="output" sandbox="allow-same-origin"></iframe>
+</div>
+<script type="module">
+import init, { convert, get_slide_count, get_info } from './pkg/pptx2html_wasm.js';
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const status = document.getElementById('status');
+const meta = document.getElementById('meta');
+const output = document.getElementById('output');
+
+function setStatus(msg, type) {
+  status.textContent = msg;
+  status.className = 'status ' + type;
+}
+
+async function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pptx')) {
+    setStatus('Please select a .pptx file.', 'error');
+    return;
+  }
+  setStatus('Converting...', 'info');
+  meta.innerHTML = '';
+  output.style.display = 'none';
+
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const infoJson = get_info(buf);
+    const info = JSON.parse(infoJson);
+    meta.innerHTML =
+      '<span>Slides: ' + info.slide_count + '</span>' +
+      '<span>Size: ' + info.width_px.toFixed(0) + ' x ' + info.height_px.toFixed(0) + ' px</span>' +
+      (info.title ? '<span>Title: ' + info.title + '</span>' : '');
+
+    const t0 = performance.now();
+    const html = convert(buf);
+    const elapsed = (performance.now() - t0).toFixed(0);
+
+    output.srcdoc = html;
+    output.style.display = 'block';
+    setStatus('Converted in ' + elapsed + ' ms (' + (html.length / 1024).toFixed(1) + ' KB HTML)', 'success');
+  } catch (e) {
+    setStatus('Conversion failed: ' + e.message, 'error');
+  }
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+init().then(() => setStatus('WASM module loaded — ready to convert.', 'info'));
+</script>
+</body>
+</html>
