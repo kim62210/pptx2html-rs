@@ -125,8 +125,16 @@ impl Color {
                     .and_then(|cm| cm.get(name))
                     .map(String::as_str)
                     .unwrap_or(name.as_str());
-                let hex = scheme.and_then(|s| s.get(mapped))?;
-                parse_hex_rgb(&hex)?
+                // OOXML default aliases: tx1->dk1, tx2->dk2, bg1->lt1, bg2->lt2
+                // These apply when ClrMap has no explicit mapping and ColorScheme
+                // doesn't recognize the name directly (e.g. "tx1" is not a scheme slot).
+                let scheme_key = scheme
+                    .and_then(|s| s.get(mapped))
+                    .or_else(|| {
+                        let alias = ooxml_color_alias(mapped)?;
+                        scheme.and_then(|s| s.get(alias))
+                    })?;
+                parse_hex_rgb(&scheme_key)?
             }
             ColorKind::System(name) => parse_hex_rgb(system_color_fallback(name)?)?,
             ColorKind::Preset(name) => parse_hex_rgb(preset_color(name)?)?,
@@ -395,6 +403,19 @@ fn parse_hex_rgb(hex: &str) -> Option<ResolvedColor> {
     Some(ResolvedColor::new(r, g, b))
 }
 
+// ── OOXML default color aliases (ECMA-376 §20.1.6.1) ──
+// When ClrMap has no explicit mapping, these names are NOT ColorScheme slots;
+// they must be remapped to the actual scheme slot names.
+fn ooxml_color_alias(name: &str) -> Option<&str> {
+    match name {
+        "tx1" => Some("dk1"),
+        "tx2" => Some("dk2"),
+        "bg1" => Some("lt1"),
+        "bg2" => Some("lt2"),
+        _ => None,
+    }
+}
+
 // ── Theme color fallback ──
 
 fn theme_fallback(name: &str) -> &str {
@@ -598,6 +619,56 @@ mod tests {
         let color = Color::theme("tx1");
         let resolved = color.resolve(Some(&scheme), Some(&clr_map)).unwrap();
         assert_eq!(resolved, ResolvedColor::new(0x1A, 0x1A, 0x1A));
+    }
+
+    #[test]
+    fn test_tx1_default_alias_no_clrmap() {
+        // tx1 should resolve to dk1 via OOXML default alias when no ClrMap exists
+        let scheme = ColorScheme {
+            dk1: "333333".to_string(),
+            ..Default::default()
+        };
+        let color = Color::theme("tx1");
+        let resolved = color.resolve(Some(&scheme), None).unwrap();
+        assert_eq!(resolved, ResolvedColor::new(0x33, 0x33, 0x33));
+    }
+
+    #[test]
+    fn test_tx1_default_alias_empty_clrmap() {
+        // tx1 should resolve to dk1 via OOXML default alias when ClrMap is present but empty
+        let scheme = ColorScheme {
+            dk1: "222222".to_string(),
+            ..Default::default()
+        };
+        let clr_map = ClrMap::default();
+        let color = Color::theme("tx1");
+        let resolved = color.resolve(Some(&scheme), Some(&clr_map)).unwrap();
+        assert_eq!(resolved, ResolvedColor::new(0x22, 0x22, 0x22));
+    }
+
+    #[test]
+    fn test_bg1_default_alias() {
+        // bg1 should resolve to lt1 via OOXML default alias
+        let scheme = ColorScheme {
+            lt1: "FAFAFA".to_string(),
+            ..Default::default()
+        };
+        let color = Color::theme("bg1");
+        let resolved = color.resolve(Some(&scheme), None).unwrap();
+        assert_eq!(resolved, ResolvedColor::new(0xFA, 0xFA, 0xFA));
+    }
+
+    #[test]
+    fn test_tx2_bg2_default_aliases() {
+        let scheme = ColorScheme {
+            dk2: "44546A".to_string(),
+            lt2: "E7E6E6".to_string(),
+            ..Default::default()
+        };
+        let tx2 = Color::theme("tx2").resolve(Some(&scheme), None).unwrap();
+        assert_eq!(tx2, ResolvedColor::new(0x44, 0x54, 0x6A));
+        let bg2 = Color::theme("bg2").resolve(Some(&scheme), None).unwrap();
+        assert_eq!(bg2, ResolvedColor::new(0xE7, 0xE6, 0xE6));
     }
 
     #[test]
