@@ -1,1 +1,12 @@
 /target
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Evaluation artifacts (generated, not tracked)
+evaluate/golden_set/*.pptx
+evaluate/golden_references/**/slide_*.png
+evaluate/.venv/
