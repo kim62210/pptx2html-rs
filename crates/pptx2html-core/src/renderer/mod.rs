@@ -294,6 +294,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
         }
 
+        // Determine SVG preset name early so we know whether to skip CSS fill/border
+        let svg_preset_name = match &shape.shape_type {
+            ShapeType::Ellipse => Some("ellipse"),
+            ShapeType::RoundedRectangle => Some("roundRect"),
+            ShapeType::Triangle => Some("triangle"),
+            ShapeType::Custom(name) => Some(name.as_str()),
+            _ => None,
+        };
+        let uses_svg = svg_preset_name.is_some()
+            || matches!(shape.shape_type, ShapeType::CustomGeom(_));
+
         // Resolve fill via inheritance (with style_ref fallback)
         let fmt_scheme = ctx.pres.primary_theme().map(|t| &t.fmt_scheme);
         let resolved_fill = inheritance::resolve_shape_fill_with_theme(
@@ -304,7 +315,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ctx.scheme,
             ctx.clr_map,
         );
-        Self::fill_to_css_buf(&resolved_fill, ctx, &mut style_buf);
+        // Only emit CSS background for non-SVG shapes; SVG shapes use the fill attribute
+        // on the <path> element directly, so CSS background would leak outside the shape path
+        if !uses_svg {
+            Self::fill_to_css_buf(&resolved_fill, ctx, &mut style_buf);
+        }
 
         // Resolve border via inheritance (with style_ref fallback)
         let resolved_border = inheritance::resolve_border_with_theme(
@@ -315,17 +330,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ctx.scheme,
             ctx.clr_map,
         );
-
-        // Determine SVG preset name early so we know whether to emit CSS border
-        let svg_preset_name = match &shape.shape_type {
-            ShapeType::Ellipse => Some("ellipse"),
-            ShapeType::RoundedRectangle => Some("roundRect"),
-            ShapeType::Triangle => Some("triangle"),
-            ShapeType::Custom(name) => Some(name.as_str()),
-            _ => None,
-        };
-        let uses_svg = svg_preset_name.is_some()
-            || matches!(shape.shape_type, ShapeType::CustomGeom(_));
 
         // Only apply CSS border for non-SVG shapes; SVG shapes use stroke instead
         if resolved_border.width > 0.0 && !uses_svg {
@@ -376,8 +380,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let _ = write!(style_buf, "; box-shadow: {}", shadows.join(", "));
             }
         }
-
-        // Note: svg_preset_name was determined above (before border handling)
 
         // Cropped images need overflow:hidden on the shape container
         if let ShapeType::Picture(pic) = &shape.shape_type {
