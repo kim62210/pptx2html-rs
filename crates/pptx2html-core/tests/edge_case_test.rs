@@ -164,7 +164,7 @@ fn test_smartart_placeholder() {
     let pres = parse_pptx(&pptx);
     assert_eq!(pres.slides[0].shapes.len(), 1);
     assert!(
-        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(label) if label == "SmartArt"),
+        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(data) if data.label == "SmartArt"),
         "Expected Unsupported(SmartArt)"
     );
 
@@ -192,7 +192,7 @@ fn test_ole_object_placeholder() {
     let pres = parse_pptx(&pptx);
     assert_eq!(pres.slides[0].shapes.len(), 1);
     assert!(
-        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(label) if label == "OLE Object"),
+        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(data) if data.label == "OLE Object"),
         "Expected Unsupported(OLE Object)"
     );
 
@@ -220,7 +220,7 @@ fn test_math_equation_placeholder() {
     let pres = parse_pptx(&pptx);
     assert_eq!(pres.slides[0].shapes.len(), 1);
     assert!(
-        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(label) if label == "Math Equation"),
+        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Unsupported(data) if data.label == "Math Equation"),
         "Expected Unsupported(Math Equation)"
     );
 
@@ -462,4 +462,227 @@ fn test_get_info_from_bytes() {
     assert_eq!(info.slide_count, 1);
     assert!((info.width_px - 960.0).abs() < 0.1);
     assert!((info.height_px - 720.0).abs() < 0.1);
+}
+
+// ── Metadata sideband tests ──
+
+#[test]
+fn test_smartart_metadata() {
+    use pptx2html_core::model::slide::UnresolvedType;
+
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="Diagram"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="200000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram">
+          <dgm:relIds xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" r:dm="rId1" r:lo="rId2"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+
+    // HTML contains structured placeholder
+    assert!(
+        result.html.contains("unresolved-element"),
+        "HTML should contain unresolved-element class"
+    );
+    assert!(
+        result.html.contains("data-type=\"smartart\""),
+        "HTML should contain data-type=smartart attribute"
+    );
+    assert!(
+        result.html.contains("data-slide=\"0\""),
+        "HTML should contain data-slide attribute"
+    );
+    assert!(
+        result.html.contains("id=\"unresolved-s0-e0\""),
+        "HTML should contain structured placeholder ID"
+    );
+
+    // Metadata
+    assert_eq!(result.unresolved_elements.len(), 1);
+    let elem = &result.unresolved_elements[0];
+    assert_eq!(elem.element_type, UnresolvedType::SmartArt);
+    assert_eq!(elem.slide_index, 0);
+    assert!(elem.placeholder_id.starts_with("unresolved-"));
+
+    // Raw XML captured
+    assert!(
+        elem.raw_xml.is_some(),
+        "SmartArt raw_xml should be captured"
+    );
+    let raw = elem.raw_xml.as_ref().expect("raw_xml");
+    assert!(
+        raw.contains("relIds") || raw.contains("dgm"),
+        "Raw XML should contain diagram-related content: {raw}"
+    );
+}
+
+#[test]
+fn test_math_metadata() {
+    use pptx2html_core::model::slide::UnresolvedType;
+
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="Math"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/officeDocument/2006/math">
+          <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+
+    assert_eq!(result.unresolved_elements.len(), 1);
+    let elem = &result.unresolved_elements[0];
+    assert_eq!(elem.element_type, UnresolvedType::MathEquation);
+    assert!(result.html.contains("data-type=\"math\""));
+}
+
+#[test]
+fn test_ole_metadata() {
+    use pptx2html_core::model::slide::UnresolvedType;
+
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="OLE"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/schemas/oleObject">
+          <p:oleObj r:id="rId2" progId="Excel.Sheet.12"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+
+    assert_eq!(result.unresolved_elements.len(), 1);
+    let elem = &result.unresolved_elements[0];
+    assert_eq!(elem.element_type, UnresolvedType::OleObject);
+    assert!(result.html.contains("data-type=\"ole\""));
+
+    // Raw XML should capture OLE attributes
+    assert!(elem.raw_xml.is_some());
+    let raw = elem.raw_xml.as_ref().expect("raw_xml");
+    assert!(
+        raw.contains("oleObj") || raw.contains("progId"),
+        "OLE raw XML should contain object attributes: {raw}"
+    );
+}
+
+#[test]
+fn test_no_unresolved_for_normal_shapes() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Normal text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+
+    assert!(
+        result.unresolved_elements.is_empty(),
+        "Normal shapes should produce no unresolved elements"
+    );
+    assert_eq!(result.slide_count, 1);
+    assert!(result.html.contains("Normal text"));
+}
+
+#[test]
+fn test_backward_compat_convert_bytes() {
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="Diagram"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="200000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram">
+          <dgm:relIds xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" r:dm="rId1"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+
+    // Existing API still returns String, not ConversionResult
+    let html: String = pptx2html_core::convert_bytes(&pptx).expect("conversion failed");
+    assert!(html.contains("[SmartArt]"), "Backward compat: label should still appear");
+    assert!(html.contains("<!DOCTYPE html>"), "Should be complete HTML");
+}
+
+#[test]
+fn test_multiple_unresolved_elements_unique_ids() {
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="SmartArt1"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="4000000" cy="2000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram">
+          <dgm:relIds xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" r:dm="rId1"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="3" name="Math1"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="3000000"/><a:ext cx="4000000" cy="2000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/officeDocument/2006/math">
+          <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+
+    assert_eq!(result.unresolved_elements.len(), 2);
+
+    // Each element should have a unique placeholder_id
+    let id0 = &result.unresolved_elements[0].placeholder_id;
+    let id1 = &result.unresolved_elements[1].placeholder_id;
+    assert_ne!(id0, id1, "Placeholder IDs must be unique");
+
+    // IDs should be present in HTML
+    assert!(result.html.contains(id0.as_str()));
+    assert!(result.html.contains(id1.as_str()));
+}
+
+#[test]
+fn test_conversion_result_slide_count() {
+    use pptx2html_core::ConversionOptions;
+
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+
+    // Default options
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion failed");
+    assert_eq!(result.slide_count, 1);
+
+    // With options
+    let opts = ConversionOptions::default();
+    let result = pptx2html_core::convert_bytes_with_options_metadata(&pptx, &opts)
+        .expect("conversion failed");
+    assert_eq!(result.slide_count, 1);
 }

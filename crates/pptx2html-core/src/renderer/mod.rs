@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use base64::Engine;
 
 use crate::ConversionOptions;
+use crate::ConversionResult;
 use crate::error::PptxResult;
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
@@ -15,12 +16,22 @@ use crate::resolver::inheritance;
 use crate::resolver::placeholder;
 use crate::resolver::style_ref;
 
+use std::cell::RefCell;
+
+/// Mutable state for collecting unresolved elements during rendering
+struct UnresolvedCollector {
+    elements: Vec<UnresolvedElement>,
+    counter: usize,
+    current_slide_index: usize,
+}
+
 /// Rendering context -- propagates theme/ClrMap references and full presentation
 struct RenderCtx<'a> {
     pres: &'a Presentation,
     scheme: Option<&'a ColorScheme>,
     clr_map: Option<&'a ClrMap>,
     embed_images: bool,
+    collector: &'a RefCell<UnresolvedCollector>,
 }
 
 impl<'a> RenderCtx<'a> {
@@ -41,6 +52,7 @@ impl<'a> RenderCtx<'a> {
             scheme: self.scheme,
             clr_map: slide_clr_map.or(self.clr_map),
             embed_images: self.embed_images,
+            collector: self.collector,
         }
     }
 }
@@ -58,8 +70,22 @@ impl HtmlRenderer {
         pres: &Presentation,
         opts: &ConversionOptions,
     ) -> PptxResult<String> {
+        Ok(Self::render_with_options_metadata(pres, opts)?.html)
+    }
+
+    /// Render entire Presentation to HTML with metadata about unresolved elements
+    pub fn render_with_options_metadata(
+        pres: &Presentation,
+        opts: &ConversionOptions,
+    ) -> PptxResult<ConversionResult> {
         let slide_w = pres.slide_size.width.to_px();
         let slide_h = pres.slide_size.height.to_px();
+
+        let collector = RefCell::new(UnresolvedCollector {
+            elements: Vec::new(),
+            counter: 0,
+            current_slide_index: 0,
+        });
 
         let ctx = RenderCtx {
             pres,
@@ -70,6 +96,7 @@ impl HtmlRenderer {
                 Some(&pres.clr_map)
             },
             embed_images: opts.embed_images,
+            collector: &collector,
         };
 
         let mut html = String::with_capacity(4096);
@@ -91,18 +118,26 @@ impl HtmlRenderer {
         html.push_str("</head>\n<body>\n");
         html.push_str("<div class=\"pptx-container\">\n");
 
+        let mut slide_count = 0;
         for (i, slide) in pres.slides.iter().enumerate() {
             let one_based = i + 1;
             if !opts.should_include_slide(one_based, slide.hidden) {
                 continue;
             }
+            collector.borrow_mut().current_slide_index = i;
             html.push_str(&Self::render_slide(
                 slide, one_based, slide_w, slide_h, &ctx,
             ));
+            slide_count += 1;
         }
 
         html.push_str("</div>\n</body>\n</html>");
-        Ok(html)
+        let coll = collector.into_inner();
+        Ok(ConversionResult {
+            html,
+            unresolved_elements: coll.elements,
+            slide_count,
+        })
     }
 
     fn global_css(slide_w: f64, slide_h: f64) -> String {
@@ -137,6 +172,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
 .shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
 .shape-svg + .text-body {{ position: relative; z-index: 1; }}
 .chart-placeholder {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
+.unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 "#
         )
     }
@@ -325,12 +361,44 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         // Unsupported content (SmartArt, OLE, Math)
-        if let ShapeType::Unsupported(ref label) = shape.shape_type {
-            let escaped = escape_html(label);
+        if let ShapeType::Unsupported(ref data) = shape.shape_type {
+            let mut coll = ctx.collector.borrow_mut();
+            let placeholder_id = format!(
+                "unresolved-s{}-e{}",
+                coll.current_slide_index, coll.counter
+            );
+            coll.counter += 1;
+
+            let type_attr = match data.element_type {
+                UnresolvedType::SmartArt => "smartart",
+                UnresolvedType::OleObject => "ole",
+                UnresolvedType::MathEquation => "math",
+                UnresolvedType::CustomGeometry => "custom-geometry",
+            };
+
+            let escaped = escape_html(&data.label);
             html.push_str(&format!(
-                "<div class=\"chart-placeholder\">\
-                 <span>[{escaped}]</span></div>\n"
+                "<div class=\"unresolved-element\" id=\"{placeholder_id}\" \
+                 data-type=\"{type_attr}\" data-slide=\"{}\">\
+                 <span>[{escaped}]</span></div>\n",
+                coll.current_slide_index
             ));
+
+            let pos_non_zero = pos.x.0 != 0 || pos.y.0 != 0;
+            let size_non_zero = size.width.0 != 0 || size.height.0 != 0;
+            let slide_idx = coll.current_slide_index;
+            let elem = UnresolvedElement {
+                slide_index: slide_idx,
+                element_type: data.element_type.clone(),
+                placeholder_id,
+                position: if pos_non_zero { Some(pos) } else { None },
+                size: if size_non_zero { Some(size) } else { None },
+                raw_xml: data.raw_xml.clone(),
+                data_model: None,
+            };
+            coll.elements.push(elem);
+
+            drop(coll);
             html.push_str("</div>\n");
             return html;
         }

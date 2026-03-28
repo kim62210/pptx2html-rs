@@ -88,12 +88,31 @@ pub fn parse_slide<R: Read + Seek>(
     // Chart detection state
     let mut in_graphic_data = false;
     let mut graphic_data_is_chart = false;
+    // Raw XML capture buffer for unsupported graphicData content
+    let mut capturing_raw_xml = false;
+    let mut raw_xml_buf = String::new();
 
     loop {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
                 depth.push(local.clone());
+
+                // Capture raw XML inside graphicData for unresolved content
+                if capturing_raw_xml && local != "graphicData" {
+                    raw_xml_buf.push('<');
+                    raw_xml_buf.push_str(std::str::from_utf8(e.name().as_ref()).unwrap_or(&local));
+                    for attr in e.attributes().flatten() {
+                        let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                        let val = std::str::from_utf8(&attr.value).unwrap_or("");
+                        raw_xml_buf.push(' ');
+                        raw_xml_buf.push_str(key);
+                        raw_xml_buf.push_str("=\"");
+                        raw_xml_buf.push_str(val);
+                        raw_xml_buf.push('"');
+                    }
+                    raw_xml_buf.push('>');
+                }
 
                 match local.as_str() {
                     // ── Group shape ──
@@ -132,17 +151,26 @@ pub fn parse_slide<R: Read + Seek>(
                                 warn!("SmartArt diagram detected — rendering placeholder");
                                 if let Some(sb) = current_shape.as_mut() {
                                     sb.unsupported_content = Some("SmartArt".to_string());
+                                    sb.unresolved_type = Some(slide::UnresolvedType::SmartArt);
                                 }
+                                capturing_raw_xml = true;
+                                raw_xml_buf.clear();
                             } else if uri.contains("oleObject") {
                                 warn!("OLE object detected — rendering placeholder");
                                 if let Some(sb) = current_shape.as_mut() {
                                     sb.unsupported_content = Some("OLE Object".to_string());
+                                    sb.unresolved_type = Some(slide::UnresolvedType::OleObject);
                                 }
+                                capturing_raw_xml = true;
+                                raw_xml_buf.clear();
                             } else if uri.contains("math") || uri.contains("omml") {
                                 warn!("Math equation detected — rendering placeholder");
                                 if let Some(sb) = current_shape.as_mut() {
                                     sb.unsupported_content = Some("Math Equation".to_string());
+                                    sb.unresolved_type = Some(slide::UnresolvedType::MathEquation);
                                 }
+                                capturing_raw_xml = true;
+                                raw_xml_buf.clear();
                             }
                         }
                     }
@@ -434,6 +462,22 @@ pub fn parse_slide<R: Read + Seek>(
             }
             Ok(Event::Empty(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
+
+                // Capture self-closing elements inside graphicData
+                if capturing_raw_xml {
+                    raw_xml_buf.push('<');
+                    raw_xml_buf.push_str(std::str::from_utf8(e.name().as_ref()).unwrap_or(&local));
+                    for attr in e.attributes().flatten() {
+                        let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                        let val = std::str::from_utf8(&attr.value).unwrap_or("");
+                        raw_xml_buf.push(' ');
+                        raw_xml_buf.push_str(key);
+                        raw_xml_buf.push_str("=\"");
+                        raw_xml_buf.push_str(val);
+                        raw_xml_buf.push('"');
+                    }
+                    raw_xml_buf.push_str("/>");
+                }
 
                 match local.as_str() {
                     // Table column width
@@ -1038,6 +1082,19 @@ pub fn parse_slide<R: Read + Seek>(
                     _ => {}
                 }
             }
+            Ok(Event::Text(ref e)) if capturing_raw_xml => {
+                raw_xml_buf.push_str(&e.unescape().unwrap_or_default());
+                // Fall through to regular text handlers
+                if in_cell_text {
+                    if let Some(rb) = &mut cell_run {
+                        rb.text.push_str(&e.unescape().unwrap_or_default());
+                    }
+                } else if in_text {
+                    if let Some(rb) = &mut current_run {
+                        rb.text.push_str(&e.unescape().unwrap_or_default());
+                    }
+                }
+            }
             Ok(Event::Text(ref e)) if in_cell_text => {
                 if let Some(rb) = &mut cell_run {
                     rb.text.push_str(&e.unescape().unwrap_or_default());
@@ -1051,6 +1108,13 @@ pub fn parse_slide<R: Read + Seek>(
             Ok(Event::End(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
                 depth.pop();
+
+                // Capture closing tags for raw XML (before graphicData end stops capture)
+                if capturing_raw_xml && local != "graphicData" {
+                    raw_xml_buf.push_str("</");
+                    raw_xml_buf.push_str(std::str::from_utf8(e.name().as_ref()).unwrap_or(&local));
+                    raw_xml_buf.push('>');
+                }
 
                 match local.as_str() {
                     // ── Table cell text end events ──
@@ -1192,7 +1256,18 @@ pub fn parse_slide<R: Read + Seek>(
                     // ── New state end events ──
                     "avLst" => in_av_lst = false,
                     "bgPr" => in_bg_pr = false,
-                    "graphicData" => in_graphic_data = false,
+                    "graphicData" => {
+                        in_graphic_data = false;
+                        if capturing_raw_xml {
+                            capturing_raw_xml = false;
+                            if let Some(sb) = current_shape.as_mut() {
+                                if !raw_xml_buf.is_empty() {
+                                    sb.raw_xml_capture = Some(raw_xml_buf.clone());
+                                }
+                            }
+                            raw_xml_buf.clear();
+                        }
+                    }
                     "effectLst" if in_effect_lst => in_effect_lst = false,
                     "outerShdw" if in_outer_shdw => {
                         in_outer_shdw = false;
@@ -1675,12 +1750,20 @@ struct ShapeBuilder {
     chart_rel_id: Option<String>,
     // Unsupported content type (SmartArt, OLE, Math)
     unsupported_content: Option<String>,
+    // Typed classification for unresolved element
+    unresolved_type: Option<slide::UnresolvedType>,
+    // Raw XML captured from graphicData for unresolved content
+    raw_xml_capture: Option<String>,
 }
 
 impl ShapeBuilder {
     fn build(self) -> Shape {
         let shape_type = if let Some(label) = self.unsupported_content {
-            ShapeType::Unsupported(label)
+            ShapeType::Unsupported(slide::UnsupportedData {
+                label,
+                element_type: self.unresolved_type.unwrap_or(slide::UnresolvedType::SmartArt),
+                raw_xml: self.raw_xml_capture,
+            })
         } else if self.is_chart {
             ShapeType::Chart(ChartData {
                 rel_id: self.chart_rel_id.unwrap_or_default(),

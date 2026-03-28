@@ -19,7 +19,7 @@ pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
     AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, CropRect, GroupData, PictureData, Shape,
     ShapeType, Slide, TableCell, TableData, TableRow, TextBody, TextMargins, TextParagraph,
-    TextRun, VerticalAlign,
+    TextRun, UnresolvedElement, UnresolvedType, UnsupportedData, VerticalAlign,
 };
 pub use style::{
     Alignment, Border, BorderStyle, Fill, FontStyle, GradientFill, GradientStop, ImageFill,

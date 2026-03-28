@@ -37,6 +37,7 @@ pub mod resolver;
 use std::path::Path;
 
 use error::PptxResult;
+use model::UnresolvedElement;
 use parser::PptxParser;
 use renderer::HtmlRenderer;
 
@@ -93,37 +94,71 @@ impl ConversionOptions {
     }
 }
 
+/// Result of PPTX conversion with metadata about unresolved elements.
+///
+/// Use this with `convert_*_with_metadata()` functions to get both the HTML
+/// and structured information about elements that could not be fully rendered.
+#[derive(Debug, Clone)]
+pub struct ConversionResult {
+    /// Generated HTML string.
+    pub html: String,
+    /// Metadata about elements that were rendered as placeholders.
+    pub unresolved_elements: Vec<UnresolvedElement>,
+    /// Number of slides processed.
+    pub slide_count: usize,
+}
+
 /// Convert a PPTX file at `path` to a self-contained HTML string.
 ///
 /// Images are embedded as base64 data URIs by default.
 /// Returns [`PptxError`](error::PptxError) on I/O, ZIP, or XML errors.
 pub fn convert_file(path: &Path) -> PptxResult<String> {
-    let presentation = PptxParser::parse_file(path)?;
-    let html = HtmlRenderer::render(&presentation)?;
-    Ok(html)
+    Ok(convert_file_with_metadata(path)?.html)
 }
 
 /// Convert PPTX byte data to a self-contained HTML string.
 ///
 /// Useful when the PPTX is already loaded in memory (e.g. from a network request).
 pub fn convert_bytes(data: &[u8]) -> PptxResult<String> {
-    let presentation = PptxParser::parse_bytes(data)?;
-    let html = HtmlRenderer::render(&presentation)?;
-    Ok(html)
+    Ok(convert_bytes_with_metadata(data)?.html)
 }
 
 /// Convert a PPTX file to HTML with custom [`ConversionOptions`].
 pub fn convert_file_with_options(path: &Path, opts: &ConversionOptions) -> PptxResult<String> {
-    let presentation = PptxParser::parse_file(path)?;
-    let html = HtmlRenderer::render_with_options(&presentation, opts)?;
-    Ok(html)
+    Ok(convert_file_with_options_metadata(path, opts)?.html)
 }
 
 /// Convert PPTX byte data to HTML with custom [`ConversionOptions`].
 pub fn convert_bytes_with_options(data: &[u8], opts: &ConversionOptions) -> PptxResult<String> {
+    Ok(convert_bytes_with_options_metadata(data, opts)?.html)
+}
+
+/// Convert a PPTX file to HTML with metadata about unresolved elements.
+pub fn convert_file_with_metadata(path: &Path) -> PptxResult<ConversionResult> {
+    convert_file_with_options_metadata(path, &ConversionOptions::default())
+}
+
+/// Convert PPTX byte data to HTML with metadata about unresolved elements.
+pub fn convert_bytes_with_metadata(data: &[u8]) -> PptxResult<ConversionResult> {
+    convert_bytes_with_options_metadata(data, &ConversionOptions::default())
+}
+
+/// Convert a PPTX file to HTML with options and metadata about unresolved elements.
+pub fn convert_file_with_options_metadata(
+    path: &Path,
+    opts: &ConversionOptions,
+) -> PptxResult<ConversionResult> {
+    let presentation = PptxParser::parse_file(path)?;
+    HtmlRenderer::render_with_options_metadata(&presentation, opts)
+}
+
+/// Convert PPTX byte data to HTML with options and metadata about unresolved elements.
+pub fn convert_bytes_with_options_metadata(
+    data: &[u8],
+    opts: &ConversionOptions,
+) -> PptxResult<ConversionResult> {
     let presentation = PptxParser::parse_bytes(data)?;
-    let html = HtmlRenderer::render_with_options(&presentation, opts)?;
-    Ok(html)
+    HtmlRenderer::render_with_options_metadata(&presentation, opts)
 }
 
 /// Lightweight presentation metadata (no rendering performed).
