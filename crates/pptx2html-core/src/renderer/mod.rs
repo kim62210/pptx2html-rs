@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use base64::Engine;
 
+use crate::ConversionOptions;
 use crate::error::PptxResult;
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
@@ -19,6 +20,7 @@ struct RenderCtx<'a> {
     pres: &'a Presentation,
     scheme: Option<&'a ColorScheme>,
     clr_map: Option<&'a ClrMap>,
+    embed_images: bool,
 }
 
 impl<'a> RenderCtx<'a> {
@@ -38,6 +40,7 @@ impl<'a> RenderCtx<'a> {
             pres: self.pres,
             scheme: self.scheme,
             clr_map: slide_clr_map.or(self.clr_map),
+            embed_images: self.embed_images,
         }
     }
 }
@@ -47,6 +50,11 @@ pub struct HtmlRenderer;
 impl HtmlRenderer {
     /// Render entire Presentation to HTML
     pub fn render(pres: &Presentation) -> PptxResult<String> {
+        Self::render_with_options(pres, &ConversionOptions::default())
+    }
+
+    /// Render entire Presentation to HTML with conversion options
+    pub fn render_with_options(pres: &Presentation, opts: &ConversionOptions) -> PptxResult<String> {
         let slide_w = pres.slide_size.width.to_px();
         let slide_h = pres.slide_size.height.to_px();
 
@@ -54,6 +62,7 @@ impl HtmlRenderer {
             pres,
             scheme: pres.primary_theme().map(|t| &t.color_scheme),
             clr_map: if pres.clr_map.is_empty() { None } else { Some(&pres.clr_map) },
+            embed_images: opts.embed_images,
         };
 
         let mut html = String::with_capacity(4096);
@@ -74,10 +83,11 @@ impl HtmlRenderer {
         html.push_str("<div class=\"pptx-container\">\n");
 
         for (i, slide) in pres.slides.iter().enumerate() {
-            if slide.hidden {
+            let one_based = i + 1;
+            if !opts.should_include_slide(one_based, slide.hidden) {
                 continue;
             }
-            html.push_str(&Self::render_slide(slide, i + 1, slide_w, slide_h, &ctx));
+            html.push_str(&Self::render_slide(slide, one_based, slide_w, slide_h, &ctx));
         }
 
         html.push_str("</div>\n</body>\n</html>");
@@ -297,10 +307,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         if let ShapeType::Chart(ref chart_data) = shape.shape_type {
             if let Some(ref img_data) = chart_data.preview_image {
                 if !img_data.is_empty() {
-                    let b64 = base64::engine::general_purpose::STANDARD.encode(img_data);
                     let mime = chart_data.preview_mime.as_deref().unwrap_or("image/png");
+                    let src = if ctx.embed_images {
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(img_data);
+                        format!("data:{mime};base64,{b64}")
+                    } else {
+                        format!("images/chart-{}.png", img_data.len() % 100000)
+                    };
                     html.push_str(&format!(
-                        "<img class=\"shape-image\" src=\"data:{mime};base64,{b64}\" alt=\"Chart\">\n"
+                        "<img class=\"shape-image\" src=\"{src}\" alt=\"Chart\">\n"
                     ));
                 }
             } else {
@@ -340,11 +355,23 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         // Image
         if let ShapeType::Picture(pic) = &shape.shape_type {
             if !pic.data.is_empty() {
-                let b64 = base64::engine::general_purpose::STANDARD.encode(&pic.data);
                 let mime = if pic.content_type.is_empty() {
                     "image/png"
                 } else {
                     &pic.content_type
+                };
+                let src = if ctx.embed_images {
+                    let b64 = base64::engine::general_purpose::STANDARD.encode(&pic.data);
+                    format!("data:{mime};base64,{b64}")
+                } else {
+                    let ext = match mime {
+                        "image/jpeg" => "jpg",
+                        "image/gif" => "gif",
+                        "image/svg+xml" => "svg",
+                        "image/webp" => "webp",
+                        _ => "png",
+                    };
+                    format!("images/image-{}.{ext}", pic.data.len() % 100000)
                 };
                 let mut img_styles = Vec::new();
                 if let Some(ref crop) = pic.crop {
@@ -373,7 +400,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     format!(" style=\"{}\"", img_styles.join("; "))
                 };
                 html.push_str(&format!(
-                    "<img class=\"shape-image\" src=\"data:{mime};base64,{b64}\" alt=\"\"{style_attr}>\n"
+                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\"{style_attr}>\n"
                 ));
             }
         }
@@ -920,13 +947,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
             Fill::Image(img_fill) => {
                 if !img_fill.data.is_empty() {
-                    let b64 = base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
                     let mime = if img_fill.content_type.is_empty() {
                         "image/png"
                     } else {
                         &img_fill.content_type
                     };
-                    format!("background-image: url(data:{mime};base64,{b64}); background-size: cover; background-position: center")
+                    let url = if ctx.embed_images {
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
+                        format!("data:{mime};base64,{b64}")
+                    } else {
+                        let ext = match mime {
+                            "image/jpeg" => "jpg",
+                            "image/gif" => "gif",
+                            "image/svg+xml" => "svg",
+                            "image/webp" => "webp",
+                            _ => "png",
+                        };
+                        format!("images/bg-{}.{ext}", img_fill.data.len() % 100000)
+                    };
+                    format!("background-image: url({url}); background-size: cover; background-position: center")
                 } else {
                     String::new()
                 }
