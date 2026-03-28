@@ -56,6 +56,9 @@ let html = pptx2html_rs::convert_bytes(&pptx_data)?;
 | Shape style refs (fillRef / lnRef / fontRef) | ✅ |
 | Paragraph spacing (lnSpc / spcBef / spcAft) | ✅ |
 | defaultTextStyle | ✅ |
+| Text style inheritance (txStyles → defaultTextStyle) | ✅ |
+| Font theme refs (+mj-lt / +mn-lt resolution) | ✅ |
+| fontRef (major/minor → font-family) | ✅ |
 | Tables | 🔜 |
 | Bullets (multi-level) | 🔜 |
 | Group shapes | 🔜 |
@@ -96,7 +99,7 @@ cargo test
 ```
 
 - 52 unit tests: color resolution, HSL, modifiers, placeholder matching, inheritance, style refs
-- 37 integration tests: PPTX generation → parsing → rendering verification
+- 46 integration tests: PPTX generation → parsing → rendering verification (hierarchy + integration)
 
 ## License
 
