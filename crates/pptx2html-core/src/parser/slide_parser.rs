@@ -792,14 +792,14 @@ pub fn parse_slide<R: Read + Seek>(
                     "rPr" if current_run.is_some() && !in_tc => {
                         parse_run_props(e, &mut current_run);
                     }
-                    // noFill
+                    // noFill -- explicit transparent
                     "noFill" => {
                         if in_ln {
                             if let Some(sb) = &mut current_shape {
                                 sb.border_style = BorderStyle::None;
                             }
                         } else if in_sp_pr && let Some(sb) = &mut current_shape {
-                            sb.fill = Fill::None;
+                            sb.fill = Fill::NoFill;
                         }
                     }
                     // Line dash style

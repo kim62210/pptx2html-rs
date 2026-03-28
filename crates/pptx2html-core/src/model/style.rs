@@ -66,8 +66,11 @@ impl Alignment {
 /// Fill (shape/slide background)
 #[derive(Debug, Clone, Default)]
 pub enum Fill {
+    /// No fill specified -- inheritance/theme fallback should apply
     #[default]
     None,
+    /// Explicit `<a:noFill>` -- transparent, do NOT apply theme fallback
+    NoFill,
     Solid(SolidFill),
     Gradient(GradientFill),
     Image(ImageFill),

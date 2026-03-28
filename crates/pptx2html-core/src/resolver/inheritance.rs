@@ -44,18 +44,28 @@ pub fn resolve_shape_fill(
     layout_match: Option<&Shape>,
     master_match: Option<&Shape>,
 ) -> Fill {
+    // Fill::NoFill is an explicit "transparent" -- stop inheritance here
+    if matches!(shape.fill, Fill::NoFill) {
+        return Fill::NoFill;
+    }
     if !matches!(shape.fill, Fill::None) {
         return shape.fill.clone();
     }
-    if let Some(lm) = layout_match
-        && !matches!(lm.fill, Fill::None)
-    {
-        return lm.fill.clone();
+    if let Some(lm) = layout_match {
+        if matches!(lm.fill, Fill::NoFill) {
+            return Fill::NoFill;
+        }
+        if !matches!(lm.fill, Fill::None) {
+            return lm.fill.clone();
+        }
     }
-    if let Some(mm) = master_match
-        && !matches!(mm.fill, Fill::None)
-    {
-        return mm.fill.clone();
+    if let Some(mm) = master_match {
+        if matches!(mm.fill, Fill::NoFill) {
+            return Fill::NoFill;
+        }
+        if !matches!(mm.fill, Fill::None) {
+            return mm.fill.clone();
+        }
     }
     Fill::None
 }
@@ -70,6 +80,10 @@ pub fn resolve_shape_fill_with_theme(
     clr_map: Option<&ClrMap>,
 ) -> Fill {
     let basic = resolve_shape_fill(shape, layout_match, master_match);
+    // NoFill is explicit transparent -- do NOT apply theme fallback
+    if matches!(basic, Fill::NoFill) {
+        return Fill::NoFill;
+    }
     if !matches!(basic, Fill::None) {
         return basic;
     }

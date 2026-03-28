@@ -407,7 +407,7 @@ fn test_no_fill() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
-    assert!(matches!(shape.fill, Fill::None));
+    assert!(matches!(shape.fill, Fill::NoFill));
 }
 
 // ── E2E HTML rendering tests ──
