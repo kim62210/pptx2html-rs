@@ -49,6 +49,27 @@ pub fn parse_slide<R: Read + Seek>(
     let mut p_style_current_ref: Option<String> = None;
     let mut p_style_idx: Option<String> = None;
 
+    // Table parsing state
+    let mut in_graphic_frame = false;
+    let mut in_tbl = false;
+    let mut in_tr = false;
+    let mut in_tc = false;
+    let mut in_tc_pr = false;
+    let mut tc_border_side: Option<String> = None;
+    let mut table_builder: Option<TableBuilder> = None;
+    let mut current_row: Option<TableRowBuilder> = None;
+    let mut current_cell: Option<TableCellBuilder> = None;
+    let mut cell_paragraphs: Vec<TextParagraph> = Vec::new();
+    let mut cell_paragraph: Option<ParagraphBuilder> = None;
+    let mut cell_run: Option<RunBuilder> = None;
+    let mut in_cell_text = false;
+    let mut in_cell_r_pr = false;
+    let mut in_cell_bu_clr = false;
+
+    // Group shape parsing state
+    let mut grp_stack: Vec<GroupContext> = Vec::new();
+    let mut in_grp_sp_pr = false;
+
     loop {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
@@ -56,6 +77,127 @@ pub fn parse_slide<R: Read + Seek>(
                 depth.push(local.clone());
 
                 match local.as_str() {
+                    // ── Group shape ──
+                    "grpSp" => {
+                        grp_stack.push(GroupContext {
+                            shapes: Vec::new(),
+                            position: Position::default(),
+                            size: Size::default(),
+                            child_offset: Position::default(),
+                            child_extent: Size::default(),
+                        });
+                    }
+                    // Group shape properties
+                    "grpSpPr" if !grp_stack.is_empty() => {
+                        in_grp_sp_pr = true;
+                    }
+                    // ── Graphic frame (tables) ──
+                    "graphicFrame" => {
+                        in_graphic_frame = true;
+                        current_shape = Some(ShapeBuilder::default());
+                    }
+                    // Table start
+                    "tbl" if in_graphic_frame => {
+                        in_tbl = true;
+                        table_builder = Some(TableBuilder::default());
+                    }
+                    // Table row
+                    "tr" if in_tbl => {
+                        in_tr = true;
+                        let h = xml_utils::attr_str(e, "h")
+                            .map(|v| Emu::from_str(&v).to_px())
+                            .unwrap_or(0.0);
+                        current_row = Some(TableRowBuilder {
+                            height: h,
+                            cells: Vec::new(),
+                        });
+                    }
+                    // Table cell
+                    "tc" if in_tr => {
+                        in_tc = true;
+                        let col_span = xml_utils::attr_str(e, "gridSpan")
+                            .and_then(|v| v.parse::<u32>().ok())
+                            .unwrap_or(1);
+                        let row_span = xml_utils::attr_str(e, "rowSpan")
+                            .and_then(|v| v.parse::<u32>().ok())
+                            .unwrap_or(1);
+                        let v_merge = xml_utils::attr_str(e, "vMerge")
+                            .map(|v| v == "1" || v == "true")
+                            .unwrap_or(false);
+                        current_cell = Some(TableCellBuilder {
+                            text_body: None,
+                            fill: Fill::None,
+                            border_left: Border::default(),
+                            border_right: Border::default(),
+                            border_top: Border::default(),
+                            border_bottom: Border::default(),
+                            col_span,
+                            row_span,
+                            v_merge,
+                        });
+                        cell_paragraphs.clear();
+                    }
+                    // Table cell properties
+                    "tcPr" if in_tc => {
+                        in_tc_pr = true;
+                    }
+                    // Table cell border elements inside tcPr
+                    "lnL" | "lnR" | "lnT" | "lnB" if in_tc_pr => {
+                        tc_border_side = Some(local.clone());
+                        if let Some(w) = xml_utils::attr_str(e, "w") {
+                            let width = Emu::from_str(&w).to_pt();
+                            if let Some(ref mut cell) = current_cell {
+                                match local.as_str() {
+                                    "lnL" => cell.border_left.width = width,
+                                    "lnR" => cell.border_right.width = width,
+                                    "lnT" => cell.border_top.width = width,
+                                    "lnB" => cell.border_bottom.width = width,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    // Text body inside table cell
+                    "txBody" if in_tc => {
+                        // Do NOT set current_shape.has_text_body; cell text is separate
+                    }
+                    // Paragraph inside table cell
+                    "p" if in_tc => {
+                        cell_paragraph = Some(ParagraphBuilder::default());
+                    }
+                    // Paragraph properties inside table cell
+                    "pPr" if in_tc && cell_paragraph.is_some() => {
+                        parse_para_props(e, &mut cell_paragraph);
+                    }
+                    // Spacing containers inside table cell
+                    "lnSpc" if in_tc && cell_paragraph.is_some() => {
+                        in_ln_spc = true;
+                    }
+                    "spcBef" if in_tc && cell_paragraph.is_some() => {
+                        in_spc_bef = true;
+                    }
+                    "spcAft" if in_tc && cell_paragraph.is_some() => {
+                        in_spc_aft = true;
+                    }
+                    // Bullet color inside table cell
+                    "buClr" if in_tc && cell_paragraph.is_some() => {
+                        in_cell_bu_clr = true;
+                    }
+                    // Run inside table cell
+                    "r" if in_tc && cell_paragraph.is_some() => {
+                        cell_run = Some(RunBuilder::default());
+                    }
+                    // Run properties inside table cell
+                    "rPr" if in_tc && cell_run.is_some() => {
+                        in_cell_r_pr = true;
+                        parse_run_props(e, &mut cell_run);
+                    }
+                    // Text content inside table cell
+                    "t" if in_tc && cell_run.is_some() => {
+                        in_cell_text = true;
+                    }
+
+                    // ── Regular shape handling ──
                     // Shape start
                     "sp" | "pic" | "cxnSp" => {
                         current_shape = Some(ShapeBuilder::default());
@@ -82,49 +224,53 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Text body
-                    "txBody" => {
+                    // Line/border inside table cell border
+                    "ln" if tc_border_side.is_some() => {
+                        // Already handled width in lnL/lnR/lnT/lnB
+                    }
+                    // Text body (non-table)
+                    "txBody" if !in_tc => {
                         if let Some(sb) = &mut current_shape {
                             sb.has_text_body = true;
                         }
                     }
                     // bodyPr — text area properties
-                    "bodyPr" if current_shape.is_some() => {
+                    "bodyPr" if current_shape.is_some() && !in_tc => {
                         parse_body_pr(e, &mut current_shape);
                     }
-                    // Paragraph
-                    "p" if current_shape.is_some() => {
+                    // Paragraph (non-table)
+                    "p" if current_shape.is_some() && !in_tc => {
                         current_paragraph = Some(ParagraphBuilder::default());
                     }
                     // Paragraph properties
-                    "pPr" if current_paragraph.is_some() => {
+                    "pPr" if current_paragraph.is_some() && !in_tc => {
                         parse_para_props(e, &mut current_paragraph);
                     }
-                    // Paragraph spacing containers
-                    "lnSpc" if current_paragraph.is_some() => {
+                    // Paragraph spacing containers (non-table)
+                    "lnSpc" if current_paragraph.is_some() && !in_tc => {
                         in_ln_spc = true;
                     }
-                    "spcBef" if current_paragraph.is_some() => {
+                    "spcBef" if current_paragraph.is_some() && !in_tc => {
                         in_spc_bef = true;
                     }
-                    "spcAft" if current_paragraph.is_some() => {
+                    "spcAft" if current_paragraph.is_some() && !in_tc => {
                         in_spc_aft = true;
                     }
-                    // Bullet color container
-                    "buClr" if current_paragraph.is_some() => {
+                    // Bullet color container (non-table)
+                    "buClr" if current_paragraph.is_some() && !in_tc => {
                         in_bu_clr = true;
                     }
-                    // Text run
-                    "r" if current_paragraph.is_some() => {
+                    // Text run (non-table)
+                    "r" if current_paragraph.is_some() && !in_tc => {
                         current_run = Some(RunBuilder::default());
                     }
-                    // Run properties
-                    "rPr" if current_run.is_some() => {
+                    // Run properties (non-table)
+                    "rPr" if current_run.is_some() && !in_tc => {
                         in_r_pr = true;
                         parse_run_props(e, &mut current_run);
                     }
-                    // Text content
-                    "t" if current_run.is_some() => {
+                    // Text content (non-table)
+                    "t" if current_run.is_some() && !in_tc => {
                         in_text = true;
                     }
                     // Shape style reference (<p:style>)
@@ -138,6 +284,9 @@ pub fn parse_slide<R: Read + Seek>(
                         p_style_idx = xml_utils::attr_str(e, "idx");
                     }
                     // Fill — solidFill (Start variant)
+                    "solidFill" if in_tc_pr && tc_border_side.is_none() => {
+                        // Cell fill — child color will be assigned
+                    }
                     "solidFill" => {
                         // solidFill has child color elements
                     }
@@ -184,17 +333,70 @@ pub fn parse_slide<R: Read + Seek>(
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
 
                 match local.as_str() {
-                    // Shape position/size
+                    // Table column width
+                    "gridCol" if in_tbl => {
+                        if let Some(ref mut tb) = table_builder {
+                            let w = xml_utils::attr_str(e, "w")
+                                .map(|v| Emu::from_str(&v).to_px())
+                                .unwrap_or(0.0);
+                            tb.col_widths.push(w);
+                        }
+                    }
+                    // Paragraph properties inside table cell (Empty variant)
+                    "pPr" if in_tc && cell_paragraph.is_some() => {
+                        parse_para_props(e, &mut cell_paragraph);
+                    }
+                    // Run properties inside table cell (Empty variant)
+                    "rPr" if in_tc && cell_run.is_some() => {
+                        parse_run_props(e, &mut cell_run);
+                    }
+                    // Shape position/size — handle group child offset/extent
                     "off" => {
-                        if let Some(sb) = current_shape.as_mut() {
+                        if in_grp_sp_pr {
+                            // Inside grpSpPr: "off" under xfrm is group position,
+                            // "chOff" is handled separately below
+                            if let Some(gc) = grp_stack.last_mut() {
+                                let x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                                let y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                                // Check if this is inside chOff or the outer xfrm off
+                                if depth_contains(&depth, "chOff") {
+                                    gc.child_offset = Position { x, y };
+                                } else {
+                                    gc.position = Position { x, y };
+                                }
+                            }
+                        } else if let Some(sb) = current_shape.as_mut() {
                             sb.position.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
                             sb.position.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
                     "ext" => {
-                        if let Some(sb) = current_shape.as_mut() {
+                        if in_grp_sp_pr {
+                            if let Some(gc) = grp_stack.last_mut() {
+                                let cx = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                                let cy = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                                if depth_contains(&depth, "chExt") {
+                                    gc.child_extent = Size { width: cx, height: cy };
+                                } else {
+                                    gc.size = Size { width: cx, height: cy };
+                                }
+                            }
+                        } else if let Some(sb) = current_shape.as_mut() {
                             sb.size.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
                             sb.size.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                        }
+                    }
+                    // Child offset/extent for group (self-closing variant)
+                    "chOff" if in_grp_sp_pr => {
+                        if let Some(gc) = grp_stack.last_mut() {
+                            gc.child_offset.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                            gc.child_offset.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                        }
+                    }
+                    "chExt" if in_grp_sp_pr => {
+                        if let Some(gc) = grp_stack.last_mut() {
+                            gc.child_extent.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                            gc.child_extent.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
                         }
                     }
                     // Preset geometry
@@ -206,15 +408,15 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     // bodyPr (Empty variant)
-                    "bodyPr" if current_shape.is_some() => {
+                    "bodyPr" if current_shape.is_some() && !in_tc => {
                         parse_body_pr(e, &mut current_shape);
                     }
-                    // Paragraph properties (Empty variant)
-                    "pPr" if current_paragraph.is_some() => {
+                    // Paragraph properties (Empty variant, non-table)
+                    "pPr" if current_paragraph.is_some() && !in_tc => {
                         parse_para_props(e, &mut current_paragraph);
                     }
-                    // Run properties (Empty variant)
-                    "rPr" if current_run.is_some() => {
+                    // Run properties (Empty variant, non-table)
+                    "rPr" if current_run.is_some() && !in_tc => {
                         parse_run_props(e, &mut current_run);
                     }
                     // noFill
@@ -264,7 +466,17 @@ pub fn parse_slide<R: Read + Seek>(
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
-                            if in_bu_clr {
+                            if in_cell_bu_clr {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_tc_pr {
+                                assign_tc_color(color, &tc_border_side, &mut current_cell);
+                            } else if in_cell_r_pr {
+                                if let Some(rb) = cell_run.as_mut() {
+                                    rb.color = color;
+                                }
+                            } else if in_bu_clr {
                                 if let Some(pb) = current_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -291,7 +503,17 @@ pub fn parse_slide<R: Read + Seek>(
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
-                            if in_bu_clr {
+                            if in_cell_bu_clr {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_tc_pr {
+                                assign_tc_color(color, &tc_border_side, &mut current_cell);
+                            } else if in_cell_r_pr {
+                                if let Some(rb) = cell_run.as_mut() {
+                                    rb.color = color;
+                                }
+                            } else if in_bu_clr {
                                 if let Some(pb) = current_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -318,7 +540,17 @@ pub fn parse_slide<R: Read + Seek>(
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::preset(val);
-                            if in_bu_clr {
+                            if in_cell_bu_clr {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_tc_pr {
+                                assign_tc_color(color, &tc_border_side, &mut current_cell);
+                            } else if in_cell_r_pr {
+                                if let Some(rb) = cell_run.as_mut() {
+                                    rb.color = color;
+                                }
+                            } else if in_bu_clr {
                                 if let Some(pb) = current_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -351,7 +583,17 @@ pub fn parse_slide<R: Read + Seek>(
                             Color::none()
                         };
                         if !color.is_none() {
-                            if in_bu_clr {
+                            if in_cell_bu_clr {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_tc_pr {
+                                assign_tc_color(color, &tc_border_side, &mut current_cell);
+                            } else if in_cell_r_pr {
+                                if let Some(rb) = cell_run.as_mut() {
+                                    rb.color = color;
+                                }
+                            } else if in_bu_clr {
                                 if let Some(pb) = current_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -406,27 +648,36 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Font
+                    // Font (table cell or regular)
                     "latin" => {
-                        if let Some(rb) = current_run.as_mut() {
+                        if let Some(rb) = cell_run.as_mut() {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                rb.font_latin = Some(typeface);
+                            }
+                        } else if let Some(rb) = current_run.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_latin = Some(typeface);
                             }
                         }
                     }
                     "ea" => {
-                        if let Some(rb) = current_run.as_mut() {
+                        if let Some(rb) = cell_run.as_mut() {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                rb.font_ea = Some(typeface);
+                            }
+                        } else if let Some(rb) = current_run.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_ea = Some(typeface);
                             }
                         }
                     }
-                    // Spacing percentage (inside lnSpc/spcBef/spcAft)
-                    "spcPct" if current_paragraph.is_some() => {
+                    // Spacing percentage (inside lnSpc/spcBef/spcAft) — cell or regular
+                    "spcPct" => {
                         if let Some(val_str) = xml_utils::attr_str(e, "val") {
                             if let Ok(val) = val_str.parse::<f64>() {
                                 let spacing = SpacingValue::Percent(val / 100_000.0);
-                                if let Some(pb) = current_paragraph.as_mut() {
+                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                if let Some(pb) = target.as_mut() {
                                     if in_ln_spc {
                                         pb.line_spacing = Some(spacing);
                                     } else if in_spc_bef {
@@ -438,12 +689,13 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Spacing points (inside lnSpc/spcBef/spcAft)
-                    "spcPts" if current_paragraph.is_some() => {
+                    // Spacing points (inside lnSpc/spcBef/spcAft) — cell or regular
+                    "spcPts" => {
                         if let Some(val_str) = xml_utils::attr_str(e, "val") {
                             if let Ok(val) = val_str.parse::<f64>() {
                                 let spacing = SpacingValue::Points(val / 100.0);
-                                if let Some(pb) = current_paragraph.as_mut() {
+                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                if let Some(pb) = target.as_mut() {
                                     if in_ln_spc {
                                         pb.line_spacing = Some(spacing);
                                     } else if in_spc_bef {
@@ -455,17 +707,19 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Bullet font
-                    "buFont" if current_paragraph.is_some() => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                    // Bullet font (cell or regular)
+                    "buFont" => {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 pb.bu_font = Some(typeface);
                             }
                         }
                     }
-                    // Bullet size (percentage)
-                    "buSzPct" if current_paragraph.is_some() => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                    // Bullet size (percentage, cell or regular)
+                    "buSzPct" => {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             if let Some(val_str) = xml_utils::attr_str(e, "val") {
                                 if let Ok(val) = val_str.parse::<f64>() {
                                     pb.bu_size_pct = Some(val / 100_000.0);
@@ -473,9 +727,10 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Bullet size (points) — convert to percentage equivalent
-                    "buSzPts" if current_paragraph.is_some() => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                    // Bullet size (points, cell or regular)
+                    "buSzPts" => {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             if let Some(val_str) = xml_utils::attr_str(e, "val") {
                                 if let Ok(val) = val_str.parse::<f64>() {
                                     // Store as negative to distinguish from pct in rendering
@@ -485,14 +740,16 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Bullet
+                    // Bullet (cell or regular)
                     "buNone" => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             pb.bullet = Some(Bullet::None);
                         }
                     }
                     "buChar" => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             if let Some(ch) = xml_utils::attr_str(e, "char") {
                                 pb.bullet = Some(Bullet::Char(BulletChar {
                                     char: ch,
@@ -504,7 +761,8 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     "buAutoNum" => {
-                        if let Some(pb) = current_paragraph.as_mut() {
+                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        if let Some(pb) = target.as_mut() {
                             let num_type = xml_utils::attr_str(e, "type")
                                 .unwrap_or_else(|| "arabicPeriod".to_string());
                             let start_at = xml_utils::attr_str(e, "startAt")
@@ -521,6 +779,11 @@ pub fn parse_slide<R: Read + Seek>(
                     _ => {}
                 }
             }
+            Ok(Event::Text(ref e)) if in_cell_text => {
+                if let Some(rb) = &mut cell_run {
+                    rb.text.push_str(&e.unescape().unwrap_or_default());
+                }
+            }
             Ok(Event::Text(ref e)) if in_text => {
                 if let Some(rb) = &mut current_run {
                     rb.text.push_str(&e.unescape().unwrap_or_default());
@@ -531,6 +794,114 @@ pub fn parse_slide<R: Read + Seek>(
                 depth.pop();
 
                 match local.as_str() {
+                    // ── Table cell text end events ──
+                    "t" if in_cell_text => {
+                        in_cell_text = false;
+                    }
+                    "rPr" if in_cell_r_pr => {
+                        in_cell_r_pr = false;
+                    }
+                    "r" if in_tc && cell_paragraph.is_some() => {
+                        if let (Some(pb), Some(rb)) =
+                            (&mut cell_paragraph, cell_run.take())
+                        {
+                            pb.runs.push(rb.build());
+                        }
+                    }
+                    "p" if in_tc => {
+                        if let Some(pb) = cell_paragraph.take() {
+                            cell_paragraphs.push(pb.build());
+                        }
+                    }
+                    "buClr" if in_cell_bu_clr => {
+                        in_cell_bu_clr = false;
+                    }
+                    // End of table cell border sides
+                    "lnL" | "lnR" | "lnT" | "lnB" if in_tc_pr => {
+                        tc_border_side = None;
+                    }
+                    // End of table cell properties
+                    "tcPr" => {
+                        in_tc_pr = false;
+                    }
+                    // End of table cell
+                    "tc" => {
+                        if let Some(mut cell) = current_cell.take() {
+                            if !cell_paragraphs.is_empty() {
+                                cell.text_body = Some(TextBody {
+                                    paragraphs: std::mem::take(&mut cell_paragraphs),
+                                    ..Default::default()
+                                });
+                            }
+                            if let Some(ref mut row) = current_row {
+                                row.cells.push(cell.build());
+                            }
+                        }
+                        in_tc = false;
+                        cell_paragraph = None;
+                        cell_run = None;
+                        in_cell_text = false;
+                        in_cell_r_pr = false;
+                    }
+                    // End of table row
+                    "tr" => {
+                        if let Some(row) = current_row.take() {
+                            if let Some(tb) = table_builder.as_mut() {
+                                tb.rows.push(row.build());
+                            }
+                        }
+                        in_tr = false;
+                    }
+                    // End of table
+                    "tbl" => {
+                        in_tbl = false;
+                    }
+                    // End of graphic frame — finalize table shape
+                    "graphicFrame" => {
+                        if let (Some(sb), Some(tb)) = (current_shape.take(), table_builder.take()) {
+                            let table_data = tb.build();
+                            let shape = Shape {
+                                position: sb.position,
+                                size: sb.size,
+                                shape_type: ShapeType::Table(table_data),
+                                ..Default::default()
+                            };
+                            if !grp_stack.is_empty() {
+                                if let Some(gc) = grp_stack.last_mut() {
+                                    gc.shapes.push(shape);
+                                }
+                            } else {
+                                slide.shapes.push(shape);
+                            }
+                        }
+                        in_graphic_frame = false;
+                    }
+                    // ── Group shape end ──
+                    "grpSp" => {
+                        if let Some(gc) = grp_stack.pop() {
+                            let group_data = GroupData {
+                                child_offset: gc.child_offset,
+                                child_extent: gc.child_extent,
+                            };
+                            let shape = Shape {
+                                position: gc.position,
+                                size: gc.size,
+                                shape_type: ShapeType::Group(gc.shapes, group_data),
+                                ..Default::default()
+                            };
+                            // Nested groups: push to parent group
+                            if let Some(parent) = grp_stack.last_mut() {
+                                parent.shapes.push(shape);
+                            } else {
+                                slide.shapes.push(shape);
+                            }
+                        }
+                    }
+                    "grpSpPr" => {
+                        in_grp_sp_pr = false;
+                    }
+
+                    // ── Original shape end events ──
                     "t" => in_text = false,
                     "rPr" => in_r_pr = false,
                     // End of paragraph spacing containers
@@ -555,7 +926,17 @@ pub fn parse_slide<R: Read + Seek>(
                     // End of color element — assign to target after applying modifiers
                     "srgbClr" | "schemeClr" | "prstClr" | "sysClr" => {
                         if let Some(color) = current_color.take() {
-                            if in_bu_clr {
+                            if in_cell_bu_clr {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_tc_pr {
+                                assign_tc_color(color, &tc_border_side, &mut current_cell);
+                            } else if in_cell_r_pr {
+                                if let Some(rb) = cell_run.as_mut() {
+                                    rb.color = color;
+                                }
+                            } else if in_bu_clr {
                                 // Bullet color
                                 if let Some(pb) = current_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
@@ -654,7 +1035,14 @@ pub fn parse_slide<R: Read + Seek>(
                                     }
                                 }
                             }
-                            slide.shapes.push(shape);
+                            // Add shape to group or slide
+                            if !grp_stack.is_empty() {
+                                if let Some(gc) = grp_stack.last_mut() {
+                                    gc.shapes.push(shape);
+                                }
+                            } else {
+                                slide.shapes.push(shape);
+                            }
                         }
                     }
                     _ => {}
@@ -1082,5 +1470,118 @@ impl RunBuilder {
             },
             ..Default::default()
         }
+    }
+}
+
+// ── Table builder pattern ──
+
+#[derive(Default)]
+struct TableBuilder {
+    col_widths: Vec<f64>,
+    rows: Vec<TableRow>,
+}
+
+impl TableBuilder {
+    fn build(self) -> TableData {
+        TableData {
+            rows: self.rows,
+            col_widths: self.col_widths,
+        }
+    }
+}
+
+#[derive(Default)]
+struct TableRowBuilder {
+    height: f64,
+    cells: Vec<TableCell>,
+}
+
+impl TableRowBuilder {
+    fn build(self) -> TableRow {
+        TableRow {
+            height: self.height,
+            cells: self.cells,
+        }
+    }
+}
+
+struct TableCellBuilder {
+    text_body: Option<TextBody>,
+    fill: Fill,
+    border_left: Border,
+    border_right: Border,
+    border_top: Border,
+    border_bottom: Border,
+    col_span: u32,
+    row_span: u32,
+    v_merge: bool,
+}
+
+impl TableCellBuilder {
+    fn build(self) -> TableCell {
+        TableCell {
+            text_body: self.text_body,
+            fill: self.fill,
+            border_left: self.border_left,
+            border_right: self.border_right,
+            border_top: self.border_top,
+            border_bottom: self.border_bottom,
+            col_span: self.col_span,
+            row_span: self.row_span,
+            v_merge: self.v_merge,
+        }
+    }
+}
+
+// ── Group shape context ──
+
+struct GroupContext {
+    shapes: Vec<Shape>,
+    position: Position,
+    size: Size,
+    child_offset: Position,
+    child_extent: Size,
+}
+
+/// Assign color to table cell fill or border based on context
+fn assign_tc_color(
+    color: Color,
+    border_side: &Option<String>,
+    cell: &mut Option<TableCellBuilder>,
+) {
+    let cell = match cell.as_mut() {
+        Some(c) => c,
+        None => return,
+    };
+    match border_side.as_deref() {
+        Some("lnL") => {
+            cell.border_left.color = color;
+            if matches!(cell.border_left.style, BorderStyle::None) && cell.border_left.width > 0.0 {
+                cell.border_left.style = BorderStyle::Solid;
+            }
+        }
+        Some("lnR") => {
+            cell.border_right.color = color;
+            if matches!(cell.border_right.style, BorderStyle::None) && cell.border_right.width > 0.0 {
+                cell.border_right.style = BorderStyle::Solid;
+            }
+        }
+        Some("lnT") => {
+            cell.border_top.color = color;
+            if matches!(cell.border_top.style, BorderStyle::None) && cell.border_top.width > 0.0 {
+                cell.border_top.style = BorderStyle::Solid;
+            }
+        }
+        Some("lnB") => {
+            cell.border_bottom.color = color;
+            if matches!(cell.border_bottom.style, BorderStyle::None) && cell.border_bottom.width > 0.0 {
+                cell.border_bottom.style = BorderStyle::Solid;
+            }
+        }
+        None => {
+            // Cell fill color (solidFill inside tcPr, not inside a border)
+            cell.fill = Fill::Solid(SolidFill { color });
+        }
+        _ => {}
     }
 }

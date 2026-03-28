@@ -39,7 +39,7 @@ pub enum ShapeType {
     TextBox,
     Picture(PictureData),
     Table(TableData),
-    Group(Vec<Shape>),
+    Group(Vec<Shape>, GroupData),
     Custom(String), // preset shape name
 }
 
@@ -124,6 +124,14 @@ pub struct TableCell {
     pub border_right: Border,
     pub col_span: u32,
     pub row_span: u32,
+    pub v_merge: bool,
+}
+
+/// Group shape data (child offset/extent for coordinate remapping)
+#[derive(Debug, Clone, Default)]
+pub struct GroupData {
+    pub child_offset: Position,
+    pub child_extent: Size,
 }
 
 /// Vertical alignment

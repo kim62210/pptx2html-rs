@@ -259,6 +259,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let style_str = styles.join("; ");
         let mut html = format!("<div class=\"shape\" style=\"{style_str}\">\n");
 
+        // Table
+        if let ShapeType::Table(ref table) = shape.shape_type {
+            html.push_str(&Self::render_table(table, ctx));
+            html.push_str("</div>\n");
+            return html;
+        }
+
+        // Group
+        if let ShapeType::Group(ref children, ref group_data) = shape.shape_type {
+            html.push_str(&Self::render_group(children, shape, group_data, ctx));
+            html.push_str("</div>\n");
+            return html;
+        }
+
         // Image
         if let ShapeType::Picture(pic) = &shape.shape_type {
             if !pic.data.is_empty() {
@@ -300,6 +314,93 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         html.push_str("</div>\n");
+        html
+    }
+
+    fn render_table(table: &TableData, ctx: &RenderCtx<'_>) -> String {
+        let total_width: f64 = table.col_widths.iter().sum();
+        let mut html = String::from(
+            "<table style=\"width:100%; height:100%; border-collapse:collapse; table-layout:fixed;\">\n<colgroup>\n"
+        );
+        for w in &table.col_widths {
+            let pct = if total_width > 0.0 { w / total_width * 100.0 } else { 0.0 };
+            html.push_str(&format!("<col style=\"width:{pct:.1}%\"/>\n"));
+        }
+        html.push_str("</colgroup>\n");
+
+        for row in &table.rows {
+            html.push_str(&format!("<tr style=\"height:{:.1}px;\">\n", row.height));
+            for cell in &row.cells {
+                // Skip cells that are continuation of a vertical merge
+                if cell.v_merge {
+                    continue;
+                }
+
+                let mut td_styles = Vec::new();
+
+                // Cell fill
+                let fill_css = Self::fill_to_css(&cell.fill, ctx);
+                if !fill_css.is_empty() {
+                    td_styles.push(fill_css);
+                }
+
+                // Cell borders
+                if cell.border_left.width > 0.0 {
+                    let color = ctx.color_to_css(&cell.border_left.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    td_styles.push(format!("border-left: {:.1}px solid {}", cell.border_left.width, color));
+                }
+                if cell.border_right.width > 0.0 {
+                    let color = ctx.color_to_css(&cell.border_right.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    td_styles.push(format!("border-right: {:.1}px solid {}", cell.border_right.width, color));
+                }
+                if cell.border_top.width > 0.0 {
+                    let color = ctx.color_to_css(&cell.border_top.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    td_styles.push(format!("border-top: {:.1}px solid {}", cell.border_top.width, color));
+                }
+                if cell.border_bottom.width > 0.0 {
+                    let color = ctx.color_to_css(&cell.border_bottom.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    td_styles.push(format!("border-bottom: {:.1}px solid {}", cell.border_bottom.width, color));
+                }
+
+                td_styles.push("padding: 4px".to_string());
+                td_styles.push("vertical-align: top".to_string());
+
+                let colspan = if cell.col_span > 1 { format!(" colspan=\"{}\"", cell.col_span) } else { String::new() };
+                let rowspan = if cell.row_span > 1 { format!(" rowspan=\"{}\"", cell.row_span) } else { String::new() };
+
+                html.push_str(&format!("<td{colspan}{rowspan} style=\"{}\">\n", td_styles.join("; ")));
+                if let Some(ref tb) = cell.text_body {
+                    let mut auto_num_counters: [i32; 9] = [0; 9];
+                    for para in &tb.paragraphs {
+                        html.push_str(&Self::render_paragraph(para, ctx, &mut auto_num_counters));
+                    }
+                }
+                html.push_str("</td>\n");
+            }
+            html.push_str("</tr>\n");
+        }
+        html.push_str("</table>\n");
+        html
+    }
+
+    fn render_group(
+        children: &[Shape],
+        _parent: &Shape,
+        _group_data: &GroupData,
+        ctx: &RenderCtx<'_>,
+    ) -> String {
+        let mut html = String::new();
+        for child in children {
+            if child.hidden {
+                continue;
+            }
+            // Render each child shape with its own position relative to the group
+            html.push_str(&Self::render_shape_resolved(child, None, None, ctx));
+        }
         html
     }
 
