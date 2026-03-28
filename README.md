@@ -159,6 +159,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 | Bullets | Character and auto-numbered bullets with font, size, color |
 | Charts | Detection with preview image fallback |
 | Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
+| LLM Enhance | Post-processing layer: SmartArt→HTML/CSS, OMML→MathML, DrawingML→CSS via LLM (pptx2html-enhance) |
 
 ## Architecture
 
@@ -181,6 +182,9 @@ Cargo workspace
 │   ├── create_golden_set.py   # Generate 50 golden PPTX test files
 │   ├── golden_set/            # Golden PPTX files (generated)
 │   └── golden_references/     # Reference PNG renders (generated)
+├── pptx2html-enhance/         # LLM post-processing for unresolved elements (Python)
+│   ├── src/pptx2html_enhance/ # Enhancer, handlers (SmartArt/Math/Effects), providers
+│   └── tests/                 # 32 tests with mock LLM provider
 └── Cargo.toml                 # Workspace root
 ```
 
