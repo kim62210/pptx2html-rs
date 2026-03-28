@@ -346,6 +346,27 @@ pub fn parse_slide<R: Read + Seek>(
                     "bodyPr" if current_shape.is_some() && !in_tc => {
                         parse_body_pr(e, &mut current_shape);
                     }
+                    // normAutofit — shrink text to fit (child of bodyPr)
+                    "normAutofit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            let font_scale = xml_utils::attr_str(e, "fontScale")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            sb.text_auto_fit = AutoFit::Normal {
+                                font_scale,
+                                line_spacing_reduction,
+                            };
+                        }
+                    }
+                    // spAutoFit — resize shape to fit text (child of bodyPr)
+                    "spAutoFit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::Shrink;
+                        }
+                    }
                     // Paragraph (non-table)
                     "p" if current_shape.is_some() && !in_tc => {
                         current_paragraph = Some(ParagraphBuilder::default());
@@ -741,6 +762,27 @@ pub fn parse_slide<R: Read + Seek>(
                     // bodyPr (Empty variant)
                     "bodyPr" if current_shape.is_some() && !in_tc => {
                         parse_body_pr(e, &mut current_shape);
+                    }
+                    // normAutofit (Empty variant — self-closing tag)
+                    "normAutofit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            let font_scale = xml_utils::attr_str(e, "fontScale")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            sb.text_auto_fit = AutoFit::Normal {
+                                font_scale,
+                                line_spacing_reduction,
+                            };
+                        }
+                    }
+                    // spAutoFit (Empty variant)
+                    "spAutoFit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::Shrink;
+                        }
                     }
                     // Paragraph properties (Empty variant, non-table)
                     "pPr" if current_paragraph.is_some() && !in_tc => {

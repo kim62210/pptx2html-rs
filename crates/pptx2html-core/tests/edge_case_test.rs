@@ -983,3 +983,220 @@ fn test_custgeom_empty_pathlist() {
     // Should not crash when rendering
     let _html = render_html(&pptx);
 }
+
+// ── Auto-fit (normAutofit / spAutoFit) ──
+
+#[test]
+fn test_norm_autofit_font_scale_parsed() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="62500" lnSpcReduction="20000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="2400"/><a:t>Scaled text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    let tb = shape.text_body.as_ref().expect("text_body");
+
+    match &tb.auto_fit {
+        AutoFit::Normal {
+            font_scale,
+            line_spacing_reduction,
+        } => {
+            let fs = font_scale.expect("font_scale should be Some");
+            assert!((fs - 0.625).abs() < 0.001, "font_scale: expected ~0.625, got {fs}");
+            let lr = line_spacing_reduction.expect("line_spacing_reduction should be Some");
+            assert!((lr - 0.2).abs() < 0.001, "line_spacing_reduction: expected ~0.2, got {lr}");
+        }
+        other => panic!("Expected AutoFit::Normal, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_norm_autofit_without_attributes() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let tb = pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .expect("text_body");
+
+    match &tb.auto_fit {
+        AutoFit::Normal {
+            font_scale,
+            line_spacing_reduction,
+        } => {
+            assert!(font_scale.is_none(), "font_scale should be None");
+            assert!(
+                line_spacing_reduction.is_none(),
+                "line_spacing_reduction should be None"
+            );
+        }
+        other => panic!("Expected AutoFit::Normal, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_sp_auto_fit_parsed_as_shrink() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr><a:spAutoFit/></a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Shrink</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let tb = pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .expect("text_body");
+    assert!(matches!(tb.auto_fit, AutoFit::Shrink));
+}
+
+#[test]
+fn test_norm_autofit_renders_scaled_font_size() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="50000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="2000"/><a:t>Half size</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // Original 20pt * 0.5 = 10pt
+    assert!(
+        html.contains("font-size: 10.0pt"),
+        "Expected scaled font-size 10.0pt in HTML: {html}"
+    );
+}
+
+#[test]
+fn test_norm_autofit_renders_overflow_hidden() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="80000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Clipped</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // Check that the text-body div's inline style contains overflow:hidden
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 300.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("overflow: hidden"),
+        "Expected overflow:hidden on text-body when fontScale is present, got: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_norm_autofit_line_spacing_reduction() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit lnSpcReduction="20000"/>
+        </a:bodyPr>
+        <a:p>
+          <a:pPr><a:lnSpc><a:spcPct val="150000"/></a:lnSpc></a:pPr>
+          <a:r><a:rPr sz="1800"/><a:t>Reduced spacing</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // line-height 1.5 * (1.0 - 0.2) = 1.2
+    assert!(
+        html.contains("line-height: 1.20"),
+        "Expected reduced line-height 1.20 in HTML: {html}"
+    );
+}
+
+#[test]
+fn test_norm_autofit_no_font_scale_no_overflow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>No scale</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // No fontScale → text-body div should not have overflow:hidden in its style
+    // Extract the text-body div's style to check (global CSS has overflow:hidden on .slide, so check inline)
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 300.min(html.len() - tb_start)];
+    assert!(
+        !tb_chunk.contains("overflow: hidden"),
+        "text-body should not have overflow:hidden when no fontScale, got: {tb_chunk}"
+    );
+    assert!(
+        html.contains("font-size: 18.0pt"),
+        "Font size should remain 18.0pt without fontScale"
+    );
+}

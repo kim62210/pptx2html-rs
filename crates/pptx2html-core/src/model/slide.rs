@@ -186,7 +186,10 @@ impl VerticalAlign {
 pub enum AutoFit {
     #[default]
     None,
-    Normal,
+    Normal {
+        font_scale: Option<f64>,             // 0.0-1.0 (e.g., 0.625 for 62.5%)
+        line_spacing_reduction: Option<f64>, // 0.0-1.0 (e.g., 0.2 for 20%)
+    },
     Shrink,
 }
 

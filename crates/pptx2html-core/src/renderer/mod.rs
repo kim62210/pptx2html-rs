@@ -611,6 +611,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     _ => {}
                 }
             }
+            // Extract auto-fit scaling factors
+            let (font_scale, ln_spc_reduction) = match &text_body.auto_fit {
+                AutoFit::Normal {
+                    font_scale,
+                    line_spacing_reduction,
+                } => (*font_scale, *line_spacing_reduction),
+                _ => (None, None),
+            };
+            // Add overflow:hidden when text is auto-fitted with fontScale
+            if font_scale.is_some() {
+                tb_style.push_str("; overflow: hidden");
+            }
             let _ = write!(
                 html,
                 "<div class=\"text-body {v_class}\" style=\"{tb_style}\">\n"
@@ -624,6 +636,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     &mut auto_num_counters,
                     &text_style_ctx,
                     font_ref_font.as_deref(),
+                    font_scale,
+                    ln_spc_reduction,
                     html,
                 );
             }
@@ -804,6 +818,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             auto_num_counters,
             &TextStyleCtx::default(),
             None,
+            None,
+            None,
             html,
         );
     }
@@ -815,6 +831,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         auto_num_counters: &mut [i32; 9],
         text_ctx: &TextStyleCtx<'_>,
         font_ref_font: Option<&str>,
+        font_scale: Option<f64>,
+        ln_spc_reduction: Option<f64>,
         html: &mut String,
     ) {
         let level = (para.level as usize).min(8);
@@ -826,20 +844,27 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let mut para_style = String::with_capacity(128);
         let _ = write!(para_style, "text-align: {align}");
 
-        // Line spacing (explicit > inherited)
+        // Line spacing (explicit > inherited), with optional reduction from normAutofit
         let line_spacing = para
             .line_spacing
             .as_ref()
             .or_else(|| inherited.and_then(|d| d.line_spacing.as_ref()));
+        let reduction_factor = ln_spc_reduction.map(|r| 1.0 - r).unwrap_or(1.0);
         if let Some(ls) = line_spacing {
             match ls {
                 SpacingValue::Percent(p) => {
-                    let _ = write!(para_style, "; line-height: {p:.2}");
+                    let effective = p * reduction_factor;
+                    let _ = write!(para_style, "; line-height: {effective:.2}");
                 }
                 SpacingValue::Points(pt) => {
-                    let _ = write!(para_style, "; line-height: {pt:.1}pt");
+                    let effective = pt * reduction_factor;
+                    let _ = write!(para_style, "; line-height: {effective:.1}pt");
                 }
             }
+        } else if ln_spc_reduction.is_some() {
+            // Apply reduction to default line-height (1.0 = 100%)
+            let effective = reduction_factor;
+            let _ = write!(para_style, "; line-height: {effective:.2}");
         }
         // Space before (explicit > inherited)
         let space_before = para
@@ -987,6 +1012,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 ctx,
                 run_defaults,
                 font_ref_font,
+                font_scale,
                 html,
             );
         }
@@ -1004,6 +1030,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         ctx: &RenderCtx<'_>,
         run_defaults: Option<&RunDefaults>,
         font_ref_font: Option<&str>,
+        font_scale: Option<f64>,
         html: &mut String,
     ) {
         // Line break (early return)
@@ -1050,14 +1077,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             let _ = write!(run_style, "font-family: '{f}'");
         }
 
-        // Font size: explicit > inherited
+        // Font size: explicit > inherited, scaled by fontScale from normAutofit
         let font_size = run
             .style
             .font_size
             .or_else(|| run_defaults.and_then(|rd| rd.font_size));
         if let Some(sz) = font_size {
+            let effective_sz = sz * font_scale.unwrap_or(1.0);
             push_sep(&mut run_style);
-            let _ = write!(run_style, "font-size: {sz:.1}pt");
+            let _ = write!(run_style, "font-size: {effective_sz:.1}pt");
         }
 
         // Bold: explicit > inherited
