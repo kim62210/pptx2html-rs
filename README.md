@@ -4,9 +4,24 @@ Convert PPTX slides to pixel-perfect HTML in pure Rust.
 
 Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bindings, just Rust.
 
+## Features
+
+- High-fidelity layout preservation using absolute positioning
+- Theme color resolution with 12 color modifiers (tint, shade, lumMod, etc.)
+- Slide master / layout inheritance chain with placeholder matching
+- 30 preset shape SVG rendering with adjust value support
+- Table, group shape, and connector support
+- Image embedding (base64) or external references, with cropping
+- Text styling: bold, italic, underline, bullets, vertical text, shadows
+- Graceful placeholders for unsupported content (SmartArt, OLE, Math)
+- Self-contained HTML output (single file, no external dependencies)
+
 ## Install
 
 ```bash
+# Rust library
+cargo add pptx2html-core
+
 # CLI
 cargo install --path crates/pptx2html-cli
 
@@ -117,66 +132,34 @@ A drag-and-drop demo page is included at `crates/pptx2html-wasm/demo/index.html`
 
 ## Supported Features
 
-| Feature | Status |
-|---------|--------|
-| Slide size / position / rotation | ✅ |
-| Theme color resolution (Theme → ClrMap → Modifiers) | ✅ |
-| Color modifiers (tint, shade, lumMod/Off, satMod/Off, alpha, etc.) | ✅ |
-| SolidFill (RGB / theme / system / preset) | ✅ |
-| GradientFill (linear) | ✅ |
-| NoFill | ✅ |
-| Border / Line (width, color, dash style) | ✅ |
-| Text (font, size, bold, italic, underline, strikethrough) | ✅ |
-| Text color (RGB / theme + modifiers) | ✅ |
-| Superscript / subscript | ✅ |
-| Letter spacing | ✅ |
-| bodyPr (vertical alignment, internal margins) | ✅ |
-| Images (base64 inline + external) | ✅ |
-| Hyperlinks | ✅ |
-| Preset shapes (rect, ellipse, roundRect, etc.) | ✅ |
-| Slide Master / Layout inheritance | ✅ |
-| Placeholder content inheritance | ✅ |
-| Shape style refs (fillRef / lnRef / fontRef) | ✅ |
-| Paragraph spacing (lnSpc / spcBef / spcAft) | ✅ |
-| defaultTextStyle | ✅ |
-| Text style inheritance (txStyles → defaultTextStyle) | ✅ |
-| Font theme refs (+mj-lt / +mn-lt resolution) | ✅ |
-| fontRef (major/minor → font-family) | ✅ |
-| Tables | ✅ |
-| Bullets (multi-level) | ✅ |
-| Group shapes | ✅ |
-| Preset shape SVG (30 shapes with adjust values) | ✅ |
-| Image cropping (srcRect) | ✅ |
-| Image MIME auto-detection | ✅ |
-| Background image fill | ✅ |
-| Chart fallback rendering | ✅ |
-| Text breaks (\<a:br\>) | ✅ |
-| Vertical text (vert, vert270, wordArtVert) | ✅ |
-| Text highlight | ✅ |
-| Text shadow (outerShdw) | ✅ |
-| Slide filtering (range / indices) | ✅ |
-| PyO3 Python bindings | ✅ |
-| WASM target | ✅ |
+See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element mapping.
+
+| Category | Highlights |
+|----------|-----------|
+| Shapes | 30 preset shapes (rect, ellipse, arrows, stars, callouts, etc.) with SVG rendering |
+| Text | Bold, italic, underline, strikethrough, super/subscript, vertical text, shadows, highlights |
+| Colors | RGB, theme, system, preset with 12 modifiers (tint, shade, lumMod, satMod, etc.) |
+| Fills | Solid, gradient, image, noFill; style references (fillRef/lnRef) |
+| Tables | Cell fill, borders, column/row spans, vertical merge |
+| Images | Base64 embedding, external refs, cropping, MIME auto-detection |
+| Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles |
+| Bullets | Character and auto-numbered bullets with font, size, color |
+| Charts | Detection with preview image fallback |
+| Unsupported | SmartArt, OLE, Math rendered as labeled placeholders |
 
 ## Architecture
 
 ```
 Cargo workspace
 ├── crates/
-│   ├── pptx2html-core/        # Core library
-│   │   ├── src/
-│   │   │   ├── model/         # Data model (color, geometry, hierarchy, slide, style)
-│   │   │   ├── parser/        # OOXML SAX parser (7-stage pipeline)
-│   │   │   ├── resolver/      # Property inheritance cascade
-│   │   │   └── renderer/      # HTML/CSS generation + preset shape SVG
-│   │   ├── tests/             # Integration tests
-│   │   └── benches/           # Criterion benchmarks
+│   ├── pptx2html-core/        # Core library (model, parser, resolver, renderer)
 │   ├── pptx2html-cli/         # CLI binary (clap)
 │   ├── pptx2html-py/          # PyO3 Python bindings (maturin)
-│   └── pptx2html-wasm/        # WASM bindings (wasm-bindgen)
-│       └── demo/              # Browser demo page
+│   └── pptx2html-wasm/        # WASM bindings (wasm-bindgen) + demo page
 └── Cargo.toml                 # Workspace root
 ```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline diagram and module responsibilities.
 
 ## Testing
 
@@ -188,11 +171,20 @@ cargo test --workspace
 cargo bench --package pptx2html-core
 ```
 
-- 59 unit tests: color resolution, HSL, modifiers, placeholder matching, inheritance, style refs, geometry SVG
-- 60 integration tests: PPTX generation → parsing → rendering verification
+145 tests across 4 crates, all passing:
+- 59 unit tests: color resolution, HSL, modifiers, placeholder matching, style refs, SVG geometry
+- 80 integration tests: PPTX generation / parsing / rendering verification + edge cases
 - 6 CLI tests: slide selection parser
-- 125 tests total, all passing
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Ensure `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check` all pass
+4. Submit a pull request
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for guidance on adding support for new PPTX features.
 
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE)
