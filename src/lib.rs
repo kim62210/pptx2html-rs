@@ -7,6 +7,7 @@ pub mod error;
 pub mod model;
 pub mod parser;
 pub mod renderer;
+pub mod resolver;
 
 use std::path::Path;
 

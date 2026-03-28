@@ -1,22 +1,17 @@
 //! HTML/CSS renderer
-//! Presentation model → self-contained HTML string generation
+//! Presentation model -> self-contained HTML string generation
 
 use base64::Engine;
 
 use crate::error::PptxResult;
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
+use crate::resolver::inheritance;
+use crate::resolver::placeholder;
 
-/// Extract the f64 value from a SpacingValue
-fn spacing_to_f64(sv: &SpacingValue) -> f64 {
-    match sv {
-        SpacingValue::Percent(v) => *v,
-        SpacingValue::Points(v) => *v,
-    }
-}
-
-/// Rendering context — propagates theme/ClrMap references
+/// Rendering context -- propagates theme/ClrMap references and full presentation
 struct RenderCtx<'a> {
+    pres: &'a Presentation,
     scheme: Option<&'a ColorScheme>,
     clr_map: Option<&'a ClrMap>,
 }
@@ -31,6 +26,15 @@ impl<'a> RenderCtx<'a> {
             .map(|c| c.to_css())
             .or_else(|| color.to_css())
     }
+
+    /// Create a slide-scoped context with resolved ClrMap
+    fn for_slide(&self, slide_clr_map: Option<&'a ClrMap>) -> RenderCtx<'a> {
+        RenderCtx {
+            pres: self.pres,
+            scheme: self.scheme,
+            clr_map: slide_clr_map.or(self.clr_map),
+        }
+    }
 }
 
 pub struct HtmlRenderer;
@@ -42,6 +46,7 @@ impl HtmlRenderer {
         let slide_h = pres.slide_size.height.to_px();
 
         let ctx = RenderCtx {
+            pres,
             scheme: pres.primary_theme().map(|t| &t.color_scheme),
             clr_map: if pres.clr_map.is_empty() { None } else { Some(&pres.clr_map) },
         };
@@ -116,29 +121,84 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
     ) -> String {
         let mut html = String::new();
 
-        let default_bg = Fill::None;
-        let bg = slide.background.as_ref().unwrap_or(&default_bg);
-        let bg_style = Self::fill_to_css(bg, ctx);
+        // Look up layout and master for this slide
+        let layout = slide
+            .layout_idx
+            .and_then(|idx| ctx.pres.layouts.get(idx));
+        let master = layout
+            .map(|l| l.master_idx)
+            .and_then(|idx| ctx.pres.masters.get(idx));
+
+        // Resolve ClrMap per slide (considering overrides)
+        let slide_ctx = if let Some(m) = master {
+            let resolved_cm = inheritance::resolve_clr_map(slide, layout, m);
+            ctx.for_slide(if resolved_cm.is_empty() { None } else { Some(resolved_cm) })
+        } else {
+            ctx.for_slide(None)
+        };
+
+        // Resolve background via inheritance
+        let bg = inheritance::resolve_background(slide, layout, master);
+        let bg_style = Self::fill_to_css(&bg, &slide_ctx);
         html.push_str(&format!(
             "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">\n"
         ));
 
+        // Render master shapes if show_master_sp is true
+        let show_master = slide.show_master_sp
+            && layout.map_or(true, |l| l.show_master_sp);
+        if show_master {
+            if let Some(m) = master {
+                for master_shape in &m.shapes {
+                    if master_shape.hidden {
+                        continue;
+                    }
+                    // Only render master shapes that don't have a matching slide shape
+                    if let Some(ref ph) = master_shape.placeholder {
+                        let has_slide_match =
+                            placeholder::find_matching_placeholder(ph, &slide.shapes).is_some();
+                        if has_slide_match {
+                            continue;
+                        }
+                    }
+                    html.push_str(&Self::render_shape_resolved(master_shape, None, None, &slide_ctx));
+                }
+            }
+        }
+
+        // Render slide shapes with inheritance
         for shape in &slide.shapes {
             if shape.hidden {
                 continue;
             }
-            html.push_str(&Self::render_shape(shape, ctx));
+            // Find matching placeholder in layout/master
+            let layout_match = shape.placeholder.as_ref().and_then(|ph| {
+                layout.and_then(|l| placeholder::find_matching_placeholder(ph, &l.shapes))
+            });
+            let master_match = shape.placeholder.as_ref().and_then(|ph| {
+                master.and_then(|m| placeholder::find_matching_placeholder(ph, &m.shapes))
+            });
+
+            html.push_str(&Self::render_shape_resolved(shape, layout_match, master_match, &slide_ctx));
         }
 
         html.push_str("</div>\n");
         html
     }
 
-    fn render_shape(shape: &Shape, ctx: &RenderCtx<'_>) -> String {
-        let x = shape.position.x.to_px();
-        let y = shape.position.y.to_px();
-        let w = shape.size.width.to_px();
-        let h = shape.size.height.to_px();
+    /// Render shape with resolved properties from inheritance cascade
+    fn render_shape_resolved(
+        shape: &Shape,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+        ctx: &RenderCtx<'_>,
+    ) -> String {
+        // Resolve position/size via inheritance
+        let (pos, size) = inheritance::resolve_position(shape, layout_match, master_match);
+        let x = pos.x.to_px();
+        let y = pos.y.to_px();
+        let w = size.width.to_px();
+        let h = size.height.to_px();
 
         let mut styles = vec![
             format!("left: {x:.1}px"),
@@ -151,7 +211,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push(format!("transform: rotate({:.1}deg)", shape.rotation));
         }
 
-        let fill_css = Self::fill_to_css(&shape.fill, ctx);
+        // Resolve fill via inheritance
+        let resolved_fill = inheritance::resolve_shape_fill(shape, layout_match, master_match);
+        let fill_css = Self::fill_to_css(&resolved_fill, ctx);
         if !fill_css.is_empty() {
             styles.push(fill_css);
         }
@@ -226,17 +288,38 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let align = para.alignment.to_css();
         let mut style_parts = vec![format!("text-align: {align}")];
 
+        // Line spacing
         if let Some(ref ls) = para.line_spacing {
-            let v = spacing_to_f64(ls);
-            style_parts.push(format!("line-height: {v:.2}"));
+            match ls {
+                SpacingValue::Percent(p) => {
+                    style_parts.push(format!("line-height: {p:.2}"));
+                }
+                SpacingValue::Points(pt) => {
+                    style_parts.push(format!("line-height: {pt:.1}pt"));
+                }
+            }
         }
+        // Space before
         if let Some(ref sb) = para.space_before {
-            let v = spacing_to_f64(sb);
-            style_parts.push(format!("margin-top: {v:.1}pt"));
+            match sb {
+                SpacingValue::Percent(p) => {
+                    style_parts.push(format!("margin-top: {p:.1}em"));
+                }
+                SpacingValue::Points(pt) => {
+                    style_parts.push(format!("margin-top: {pt:.1}pt"));
+                }
+            }
         }
+        // Space after
         if let Some(ref sa) = para.space_after {
-            let v = spacing_to_f64(sa);
-            style_parts.push(format!("margin-bottom: {v:.1}pt"));
+            match sa {
+                SpacingValue::Percent(p) => {
+                    style_parts.push(format!("margin-bottom: {p:.1}em"));
+                }
+                SpacingValue::Points(pt) => {
+                    style_parts.push(format!("margin-bottom: {pt:.1}pt"));
+                }
+            }
         }
         if let Some(indent) = para.indent {
             style_parts.push(format!("text-indent: {indent:.1}pt"));
@@ -299,7 +382,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push("text-decoration: line-through".to_string());
         }
 
-        // Color — theme-aware resolution
+        // Color -- theme-aware resolution
         if let Some(css_color) = ctx.color_to_css(&run.style.color) {
             styles.push(format!("color: {css_color}"));
         }
