@@ -1954,6 +1954,15 @@ fn assign_color(
     run: &mut Option<RunBuilder>,
     grad_stops: &mut Vec<GradientStop>,
 ) {
+    // Run text color MUST be checked first — rPr is nested inside sp,
+    // so in_sp_pr can be true simultaneously with in_r_pr.
+    if in_r_pr || depth_contains(depth, "rPr") {
+        if let Some(rb) = run.as_mut() {
+            rb.color = color;
+        }
+        return;
+    }
+
     // Gradient stop color
     if in_grad_fill && depth_contains(depth, "gs") {
         grad_stops.push(GradientStop {
@@ -1978,14 +1987,6 @@ fn assign_color(
     if in_sp_pr && depth_contains(depth, "solidFill") {
         if let Some(sb) = shape.as_mut() {
             sb.fill = Fill::Solid(SolidFill { color });
-        }
-        return;
-    }
-
-    // Run text color (solidFill in rPr, or directly inside rPr)
-    if in_r_pr || depth_contains(depth, "rPr") {
-        if let Some(rb) = run.as_mut() {
-            rb.color = color;
         }
         return;
     }
