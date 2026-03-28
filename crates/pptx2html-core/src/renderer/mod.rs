@@ -161,13 +161,15 @@ body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }}
 .text-body.v-top {{ justify-content: flex-start; }}
 .text-body.v-middle {{ justify-content: center; }}
 .text-body.v-bottom {{ justify-content: flex-end; }}
 .paragraph {{ margin: 0; }}
-.run {{ white-space: pre-wrap; }}
-img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
+.run {{ white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }}
+img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
 .shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
 .shape-svg + .text-body {{ position: relative; z-index: 1; }}
 .chart-placeholder {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
@@ -380,6 +382,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
 
+        // Cropped images need overflow:hidden on the shape container
+        if let ShapeType::Picture(pic) = &shape.shape_type {
+            if pic.crop.is_some() {
+                style_buf.push_str("; overflow: hidden");
+            }
+        }
+
         let _ = write!(html, "<div class=\"shape\" style=\"{style_buf}\">\n");
 
         // Table
@@ -550,22 +559,47 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 format!("images/image-{}.{ext}", pic.data.len() % 100000)
             };
             if let Some(ref crop) = pic.crop {
-                // CSS object-view-box or clip approach for cropping
+                // Use object-fit/object-position for image cropping.
+                // The shape div already has the correct final dimensions.
+                // We compute the visible portion and position within those bounds.
                 let left_pct = crop.left * 100.0;
                 let top_pct = crop.top * 100.0;
                 let right_pct = crop.right * 100.0;
                 let bottom_pct = crop.bottom * 100.0;
-                let scale_x = 100.0 / (100.0 - left_pct - right_pct) * 100.0;
-                let scale_y = 100.0 / (100.0 - top_pct - bottom_pct) * 100.0;
-                let offset_x = -left_pct / (100.0 - left_pct - right_pct) * 100.0;
-                let offset_y = -top_pct / (100.0 - top_pct - bottom_pct) * 100.0;
-                let _ = write!(
-                    html,
-                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\" style=\"\
-                     clip-path: inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%); \
-                     width: {scale_x:.1}%; height: {scale_y:.1}%; \
-                     margin-left: {offset_x:.1}%; margin-top: {offset_y:.1}%\">\n"
-                );
+                let vis_w = 100.0 - left_pct - right_pct;
+                let vis_h = 100.0 - top_pct - bottom_pct;
+                if vis_w > 0.001 && vis_h > 0.001 {
+                    // Scale image so the visible portion fills the shape exactly.
+                    // object-fit:none keeps the image at its natural size, so we
+                    // set explicit width/height as percentages of the shape.
+                    let scale_x = 100.0 / vis_w * 100.0;
+                    let scale_y = 100.0 / vis_h * 100.0;
+                    // Position: shift image so the crop region's top-left aligns
+                    // with the shape's top-left.
+                    let pos_x = if left_pct.abs() < 0.001 {
+                        0.0
+                    } else {
+                        -left_pct / vis_w * 100.0
+                    };
+                    let pos_y = if top_pct.abs() < 0.001 {
+                        0.0
+                    } else {
+                        -top_pct / vis_h * 100.0
+                    };
+                    let _ = write!(
+                        html,
+                        "<img class=\"shape-image\" src=\"{src}\" alt=\"\" style=\"\
+                         object-fit: fill; \
+                         width: {scale_x:.1}%; height: {scale_y:.1}%; \
+                         margin-left: {pos_x:.1}%; margin-top: {pos_y:.1}%\">\n"
+                    );
+                } else {
+                    // Degenerate crop — show the whole image
+                    let _ = write!(
+                        html,
+                        "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n"
+                    );
+                }
             } else {
                 let _ = write!(
                     html,
