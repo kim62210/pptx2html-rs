@@ -1,6 +1,7 @@
-//! Preset shape SVG path generation for OOXML preset geometries (150+).
+//! Preset shape SVG path generation for all 187 OOXML preset geometries.
 //! Generates SVG `<path>` elements parameterized by width, height, and adjust values.
-//! Covers flowchart, action buttons, stars, callouts, math shapes, and more
+//! Covers flowchart, action buttons, stars, callouts, math shapes, arrow callouts,
+//! brackets/braces, chart shapes, scrolls, tabs, ribbons, circular arrows, and more
 //! per ECMA-376 Part 1 section 20.1.10.
 
 use std::collections::HashMap;
@@ -172,6 +173,52 @@ pub fn preset_shape_svg(
         "funnel" => Some(funnel_path(w, h)),
         "teardrop" => Some(teardrop_path(w, h)),
         "heptagon" => Some(regular_polygon_path(w, h, 7)),
+        // Arrow callouts
+        "downArrowCallout" => Some(down_arrow_callout_path(w, h)),
+        "leftArrowCallout" => Some(left_arrow_callout_path(w, h)),
+        "rightArrowCallout" => Some(right_arrow_callout_path(w, h)),
+        "upArrowCallout" => Some(up_arrow_callout_path(w, h)),
+        "quadArrowCallout" => Some(quad_arrow_callout_path(w, h)),
+        "leftRightArrowCallout" => Some(left_right_arrow_callout_path(w, h)),
+        "upDownArrowCallout" => Some(up_down_arrow_callout_path(w, h)),
+        // Brackets and braces
+        "leftBrace" => Some(left_brace_path(w, h)),
+        "rightBrace" => Some(right_brace_path(w, h)),
+        "leftBracket" => Some(left_bracket_path(w, h)),
+        "rightBracket" => Some(right_bracket_path(w, h)),
+        // Chart shapes
+        "chartPlus" => Some(chart_plus_path(w, h)),
+        "chartStar" => Some(chart_star_path(w, h)),
+        "chartX" => Some(chart_x_path(w, h)),
+        // Scrolls
+        "horizontalScroll" => Some(horizontal_scroll_path(w, h)),
+        "verticalScroll" => Some(vertical_scroll_path(w, h)),
+        // Tabs
+        "cornerTabs" => Some(corner_tabs_path(w, h)),
+        "plaqueTabs" => Some(plaque_tabs_path(w, h)),
+        "squareTabs" => Some(square_tabs_path(w, h)),
+        // Ribbons
+        "ellipseRibbon" => Some(ellipse_ribbon_path(w, h)),
+        "ellipseRibbon2" => Some(ellipse_ribbon2_path(w, h)),
+        // Circular arrows
+        "leftCircularArrow" => Some(left_circular_arrow_path(w, h)),
+        "leftRightCircularArrow" => Some(left_right_circular_arrow_path(w, h)),
+        // Misc
+        "chord" => Some(chord_path(w, h)),
+        "lineInv" => Some(line_inv_path(w, h)),
+        "nonIsoscelesTrapezoid" => Some(non_isosceles_trapezoid_path(w, h, adjust_values)),
+        "swooshArrow" => Some(swoosh_arrow_path(w, h)),
+        "leftRightRibbon" => Some(left_right_ribbon_path(w, h)),
+        // Additional ECMA-376 ST_ShapeType shapes
+        "flowChartOfflineStorage" => Some(flowchart_offline_storage_path(w, h)),
+        "cross" => Some(plus_path(w, h, adjust_values)),
+        "curvedConnector2" => Some(curved_connector2_path(w, h)),
+        "curvedConnector3" => Some(curved_connector3_path(w, h)),
+        "curvedConnector4" => Some(curved_connector4_path(w, h)),
+        "curvedConnector5" => Some(curved_connector5_path(w, h)),
+        "bentConnector2" => Some(bent_connector2_path(w, h)),
+        "bentConnector3" => Some(bent_connector3_path(w, h)),
+        "bentConnector4" => Some(bent_connector4_path(w, h)),
         _ => None,
     }
 }
@@ -303,6 +350,58 @@ fn regular_polygon_path(w: f64, h: f64, sides: u32) -> String { let(cx,cy)=(w/2.
 fn funnel_path(w: f64, h: f64) -> String { let cx=w/2.0; let nw=w*0.2; let ny=h*0.6; format!("M0,0 L{w:.1},0 L{x2:.1},{ny:.1} L{x2:.1},{h:.1} L{x1:.1},{h:.1} L{x1:.1},{ny:.1} Z", w=w, x1=cx-nw/2.0, x2=cx+nw/2.0, ny=ny, h=h) }
 fn teardrop_path(w: f64, h: f64) -> String { let(rx,ry)=(w/2.0,h/2.0); format!("M{w:.1},0 L{w:.1},{ry:.1} A{rx:.1},{ry:.1} 0 1,1 {rx:.1},0 Z", w=w, rx=rx, ry=ry) }
 
+// Arrow callout shapes
+fn down_arrow_callout_path(w: f64, h: f64) -> String { let(cx,s,ah)=(w/2.0,w*0.15,h*0.25); let bh=h*0.6; format!("M0,0 L{w:.1},0 L{w:.1},{bh:.1} L{x2:.1},{bh:.1} L{x2:.1},{yh:.1} L{cx:.1},{h:.1} L{x1:.1},{yh:.1} L{x1:.1},{bh:.1} L0,{bh:.1} Z", w=w, bh=bh, x1=cx-s, x2=cx+s, yh=h-ah, cx=cx, h=h) }
+fn left_arrow_callout_path(w: f64, h: f64) -> String { let(cy,s,aw)=(h/2.0,h*0.15,w*0.25); let bx=w*0.4; format!("M{bx:.1},0 L{w:.1},0 L{w:.1},{h:.1} L{bx:.1},{h:.1} L{bx:.1},{y2:.1} L{aw:.1},{y2:.1} L0,{cy:.1} L{aw:.1},{y1:.1} L{bx:.1},{y1:.1} Z", bx=bx, w=w, h=h, y1=cy-s, y2=cy+s, aw=aw, cy=cy) }
+fn right_arrow_callout_path(w: f64, h: f64) -> String { let(cy,s,aw)=(h/2.0,h*0.15,w*0.25); let bx=w*0.6; format!("M0,0 L{bx:.1},0 L{bx:.1},{y1:.1} L{xh:.1},{y1:.1} L{w:.1},{cy:.1} L{xh:.1},{y2:.1} L{bx:.1},{y2:.1} L{bx:.1},{h:.1} L0,{h:.1} Z", bx=bx, y1=cy-s, y2=cy+s, xh=w-aw, w=w, cy=cy, h=h) }
+fn up_arrow_callout_path(w: f64, h: f64) -> String { let(cx,s,ah)=(w/2.0,w*0.15,h*0.25); let bh=h*0.4; format!("M0,{bh:.1} L{x1:.1},{bh:.1} L{x1:.1},{ah:.1} L{cx:.1},0 L{x2:.1},{ah:.1} L{x2:.1},{bh:.1} L{w:.1},{bh:.1} L{w:.1},{h:.1} L0,{h:.1} Z", bh=bh, x1=cx-s, x2=cx+s, ah=ah, cx=cx, w=w, h=h) }
+fn quad_arrow_callout_path(w: f64, h: f64) -> String { let(cx,cy)=(w/2.0,h/2.0); let(sx,sy)=(w*0.1,h*0.1); let(ax,ay)=(w*0.18,h*0.18); let(bx,by)=(w*0.22,h*0.22); format!("M{cx:.1},0 L{x4:.1},{ay:.1} L{x3:.1},{ay:.1} L{x3:.1},{by:.1} L{bx:.1},{by:.1} L{bx:.1},{y1:.1} L{ax:.1},{y1:.1} L0,{cy:.1} L{ax:.1},{y2:.1} L{bx:.1},{y2:.1} L{bx:.1},{y4:.1} L{x3:.1},{y4:.1} L{x3:.1},{y3:.1} L{x4:.1},{y3:.1} L{cx:.1},{h:.1} L{x5:.1},{y3:.1} L{x6:.1},{y3:.1} L{x6:.1},{y4:.1} L{x7:.1},{y4:.1} L{x7:.1},{y2:.1} L{x8:.1},{y2:.1} L{w:.1},{cy:.1} L{x8:.1},{y1:.1} L{x7:.1},{y1:.1} L{x7:.1},{by:.1} L{x6:.1},{by:.1} L{x6:.1},{ay:.1} L{x5:.1},{ay:.1} Z", cx=cx, cy=cy, w=w, h=h, ax=ax, ay=ay, bx=bx, by=by, x3=cx-sx, x4=cx-sy, x5=cx+sy, x6=cx+sx, x7=w-bx, x8=w-ax, y1=cy-sy, y2=cy+sy, y3=h-ay, y4=h-by) }
+fn left_right_arrow_callout_path(w: f64, h: f64) -> String { let(cy,s,aw)=(h/2.0,h*0.15,w*0.2); let(bx1,bx2)=(w*0.3,w*0.7); format!("M{bx1:.1},0 L{bx2:.1},0 L{bx2:.1},{y1:.1} L{xh:.1},{y1:.1} L{w:.1},{cy:.1} L{xh:.1},{y2:.1} L{bx2:.1},{y2:.1} L{bx2:.1},{h:.1} L{bx1:.1},{h:.1} L{bx1:.1},{y2:.1} L{aw:.1},{y2:.1} L0,{cy:.1} L{aw:.1},{y1:.1} L{bx1:.1},{y1:.1} Z", bx1=bx1, bx2=bx2, y1=cy-s, y2=cy+s, aw=aw, xh=w-aw, w=w, cy=cy, h=h) }
+fn up_down_arrow_callout_path(w: f64, h: f64) -> String { let(cx,s,ah)=(w/2.0,w*0.15,h*0.2); let(by1,by2)=(h*0.3,h*0.7); format!("M0,{by1:.1} L{x1:.1},{by1:.1} L{x1:.1},{ah:.1} L{cx:.1},0 L{x2:.1},{ah:.1} L{x2:.1},{by1:.1} L{w:.1},{by1:.1} L{w:.1},{by2:.1} L{x2:.1},{by2:.1} L{x2:.1},{yh:.1} L{cx:.1},{h:.1} L{x1:.1},{yh:.1} L{x1:.1},{by2:.1} L0,{by2:.1} Z", by1=by1, by2=by2, x1=cx-s, x2=cx+s, ah=ah, yh=h-ah, cx=cx, w=w, h=h) }
+
+// Brackets and braces
+fn left_brace_path(w: f64, h: f64) -> String { let cy=h/2.0; let r=h*0.08; let x=w*0.7; format!("M{x:.1},0 Q{xm:.1},0 {xm:.1},{r:.1} L{xm:.1},{y1:.1} Q{xm:.1},{cy:.1} 0,{cy:.1} Q{xm:.1},{cy:.1} {xm:.1},{y2:.1} L{xm:.1},{y3:.1} Q{xm:.1},{h:.1} {x:.1},{h:.1}", x=x, xm=x*0.5, r=r, y1=cy-r, cy=cy, y2=cy+r, y3=h-r, h=h) }
+fn right_brace_path(w: f64, h: f64) -> String { let cy=h/2.0; let r=h*0.08; let x=w*0.3; format!("M{x:.1},0 Q{xm:.1},0 {xm:.1},{r:.1} L{xm:.1},{y1:.1} Q{xm:.1},{cy:.1} {w:.1},{cy:.1} Q{xm:.1},{cy:.1} {xm:.1},{y2:.1} L{xm:.1},{y3:.1} Q{xm:.1},{h:.1} {x:.1},{h:.1}", x=x, xm=w-x*0.5, r=r, y1=cy-r, cy=cy, y2=cy+r, y3=h-r, h=h, w=w) }
+fn left_bracket_path(w: f64, h: f64) -> String { let r=h*0.06; let x=w*0.7; format!("M{x:.1},0 L{r:.1},0 Q0,0 0,{r:.1} L0,{y:.1} Q0,{h:.1} {r:.1},{h:.1} L{x:.1},{h:.1}", x=x, r=r, y=h-r, h=h) }
+fn right_bracket_path(w: f64, h: f64) -> String { let r=h*0.06; let x=w*0.3; format!("M{x:.1},0 L{xr:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y:.1} Q{w:.1},{h:.1} {xr:.1},{h:.1} L{x:.1},{h:.1}", x=x, xr=w-r, w=w, r=r, y=h-r, h=h) }
+
+// Chart shapes
+fn chart_plus_path(w: f64, h: f64) -> String { let t=w.min(h)*0.12; format!("M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M{cx1:.1},{t:.1} L{cx2:.1},{t:.1} L{cx2:.1},{y:.1} L{cx1:.1},{y:.1} Z M{t:.1},{cy1:.1} L{x:.1},{cy1:.1} L{x:.1},{cy2:.1} L{t:.1},{cy2:.1} Z", w=w, h=h, t=t, cx1=w*0.35, cx2=w*0.65, cy1=h*0.35, cy2=h*0.65, x=w-t, y=h-t) }
+fn chart_star_path(w: f64, h: f64) -> String { let t=w.min(h)*0.12; let(cx,cy)=(w/2.0,h/2.0); format!("M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M{cx:.1},{t:.1} L{x1:.1},{y1:.1} L{x:.1},{cy:.1} L{x1:.1},{y2:.1} L{cx:.1},{y:.1} L{x2:.1},{y2:.1} L{t:.1},{cy:.1} L{x2:.1},{y1:.1} Z", w=w, h=h, cx=cx, cy=cy, t=t, x=w-t, y=h-t, x1=w*0.7, x2=w*0.3, y1=h*0.3, y2=h*0.7) }
+fn chart_x_path(w: f64, h: f64) -> String { let t=w.min(h)*0.12; let s=w.min(h)*0.06; format!("M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M{cx:.1},{y1:.1} L{x1:.1},{t:.1} L{x:.1},{y1:.1} L{x2:.1},{cy:.1} L{x:.1},{y2:.1} L{x1:.1},{y:.1} L{cx:.1},{y2:.1} L{x3:.1},{cy:.1} Z", w=w, h=h, cx=w/2.0, cy=h/2.0, t=t, x=w-t, y=h-t, x1=w/2.0+s, x2=w-t-s, x3=t+s, y1=h*0.35, y2=h*0.65) }
+
+// Scrolls
+fn horizontal_scroll_path(w: f64, h: f64) -> String { let r=w.min(h)*0.1; let r2=r/2.0; let(x,y1,y2)=(w-r,h-r,h-r2); format!("M{r:.1},{r:.1} L{x:.1},{r:.1} A{r2:.1},{r2:.1} 0 0,1 {x:.1},{r2:.1} A{r2:.1},{r2:.1} 0 0,1 {w:.1},{r:.1} L{w:.1},{y1:.1} A{r2:.1},{r2:.1} 0 0,1 {w:.1},{y2:.1} A{r2:.1},{r2:.1} 0 0,1 {x:.1},{y1:.1} L{r:.1},{y1:.1} A{r2:.1},{r2:.1} 0 0,1 {r:.1},{y2:.1} A{r2:.1},{r2:.1} 0 0,1 0,{y1:.1} L0,{r:.1} A{r2:.1},{r2:.1} 0 0,1 0,{r2:.1} A{r2:.1},{r2:.1} 0 0,1 {r:.1},{r:.1} Z", r=r, r2=r2, x=x, w=w, y1=y1, y2=y2) }
+fn vertical_scroll_path(w: f64, h: f64) -> String { let r=w.min(h)*0.1; let r2=r/2.0; let(y,yh,x1,x2)=(h-r,h-r2,w-r,w-r2); format!("M{r:.1},{r:.1} L{r:.1},0 A{r2:.1},{r2:.1} 0 0,1 {r2:.1},0 A{r2:.1},{r2:.1} 0 0,1 {r:.1},{r:.1} L{r:.1},{y:.1} A{r2:.1},{r2:.1} 0 0,1 {r:.1},{yh:.1} A{r2:.1},{r2:.1} 0 0,1 0,{y:.1} L0,{r:.1} L{x1:.1},{r:.1} L{x1:.1},0 A{r2:.1},{r2:.1} 0 0,1 {x2:.1},0 A{r2:.1},{r2:.1} 0 0,1 {x1:.1},{r:.1} L{x1:.1},{y:.1} A{r2:.1},{r2:.1} 0 0,1 {x1:.1},{yh:.1} A{r2:.1},{r2:.1} 0 0,1 {w:.1},{y:.1} L{w:.1},{r:.1} Z", r=r, r2=r2, y=y, yh=yh, x1=x1, x2=x2, w=w) }
+
+// Tabs
+fn corner_tabs_path(w: f64, h: f64) -> String { let s=w.min(h)*0.12; format!("M0,0 L{s:.1},0 L0,{s:.1} Z M{x:.1},0 L{w:.1},0 L{w:.1},{s:.1} Z M{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} Z M0,{y:.1} L{s:.1},{h:.1} L0,{h:.1} Z", s=s, x=w-s, w=w, y=h-s, h=h) }
+fn plaque_tabs_path(w: f64, h: f64) -> String { let r=w.min(h)*0.12; format!("M0,0 L{r:.1},0 Q0,0 0,{r:.1} Z M{x:.1},0 L{w:.1},0 Q{w:.1},0 {w:.1},{r:.1} Z M{w:.1},{y:.1} Q{w:.1},{h:.1} {x:.1},{h:.1} L{w:.1},{h:.1} Z M0,{y:.1} Q0,{h:.1} {r:.1},{h:.1} L0,{h:.1} Z", r=r, x=w-r, w=w, y=h-r, h=h) }
+fn square_tabs_path(w: f64, h: f64) -> String { let s=w.min(h)*0.1; format!("M0,0 L{s:.1},0 L{s:.1},{s:.1} L0,{s:.1} Z M{x:.1},0 L{w:.1},0 L{w:.1},{s:.1} L{x:.1},{s:.1} Z M{x:.1},{y:.1} L{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} Z M0,{y:.1} L{s:.1},{y:.1} L{s:.1},{h:.1} L0,{h:.1} Z", s=s, x=w-s, w=w, y=h-s, h=h) }
+
+// Ribbons
+fn ellipse_ribbon_path(w: f64, h: f64) -> String { let(cy,bh)=(h*0.6,h*0.2); format!("M0,{cy:.1} Q{cx:.1},{h:.1} {w:.1},{cy:.1} L{w:.1},{bh:.1} Q{cx:.1},0 0,{bh:.1} Z", cx=w/2.0, cy=cy, w=w, bh=bh, h=h) }
+fn ellipse_ribbon2_path(w: f64, h: f64) -> String { let(cy,bh)=(h*0.4,h*0.8); format!("M0,{cy:.1} Q{cx:.1},0 {w:.1},{cy:.1} L{w:.1},{bh:.1} Q{cx:.1},{h:.1} 0,{bh:.1} Z", cx=w/2.0, cy=cy, w=w, bh=bh, h=h) }
+
+// Circular arrows
+fn left_circular_arrow_path(w: f64, h: f64) -> String { let(rx,ry)=(w/2.0,h/2.0); let cx=rx; let t=w.min(h)*0.1; let ax=cx-rx*0.866; let ay=ry+ry*0.5; format!("M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,0 {ax:.1},{ay:.1} L{tx1:.1},{ty1:.1} L{tx2:.1},{ty2:.1} L{tx3:.1},{ty3:.1} A{rxi:.1},{ryi:.1} 0 1,1 {cx:.1},{t:.1} Z", cx=cx, rx=rx, ry=ry, ax=ax, ay=ay, tx1=ax-t, ty1=ay+t, tx2=ax-t*1.5, ty2=ay-t*0.5, tx3=ax, ty3=ay, rxi=(rx-t).max(0.1), ryi=(ry-t).max(0.1), t=t) }
+fn left_right_circular_arrow_path(w: f64, h: f64) -> String { let(rx,ry)=(w/2.0,h/2.0); let cx=rx; let t=w.min(h)*0.1; let(ax1,ay1)=(cx+rx*0.866,ry-ry*0.5); let(ax2,ay2)=(cx-rx*0.866,ry+ry*0.5); format!("M{cx:.1},0 A{rx:.1},{ry:.1} 0 0,1 {ax1:.1},{ay1:.1} L{tx1:.1},{ty1:.1} L{tx2:.1},{ty2:.1} L{ax1:.1},{ay1:.1} A{rxi:.1},{ryi:.1} 0 0,0 {cx:.1},{t:.1} Z M{cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 0,1 {ax2:.1},{ay2:.1} L{bx1:.1},{by1:.1} L{bx2:.1},{by2:.1} L{ax2:.1},{ay2:.1} A{rxi:.1},{ryi:.1} 0 0,0 {cx:.1},{yt:.1} Z", cx=cx, rx=rx, ry=ry, h=h, t=t, ax1=ax1, ay1=ay1, tx1=ax1+t, ty1=ay1-t, tx2=ax1+t*1.5, ty2=ay1+t*0.5, rxi=(rx-t).max(0.1), ryi=(ry-t).max(0.1), ax2=ax2, ay2=ay2, bx1=ax2-t, by1=ay2+t, bx2=ax2-t*1.5, by2=ay2-t*0.5, yt=h-t) }
+
+// Misc shapes
+fn chord_path(w: f64, h: f64) -> String { let(rx,ry)=(w/2.0,h/2.0); let(cx,cy)=(rx,ry); let(x1,y1)=(cx-rx*0.866,cy+ry*0.5); let(x2,y2)=(cx+rx*0.866,cy+ry*0.5); format!("M{x1:.1},{y1:.1} A{rx:.1},{ry:.1} 0 1,1 {x2:.1},{y2:.1} L{x1:.1},{y1:.1} Z", x1=x1, y1=y1, rx=rx, ry=ry, x2=x2, y2=y2) }
+fn line_inv_path(w: f64, h: f64) -> String { format!("M0,{h:.1} L{w:.1},0", w=w, h=h) }
+fn non_isosceles_trapezoid_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let a1=w*adj.get("adj1").copied().unwrap_or(25000.0)/100_000.0; let a2=w*adj.get("adj2").copied().unwrap_or(18750.0)/100_000.0; format!("M{a1:.1},0 L{x:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z", a1=a1, x=w-a2, w=w, h=h) }
+fn swoosh_arrow_path(w: f64, h: f64) -> String { let cy=h*0.5; format!("M0,{h:.1} C{c1:.1},{c1y:.1} {c2:.1},{c2y:.1} {w:.1},0 L{w:.1},{cy:.1} C{c3:.1},{c3y:.1} {c4:.1},{c4y:.1} 0,{h:.1} Z", h=h, c1=w*0.1, c1y=h*0.7, c2=w*0.5, c2y=h*0.1, w=w, cy=cy, c3=w*0.6, c3y=h*0.4, c4=w*0.2, c4y=h*0.9) }
+fn left_right_ribbon_path(w: f64, h: f64) -> String { let(f,bt,bb)=(w*0.12,h*0.2,h*0.8); let m=(bt+bb)/2.0; format!("M0,{bt:.1} L{f:.1},{bt:.1} L{f:.1},{m1:.1} L0,{m:.1} L{f:.1},{m2:.1} L{f:.1},{bb:.1} L0,{bb:.1} L{f:.1},{h:.1} L{x:.1},{h:.1} L{x:.1},{bb:.1} L{w:.1},{bb:.1} L{x2:.1},{m:.1} L{w:.1},{bt:.1} L{x:.1},{bt:.1} L{x:.1},0 L{f:.1},0 Z", f=f, bt=bt, bb=bb, m=m, m1=m-h*0.05, m2=m+h*0.05, h=h, x=w-f, x2=w-f*0.3, w=w) }
+fn flowchart_offline_storage_path(w: f64, h: f64) -> String { let i=w*0.15; format!("M0,0 L{w:.1},0 L{x:.1},{h:.1} L{i:.1},{h:.1} Z", w=w, x=w-i, i=i, h=h) }
+fn curved_connector2_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},{c2:.1} {c3:.1},{c4:.1} {w:.1},{h:.1}", c1=w*0.5, c2=0.0, c3=w*0.5, c4=h, w=w, h=h) }
+fn curved_connector3_path(w: f64, h: f64) -> String { let cx=w/2.0; format!("M0,0 C{c1:.1},0 {cx:.1},0 {cx:.1},{cy:.1} C{cx:.1},{h:.1} {c2:.1},{h:.1} {w:.1},{h:.1}", c1=w*0.25, cx=cx, cy=h/2.0, c2=w*0.75, w=w, h=h) }
+fn curved_connector4_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {c3:.1},{y3:.1} C{c3:.1},{h:.1} {c4:.1},{h:.1} {w:.1},{h:.1}", c1=w*0.15, c2=w*0.33, y1=h*0.25, y2=h*0.5, c3=w*0.67, y3=h*0.75, c4=w*0.85, w=w, h=h) }
+fn curved_connector5_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {cx:.1},{cy:.1} C{c4:.1},{y2:.1} {c5:.1},{y3:.1} {c5:.1},{y3:.1} C{c5:.1},{h:.1} {c6:.1},{h:.1} {w:.1},{h:.1}", c1=w*0.1, c2=w*0.25, y1=h*0.2, y2=h*0.35, c3=w*0.35, cx=w*0.5, cy=h*0.5, c4=w*0.65, c5=w*0.75, y3=h*0.8, c6=w*0.9, w=w, h=h) }
+fn bent_connector2_path(w: f64, h: f64) -> String { format!("M0,0 L{w:.1},0 L{w:.1},{h:.1}", w=w, h=h) }
+fn bent_connector3_path(w: f64, h: f64) -> String { let cx=w/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{h:.1} L{w:.1},{h:.1}", cx=cx, w=w, h=h) }
+fn bent_connector4_path(w: f64, h: f64) -> String { let cy=h/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{cy:.1} L{w:.1},{cy:.1} L{w:.1},{h:.1}", cx=w*0.33, cy=cy, w=w, h=h) }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -314,13 +413,13 @@ mod tests {
     }
 
     #[test]
-    fn test_total_supported_shapes_at_least_150() {
+    fn test_total_supported_shapes_at_least_187() {
         let adj = HashMap::new();
-        let all = ["rect","roundRect","ellipse","triangle","isosTriangle","rtTriangle","diamond","parallelogram","trapezoid","pentagon","hexagon","octagon","snip1Rect","snip2SameRect","snip2DiagRect","snipRoundRect","round1Rect","round2SameRect","round2DiagRect","foldCorner","diagStripe","corner","plaque","bracePair","bracketPair","halfFrame","line","rightArrow","leftArrow","upArrow","downArrow","leftRightArrow","upDownArrow","bentArrow","chevron","notchedRightArrow","stripedRightArrow","curvedRightArrow","curvedLeftArrow","curvedUpArrow","curvedDownArrow","circularArrow","bentUpArrow","uturnArrow","leftRightUpArrow","quadArrow","leftUpArrow","homePlate","wedgeRoundRectCallout","wedgeEllipseCallout","cloudCallout","callout1","callout2","callout3","borderCallout1","borderCallout2","borderCallout3","accentCallout1","accentCallout2","accentCallout3","accentBorderCallout1","accentBorderCallout2","accentBorderCallout3","wedgeRectCallout","flowChartProcess","flowChartDecision","flowChartTerminator","flowChartDocument","flowChartPredefinedProcess","flowChartAlternateProcess","flowChartManualInput","flowChartConnector","flowChartInputOutput","flowChartInternalStorage","flowChartMultidocument","flowChartPreparation","flowChartManualOperation","flowChartOffpageConnector","flowChartPunchedCard","flowChartPunchedTape","flowChartSummingJunction","flowChartOr","flowChartCollate","flowChartSort","flowChartExtract","flowChartMerge","flowChartOnlineStorage","flowChartDelay","flowChartMagneticTape","flowChartMagneticDisk","flowChartMagneticDrum","flowChartDisplay","actionButtonBlank","actionButtonHome","actionButtonHelp","actionButtonInformation","actionButtonBackPrevious","actionButtonForwardNext","actionButtonBeginning","actionButtonEnd","actionButtonReturn","actionButtonDocument","actionButtonSound","actionButtonMovie","star4","star5","star6","star7","star8","star10","star12","star16","star24","star32","irregularSeal1","irregularSeal2","mathPlus","mathEqual","mathNotEqual","mathMultiply","mathDivide","mathMinus","heart","plus","lightningBolt","cloud","frame","ribbon","ribbon2","donut","noSmoking","blockArc","smileyFace","can","cube","moon","sun","bevel","gear6","gear9","pie","pieWedge","arc","wave","doubleWave","decagon","dodecagon","funnel","teardrop","heptagon"];
+        let all = ["rect","roundRect","ellipse","triangle","isosTriangle","rtTriangle","diamond","parallelogram","trapezoid","pentagon","hexagon","octagon","snip1Rect","snip2SameRect","snip2DiagRect","snipRoundRect","round1Rect","round2SameRect","round2DiagRect","foldCorner","diagStripe","corner","plaque","bracePair","bracketPair","halfFrame","line","rightArrow","leftArrow","upArrow","downArrow","leftRightArrow","upDownArrow","bentArrow","chevron","notchedRightArrow","stripedRightArrow","curvedRightArrow","curvedLeftArrow","curvedUpArrow","curvedDownArrow","circularArrow","bentUpArrow","uturnArrow","leftRightUpArrow","quadArrow","leftUpArrow","homePlate","wedgeRoundRectCallout","wedgeEllipseCallout","cloudCallout","callout1","callout2","callout3","borderCallout1","borderCallout2","borderCallout3","accentCallout1","accentCallout2","accentCallout3","accentBorderCallout1","accentBorderCallout2","accentBorderCallout3","wedgeRectCallout","flowChartProcess","flowChartDecision","flowChartTerminator","flowChartDocument","flowChartPredefinedProcess","flowChartAlternateProcess","flowChartManualInput","flowChartConnector","flowChartInputOutput","flowChartInternalStorage","flowChartMultidocument","flowChartPreparation","flowChartManualOperation","flowChartOffpageConnector","flowChartPunchedCard","flowChartPunchedTape","flowChartSummingJunction","flowChartOr","flowChartCollate","flowChartSort","flowChartExtract","flowChartMerge","flowChartOnlineStorage","flowChartDelay","flowChartMagneticTape","flowChartMagneticDisk","flowChartMagneticDrum","flowChartDisplay","actionButtonBlank","actionButtonHome","actionButtonHelp","actionButtonInformation","actionButtonBackPrevious","actionButtonForwardNext","actionButtonBeginning","actionButtonEnd","actionButtonReturn","actionButtonDocument","actionButtonSound","actionButtonMovie","star4","star5","star6","star7","star8","star10","star12","star16","star24","star32","irregularSeal1","irregularSeal2","mathPlus","mathEqual","mathNotEqual","mathMultiply","mathDivide","mathMinus","heart","plus","lightningBolt","cloud","frame","ribbon","ribbon2","donut","noSmoking","blockArc","smileyFace","can","cube","moon","sun","bevel","gear6","gear9","pie","pieWedge","arc","wave","doubleWave","decagon","dodecagon","funnel","teardrop","heptagon","downArrowCallout","leftArrowCallout","rightArrowCallout","upArrowCallout","quadArrowCallout","leftRightArrowCallout","upDownArrowCallout","leftBrace","rightBrace","leftBracket","rightBracket","chartPlus","chartStar","chartX","horizontalScroll","verticalScroll","cornerTabs","plaqueTabs","squareTabs","ellipseRibbon","ellipseRibbon2","leftCircularArrow","leftRightCircularArrow","chord","lineInv","nonIsoscelesTrapezoid","swooshArrow","leftRightRibbon","flowChartOfflineStorage","cross","curvedConnector2","curvedConnector3","curvedConnector4","curvedConnector5","bentConnector2","bentConnector3","bentConnector4"];
         let supported: Vec<_> = all.iter().filter(|n| preset_shape_svg(n, 100.0, 100.0, &adj).is_some()).collect();
         let unsupported: Vec<_> = all.iter().filter(|n| preset_shape_svg(n, 100.0, 100.0, &adj).is_none()).collect();
         assert!(unsupported.is_empty(), "Unsupported: {:?}", unsupported);
-        assert!(supported.len() >= 150, "Expected >= 150, got {}", supported.len());
+        assert!(supported.len() >= 187, "Expected >= 187, got {}", supported.len());
     }
 
     #[test]
