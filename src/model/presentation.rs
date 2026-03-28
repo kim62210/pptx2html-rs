@@ -1,0 +1,104 @@
+use std::collections::HashMap;
+
+use super::geometry::Size;
+use super::slide::Slide;
+
+/// Top-level presentation structure
+#[derive(Debug, Clone, Default)]
+pub struct Presentation {
+    pub slides: Vec<Slide>,
+    pub slide_size: Size,
+    pub title: Option<String>,
+    pub theme: Option<Theme>,
+    pub clr_map: ClrMap,
+}
+
+/// Theme data
+#[derive(Debug, Clone, Default)]
+pub struct Theme {
+    pub name: String,
+    pub color_scheme: ColorScheme,
+    pub font_scheme: FontScheme,
+}
+
+/// Theme color scheme (12 colors)
+#[derive(Debug, Clone, Default)]
+pub struct ColorScheme {
+    pub dk1: String,
+    pub lt1: String,
+    pub dk2: String,
+    pub lt2: String,
+    pub accent1: String,
+    pub accent2: String,
+    pub accent3: String,
+    pub accent4: String,
+    pub accent5: String,
+    pub accent6: String,
+    pub hlink: String,
+    pub fol_hlink: String,
+}
+
+impl ColorScheme {
+    /// Look up hex color value by scheme name
+    pub fn get(&self, name: &str) -> Option<String> {
+        let hex = match name {
+            "dk1" => &self.dk1,
+            "lt1" => &self.lt1,
+            "dk2" => &self.dk2,
+            "lt2" => &self.lt2,
+            "accent1" => &self.accent1,
+            "accent2" => &self.accent2,
+            "accent3" => &self.accent3,
+            "accent4" => &self.accent4,
+            "accent5" => &self.accent5,
+            "accent6" => &self.accent6,
+            "hlink" => &self.hlink,
+            "folHlink" | "fol_hlink" => &self.fol_hlink,
+            _ => return None,
+        };
+        if hex.is_empty() {
+            None
+        } else {
+            Some(hex.clone())
+        }
+    }
+}
+
+/// Theme font scheme
+#[derive(Debug, Clone, Default)]
+pub struct FontScheme {
+    pub major_latin: String,
+    pub minor_latin: String,
+    pub major_east_asian: Option<String>,
+    pub minor_east_asian: Option<String>,
+}
+
+/// ClrMap — color name mapping (from slideMaster `<a:clrMap>`)
+///
+/// e.g. stores tx1→dk1, bg1→lt1 mappings
+#[derive(Debug, Clone, Default)]
+pub struct ClrMap {
+    map: HashMap<String, String>,
+}
+
+impl ClrMap {
+    pub fn get(&self, key: &str) -> Option<&String> {
+        // Compatibility aliases
+        let normalized = match key {
+            "t1" => "tx1",
+            "t2" => "tx2",
+            "followedHyperlink" => "folHlink",
+            "hyperlink" => "hlink",
+            other => other,
+        };
+        self.map.get(normalized)
+    }
+
+    pub fn set(&mut self, key: &str, value: &str) {
+        self.map.insert(key.to_string(), value.to_string());
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+}
