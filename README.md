@@ -83,6 +83,13 @@ let html = convert_file_with_options(Path::new("presentation.pptx"), &opts)?;
 // Get metadata
 let info = get_info(Path::new("presentation.pptx"))?;
 println!("Slides: {}, Size: {}x{}", info.slide_count, info.width_px, info.height_px);
+
+// Conversion with metadata (SmartArt/OLE/Math sideband)
+let result = pptx2html_core::convert_file_with_metadata(Path::new("presentation.pptx"))?;
+println!("HTML length: {}", result.html.len());
+for elem in &result.unresolved_elements {
+    println!("Unresolved: {:?} at slide {}", elem.element_type, elem.slide_index);
+}
 ```
 
 ### Python
@@ -107,6 +114,12 @@ html = pptx2html.convert(
 # Get metadata
 info = pptx2html.get_info("presentation.pptx")
 print(f"Slides: {info.slide_count}, Size: {info.width_px}x{info.height_px}")
+
+# Conversion with metadata (SmartArt/OLE/Math sideband)
+result = pptx2html.convert_with_metadata("presentation.pptx")
+print(f"HTML: {len(result.html)} chars, Unresolved: {len(result.unresolved_elements)}")
+for elem in result.unresolved_elements:
+    print(f"  {elem.element_type} at slide {elem.slide_index}: {elem.placeholder_id}")
 ```
 
 ### WASM / Browser
@@ -145,7 +158,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 | Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles |
 | Bullets | Character and auto-numbered bullets with font, size, color |
 | Charts | Detection with preview image fallback |
-| Unsupported | SmartArt, OLE, Math rendered as labeled placeholders |
+| Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
 
 ## Architecture
 
@@ -183,10 +196,11 @@ cargo test --workspace
 cargo bench --package pptx2html-core
 ```
 
-145 tests across 4 crates, all passing:
+154 tests across 4 crates, all passing:
 - 59 unit tests: color resolution, HSL, modifiers, placeholder matching, style refs, SVG geometry
-- 80 integration tests: PPTX generation / parsing / rendering verification + edge cases
+- 87 integration tests: PPTX generation / parsing / rendering verification + edge cases + metadata sideband
 - 6 CLI tests: slide selection parser
+- 2 doc-tests
 
 ## Autoresearch (Experiment Loop)
 
