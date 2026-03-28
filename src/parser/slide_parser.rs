@@ -40,6 +40,12 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_spc_bef = false;
     let mut in_spc_aft = false;
 
+    // Shape style reference (<p:style>) state
+    let mut in_p_style = false;
+    let mut p_style_builder: Option<ShapeStyleRef> = None;
+    let mut p_style_current_ref: Option<String> = None;
+    let mut p_style_idx: Option<String> = None;
+
     loop {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
@@ -113,6 +119,16 @@ pub fn parse_slide<R: Read + Seek>(
                     // Text content
                     "t" if current_run.is_some() => {
                         in_text = true;
+                    }
+                    // Shape style reference (<p:style>)
+                    "style" if current_shape.is_some() && !in_sp_pr => {
+                        in_p_style = true;
+                        p_style_builder = Some(ShapeStyleRef::default());
+                    }
+                    // Style ref children (lnRef, fillRef, effectRef, fontRef)
+                    "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
+                        p_style_current_ref = Some(local.clone());
+                        p_style_idx = xml_utils::attr_str(e, "idx");
                     }
                     // Fill — solidFill (Start variant)
                     "solidFill" => {
@@ -226,47 +242,85 @@ pub fn parse_slide<R: Read + Seek>(
                             grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
                         }
                     }
+                    // Style ref elements (Empty variant -- self-closing with color child)
+                    "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
+                        // Self-closing style ref with no child color
+                        if let Some(idx_val) = xml_utils::attr_str(e, "idx") {
+                            assign_style_ref_no_color(
+                                &local,
+                                &idx_val,
+                                &mut p_style_builder,
+                            );
+                        }
+                    }
                     // Color element (Empty — simple color without modifiers)
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
-                            assign_color(
-                                color,
-                                &depth,
-                                in_sp_pr, in_ln, in_r_pr, in_grad_fill,
-                                current_gs_pos,
-                                &mut current_shape,
-                                &mut current_run,
-                                &mut grad_stops,
-                            );
+                            if in_p_style && p_style_current_ref.is_some() {
+                                assign_style_ref_color(
+                                    p_style_current_ref.as_deref().unwrap_or(""),
+                                    p_style_idx.as_deref().unwrap_or("0"),
+                                    color,
+                                    &mut p_style_builder,
+                                );
+                            } else {
+                                assign_color(
+                                    color,
+                                    &depth,
+                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    current_gs_pos,
+                                    &mut current_shape,
+                                    &mut current_run,
+                                    &mut grad_stops,
+                                );
+                            }
                         }
                     }
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
-                            assign_color(
-                                color,
-                                &depth,
-                                in_sp_pr, in_ln, in_r_pr, in_grad_fill,
-                                current_gs_pos,
-                                &mut current_shape,
-                                &mut current_run,
-                                &mut grad_stops,
-                            );
+                            if in_p_style && p_style_current_ref.is_some() {
+                                assign_style_ref_color(
+                                    p_style_current_ref.as_deref().unwrap_or(""),
+                                    p_style_idx.as_deref().unwrap_or("0"),
+                                    color,
+                                    &mut p_style_builder,
+                                );
+                            } else {
+                                assign_color(
+                                    color,
+                                    &depth,
+                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    current_gs_pos,
+                                    &mut current_shape,
+                                    &mut current_run,
+                                    &mut grad_stops,
+                                );
+                            }
                         }
                     }
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::preset(val);
-                            assign_color(
-                                color,
-                                &depth,
-                                in_sp_pr, in_ln, in_r_pr, in_grad_fill,
-                                current_gs_pos,
-                                &mut current_shape,
-                                &mut current_run,
-                                &mut grad_stops,
-                            );
+                            if in_p_style && p_style_current_ref.is_some() {
+                                assign_style_ref_color(
+                                    p_style_current_ref.as_deref().unwrap_or(""),
+                                    p_style_idx.as_deref().unwrap_or("0"),
+                                    color,
+                                    &mut p_style_builder,
+                                );
+                            } else {
+                                assign_color(
+                                    color,
+                                    &depth,
+                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    current_gs_pos,
+                                    &mut current_shape,
+                                    &mut current_run,
+                                    &mut grad_stops,
+                                );
+                            }
                         }
                     }
                     "sysClr" => {
@@ -278,15 +332,24 @@ pub fn parse_slide<R: Read + Seek>(
                             Color::none()
                         };
                         if !color.is_none() {
-                            assign_color(
-                                color,
-                                &depth,
-                                in_sp_pr, in_ln, in_r_pr, in_grad_fill,
-                                current_gs_pos,
-                                &mut current_shape,
-                                &mut current_run,
-                                &mut grad_stops,
-                            );
+                            if in_p_style && p_style_current_ref.is_some() {
+                                assign_style_ref_color(
+                                    p_style_current_ref.as_deref().unwrap_or(""),
+                                    p_style_idx.as_deref().unwrap_or("0"),
+                                    color,
+                                    &mut p_style_builder,
+                                );
+                            } else {
+                                assign_color(
+                                    color,
+                                    &depth,
+                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    current_gs_pos,
+                                    &mut current_shape,
+                                    &mut current_run,
+                                    &mut grad_stops,
+                                );
+                            }
                         }
                     }
                     // Color modifiers (Empty tags)
@@ -432,15 +495,47 @@ pub fn parse_slide<R: Read + Seek>(
                     // End of color element — assign to target after applying modifiers
                     "srgbClr" | "schemeClr" | "prstClr" | "sysClr" => {
                         if let Some(color) = current_color.take() {
-                            assign_color(
-                                color,
-                                &depth,
-                                in_sp_pr, in_ln, in_r_pr, in_grad_fill,
-                                current_gs_pos,
-                                &mut current_shape,
-                                &mut current_run,
-                                &mut grad_stops,
-                            );
+                            if in_p_style && p_style_current_ref.is_some() {
+                                assign_style_ref_color(
+                                    p_style_current_ref.as_deref().unwrap_or(""),
+                                    p_style_idx.as_deref().unwrap_or("0"),
+                                    color,
+                                    &mut p_style_builder,
+                                );
+                            } else {
+                                assign_color(
+                                    color,
+                                    &depth,
+                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    current_gs_pos,
+                                    &mut current_shape,
+                                    &mut current_run,
+                                    &mut grad_stops,
+                                );
+                            }
+                        }
+                    }
+                    // End of style ref children
+                    "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
+                        // If no child color was found, still record the idx
+                        if p_style_current_ref.is_some() {
+                            if let Some(idx_val) = p_style_idx.take() {
+                                // Only create if builder doesn't already have this ref set
+                                // (it's already set if a color child was processed)
+                                ensure_style_ref(
+                                    &local,
+                                    &idx_val,
+                                    &mut p_style_builder,
+                                );
+                            }
+                            p_style_current_ref = None;
+                        }
+                    }
+                    // End of <p:style>
+                    "style" if in_p_style => {
+                        in_p_style = false;
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.style_ref = p_style_builder.take();
                         }
                     }
                     // End of solidFill — assign fill based on context
@@ -569,6 +664,124 @@ fn assign_color(
 
 fn depth_contains(depth: &[String], tag: &str) -> bool {
     depth.iter().any(|d| d == tag)
+}
+
+/// Assign color to a style ref element (lnRef/fillRef/effectRef/fontRef)
+fn assign_style_ref_color(
+    ref_kind: &str,
+    idx_str: &str,
+    color: Color,
+    builder: &mut Option<ShapeStyleRef>,
+) {
+    let builder = match builder.as_mut() {
+        Some(b) => b,
+        None => return,
+    };
+    match ref_kind {
+        "fillRef" => {
+            builder.fill_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color,
+            });
+        }
+        "lnRef" => {
+            builder.ln_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color,
+            });
+        }
+        "effectRef" => {
+            builder.effect_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color,
+            });
+        }
+        "fontRef" => {
+            builder.font_ref = Some(FontRef {
+                idx: idx_str.to_string(),
+                color,
+            });
+        }
+        _ => {}
+    }
+}
+
+/// Ensure style ref exists (set idx but no color override, for End events when no child color was present)
+fn ensure_style_ref(
+    ref_kind: &str,
+    idx_str: &str,
+    builder: &mut Option<ShapeStyleRef>,
+) {
+    let builder = match builder.as_mut() {
+        Some(b) => b,
+        None => return,
+    };
+    match ref_kind {
+        "fillRef" if builder.fill_ref.is_none() => {
+            builder.fill_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "lnRef" if builder.ln_ref.is_none() => {
+            builder.ln_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "effectRef" if builder.effect_ref.is_none() => {
+            builder.effect_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "fontRef" if builder.font_ref.is_none() => {
+            builder.font_ref = Some(FontRef {
+                idx: idx_str.to_string(),
+                color: Color::none(),
+            });
+        }
+        _ => {}
+    }
+}
+
+/// Assign style ref with no color (Empty variant self-closing)
+fn assign_style_ref_no_color(
+    ref_kind: &str,
+    idx_str: &str,
+    builder: &mut Option<ShapeStyleRef>,
+) {
+    let builder = match builder.as_mut() {
+        Some(b) => b,
+        None => return,
+    };
+    match ref_kind {
+        "fillRef" => {
+            builder.fill_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "lnRef" => {
+            builder.ln_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "effectRef" => {
+            builder.effect_ref = Some(StyleRef {
+                idx: idx_str.parse::<u32>().unwrap_or(0),
+                color: Color::none(),
+            });
+        }
+        "fontRef" => {
+            builder.font_ref = Some(FontRef {
+                idx: idx_str.to_string(),
+                color: Color::none(),
+            });
+        }
+        _ => {}
+    }
 }
 
 /// Parse bodyPr attributes

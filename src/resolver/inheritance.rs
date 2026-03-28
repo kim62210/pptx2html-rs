@@ -4,10 +4,11 @@
 //! Properties defined at a lower level (slide) override the same property
 //! from a higher level (master). This module resolves effective values.
 
-use crate::model::hierarchy::{ClrMapOverride, SlideLayout, SlideMaster};
-use crate::model::presentation::ClrMap;
+use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
+use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
-use crate::model::{Color, Fill, Position, Size};
+use crate::model::{Border, Color, Fill, Position, Size};
+use super::style_ref;
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
 pub fn resolve_background(
@@ -39,7 +40,7 @@ pub fn resolve_background(
     })
 }
 
-/// Resolve effective fill for a shape (slide shape -> layout match -> master match)
+/// Resolve effective fill for a shape (slide shape -> layout match -> master match -> style_ref)
 pub fn resolve_shape_fill(
     shape: &Shape,
     layout_match: Option<&Shape>,
@@ -59,6 +60,74 @@ pub fn resolve_shape_fill(
         }
     }
     Fill::None
+}
+
+/// Resolve effective fill with style_ref fallback (theme-aware)
+pub fn resolve_shape_fill_with_theme(
+    shape: &Shape,
+    layout_match: Option<&Shape>,
+    master_match: Option<&Shape>,
+    fmt_scheme: Option<&FmtScheme>,
+    scheme: Option<&ColorScheme>,
+    clr_map: Option<&ClrMap>,
+) -> Fill {
+    let basic = resolve_shape_fill(shape, layout_match, master_match);
+    if !matches!(basic, Fill::None) {
+        return basic;
+    }
+
+    // Try style_ref fillRef as fallback
+    if let (Some(style_ref), Some(fmt), Some(cs), Some(cm)) =
+        (&shape.style_ref, fmt_scheme, scheme, clr_map)
+    {
+        if let Some(fill_ref) = &style_ref.fill_ref {
+            if let Some(resolved) = style_ref::resolve_fill_ref(fill_ref, fmt, cs, cm) {
+                return resolved;
+            }
+        }
+    }
+
+    Fill::None
+}
+
+/// Resolve effective border with style_ref fallback (theme-aware)
+pub fn resolve_border_with_theme(
+    shape: &Shape,
+    layout_match: Option<&Shape>,
+    master_match: Option<&Shape>,
+    fmt_scheme: Option<&FmtScheme>,
+    scheme: Option<&ColorScheme>,
+    clr_map: Option<&ClrMap>,
+) -> Border {
+    // Check shape's own border first
+    if shape.border.width > 0.0 {
+        return shape.border.clone();
+    }
+    // Check layout match
+    if let Some(lm) = layout_match {
+        if lm.border.width > 0.0 {
+            return lm.border.clone();
+        }
+    }
+    // Check master match
+    if let Some(mm) = master_match {
+        if mm.border.width > 0.0 {
+            return mm.border.clone();
+        }
+    }
+
+    // Try style_ref lnRef as fallback
+    if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+        (&shape.style_ref, fmt_scheme, scheme, clr_map)
+    {
+        if let Some(ln_ref) = &sr.ln_ref {
+            if let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm) {
+                return resolved;
+            }
+        }
+    }
+
+    shape.border.clone()
 }
 
 /// Resolve effective position/size for a placeholder shape.

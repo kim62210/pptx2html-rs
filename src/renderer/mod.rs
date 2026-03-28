@@ -211,17 +211,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push(format!("transform: rotate({:.1}deg)", shape.rotation));
         }
 
-        // Resolve fill via inheritance
-        let resolved_fill = inheritance::resolve_shape_fill(shape, layout_match, master_match);
+        // Resolve fill via inheritance (with style_ref fallback)
+        let fmt_scheme = ctx.pres.primary_theme().map(|t| &t.fmt_scheme);
+        let resolved_fill = inheritance::resolve_shape_fill_with_theme(
+            shape,
+            layout_match,
+            master_match,
+            fmt_scheme,
+            ctx.scheme,
+            ctx.clr_map,
+        );
         let fill_css = Self::fill_to_css(&resolved_fill, ctx);
         if !fill_css.is_empty() {
             styles.push(fill_css);
         }
 
-        if shape.border.width > 0.0 {
-            let border_color = ctx.color_to_css(&shape.border.color)
+        // Resolve border via inheritance (with style_ref fallback)
+        let resolved_border = inheritance::resolve_border_with_theme(
+            shape,
+            layout_match,
+            master_match,
+            fmt_scheme,
+            ctx.scheme,
+            ctx.clr_map,
+        );
+        if resolved_border.width > 0.0 {
+            let border_color = ctx.color_to_css(&resolved_border.color)
                 .unwrap_or_else(|| "#000".to_string());
-            let border_style = match shape.border.style {
+            let border_style = match resolved_border.style {
                 BorderStyle::Solid => "solid",
                 BorderStyle::Dashed => "dashed",
                 BorderStyle::Dotted => "dotted",
@@ -229,7 +246,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             };
             styles.push(format!(
                 "border: {:.1}px {border_style} {border_color}",
-                shape.border.width
+                resolved_border.width
             ));
         }
 
