@@ -72,13 +72,12 @@ pub fn resolve_ln_ref(
     let base_border = fmt_scheme.ln_style_lst.get(list_idx)?;
 
     // Override color with ln_ref.color if the ref has one, or if base uses phClr
-    let color = if !ln_ref.color.is_none() {
-        ln_ref.color.clone()
-    } else if is_placeholder_color(&base_border.color.kind) {
-        ln_ref.color.clone()
-    } else {
-        base_border.color.clone()
-    };
+    let color =
+        if ln_ref.color.kind != ColorKind::None || is_placeholder_color(&base_border.color.kind) {
+            ln_ref.color.clone()
+        } else {
+            base_border.color.clone()
+        };
 
     Some(Border {
         width: base_border.width,
@@ -116,9 +115,7 @@ pub fn resolve_font_ref(
     }
 
     let resolved_color = if !font_ref.color.is_none() {
-        font_ref
-            .color
-            .resolve(Some(scheme), Some(clr_map))
+        font_ref.color.resolve(Some(scheme), Some(clr_map))
     } else {
         None
     };
@@ -152,30 +149,53 @@ mod tests {
     fn test_fmt_scheme() -> FmtScheme {
         FmtScheme {
             fill_style_lst: vec![
-                Fill::Solid(SolidFill { color: Color::none() }),
-                Fill::Solid(SolidFill { color: Color::rgb("AABBCC") }),
-                Fill::Solid(SolidFill { color: Color::none() }),
+                Fill::Solid(SolidFill {
+                    color: Color::none(),
+                }),
+                Fill::Solid(SolidFill {
+                    color: Color::rgb("AABBCC"),
+                }),
+                Fill::Solid(SolidFill {
+                    color: Color::none(),
+                }),
             ],
             ln_style_lst: vec![
-                Border { width: 0.75, color: Color::none(), style: BorderStyle::Solid },
-                Border { width: 1.5, color: Color::none(), style: BorderStyle::Solid },
+                Border {
+                    width: 0.75,
+                    color: Color::none(),
+                    style: BorderStyle::Solid,
+                },
+                Border {
+                    width: 1.5,
+                    color: Color::none(),
+                    style: BorderStyle::Solid,
+                },
             ],
-            bg_fill_style_lst: vec![
-                Fill::Solid(SolidFill { color: Color::none() }),
-            ],
+            bg_fill_style_lst: vec![Fill::Solid(SolidFill {
+                color: Color::none(),
+            })],
         }
     }
 
     #[test]
     fn fill_ref_idx_zero_returns_none() {
-        let sr = StyleRef { idx: 0, color: Color::theme("accent1") };
-        assert!(resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none());
+        let sr = StyleRef {
+            idx: 0,
+            color: Color::theme("accent1"),
+        };
+        assert!(
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none()
+        );
     }
 
     #[test]
     fn fill_ref_idx_1_replaces_placeholder_color() {
-        let sr = StyleRef { idx: 1, color: Color::theme("accent1") };
-        let fill = resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        let sr = StyleRef {
+            idx: 1,
+            color: Color::theme("accent1"),
+        };
+        let fill =
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
         match fill {
             Fill::Solid(sf) => {
                 assert!(matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"));
@@ -186,8 +206,12 @@ mod tests {
 
     #[test]
     fn fill_ref_idx_2_keeps_existing_color() {
-        let sr = StyleRef { idx: 2, color: Color::theme("accent1") };
-        let fill = resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        let sr = StyleRef {
+            idx: 2,
+            color: Color::theme("accent1"),
+        };
+        let fill =
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
         match fill {
             Fill::Solid(sf) => {
                 assert!(matches!(sf.color.kind, ColorKind::Rgb(ref v) if v == "AABBCC"));
@@ -198,8 +222,12 @@ mod tests {
 
     #[test]
     fn fill_ref_bg_idx_1001() {
-        let sr = StyleRef { idx: 1001, color: Color::theme("accent1") };
-        let fill = resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        let sr = StyleRef {
+            idx: 1001,
+            color: Color::theme("accent1"),
+        };
+        let fill =
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
         match fill {
             Fill::Solid(sf) => {
                 assert!(matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"));
@@ -210,20 +238,34 @@ mod tests {
 
     #[test]
     fn fill_ref_out_of_range_returns_none() {
-        let sr = StyleRef { idx: 99, color: Color::theme("accent1") };
-        assert!(resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none());
+        let sr = StyleRef {
+            idx: 99,
+            color: Color::theme("accent1"),
+        };
+        assert!(
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none()
+        );
     }
 
     #[test]
     fn ln_ref_idx_zero_returns_none() {
-        let sr = StyleRef { idx: 0, color: Color::theme("accent1") };
-        assert!(resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none());
+        let sr = StyleRef {
+            idx: 0,
+            color: Color::theme("accent1"),
+        };
+        assert!(
+            resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none()
+        );
     }
 
     #[test]
     fn ln_ref_idx_1_overrides_color() {
-        let sr = StyleRef { idx: 1, color: Color::theme("accent1") };
-        let border = resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        let sr = StyleRef {
+            idx: 1,
+            color: Color::theme("accent1"),
+        };
+        let border =
+            resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
         assert!((border.width - 0.75).abs() < 0.01);
         assert!(matches!(border.color.kind, ColorKind::Theme(ref n) if n == "accent1"));
         assert!(matches!(border.style, BorderStyle::Solid));
@@ -231,15 +273,22 @@ mod tests {
 
     #[test]
     fn ln_ref_idx_2() {
-        let sr = StyleRef { idx: 2, color: Color::rgb("FF0000") };
-        let border = resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        let sr = StyleRef {
+            idx: 2,
+            color: Color::rgb("FF0000"),
+        };
+        let border =
+            resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
         assert!((border.width - 1.5).abs() < 0.01);
         assert!(matches!(border.color.kind, ColorKind::Rgb(ref v) if v == "FF0000"));
     }
 
     #[test]
     fn font_ref_major() {
-        let fr = FontRef { idx: "major".to_string(), color: Color::theme("dk1") };
+        let fr = FontRef {
+            idx: "major".to_string(),
+            color: Color::theme("dk1"),
+        };
         let fs = FontScheme {
             major_latin: "Calibri Light".to_string(),
             minor_latin: "Calibri".to_string(),
@@ -252,7 +301,10 @@ mod tests {
 
     #[test]
     fn font_ref_minor() {
-        let fr = FontRef { idx: "minor".to_string(), color: Color::none() };
+        let fr = FontRef {
+            idx: "minor".to_string(),
+            color: Color::none(),
+        };
         let fs = FontScheme {
             major_latin: "Calibri Light".to_string(),
             minor_latin: "Calibri".to_string(),
@@ -265,7 +317,10 @@ mod tests {
 
     #[test]
     fn font_ref_unknown_idx_returns_none() {
-        let fr = FontRef { idx: "unknown".to_string(), color: Color::none() };
+        let fr = FontRef {
+            idx: "unknown".to_string(),
+            color: Color::none(),
+        };
         let fs = FontScheme::default();
         assert!(resolve_font_ref(&fr, &fs, &test_scheme(), &ClrMap::default()).is_none());
     }

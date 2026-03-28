@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 
-use crate::error::PptxResult;
 use super::xml_utils;
+use crate::error::PptxResult;
 
 /// Parse .rels file into {rId → target_path} map
 pub fn parse_relationships(xml: &str) -> PptxResult<HashMap<String, String>> {

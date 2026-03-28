@@ -1,6 +1,6 @@
-/// OOXML color system (ECMA-376 §20.1.2.3)
-///
-/// Color resolution chain: ColorKind → ClrMap mapping → Theme ColorScheme lookup → apply modifiers → ResolvedColor
+//! OOXML color system (ECMA-376 §20.1.2.3)
+//!
+//! Color resolution chain: ColorKind → ClrMap mapping → Theme ColorScheme lookup → apply modifiers → ResolvedColor
 
 use crate::model::presentation::{ClrMap, ColorScheme};
 
@@ -68,23 +68,38 @@ pub struct ResolvedColor {
 
 impl Color {
     pub fn none() -> Self {
-        Self { kind: ColorKind::None, modifiers: vec![] }
+        Self {
+            kind: ColorKind::None,
+            modifiers: vec![],
+        }
     }
 
     pub fn rgb(hex: impl Into<String>) -> Self {
-        Self { kind: ColorKind::Rgb(hex.into()), modifiers: vec![] }
+        Self {
+            kind: ColorKind::Rgb(hex.into()),
+            modifiers: vec![],
+        }
     }
 
     pub fn theme(name: impl Into<String>) -> Self {
-        Self { kind: ColorKind::Theme(name.into()), modifiers: vec![] }
+        Self {
+            kind: ColorKind::Theme(name.into()),
+            modifiers: vec![],
+        }
     }
 
     pub fn system(name: impl Into<String>) -> Self {
-        Self { kind: ColorKind::System(name.into()), modifiers: vec![] }
+        Self {
+            kind: ColorKind::System(name.into()),
+            modifiers: vec![],
+        }
     }
 
     pub fn preset(name: impl Into<String>) -> Self {
-        Self { kind: ColorKind::Preset(name.into()), modifiers: vec![] }
+        Self {
+            kind: ColorKind::Preset(name.into()),
+            modifiers: vec![],
+        }
     }
 
     pub fn is_none(&self) -> bool {
@@ -113,12 +128,8 @@ impl Color {
                 let hex = scheme.and_then(|s| s.get(mapped))?;
                 parse_hex_rgb(&hex)?
             }
-            ColorKind::System(name) => {
-                parse_hex_rgb(system_color_fallback(name)?)?
-            }
-            ColorKind::Preset(name) => {
-                parse_hex_rgb(preset_color(name)?)?
-            }
+            ColorKind::System(name) => parse_hex_rgb(system_color_fallback(name)?)?,
+            ColorKind::Preset(name) => parse_hex_rgb(preset_color(name)?)?,
         };
         Some(apply_modifiers(base, &self.modifiers))
     }
@@ -129,12 +140,8 @@ impl Color {
             ColorKind::None => None,
             ColorKind::Rgb(hex) => Some(format!("#{hex}")),
             ColorKind::Theme(name) => Some(format!("#{}", theme_fallback(name))),
-            ColorKind::System(name) => {
-                Some(format!("#{}", system_color_fallback(name)?))
-            }
-            ColorKind::Preset(name) => {
-                Some(format!("#{}", preset_color(name)?))
-            }
+            ColorKind::System(name) => Some(format!("#{}", system_color_fallback(name)?)),
+            ColorKind::Preset(name) => Some(format!("#{}", preset_color(name)?)),
         }
     }
 }
@@ -156,7 +163,9 @@ impl ResolvedColor {
         } else {
             format!(
                 "rgba({}, {}, {}, {:.2})",
-                self.r, self.g, self.b,
+                self.r,
+                self.g,
+                self.b,
                 self.a as f64 / 255.0
             )
         }
@@ -187,39 +196,51 @@ fn apply_modifiers(mut c: ResolvedColor, modifiers: &[ColorModifier]) -> Resolve
                 let (h, s, mut l) = rgb_to_hsl(c.r, c.g, c.b);
                 l *= *val as f64 / 100_000.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l.clamp(0.0, 1.0));
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::LumOff(val) => {
                 let (h, s, mut l) = rgb_to_hsl(c.r, c.g, c.b);
                 l += *val as f64 / 100_000.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l.clamp(0.0, 1.0));
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::SatMod(val) => {
                 let (h, mut s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 s *= *val as f64 / 100_000.0;
                 let (r, g, b) = hsl_to_rgb(h, s.clamp(0.0, 1.0), l);
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::SatOff(val) => {
                 let (h, mut s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 s += *val as f64 / 100_000.0;
                 let (r, g, b) = hsl_to_rgb(h, s.clamp(0.0, 1.0), l);
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::HueMod(val) => {
                 let (mut h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 h *= *val as f64 / 100_000.0;
                 h %= 360.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l);
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::HueOff(val) => {
                 let (mut h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 h += *val as f64 * 360.0 / 100_000.0;
                 h = ((h % 360.0) + 360.0) % 360.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l);
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::Inv => {
                 c.r ^= 0xFF;
@@ -230,13 +251,15 @@ fn apply_modifiers(mut c: ResolvedColor, modifiers: &[ColorModifier]) -> Resolve
                 let (mut h, s, l) = rgb_to_hsl(c.r, c.g, c.b);
                 h = (h + 180.0) % 360.0;
                 let (r, g, b) = hsl_to_rgb(h, s, l);
-                c.r = r; c.g = g; c.b = b;
+                c.r = r;
+                c.g = g;
+                c.b = b;
             }
             ColorModifier::Gray => {
-                let gray = clamp_u8(
-                    c.r as f64 * 0.299 + c.g as f64 * 0.587 + c.b as f64 * 0.114,
-                );
-                c.r = gray; c.g = gray; c.b = gray;
+                let gray = clamp_u8(c.r as f64 * 0.299 + c.g as f64 * 0.587 + c.b as f64 * 0.114);
+                c.r = gray;
+                c.g = gray;
+                c.b = gray;
             }
         }
     }
@@ -283,7 +306,11 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
         return (v, v, v);
     }
 
-    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
     let p = 2.0 * l - q;
     let h_norm = h / 360.0;
 
@@ -291,15 +318,29 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
     let g = hue_to_rgb(p, q, h_norm);
     let b = hue_to_rgb(p, q, h_norm - 1.0 / 3.0);
 
-    (clamp_u8(r * 255.0), clamp_u8(g * 255.0), clamp_u8(b * 255.0))
+    (
+        clamp_u8(r * 255.0),
+        clamp_u8(g * 255.0),
+        clamp_u8(b * 255.0),
+    )
 }
 
 fn hue_to_rgb(p: f64, q: f64, mut t: f64) -> f64 {
-    if t < 0.0 { t += 1.0; }
-    if t > 1.0 { t -= 1.0; }
-    if t < 1.0 / 6.0 { return p + (q - p) * 6.0 * t; }
-    if t < 1.0 / 2.0 { return q; }
-    if t < 2.0 / 3.0 { return p + (q - p) * (2.0 / 3.0 - t) * 6.0; }
+    if t < 0.0 {
+        t += 1.0;
+    }
+    if t > 1.0 {
+        t -= 1.0;
+    }
+    if t < 1.0 / 6.0 {
+        return p + (q - p) * 6.0 * t;
+    }
+    if t < 1.0 / 2.0 {
+        return q;
+    }
+    if t < 2.0 / 3.0 {
+        return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+    }
     p
 }
 
@@ -580,12 +621,28 @@ mod tests {
 
     #[test]
     fn test_hsl_roundtrip() {
-        for (r, g, b) in [(255, 0, 0), (0, 255, 0), (0, 0, 255), (128, 64, 192), (0, 0, 0), (255, 255, 255)] {
+        for (r, g, b) in [
+            (255, 0, 0),
+            (0, 255, 0),
+            (0, 0, 255),
+            (128, 64, 192),
+            (0, 0, 0),
+            (255, 255, 255),
+        ] {
             let (h, s, l) = rgb_to_hsl(r, g, b);
             let (r2, g2, b2) = hsl_to_rgb(h, s, l);
-            assert!((r as i16 - r2 as i16).abs() <= 1, "R mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})");
-            assert!((g as i16 - g2 as i16).abs() <= 1, "G mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})");
-            assert!((b as i16 - b2 as i16).abs() <= 1, "B mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})");
+            assert!(
+                (r as i16 - r2 as i16).abs() <= 1,
+                "R mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            );
+            assert!(
+                (g as i16 - g2 as i16).abs() <= 1,
+                "G mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            );
+            assert!(
+                (b as i16 - b2 as i16).abs() <= 1,
+                "B mismatch for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            );
         }
     }
 
@@ -606,7 +663,10 @@ mod tests {
     #[test]
     fn test_resolved_color_css() {
         assert_eq!(ResolvedColor::new(255, 0, 0).to_css(), "#FF0000");
-        assert_eq!(ResolvedColor::with_alpha(255, 0, 0, 128).to_css(), "rgba(255, 0, 0, 0.50)");
+        assert_eq!(
+            ResolvedColor::with_alpha(255, 0, 0, 128).to_css(),
+            "rgba(255, 0, 0, 0.50)"
+        );
     }
 
     #[test]

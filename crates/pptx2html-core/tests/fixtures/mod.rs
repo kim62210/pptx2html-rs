@@ -1,8 +1,8 @@
 //! Test helper for generating minimal PPTX files
 
 use std::io::{Cursor, Write};
-use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 /// Minimal PPTX builder -- generates various test cases by swapping slide XML
 pub struct MinimalPptx {
@@ -155,7 +155,8 @@ impl MinimalPptx {
         zip.write_all(pres_xml.as_bytes()).unwrap();
 
         // ppt/_rels/presentation.xml.rels
-        zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+        zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+            .unwrap();
         zip.write_all(PRESENTATION_RELS.as_bytes()).unwrap();
 
         // ppt/slides/slide1.xml
@@ -168,11 +169,14 @@ impl MinimalPptx {
         } else {
             SLIDE_RELS
         };
-        zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+        zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+            .unwrap();
         zip.write_all(slide_rels.as_bytes()).unwrap();
 
         // ppt/theme/theme1.xml
-        let theme = self.custom_theme_xml.as_deref()
+        let theme = self
+            .custom_theme_xml
+            .as_deref()
             .or(self.theme_xml.as_deref())
             .unwrap_or(DEFAULT_THEME);
         zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
@@ -180,7 +184,8 @@ impl MinimalPptx {
 
         // ppt/slideMasters/slideMaster1.xml (includes ClrMap)
         if let Some(ref master) = self.master_xml {
-            zip.start_file("ppt/slideMasters/slideMaster1.xml", opts).unwrap();
+            zip.start_file("ppt/slideMasters/slideMaster1.xml", opts)
+                .unwrap();
             zip.write_all(master.as_bytes()).unwrap();
 
             // Master rels (references theme and layout)
@@ -189,17 +194,20 @@ impl MinimalPptx {
             } else {
                 MASTER_RELS
             };
-            zip.start_file("ppt/slideMasters/_rels/slideMaster1.xml.rels", opts).unwrap();
+            zip.start_file("ppt/slideMasters/_rels/slideMaster1.xml.rels", opts)
+                .unwrap();
             zip.write_all(master_rels.as_bytes()).unwrap();
         }
 
         // ppt/slideLayouts/slideLayout1.xml
         if let Some(ref layout) = self.layout_xml {
-            zip.start_file("ppt/slideLayouts/slideLayout1.xml", opts).unwrap();
+            zip.start_file("ppt/slideLayouts/slideLayout1.xml", opts)
+                .unwrap();
             zip.write_all(layout.as_bytes()).unwrap();
 
             // Layout rels (references master)
-            zip.start_file("ppt/slideLayouts/_rels/slideLayout1.xml.rels", opts).unwrap();
+            zip.start_file("ppt/slideLayouts/_rels/slideLayout1.xml.rels", opts)
+                .unwrap();
             zip.write_all(LAYOUT_RELS.as_bytes()).unwrap();
         }
 

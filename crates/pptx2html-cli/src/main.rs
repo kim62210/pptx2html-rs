@@ -83,10 +83,7 @@ fn main() {
         match pptx2html_core::get_info(&cli.input) {
             Ok(info) => {
                 let title = match &info.title {
-                    Some(t) => format!(
-                        "\"{}\"",
-                        t.replace('\\', "\\\\").replace('"', "\\\"")
-                    ),
+                    Some(t) => format!("\"{}\"", t.replace('\\', "\\\\").replace('"', "\\\"")),
                     None => "null".to_string(),
                 };
                 println!(
@@ -124,9 +121,7 @@ fn main() {
 
     if cli.format == "multi" {
         // Multi-file output: one HTML per slide
-        let output_dir = cli.output.unwrap_or_else(|| {
-            cli.input.with_extension("")
-        });
+        let output_dir = cli.output.unwrap_or_else(|| cli.input.with_extension(""));
         if let Err(e) = std::fs::create_dir_all(&output_dir) {
             eprintln!("Failed to create output directory: {e}");
             std::process::exit(1);
@@ -175,9 +170,9 @@ fn main() {
         );
     } else {
         // Single-file output
-        let output = cli.output.unwrap_or_else(|| {
-            cli.input.with_extension("html")
-        });
+        let output = cli
+            .output
+            .unwrap_or_else(|| cli.input.with_extension("html"));
 
         match pptx2html_core::convert_file_with_options(&cli.input, &opts) {
             Ok(html) => {
@@ -223,10 +218,7 @@ mod tests {
 
     #[test]
     fn test_parse_dedup() {
-        assert_eq!(
-            parse_slide_selection("1,1,2,2-3").unwrap(),
-            vec![1, 2, 3]
-        );
+        assert_eq!(parse_slide_selection("1,1,2,2-3").unwrap(), vec![1, 2, 3]);
     }
 
     #[test]

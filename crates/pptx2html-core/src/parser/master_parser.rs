@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use zip::ZipArchive;
 
-use crate::error::{PptxError, PptxResult};
-use crate::model::*;
-use crate::model::presentation::ClrMap;
 use super::xml_utils;
+use crate::error::{PptxError, PptxResult};
+use crate::model::presentation::ClrMap;
+use crate::model::*;
 
 /// Parse slideMaster XML into SlideMaster
 pub fn parse_slide_master<R: Read + Seek>(
@@ -117,63 +117,67 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     // Font in defRPr
                     "latin" if in_def_rpr => {
-                        if let Some(rd) = current_run_defaults.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rd.font_latin = Some(typeface);
-                            }
+                        if let Some(rd) = current_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_latin = Some(typeface);
                         }
                     }
                     "ea" if in_def_rpr => {
-                        if let Some(rd) = current_run_defaults.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rd.font_ea = Some(typeface);
-                            }
+                        if let Some(rd) = current_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_ea = Some(typeface);
                         }
                     }
                     // Color elements (Empty variant) inside defRPr
                     "srgbClr" if in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if let Some(rd) = current_run_defaults.as_mut() {
-                                rd.color = Some(Color::rgb(val));
-                            }
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(rd) = current_run_defaults.as_mut()
+                        {
+                            rd.color = Some(Color::rgb(val));
                         }
                     }
                     "schemeClr" if in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if let Some(rd) = current_run_defaults.as_mut() {
-                                rd.color = Some(Color::theme(val));
-                            }
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(rd) = current_run_defaults.as_mut()
+                        {
+                            rd.color = Some(Color::theme(val));
                         }
                     }
                     // Spacing percentage/points (inside lnSpc/spcBef/spcAft)
-                    "spcPct" if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                            if let Ok(val) = val_str.parse::<f64>() {
-                                let spacing = SpacingValue::Percent(val / 100_000.0);
-                                if let Some(pd) = current_para_defaults.as_mut() {
-                                    if in_ln_spc {
-                                        pd.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pd.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pd.space_after = Some(spacing);
-                                    }
+                    "spcPct"
+                        if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                    {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Percent(val / 100_000.0);
+                            if let Some(pd) = current_para_defaults.as_mut() {
+                                if in_ln_spc {
+                                    pd.line_spacing = Some(spacing);
+                                } else if in_spc_bef {
+                                    pd.space_before = Some(spacing);
+                                } else if in_spc_aft {
+                                    pd.space_after = Some(spacing);
                                 }
                             }
                         }
                     }
-                    "spcPts" if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                            if let Ok(val) = val_str.parse::<f64>() {
-                                let spacing = SpacingValue::Points(val / 100.0);
-                                if let Some(pd) = current_para_defaults.as_mut() {
-                                    if in_ln_spc {
-                                        pd.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pd.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pd.space_after = Some(spacing);
-                                    }
+                    "spcPts"
+                        if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                    {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Points(val / 100.0);
+                            if let Some(pd) = current_para_defaults.as_mut() {
+                                if in_ln_spc {
+                                    pd.line_spacing = Some(spacing);
+                                } else if in_spc_bef {
+                                    pd.space_before = Some(spacing);
+                                } else if in_spc_aft {
+                                    pd.space_after = Some(spacing);
                                 }
                             }
                         }
@@ -183,12 +187,7 @@ pub fn parse_slide_master<R: Read + Seek>(
                         let lvl = parse_lvl_index(s);
                         let mut pd = ParagraphDefaults::default();
                         parse_lvl_ppr_attrs(e, &mut pd);
-                        store_level_defaults(
-                            &tx_style_kind,
-                            &mut master.tx_styles,
-                            lvl,
-                            pd,
-                        );
+                        store_level_defaults(&tx_style_kind, &mut master.tx_styles, lvl, pd);
                     }
                     // Empty defRPr (no children)
                     "defRPr" if current_lvl.is_some() && !in_def_rpr => {
@@ -201,14 +200,18 @@ pub fn parse_slide_master<R: Read + Seek>(
                     // Position/size for shapes
                     "off" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.position.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                            sb.position.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                            sb.position.x =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                            sb.position.y =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
                     "ext" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.size.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                            sb.size.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                            sb.size.width =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                            sb.size.height =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
                         }
                     }
                     _ => {}
@@ -229,31 +232,27 @@ pub fn parse_slide_master<R: Read + Seek>(
                     "defRPr" if in_def_rpr => {
                         in_def_rpr = false;
                         // Assign color from Start+child pattern
-                        if let (Some(color), Some(rd)) = (current_color.take(), current_run_defaults.as_mut()) {
-                            if rd.color.is_none() {
-                                rd.color = Some(color);
-                            }
+                        if let (Some(color), Some(rd)) =
+                            (current_color.take(), current_run_defaults.as_mut())
+                            && rd.color.is_none()
+                        {
+                            rd.color = Some(color);
                         }
                         if let Some(pd) = current_para_defaults.as_mut() {
                             pd.def_run_props = current_run_defaults.take();
                         }
                     }
                     s if is_lvl_ppr(s) && current_lvl.is_some() => {
-                        if let Some(pd) = current_para_defaults.take() {
-                            store_level_defaults(
-                                &tx_style_kind,
-                                &mut master.tx_styles,
-                                current_lvl.unwrap(),
-                                pd,
-                            );
+                        if let (Some(pd), Some(lvl)) = (current_para_defaults.take(), current_lvl) {
+                            store_level_defaults(&tx_style_kind, &mut master.tx_styles, lvl, pd);
                         }
                         current_lvl = None;
                     }
                     "srgbClr" | "schemeClr" if in_def_rpr => {
-                        if let Some(color) = current_color.take() {
-                            if let Some(rd) = current_run_defaults.as_mut() {
-                                rd.color = Some(color);
-                            }
+                        if let Some(color) = current_color.take()
+                            && let Some(rd) = current_run_defaults.as_mut()
+                        {
+                            rd.color = Some(color);
                         }
                     }
                     // End of spacing containers
@@ -290,8 +289,15 @@ enum TxStyleKind {
 pub fn is_lvl_ppr(s: &str) -> bool {
     matches!(
         s,
-        "lvl1pPr" | "lvl2pPr" | "lvl3pPr" | "lvl4pPr" | "lvl5pPr"
-        | "lvl6pPr" | "lvl7pPr" | "lvl8pPr" | "lvl9pPr"
+        "lvl1pPr"
+            | "lvl2pPr"
+            | "lvl3pPr"
+            | "lvl4pPr"
+            | "lvl5pPr"
+            | "lvl6pPr"
+            | "lvl7pPr"
+            | "lvl8pPr"
+            | "lvl9pPr"
     )
 }
 
@@ -309,10 +315,10 @@ pub fn parse_lvl_ppr_attrs(e: &quick_xml::events::BytesStart<'_>, pd: &mut Parag
         pd.alignment = Some(Alignment::from_ooxml(&algn));
     }
     if let Some(mar_l) = xml_utils::attr_str(e, "marL") {
-        pd.margin_left = Some(Emu::from_str(&mar_l).to_pt());
+        pd.margin_left = Some(Emu::parse_emu(&mar_l).to_pt());
     }
     if let Some(indent) = xml_utils::attr_str(e, "indent") {
-        pd.indent = Some(Emu::from_str(&indent).to_pt());
+        pd.indent = Some(Emu::parse_emu(&indent).to_pt());
     }
 }
 
@@ -361,15 +367,9 @@ fn store_level_defaults(
         return;
     }
     let list_style = match kind {
-        Some(TxStyleKind::Title) => {
-            tx_styles.title_style.get_or_insert_with(ListStyle::default)
-        }
-        Some(TxStyleKind::Body) => {
-            tx_styles.body_style.get_or_insert_with(ListStyle::default)
-        }
-        Some(TxStyleKind::Other) => {
-            tx_styles.other_style.get_or_insert_with(ListStyle::default)
-        }
+        Some(TxStyleKind::Title) => tx_styles.title_style.get_or_insert_with(ListStyle::default),
+        Some(TxStyleKind::Body) => tx_styles.body_style.get_or_insert_with(ListStyle::default),
+        Some(TxStyleKind::Other) => tx_styles.other_style.get_or_insert_with(ListStyle::default),
         None => return,
     };
     list_style.levels[lvl] = Some(pd);

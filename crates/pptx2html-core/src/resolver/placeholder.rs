@@ -65,9 +65,9 @@ pub fn find_matching_placeholder<'a>(
 pub fn text_style_source(ph_type: Option<&PlaceholderType>) -> TextStyleSource {
     match ph_type {
         Some(PlaceholderType::Title | PlaceholderType::CtrTitle) => TextStyleSource::TitleStyle,
-        Some(
-            PlaceholderType::Body | PlaceholderType::SubTitle | PlaceholderType::Obj,
-        ) => TextStyleSource::BodyStyle,
+        Some(PlaceholderType::Body | PlaceholderType::SubTitle | PlaceholderType::Obj) => {
+            TextStyleSource::BodyStyle
+        }
         _ => TextStyleSource::OtherStyle,
     }
 }
@@ -144,9 +144,7 @@ mod tests {
 
     #[test]
     fn no_match_returns_none() {
-        let candidates = vec![
-            make_shape_with_ph(Some(PlaceholderType::Title), Some(0)),
-        ];
+        let candidates = vec![make_shape_with_ph(Some(PlaceholderType::Title), Some(0))];
         let ph = PlaceholderInfo {
             ph_type: Some(PlaceholderType::Body),
             idx: Some(99),

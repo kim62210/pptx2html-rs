@@ -22,7 +22,10 @@ fn test_background_default_white() {
     // When no master/layout provides bg, slide gets default white background
     let pptx = fixtures::MinimalPptx::new("").build();
     let html = render_html(&pptx);
-    assert!(html.contains("#FFFFFF"), "Default white background not found: {html}");
+    assert!(
+        html.contains("#FFFFFF"),
+        "Default white background not found: {html}"
+    );
 }
 
 #[test]
@@ -40,7 +43,10 @@ fn test_background_slide_explicit() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("#FF1122"), "Explicit slide fill not found: {html}");
+    assert!(
+        html.contains("#FF1122"),
+        "Explicit slide fill not found: {html}"
+    );
 }
 
 // ── Placeholder matching test ──
@@ -106,9 +112,15 @@ fn test_title_placeholder_inherits_position() {
 
     // Position should be inherited from layout (457200 EMU -> ~48px)
     let html = render_html(&pptx);
-    assert!(html.contains("Inherited Position"), "Shape text not found: {html}");
+    assert!(
+        html.contains("Inherited Position"),
+        "Shape text not found: {html}"
+    );
     // 8229600 EMU = 864px width
-    assert!(html.contains("864.0px"), "Layout width not inherited: {html}");
+    assert!(
+        html.contains("864.0px"),
+        "Layout width not inherited: {html}"
+    );
 }
 
 // ── Paragraph spacing tests ──
@@ -135,11 +147,18 @@ fn test_line_spacing_percentage_rendering() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    let para = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0];
     assert!(matches!(para.line_spacing, Some(SpacingValue::Percent(p)) if (p - 1.5).abs() < 0.01));
 
     let html = render_html(&pptx);
-    assert!(html.contains("line-height: 1.50"), "150% line spacing not found: {html}");
+    assert!(
+        html.contains("line-height: 1.50"),
+        "150% line spacing not found: {html}"
+    );
 }
 
 #[test]
@@ -164,11 +183,18 @@ fn test_line_spacing_points_rendering() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    let para = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0];
     assert!(matches!(para.line_spacing, Some(SpacingValue::Points(p)) if (p - 24.0).abs() < 0.1));
 
     let html = render_html(&pptx);
-    assert!(html.contains("line-height: 24.0pt"), "24pt line spacing not found: {html}");
+    assert!(
+        html.contains("line-height: 24.0pt"),
+        "24pt line spacing not found: {html}"
+    );
 }
 
 #[test]
@@ -194,13 +220,23 @@ fn test_space_before_after_rendering() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    let para = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0];
     assert!(matches!(para.space_before, Some(SpacingValue::Points(p)) if (p - 12.0).abs() < 0.1));
     assert!(matches!(para.space_after, Some(SpacingValue::Points(p)) if (p - 6.0).abs() < 0.1));
 
     let html = render_html(&pptx);
-    assert!(html.contains("margin-top: 12.0pt"), "Space before not found: {html}");
-    assert!(html.contains("margin-bottom: 6.0pt"), "Space after not found: {html}");
+    assert!(
+        html.contains("margin-top: 12.0pt"),
+        "Space before not found: {html}"
+    );
+    assert!(
+        html.contains("margin-bottom: 6.0pt"),
+        "Space after not found: {html}"
+    );
 }
 
 // ── Master shapes test ──
@@ -251,7 +287,10 @@ fn test_show_master_sp_default_true() {
     // Default show_master_sp is true, so master shapes appear in HTML
     let html = render_html(&pptx);
     // The master shape div should be rendered (footer placeholder with position)
-    assert!(html.contains("class=\"shape\""), "Master shape not rendered: {html}");
+    assert!(
+        html.contains("class=\"shape\""),
+        "Master shape not rendered: {html}"
+    );
 }
 
 // ── defaultTextStyle test ──
@@ -280,7 +319,10 @@ fn test_default_text_style_parsed() {
         .build();
     let pres = parse_pptx(&pptx);
 
-    let dts = pres.default_text_style.as_ref().expect("defaultTextStyle not parsed");
+    let dts = pres
+        .default_text_style
+        .as_ref()
+        .expect("defaultTextStyle not parsed");
     let lvl1 = dts.levels[0].as_ref().expect("Level 1 not parsed");
     assert!(matches!(lvl1.alignment, Some(Alignment::Left)));
     let run_defaults = lvl1.def_run_props.as_ref().expect("defRPr not parsed");
@@ -288,7 +330,10 @@ fn test_default_text_style_parsed() {
     assert_eq!(run_defaults.bold, Some(false));
 
     let lvl2 = dts.levels[1].as_ref().expect("Level 2 not parsed");
-    let rd2 = lvl2.def_run_props.as_ref().expect("Level 2 defRPr not parsed");
+    let rd2 = lvl2
+        .def_run_props
+        .as_ref()
+        .expect("Level 2 defRPr not parsed");
     assert_eq!(rd2.font_size, Some(16.0));
 }
 
@@ -429,7 +474,10 @@ fn test_style_ref_fill_rendered() {
         .build();
     let html = render_html(&pptx);
     // fillRef idx=1 with accent1 -> phClr placeholder replaced by accent1 -> #4472C4
-    assert!(html.contains("#4472C4"), "StyleRef fill color not rendered: {html}");
+    assert!(
+        html.contains("#4472C4"),
+        "StyleRef fill color not rendered: {html}"
+    );
 }
 
 // ── Style ref with explicit fill override test ──
@@ -455,7 +503,10 @@ fn test_explicit_fill_overrides_style_ref() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
     // Explicit fill should take priority over style ref
-    assert!(html.contains("#DD0000"), "Explicit fill should override style ref: {html}");
+    assert!(
+        html.contains("#DD0000"),
+        "Explicit fill should override style ref: {html}"
+    );
 }
 
 // ── Theme FmtScheme parsing test ──
@@ -539,11 +590,18 @@ fn test_space_before_percentage() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    let para = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0];
     assert!(matches!(para.space_before, Some(SpacingValue::Percent(p)) if (p - 0.5).abs() < 0.01));
 
     let html = render_html(&pptx);
-    assert!(html.contains("margin-top: 0.5em"), "50% space before not found: {html}");
+    assert!(
+        html.contains("margin-top: 0.5em"),
+        "50% space before not found: {html}"
+    );
 }
 
 // ── Shape with no text body still renders ──
@@ -566,7 +624,10 @@ fn test_shape_no_text_body() {
 
     // Shape should have fill but no text body
     assert!(matches!(shape.fill, Fill::Solid(_)));
-    assert!(shape.text_body.is_none(), "text_body should be None for shape without txBody");
+    assert!(
+        shape.text_body.is_none(),
+        "text_body should be None for shape without txBody"
+    );
 
     let html = render_html(&pptx);
     assert!(html.contains("#FFAA00"), "Shape fill not rendered: {html}");
@@ -638,23 +699,45 @@ fn test_multiple_paragraphs_spacing() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let paras = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs;
+    let paras = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs;
     assert_eq!(paras.len(), 2);
 
     // First paragraph: left aligned, 120% line spacing
     assert!(matches!(paras[0].alignment, Alignment::Left));
-    assert!(matches!(paras[0].line_spacing, Some(SpacingValue::Percent(p)) if (p - 1.2).abs() < 0.01));
+    assert!(
+        matches!(paras[0].line_spacing, Some(SpacingValue::Percent(p)) if (p - 1.2).abs() < 0.01)
+    );
 
     // Second paragraph: center aligned, 18pt line spacing, 6pt space before
     assert!(matches!(paras[1].alignment, Alignment::Center));
-    assert!(matches!(paras[1].line_spacing, Some(SpacingValue::Points(p)) if (p - 18.0).abs() < 0.1));
-    assert!(matches!(paras[1].space_before, Some(SpacingValue::Points(p)) if (p - 6.0).abs() < 0.1));
+    assert!(
+        matches!(paras[1].line_spacing, Some(SpacingValue::Points(p)) if (p - 18.0).abs() < 0.1)
+    );
+    assert!(
+        matches!(paras[1].space_before, Some(SpacingValue::Points(p)) if (p - 6.0).abs() < 0.1)
+    );
 
     let html = render_html(&pptx);
-    assert!(html.contains("First paragraph"), "First paragraph not found");
-    assert!(html.contains("Second paragraph"), "Second paragraph not found");
-    assert!(html.contains("text-align: center"), "Center alignment not rendered");
-    assert!(html.contains("line-height: 18.0pt"), "18pt line-height not rendered");
+    assert!(
+        html.contains("First paragraph"),
+        "First paragraph not found"
+    );
+    assert!(
+        html.contains("Second paragraph"),
+        "Second paragraph not found"
+    );
+    assert!(
+        html.contains("text-align: center"),
+        "Center alignment not rendered"
+    );
+    assert!(
+        html.contains("line-height: 18.0pt"),
+        "18pt line-height not rendered"
+    );
 }
 
 // ── Verify style ref with no color child ──
@@ -711,8 +794,14 @@ fn test_bullet_char_rendered() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("class=\"bullet\""), "Bullet span not found: {html}");
-    assert!(html.contains("Bullet item"), "Bullet text not found: {html}");
+    assert!(
+        html.contains("class=\"bullet\""),
+        "Bullet span not found: {html}"
+    );
+    assert!(
+        html.contains("Bullet item"),
+        "Bullet text not found: {html}"
+    );
 }
 
 // ── FmtScheme convenience methods test ──
@@ -720,17 +809,21 @@ fn test_bullet_char_rendered() {
 #[test]
 fn test_fmt_scheme_get_fill_style() {
     use pptx2html_core::model::hierarchy::FmtScheme;
-    use pptx2html_core::model::{Fill, SolidFill, Color};
+    use pptx2html_core::model::{Color, Fill, SolidFill};
 
     let fmt = FmtScheme {
         fill_style_lst: vec![
-            Fill::Solid(SolidFill { color: Color::rgb("AA0000") }),
-            Fill::Solid(SolidFill { color: Color::rgb("BB0000") }),
+            Fill::Solid(SolidFill {
+                color: Color::rgb("AA0000"),
+            }),
+            Fill::Solid(SolidFill {
+                color: Color::rgb("BB0000"),
+            }),
         ],
         ln_style_lst: vec![],
-        bg_fill_style_lst: vec![
-            Fill::Solid(SolidFill { color: Color::rgb("CC0000") }),
-        ],
+        bg_fill_style_lst: vec![Fill::Solid(SolidFill {
+            color: Color::rgb("CC0000"),
+        })],
     };
 
     // idx 0 → None
@@ -754,9 +847,11 @@ fn test_fmt_scheme_get_line_style() {
 
     let fmt = FmtScheme {
         fill_style_lst: vec![],
-        ln_style_lst: vec![
-            Border { width: 0.75, color: Color::none(), style: BorderStyle::Solid },
-        ],
+        ln_style_lst: vec![Border {
+            width: 0.75,
+            color: Color::none(),
+            style: BorderStyle::Solid,
+        }],
         bg_fill_style_lst: vec![],
     };
 
@@ -858,11 +953,20 @@ fn test_title_inherits_font_size_from_tx_styles() {
     let html = render_html(&pptx);
 
     // Title should inherit 44pt font size from titleStyle lvl1pPr defRPr
-    assert!(html.contains("font-size: 44.0pt"), "Title should inherit 44pt font size: {html}");
+    assert!(
+        html.contains("font-size: 44.0pt"),
+        "Title should inherit 44pt font size: {html}"
+    );
     // Title should inherit bold from titleStyle
-    assert!(html.contains("font-weight: bold"), "Title should inherit bold: {html}");
+    assert!(
+        html.contains("font-weight: bold"),
+        "Title should inherit bold: {html}"
+    );
     // Title should inherit red color from titleStyle
-    assert!(html.contains("color: #FF0000"), "Title should inherit red color: {html}");
+    assert!(
+        html.contains("color: #FF0000"),
+        "Title should inherit red color: {html}"
+    );
 }
 
 #[test]
@@ -928,8 +1032,14 @@ fn test_explicit_style_overrides_inherited() {
     let html = render_html(&pptx);
 
     // Explicit 20pt should override inherited 44pt
-    assert!(html.contains("font-size: 20.0pt"), "Explicit font-size should override inherited: {html}");
-    assert!(!html.contains("font-size: 44.0pt"), "Inherited 44pt should not appear: {html}");
+    assert!(
+        html.contains("font-size: 20.0pt"),
+        "Explicit font-size should override inherited: {html}"
+    );
+    assert!(
+        !html.contains("font-size: 44.0pt"),
+        "Inherited 44pt should not appear: {html}"
+    );
 }
 
 #[test]
@@ -996,9 +1106,15 @@ fn test_body_inherits_spacing_from_tx_styles() {
     let html = render_html(&pptx);
 
     // Body should inherit space-before 10pt from bodyStyle
-    assert!(html.contains("margin-top: 10.0pt"), "Body should inherit space-before: {html}");
+    assert!(
+        html.contains("margin-top: 10.0pt"),
+        "Body should inherit space-before: {html}"
+    );
     // Body should inherit font-size 28pt from bodyStyle defRPr
-    assert!(html.contains("font-size: 28.0pt"), "Body should inherit font-size 28pt: {html}");
+    assert!(
+        html.contains("font-size: 28.0pt"),
+        "Body should inherit font-size 28pt: {html}"
+    );
 }
 
 #[test]
@@ -1050,7 +1166,10 @@ fn test_default_text_style_inherited_by_non_placeholder() {
     let html = render_html(&pptx);
 
     // Non-placeholder shapes get otherStyle first, then defaultTextStyle
-    assert!(html.contains("font-size: 18.0pt"), "Non-placeholder should inherit 18pt from defaultTextStyle: {html}");
+    assert!(
+        html.contains("font-size: 18.0pt"),
+        "Non-placeholder should inherit 18pt from defaultTextStyle: {html}"
+    );
 }
 
 #[test]
@@ -1129,7 +1248,10 @@ fn test_font_ref_provides_font_family() {
     let html = render_html(&pptx);
 
     // fontRef "minor" should resolve to "Calibri" from theme font scheme
-    assert!(html.contains("font-family: 'Calibri'"), "fontRef should resolve to Calibri: {html}");
+    assert!(
+        html.contains("font-family: 'Calibri'"),
+        "fontRef should resolve to Calibri: {html}"
+    );
 }
 
 #[test]
@@ -1178,5 +1300,8 @@ fn test_font_typeface_theme_ref_resolved() {
     let html = render_html(&pptx);
 
     // "+mn-lt" should resolve to "Pretendard"
-    assert!(html.contains("font-family: 'Pretendard'"), "+mn-lt should resolve to Pretendard: {html}");
+    assert!(
+        html.contains("font-family: 'Pretendard'"),
+        "+mn-lt should resolve to Pretendard: {html}"
+    );
 }

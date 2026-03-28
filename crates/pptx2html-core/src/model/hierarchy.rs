@@ -45,17 +45,9 @@ pub struct TxStyles {
 }
 
 /// Level-based text style container (lvl1pPr through lvl9pPr)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ListStyle {
     pub levels: [Option<ParagraphDefaults>; 9],
-}
-
-impl Default for ListStyle {
-    fn default() -> Self {
-        Self {
-            levels: [None, None, None, None, None, None, None, None, None],
-        }
-    }
 }
 
 /// Default paragraph properties for a given level

@@ -22,9 +22,7 @@ fn build_test_pptx(slide_count: usize) -> Vec<u8> {
     for i in 1..=slide_count {
         let id = 255 + i;
         let rid = format!("rId{}", i + 2); // rId1=master, rId2=theme, rId3+=slides
-        slide_id_list.push_str(&format!(
-            "<p:sldId id=\"{id}\" r:id=\"{rid}\"/>"
-        ));
+        slide_id_list.push_str(&format!("<p:sldId id=\"{id}\" r:id=\"{rid}\"/>"));
         pres_rels.push_str(&format!(
             "<Relationship Id=\"{rid}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide{i}.xml\"/>"
         ));
@@ -77,7 +75,8 @@ fn build_test_pptx(slide_count: usize) -> Vec<u8> {
   {pres_rels}
 </Relationships>"#
     );
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(pres_rels_xml.as_bytes()).unwrap();
 
     // Slide XML template with multiple shapes
@@ -133,14 +132,18 @@ fn build_test_pptx(slide_count: usize) -> Vec<u8> {
         // Slide rels
         let rels_path = format!("ppt/slides/_rels/slide{i}.xml.rels");
         zip.start_file(&rels_path, opts).unwrap();
-        zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-</Relationships>"#).unwrap();
+</Relationships>"#,
+        )
+        .unwrap();
     }
 
     // Theme
     zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Bench">
   <a:themeElements>
     <a:clrScheme name="Office">
@@ -162,7 +165,9 @@ fn build_test_pptx(slide_count: usize) -> Vec<u8> {
       <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
     </a:fontScheme>
   </a:themeElements>
-</a:theme>"#).unwrap();
+</a:theme>"#,
+    )
+    .unwrap();
 
     zip.finish().unwrap().into_inner()
 }

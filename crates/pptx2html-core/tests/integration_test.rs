@@ -69,7 +69,10 @@ fn test_theme_color_in_text() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
     // accent1 = #4472C4
-    assert!(html.contains("#4472C4"), "Theme accent1 color not found in HTML: {html}");
+    assert!(
+        html.contains("#4472C4"),
+        "Theme accent1 color not found in HTML: {html}"
+    );
 }
 
 // ── ClrMap tests ──
@@ -112,7 +115,10 @@ fn test_clr_map_color_resolution() {
         .build();
     let html = render_html(&pptx);
     // tx1 → dk1 → "000000"
-    assert!(html.contains("#000000"), "ClrMap tx1→dk1 color not found: {html}");
+    assert!(
+        html.contains("#000000"),
+        "ClrMap tx1→dk1 color not found: {html}"
+    );
 }
 
 // ── SolidFill tests ──
@@ -155,7 +161,10 @@ fn test_solid_fill_theme() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
     // accent2 = ED7D31
-    assert!(html.contains("#ED7D31"), "accent2 fill color not found: {html}");
+    assert!(
+        html.contains("#ED7D31"),
+        "accent2 fill color not found: {html}"
+    );
 }
 
 // ── Color modifier tests ──
@@ -274,7 +283,10 @@ fn test_gradient_fill_html() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("linear-gradient"), "Gradient not found in HTML: {html}");
+    assert!(
+        html.contains("linear-gradient"),
+        "Gradient not found in HTML: {html}"
+    );
     assert!(html.contains("#FF0000"), "Start color not found");
     assert!(html.contains("#0000FF"), "End color not found");
 }
@@ -302,7 +314,10 @@ fn test_border_parsing() {
     // 25400 EMU = 2pt
     assert!((shape.border.width - 2.0).abs() < 0.1);
     assert!(matches!(shape.border.style, BorderStyle::Dashed));
-    assert_eq!(shape.border.color.kind, color::ColorKind::Rgb("FF0000".to_string()));
+    assert_eq!(
+        shape.border.color.kind,
+        color::ColorKind::Rgb("FF0000".to_string())
+    );
 }
 
 #[test]
@@ -369,7 +384,10 @@ fn test_body_pr_html_rendering() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("v-bottom"), "v-bottom class not found: {html}");
+    assert!(
+        html.contains("v-bottom"),
+        "v-bottom class not found: {html}"
+    );
 }
 
 // ── NoFill tests ──
@@ -463,7 +481,10 @@ fn test_multiple_shapes() {
     assert!(html.contains("#FF0000"));
     assert!(html.contains("#00FF00"));
     // Ellipse and roundRect are now rendered as SVG paths
-    assert!(html.contains("shape-svg"), "Expected SVG rendering for preset shapes");
+    assert!(
+        html.contains("shape-svg"),
+        "Expected SVG rendering for preset shapes"
+    );
     assert!(html.contains("<path d="), "Expected SVG path element");
 }
 
@@ -531,7 +552,11 @@ fn test_preset_shape_with_adjust_values() {
     let shape = &pres.slides[0].shapes[0];
     assert!(shape.adjust_values.is_some(), "Should have adjust values");
     let adj = shape.adjust_values.as_ref().unwrap();
-    assert_eq!(*adj.get("adj").unwrap() as i64, 25000, "adj should be 25000");
+    assert_eq!(
+        *adj.get("adj").unwrap() as i64,
+        25000,
+        "adj should be 25000"
+    );
 }
 
 #[test]
@@ -568,7 +593,10 @@ fn test_rect_shape_no_svg() {
     let html = render_html(&pptx);
     // rect is ShapeType::Rectangle (rendered without SVG path)
     // Note: .shape-svg class exists in CSS, so we check for actual SVG element usage
-    assert!(!html.contains("<svg viewBox="), "Rect should not generate SVG viewBox");
+    assert!(
+        !html.contains("<svg viewBox="),
+        "Rect should not generate SVG viewBox"
+    );
     assert!(html.contains("#0000FF"));
 }
 
@@ -594,7 +622,11 @@ fn test_text_break_renders_as_br() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    let para = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0];
     assert_eq!(para.runs.len(), 3, "Should have 3 runs (text, break, text)");
     assert!(para.runs[1].is_break, "Second run should be a break");
 
@@ -626,7 +658,10 @@ fn test_vertical_text_rendering() {
     assert_eq!(shape.vertical_text.as_deref(), Some("vert"));
 
     let html = render_html(&pptx);
-    assert!(html.contains("writing-mode: vertical-rl"), "Should contain vertical writing mode");
+    assert!(
+        html.contains("writing-mode: vertical-rl"),
+        "Should contain vertical writing mode"
+    );
 }
 
 #[test]
@@ -673,11 +708,19 @@ fn test_text_highlight() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    let run = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0]
+        .runs[0];
     assert!(run.style.highlight.is_some(), "Should have highlight color");
 
     let html = render_html(&pptx);
-    assert!(html.contains("background-color: #FFFF00"), "Should render highlight as background-color");
+    assert!(
+        html.contains("background-color: #FFFF00"),
+        "Should render highlight as background-color"
+    );
 }
 
 // ── Month 4: Text shadow test ──
@@ -709,13 +752,21 @@ fn test_text_shadow() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    let run = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0]
+        .runs[0];
     assert!(run.style.shadow.is_some(), "Should have text shadow");
     let shadow = run.style.shadow.as_ref().unwrap();
     assert!(shadow.blur_rad > 0.0, "Blur radius should be positive");
 
     let html = render_html(&pptx);
-    assert!(html.contains("text-shadow:"), "Should render text-shadow CSS");
+    assert!(
+        html.contains("text-shadow:"),
+        "Should render text-shadow CSS"
+    );
 }
 
 // ── Month 4: Image crop test ──
@@ -742,8 +793,14 @@ fn test_image_crop_parsing() {
         let crop = pic.crop.as_ref().unwrap();
         assert!((crop.left - 0.1).abs() < 0.01, "Left crop should be ~0.1");
         assert!((crop.top - 0.2).abs() < 0.01, "Top crop should be ~0.2");
-        assert!((crop.right - 0.15).abs() < 0.01, "Right crop should be ~0.15");
-        assert!((crop.bottom - 0.05).abs() < 0.01, "Bottom crop should be ~0.05");
+        assert!(
+            (crop.right - 0.15).abs() < 0.01,
+            "Right crop should be ~0.15"
+        );
+        assert!(
+            (crop.bottom - 0.05).abs() < 0.01,
+            "Bottom crop should be ~0.05"
+        );
     } else {
         panic!("Expected Picture shape type");
     }
@@ -788,7 +845,10 @@ fn test_chart_renders_placeholder() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("chart-placeholder"), "Should render chart placeholder");
+    assert!(
+        html.contains("chart-placeholder"),
+        "Should render chart placeholder"
+    );
     assert!(html.contains("Chart"), "Should show Chart label");
 }
 
@@ -798,6 +858,12 @@ fn test_chart_renders_placeholder() {
 fn test_global_css_contains_svg_styles() {
     let pptx = fixtures::MinimalPptx::new("").build();
     let html = render_html(&pptx);
-    assert!(html.contains(".shape-svg"), "CSS should contain .shape-svg class");
-    assert!(html.contains(".chart-placeholder"), "CSS should contain .chart-placeholder class");
+    assert!(
+        html.contains(".shape-svg"),
+        "CSS should contain .shape-svg class"
+    );
+    assert!(
+        html.contains(".chart-placeholder"),
+        "CSS should contain .chart-placeholder class"
+    );
 }

@@ -17,7 +17,8 @@ impl Emu {
         self.0 as f64 / 360000.0
     }
 
-    pub fn from_str(s: &str) -> Self {
+    /// Parse an EMU value from string, returning zero for invalid input.
+    pub fn parse_emu(s: &str) -> Self {
         Self(s.parse::<i64>().unwrap_or(0))
     }
 }

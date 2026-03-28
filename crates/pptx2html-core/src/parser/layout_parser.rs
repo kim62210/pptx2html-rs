@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use zip::ZipArchive;
 
-use crate::error::{PptxError, PptxResult};
-use crate::model::*;
 use super::master_parser::parse_placeholder_attrs;
 use super::xml_utils;
+use crate::error::{PptxError, PptxResult};
+use crate::model::*;
 
 /// Parse slideLayout XML into SlideLayout
 pub fn parse_slide_layout<R: Read + Seek>(
@@ -71,14 +71,18 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     // Position/size for shapes
                     "off" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.position.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                            sb.position.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                            sb.position.x =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                            sb.position.y =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
                     "ext" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.size.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                            sb.size.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                            sb.size.width =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                            sb.size.height =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
                         }
                     }
                     // overrideClrMapping (override ClrMap)

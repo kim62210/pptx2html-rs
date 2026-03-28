@@ -4,11 +4,11 @@
 //! Properties defined at a lower level (slide) override the same property
 //! from a higher level (master). This module resolves effective values.
 
+use super::style_ref;
 use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
 use crate::model::{Border, Color, Fill, Position, Size};
-use super::style_ref;
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
 pub fn resolve_background(
@@ -16,24 +16,22 @@ pub fn resolve_background(
     layout: Option<&SlideLayout>,
     master: Option<&SlideMaster>,
 ) -> Fill {
-    if let Some(ref bg) = slide.background {
-        if !matches!(bg, Fill::None) {
-            return bg.clone();
-        }
+    if let Some(ref bg) = slide.background
+        && !matches!(bg, Fill::None)
+    {
+        return bg.clone();
     }
-    if let Some(l) = layout {
-        if let Some(ref bg) = l.background {
-            if !matches!(bg, Fill::None) {
-                return bg.clone();
-            }
-        }
+    if let Some(l) = layout
+        && let Some(ref bg) = l.background
+        && !matches!(bg, Fill::None)
+    {
+        return bg.clone();
     }
-    if let Some(m) = master {
-        if let Some(ref bg) = m.background {
-            if !matches!(bg, Fill::None) {
-                return bg.clone();
-            }
-        }
+    if let Some(m) = master
+        && let Some(ref bg) = m.background
+        && !matches!(bg, Fill::None)
+    {
+        return bg.clone();
     }
     Fill::Solid(crate::model::SolidFill {
         color: Color::rgb("FFFFFF"),
@@ -49,15 +47,15 @@ pub fn resolve_shape_fill(
     if !matches!(shape.fill, Fill::None) {
         return shape.fill.clone();
     }
-    if let Some(lm) = layout_match {
-        if !matches!(lm.fill, Fill::None) {
-            return lm.fill.clone();
-        }
+    if let Some(lm) = layout_match
+        && !matches!(lm.fill, Fill::None)
+    {
+        return lm.fill.clone();
     }
-    if let Some(mm) = master_match {
-        if !matches!(mm.fill, Fill::None) {
-            return mm.fill.clone();
-        }
+    if let Some(mm) = master_match
+        && !matches!(mm.fill, Fill::None)
+    {
+        return mm.fill.clone();
     }
     Fill::None
 }
@@ -79,12 +77,10 @@ pub fn resolve_shape_fill_with_theme(
     // Try style_ref fillRef as fallback
     if let (Some(style_ref), Some(fmt), Some(cs), Some(cm)) =
         (&shape.style_ref, fmt_scheme, scheme, clr_map)
+        && let Some(fill_ref) = &style_ref.fill_ref
+        && let Some(resolved) = style_ref::resolve_fill_ref(fill_ref, fmt, cs, cm)
     {
-        if let Some(fill_ref) = &style_ref.fill_ref {
-            if let Some(resolved) = style_ref::resolve_fill_ref(fill_ref, fmt, cs, cm) {
-                return resolved;
-            }
-        }
+        return resolved;
     }
 
     Fill::None
@@ -104,27 +100,25 @@ pub fn resolve_border_with_theme(
         return shape.border.clone();
     }
     // Check layout match
-    if let Some(lm) = layout_match {
-        if lm.border.width > 0.0 {
-            return lm.border.clone();
-        }
+    if let Some(lm) = layout_match
+        && lm.border.width > 0.0
+    {
+        return lm.border.clone();
     }
     // Check master match
-    if let Some(mm) = master_match {
-        if mm.border.width > 0.0 {
-            return mm.border.clone();
-        }
+    if let Some(mm) = master_match
+        && mm.border.width > 0.0
+    {
+        return mm.border.clone();
     }
 
     // Try style_ref lnRef as fallback
     if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
         (&shape.style_ref, fmt_scheme, scheme, clr_map)
+        && let Some(ln_ref) = &sr.ln_ref
+        && let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
     {
-        if let Some(ln_ref) = &sr.ln_ref {
-            if let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm) {
-                return resolved;
-            }
-        }
+        return resolved;
     }
 
     shape.border.clone()
@@ -140,15 +134,15 @@ pub fn resolve_position(
     if has_nonzero_size(&shape.size) {
         return (shape.position, shape.size);
     }
-    if let Some(lm) = layout_match {
-        if has_nonzero_size(&lm.size) {
-            return (lm.position, lm.size);
-        }
+    if let Some(lm) = layout_match
+        && has_nonzero_size(&lm.size)
+    {
+        return (lm.position, lm.size);
     }
-    if let Some(mm) = master_match {
-        if has_nonzero_size(&mm.size) {
-            return (mm.position, mm.size);
-        }
+    if let Some(mm) = master_match
+        && has_nonzero_size(&mm.size)
+    {
+        return (mm.position, mm.size);
     }
     (shape.position, shape.size)
 }
@@ -166,12 +160,12 @@ pub fn resolve_clr_map<'a>(
             ClrMapOverride::UseMaster => {}
         }
     }
-    if let Some(l) = layout {
-        if let Some(ref ovr) = l.clr_map_ovr {
-            match ovr {
-                ClrMapOverride::Override(cm) => return cm,
-                ClrMapOverride::UseMaster => {}
-            }
+    if let Some(l) = layout
+        && let Some(ref ovr) = l.clr_map_ovr
+    {
+        match ovr {
+            ClrMapOverride::Override(cm) => return cm,
+            ClrMapOverride::UseMaster => {}
         }
     }
     &master.clr_map
@@ -221,7 +215,9 @@ mod tests {
             ..Default::default()
         };
         let bg = resolve_background(&slide, Some(&layout), Some(&master));
-        assert!(matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FF0000")));
+        assert!(
+            matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FF0000"))
+        );
     }
 
     #[test]
@@ -232,7 +228,9 @@ mod tests {
             ..Default::default()
         };
         let bg = resolve_background(&slide, Some(&layout), None);
-        assert!(matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF")));
+        assert!(
+            matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF"))
+        );
     }
 
     #[test]
@@ -243,14 +241,18 @@ mod tests {
             ..Default::default()
         };
         let bg = resolve_background(&slide, None, Some(&master));
-        assert!(matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "00FF00")));
+        assert!(
+            matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "00FF00"))
+        );
     }
 
     #[test]
     fn bg_default_white() {
         let slide = Slide::default();
         let bg = resolve_background(&slide, None, None);
-        assert!(matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FFFFFF")));
+        assert!(
+            matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FFFFFF"))
+        );
     }
 
     #[test]
@@ -264,7 +266,9 @@ mod tests {
             ..Default::default()
         };
         let bg = resolve_background(&slide, Some(&layout), None);
-        assert!(matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF")));
+        assert!(
+            matches!(bg, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF"))
+        );
     }
 
     // -- resolve_shape_fill tests --
@@ -276,7 +280,9 @@ mod tests {
             ..Default::default()
         };
         let fill = resolve_shape_fill(&shape, None, None);
-        assert!(matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FF0000")));
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "FF0000"))
+        );
     }
 
     #[test]
@@ -287,7 +293,9 @@ mod tests {
             ..Default::default()
         };
         let fill = resolve_shape_fill(&shape, Some(&layout_match), None);
-        assert!(matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF")));
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "0000FF"))
+        );
     }
 
     #[test]
@@ -299,7 +307,9 @@ mod tests {
             ..Default::default()
         };
         let fill = resolve_shape_fill(&shape, Some(&layout_match), Some(&master_match));
-        assert!(matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "00FF00")));
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "00FF00"))
+        );
     }
 
     #[test]

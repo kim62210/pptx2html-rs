@@ -310,9 +310,7 @@ fn chevron_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let point = w * adj_val / 100_000.0;
     let cy = h / 2.0;
     let x1 = w - point;
-    format!(
-        "M0,0 L{x1:.1},0 L{w:.1},{cy:.1} L{x1:.1},{h:.1} L0,{h:.1} L{point:.1},{cy:.1} Z"
-    )
+    format!("M0,0 L{x1:.1},0 L{w:.1},{cy:.1} L{x1:.1},{h:.1} L0,{h:.1} L{point:.1},{cy:.1} Z")
 }
 
 // ── Callouts ──
@@ -445,16 +443,16 @@ fn star5_path(w: f64, h: f64) -> String {
     let cx = w / 2.0;
     // 5-pointed star points (outer radius = half dimensions, inner ~ 38%)
     let points = [
-        (cx, 0.0),                                // top
-        (w * 0.6173, h * 0.3455),                  // inner right-up
-        (w, h * 0.382),                            // right
-        (w * 0.6909, h * 0.5878),                  // inner right-down
-        (w * 0.7939, h),                           // bottom-right
-        (cx, h * 0.7265),                          // inner bottom
-        (w * 0.2061, h),                           // bottom-left
-        (w * 0.3090, h * 0.5878),                  // inner left-down
-        (0.0, h * 0.382),                          // left
-        (w * 0.3827, h * 0.3455),                  // inner left-up
+        (cx, 0.0),                // top
+        (w * 0.6173, h * 0.3455), // inner right-up
+        (w, h * 0.382),           // right
+        (w * 0.6909, h * 0.5878), // inner right-down
+        (w * 0.7939, h),          // bottom-right
+        (cx, h * 0.7265),         // inner bottom
+        (w * 0.2061, h),          // bottom-left
+        (w * 0.3090, h * 0.5878), // inner left-down
+        (0.0, h * 0.382),         // left
+        (w * 0.3827, h * 0.3455), // inner left-up
     ];
     let mut path = format!("M{:.1},{:.1}", points[0].0, points[0].1);
     for &(x, y) in &points[1..] {
@@ -546,7 +544,10 @@ mod tests {
     fn test_round_rect_default_radius() {
         let adj = HashMap::new();
         let path = round_rect_path(300.0, 100.0, &adj);
-        assert!(path.contains('Q'), "Should contain quadratic bezier for corners");
+        assert!(
+            path.contains('Q'),
+            "Should contain quadratic bezier for corners"
+        );
         assert!(path.ends_with('Z'));
     }
 
@@ -567,14 +568,37 @@ mod tests {
     fn test_preset_shape_svg_returns_some_for_known() {
         let adj = HashMap::new();
         let known = [
-            "rect", "roundRect", "ellipse", "triangle", "rtTriangle",
-            "diamond", "parallelogram", "trapezoid", "pentagon", "hexagon",
-            "octagon", "rightArrow", "leftArrow", "upArrow", "downArrow",
-            "leftRightArrow", "upDownArrow", "bentArrow", "chevron",
-            "wedgeRoundRectCallout", "wedgeEllipseCallout", "cloudCallout",
-            "flowChartProcess", "flowChartDecision", "flowChartTerminator",
-            "flowChartDocument", "star4", "star5", "star6",
-            "heart", "plus",
+            "rect",
+            "roundRect",
+            "ellipse",
+            "triangle",
+            "rtTriangle",
+            "diamond",
+            "parallelogram",
+            "trapezoid",
+            "pentagon",
+            "hexagon",
+            "octagon",
+            "rightArrow",
+            "leftArrow",
+            "upArrow",
+            "downArrow",
+            "leftRightArrow",
+            "upDownArrow",
+            "bentArrow",
+            "chevron",
+            "wedgeRoundRectCallout",
+            "wedgeEllipseCallout",
+            "cloudCallout",
+            "flowChartProcess",
+            "flowChartDecision",
+            "flowChartTerminator",
+            "flowChartDocument",
+            "star4",
+            "star5",
+            "star6",
+            "heart",
+            "plus",
         ];
         for name in &known {
             assert!(

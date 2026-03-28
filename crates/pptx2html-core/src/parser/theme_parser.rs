@@ -1,10 +1,10 @@
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 
+use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::presentation::{ColorScheme, Theme};
 use crate::model::{Border, BorderStyle, Color, Emu, Fill, FmtScheme, SolidFill};
-use super::xml_utils;
 
 pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     let mut reader = Reader::from_str(xml);
@@ -16,7 +16,7 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
 
     // FmtScheme state
     let mut in_fmt_scheme = false;
-    let mut fmt_list_kind: Option<FmtListKind> = None;
+    let mut fmt_list_kind: Option<FmtKind> = None;
     let mut current_fill_color: Option<Color> = None;
     let mut in_ln = false;
     let mut current_ln_width: f64 = 0.0;
@@ -45,19 +45,19 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // FmtScheme
                     "fmtScheme" => in_fmt_scheme = true,
                     "fillStyleLst" if in_fmt_scheme => {
-                        fmt_list_kind = Some(FmtListKind::FillStyle);
+                        fmt_list_kind = Some(FmtKind::Fill);
                     }
                     "lnStyleLst" if in_fmt_scheme => {
-                        fmt_list_kind = Some(FmtListKind::LnStyle);
+                        fmt_list_kind = Some(FmtKind::Ln);
                     }
                     "bgFillStyleLst" if in_fmt_scheme => {
-                        fmt_list_kind = Some(FmtListKind::BgFillStyle);
+                        fmt_list_kind = Some(FmtKind::BgFill);
                     }
                     // Line element inside lnStyleLst
-                    "ln" if matches!(fmt_list_kind, Some(FmtListKind::LnStyle)) => {
+                    "ln" if matches!(fmt_list_kind, Some(FmtKind::Ln)) => {
                         in_ln = true;
                         current_ln_width = xml_utils::attr_str(e, "w")
-                            .map(|w| Emu::from_str(&w).to_pt())
+                            .map(|w| Emu::parse_emu(&w).to_pt())
                             .unwrap_or(0.0);
                         current_ln_color = None;
                     }
@@ -93,13 +93,21 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                 match local {
                     "srgbClr" if current_color_role.is_some() => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            set_color_scheme(&mut theme.color_scheme, current_color_role.as_deref().unwrap_or(""), &val);
+                            set_color_scheme(
+                                &mut theme.color_scheme,
+                                current_color_role.as_deref().unwrap_or(""),
+                                &val,
+                            );
                         }
                         current_color_role = None;
                     }
                     "sysClr" if current_color_role.is_some() => {
                         if let Some(val) = xml_utils::attr_str(e, "lastClr") {
-                            set_color_scheme(&mut theme.color_scheme, current_color_role.as_deref().unwrap_or(""), &val);
+                            set_color_scheme(
+                                &mut theme.color_scheme,
+                                current_color_role.as_deref().unwrap_or(""),
+                                &val,
+                            );
                         }
                         current_color_role = None;
                     }
@@ -171,7 +179,11 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // End of solidFill in fill/bg lists
                     "solidFill" if fmt_list_kind.is_some() && !in_ln => {
                         if let Some(color) = current_fill_color.take() {
-                            push_fill(&fmt_list_kind, &mut theme.fmt_scheme, Fill::Solid(SolidFill { color }));
+                            push_fill(
+                                &fmt_list_kind,
+                                &mut theme.fmt_scheme,
+                                Fill::Solid(SolidFill { color }),
+                            );
                         }
                     }
                     // End of solidFill inside line
@@ -184,7 +196,11 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         let border = Border {
                             width: current_ln_width,
                             color: current_ln_color.take().unwrap_or_default(),
-                            style: if current_ln_width > 0.0 { BorderStyle::Solid } else { BorderStyle::None },
+                            style: if current_ln_width > 0.0 {
+                                BorderStyle::Solid
+                            } else {
+                                BorderStyle::None
+                            },
                         };
                         theme.fmt_scheme.ln_style_lst.push(border);
                     }
@@ -204,16 +220,16 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     Ok(theme)
 }
 
-enum FmtListKind {
-    FillStyle,
-    LnStyle,
-    BgFillStyle,
+enum FmtKind {
+    Fill,
+    Ln,
+    BgFill,
 }
 
-fn push_fill(kind: &Option<FmtListKind>, fmt: &mut FmtScheme, fill: Fill) {
+fn push_fill(kind: &Option<FmtKind>, fmt: &mut FmtScheme, fill: Fill) {
     match kind {
-        Some(FmtListKind::FillStyle) => fmt.fill_style_lst.push(fill),
-        Some(FmtListKind::BgFillStyle) => fmt.bg_fill_style_lst.push(fill),
+        Some(FmtKind::Fill) => fmt.fill_style_lst.push(fill),
+        Some(FmtKind::BgFill) => fmt.bg_fill_style_lst.push(fill),
         _ => {}
     }
 }
