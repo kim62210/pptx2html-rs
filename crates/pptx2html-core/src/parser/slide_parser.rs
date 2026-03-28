@@ -517,6 +517,18 @@ pub fn parse_slide<R: Read + Seek>(
                     "blipFill" if in_bg_pr => {
                         // Will be handled when we encounter the blip child
                     }
+                    // Image reference (Start variant — blip with child elements)
+                    "blip" => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            for attr in e.attributes().flatten() {
+                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                                if key.ends_with("embed") {
+                                    sb.image_rel_id =
+                                        Some(String::from_utf8_lossy(&attr.value).to_string());
+                                }
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
