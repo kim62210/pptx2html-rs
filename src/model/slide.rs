@@ -1,12 +1,29 @@
 use super::geometry::{Position, Size};
+use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{Alignment, Border, Fill, FontStyle, TextStyle};
 
 /// Slide
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Slide {
+    pub layout_idx: Option<usize>,
     pub shapes: Vec<Shape>,
-    pub background: Fill,
+    pub background: Option<Fill>,
+    pub clr_map_ovr: Option<ClrMapOverride>,
+    pub show_master_sp: bool,
     pub hidden: bool,
+}
+
+impl Default for Slide {
+    fn default() -> Self {
+        Self {
+            layout_idx: None,
+            shapes: Vec::new(),
+            background: None,
+            clr_map_ovr: None,
+            show_master_sp: true,
+            hidden: false,
+        }
+    }
 }
 
 /// Shape type
@@ -39,6 +56,8 @@ pub struct Shape {
     pub border: Border,
     pub text_body: Option<TextBody>,
     pub hidden: bool,
+    pub placeholder: Option<PlaceholderInfo>,
+    pub style_ref: Option<ShapeStyleRef>,
 }
 
 /// Text body
@@ -56,11 +75,12 @@ pub struct TextBody {
 pub struct TextParagraph {
     pub runs: Vec<TextRun>,
     pub alignment: Alignment,
-    pub line_spacing: Option<f64>,
-    pub space_before: Option<f64>,
-    pub space_after: Option<f64>,
+    pub line_spacing: Option<SpacingValue>,
+    pub space_before: Option<SpacingValue>,
+    pub space_after: Option<SpacingValue>,
     pub indent: Option<f64>,
     pub bullet: Option<Bullet>,
+    pub level: u32,
 }
 
 /// Text run (text segment with uniform style)

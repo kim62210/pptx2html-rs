@@ -7,6 +7,14 @@ use crate::error::PptxResult;
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
 
+/// Extract the f64 value from a SpacingValue
+fn spacing_to_f64(sv: &SpacingValue) -> f64 {
+    match sv {
+        SpacingValue::Percent(v) => *v,
+        SpacingValue::Points(v) => *v,
+    }
+}
+
 /// Rendering context — propagates theme/ClrMap references
 struct RenderCtx<'a> {
     scheme: Option<&'a ColorScheme>,
@@ -34,7 +42,7 @@ impl HtmlRenderer {
         let slide_h = pres.slide_size.height.to_px();
 
         let ctx = RenderCtx {
-            scheme: pres.theme.as_ref().map(|t| &t.color_scheme),
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
             clr_map: if pres.clr_map.is_empty() { None } else { Some(&pres.clr_map) },
         };
 
@@ -108,7 +116,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
     ) -> String {
         let mut html = String::new();
 
-        let bg_style = Self::fill_to_css(&slide.background, ctx);
+        let default_bg = Fill::None;
+        let bg = slide.background.as_ref().unwrap_or(&default_bg);
+        let bg_style = Self::fill_to_css(bg, ctx);
         html.push_str(&format!(
             "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">\n"
         ));
@@ -216,14 +226,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let align = para.alignment.to_css();
         let mut style_parts = vec![format!("text-align: {align}")];
 
-        if let Some(ls) = para.line_spacing {
-            style_parts.push(format!("line-height: {ls:.2}"));
+        if let Some(ref ls) = para.line_spacing {
+            let v = spacing_to_f64(ls);
+            style_parts.push(format!("line-height: {v:.2}"));
         }
-        if let Some(sb) = para.space_before {
-            style_parts.push(format!("margin-top: {sb:.1}pt"));
+        if let Some(ref sb) = para.space_before {
+            let v = spacing_to_f64(sb);
+            style_parts.push(format!("margin-top: {v:.1}pt"));
         }
-        if let Some(sa) = para.space_after {
-            style_parts.push(format!("margin-bottom: {sa:.1}pt"));
+        if let Some(ref sa) = para.space_after {
+            let v = spacing_to_f64(sa);
+            style_parts.push(format!("margin-bottom: {v:.1}pt"));
         }
         if let Some(indent) = para.indent {
             style_parts.push(format!("text-indent: {indent:.1}pt"));

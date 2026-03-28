@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::geometry::Size;
+use super::hierarchy::{FmtScheme, ListStyle, SlideLayout, SlideMaster};
 use super::slide::Slide;
 
 /// Top-level presentation structure
@@ -9,8 +10,18 @@ pub struct Presentation {
     pub slides: Vec<Slide>,
     pub slide_size: Size,
     pub title: Option<String>,
-    pub theme: Option<Theme>,
+    pub themes: Vec<Theme>,
+    pub masters: Vec<SlideMaster>,
+    pub layouts: Vec<SlideLayout>,
+    pub default_text_style: Option<ListStyle>,
     pub clr_map: ClrMap,
+}
+
+impl Presentation {
+    /// Get primary theme (backward compat)
+    pub fn primary_theme(&self) -> Option<&Theme> {
+        self.themes.first()
+    }
 }
 
 /// Theme data
@@ -19,6 +30,7 @@ pub struct Theme {
     pub name: String,
     pub color_scheme: ColorScheme,
     pub font_scheme: FontScheme,
+    pub fmt_scheme: FmtScheme,
 }
 
 /// Theme color scheme (12 colors)
@@ -73,9 +85,9 @@ pub struct FontScheme {
     pub minor_east_asian: Option<String>,
 }
 
-/// ClrMap — color name mapping (from slideMaster `<a:clrMap>`)
+/// ClrMap -- color name mapping (from slideMaster `<a:clrMap>`)
 ///
-/// e.g. stores tx1→dk1, bg1→lt1 mappings
+/// e.g. stores tx1->dk1, bg1->lt1 mappings
 #[derive(Debug, Clone, Default)]
 pub struct ClrMap {
     map: HashMap<String, String>,

@@ -38,7 +38,7 @@ fn test_slide_size() {
 fn test_theme_parsing() {
     let pptx = fixtures::MinimalPptx::new("").build();
     let pres = parse_pptx(&pptx);
-    let theme = pres.theme.as_ref().expect("Theme not found");
+    let theme = pres.primary_theme().expect("Theme not found");
     assert_eq!(theme.color_scheme.accent1, "4472C4");
     assert_eq!(theme.color_scheme.dk1, "000000");
     assert_eq!(theme.color_scheme.lt1, "FFFFFF");

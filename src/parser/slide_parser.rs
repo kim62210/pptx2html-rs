@@ -599,6 +599,9 @@ struct ShapeBuilder {
     text_margins: TextMargins,
     text_word_wrap: bool,
     text_auto_fit: AutoFit,
+    // Placeholder and style reference (parsed as None for now)
+    placeholder: Option<PlaceholderInfo>,
+    style_ref: Option<ShapeStyleRef>,
 }
 
 impl ShapeBuilder {
@@ -649,6 +652,8 @@ impl ShapeBuilder {
             text_body,
             fill: self.fill,
             border,
+            placeholder: self.placeholder,
+            style_ref: self.style_ref,
             ..Default::default()
         }
     }
@@ -662,9 +667,9 @@ struct ParagraphBuilder {
     indent: Option<f64>,
     margin_left: Option<f64>,
     bullet: Option<Bullet>,
-    line_spacing: Option<f64>,
-    space_before: Option<f64>,
-    space_after: Option<f64>,
+    line_spacing: Option<SpacingValue>,
+    space_before: Option<SpacingValue>,
+    space_after: Option<SpacingValue>,
 }
 
 impl ParagraphBuilder {
@@ -677,6 +682,7 @@ impl ParagraphBuilder {
             space_after: self.space_after,
             indent: self.indent,
             bullet: self.bullet,
+            level: self.level,
         }
     }
 }

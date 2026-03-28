@@ -40,7 +40,7 @@ impl PptxParser {
 
         // 2. Parse theme
         if let Ok(theme_xml) = Self::read_entry(&mut archive, "ppt/theme/theme1.xml") {
-            presentation.theme = Some(theme_parser::parse_theme(&theme_xml)?);
+            presentation.themes.push(theme_parser::parse_theme(&theme_xml)?);
         }
 
         // 3. Parse relationships
