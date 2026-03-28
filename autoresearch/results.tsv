@@ -1,1 +1,4 @@
 iteration	timestamp	phase	commit_hash	fidelity_score	ssim	text_match	test_pass_rate	perf_score	status	description
+1	2026-03-28T19:30:00+09:00	02_performance	a7e1805	-	-	-	1.000	0.723	keep	eliminate intermediate String allocations in renderer (-28% render time)
+2	2026-03-28T19:40:00+09:00	02_performance	857795a	-	-	-	1.000	0.829	keep	optimize CSS style string building (-21% render time, -43% cumulative)
+3	2026-03-28T19:50:00+09:00	01_color_fidelity	e4c387b	-	-	-	1.000	-	keep	fix OOXML color modifier order per ECMA-376 spec, tint/shade HSL formula, 16 new tests

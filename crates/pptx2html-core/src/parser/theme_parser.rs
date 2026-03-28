@@ -205,6 +205,7 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             } else {
                                 BorderStyle::None
                             },
+                            ..Default::default()
                         };
                         theme.fmt_scheme.ln_style_lst.push(border);
                     }

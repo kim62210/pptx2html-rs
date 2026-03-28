@@ -908,6 +908,7 @@ fn test_fmt_scheme_get_line_style() {
             width: 0.75,
             color: Color::none(),
             style: BorderStyle::Solid,
+            ..Default::default()
         }],
         bg_fill_style_lst: vec![],
     };

@@ -90,6 +90,7 @@ pub fn resolve_ln_ref(
         } else {
             BorderStyle::None
         },
+        ..Default::default()
     })
 }
 
@@ -164,11 +165,13 @@ mod tests {
                     width: 0.75,
                     color: Color::none(),
                     style: BorderStyle::Solid,
+                    ..Default::default()
                 },
                 Border {
                     width: 1.5,
                     color: Color::none(),
                     style: BorderStyle::Solid,
+                    ..Default::default()
                 },
             ],
             bg_fill_style_lst: vec![Fill::Solid(SolidFill {

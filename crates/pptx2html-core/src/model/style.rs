@@ -147,6 +147,9 @@ pub struct Border {
     pub width: f64, // in pt
     pub color: Color,
     pub style: BorderStyle,
+    pub dash_style: DashStyle,
+    pub head_end: Option<LineEnd>,
+    pub tail_end: Option<LineEnd>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -156,4 +159,59 @@ pub enum BorderStyle {
     Solid,
     Dashed,
     Dotted,
+}
+
+/// Dash style for SVG stroke-dasharray rendering
+#[derive(Debug, Clone, Default)]
+pub enum DashStyle {
+    #[default]
+    Solid,
+    Dash,
+    Dot,
+    DashDot,
+    LongDash,
+    LongDashDot,
+    LongDashDotDot,
+    SystemDash,
+    SystemDot,
+}
+
+/// Line ending (arrowhead) for connectors/lines
+#[derive(Debug, Clone)]
+pub struct LineEnd {
+    pub end_type: LineEndType,
+    pub width: LineEndSize,
+    pub length: LineEndSize,
+}
+
+/// Line ending arrowhead type (ECMA-376 ST_LineEndType)
+#[derive(Debug, Clone, Default)]
+pub enum LineEndType {
+    #[default]
+    None,
+    Arrow,
+    Triangle,
+    Stealth,
+    Diamond,
+    Oval,
+}
+
+/// Line ending size (ECMA-376 ST_LineEndWidth / ST_LineEndLength)
+#[derive(Debug, Clone, Default)]
+pub enum LineEndSize {
+    Small,
+    #[default]
+    Medium,
+    Large,
+}
+
+impl LineEndSize {
+    /// Convert to a pixel multiplier relative to stroke width
+    pub fn multiplier(&self) -> f64 {
+        match self {
+            Self::Small => 3.0,
+            Self::Medium => 5.0,
+            Self::Large => 7.0,
+        }
+    }
 }

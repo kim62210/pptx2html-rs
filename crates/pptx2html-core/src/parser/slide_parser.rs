@@ -825,6 +825,30 @@ pub fn parse_slide<R: Read + Seek>(
                                 }
                                 _ => BorderStyle::Solid,
                             };
+                            sb.dash_style = match val.as_str() {
+                                "solid" => DashStyle::Solid,
+                                "dash" => DashStyle::Dash,
+                                "dot" => DashStyle::Dot,
+                                "dashDot" => DashStyle::DashDot,
+                                "lgDash" => DashStyle::LongDash,
+                                "lgDashDot" => DashStyle::LongDashDot,
+                                "lgDashDotDot" => DashStyle::LongDashDotDot,
+                                "sysDash" => DashStyle::SystemDash,
+                                "sysDot" => DashStyle::SystemDot,
+                                _ => DashStyle::Solid,
+                            };
+                        }
+                    }
+                    // Line ending: head arrow (<a:headEnd>)
+                    "headEnd" if in_ln => {
+                        if let Some(sb) = &mut current_shape {
+                            sb.head_end = parse_line_end(e);
+                        }
+                    }
+                    // Line ending: tail arrow (<a:tailEnd>)
+                    "tailEnd" if in_ln => {
+                        if let Some(sb) = &mut current_shape {
+                            sb.tail_end = parse_line_end(e);
                         }
                     }
                     // Gradient direction
@@ -2086,6 +2110,34 @@ fn assign_style_ref_no_color(ref_kind: &str, idx_str: &str, builder: &mut Option
     }
 }
 
+/// Parse <a:headEnd> or <a:tailEnd> attributes into a LineEnd
+fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<LineEnd> {
+    let end_type = match xml_utils::attr_str(e, "type").as_deref() {
+        Some("arrow") => LineEndType::Arrow,
+        Some("triangle") => LineEndType::Triangle,
+        Some("stealth") => LineEndType::Stealth,
+        Some("diamond") => LineEndType::Diamond,
+        Some("oval") => LineEndType::Oval,
+        Some("none") | None => return None,
+        Some(_) => return None,
+    };
+    let width = match xml_utils::attr_str(e, "w").as_deref() {
+        Some("sm") => LineEndSize::Small,
+        Some("lg") => LineEndSize::Large,
+        _ => LineEndSize::Medium,
+    };
+    let length = match xml_utils::attr_str(e, "len").as_deref() {
+        Some("sm") => LineEndSize::Small,
+        Some("lg") => LineEndSize::Large,
+        _ => LineEndSize::Medium,
+    };
+    Some(LineEnd {
+        end_type,
+        width,
+        length,
+    })
+}
+
 /// Parse bodyPr attributes
 fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<ShapeBuilder>) {
     if let Some(sb) = shape.as_mut() {
@@ -2182,6 +2234,9 @@ struct ShapeBuilder {
     border_width: f64,
     border_color: Color,
     border_style: BorderStyle,
+    dash_style: DashStyle,
+    head_end: Option<LineEnd>,
+    tail_end: Option<LineEnd>,
     // bodyPr
     text_vertical_align: VerticalAlign,
     text_margins: TextMargins,
@@ -2263,6 +2318,9 @@ impl ShapeBuilder {
             } else {
                 self.border_style
             },
+            dash_style: self.dash_style,
+            head_end: self.head_end,
+            tail_end: self.tail_end,
         };
 
         let adjust_values = if self.adjust_values.is_empty() {

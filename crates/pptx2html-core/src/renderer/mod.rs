@@ -507,10 +507,31 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     ("none".to_string(), 0.0)
                 };
                 let fill_attr = if is_line_shape { "none" } else { &fill_color };
+                let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let _ = write!(
                     html,
-                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">\
-                     <path d=\"{svg_path}\" fill=\"{fill_attr}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>\
+                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+                );
+                // Emit marker defs for line endings (arrows)
+                let mut marker_start_attr = String::new();
+                let mut marker_end_attr = String::new();
+                if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
+                    html.push_str("<defs>");
+                    if let Some(ref he) = resolved_border.head_end {
+                        emit_marker_def(html, "head", he, &stroke_color, stroke_width);
+                        marker_start_attr = format!(" marker-start=\"url(#marker-head)\"");
+                    }
+                    if let Some(ref te) = resolved_border.tail_end {
+                        emit_marker_def(html, "tail", te, &stroke_color, stroke_width);
+                        marker_end_attr = format!(" marker-end=\"url(#marker-tail)\"");
+                    }
+                    html.push_str("</defs>");
+                }
+                let _ = write!(
+                    html,
+                    "<path d=\"{svg_path}\" fill=\"{fill_attr}\" \
+                     stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
+                     {dash_attr}{marker_start_attr}{marker_end_attr}/>\
                      </svg>\n"
                 );
             }
@@ -530,6 +551,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("none".to_string(), 0.0)
                 };
+                let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let _ = write!(
                     html,
                     "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
@@ -541,7 +563,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     };
                     let _ = write!(
                         html,
-                        "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>",
+                        "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"{dash_attr}/>",
                         path_svg.d
                     );
                 }
@@ -1520,4 +1542,115 @@ fn escape_html(s: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+/// Convert DashStyle to SVG stroke-dasharray attribute string (including leading space)
+fn dash_style_to_svg(style: &DashStyle, stroke_width: f64) -> String {
+    let sw = if stroke_width > 0.0 {
+        stroke_width
+    } else {
+        1.0
+    };
+    match style {
+        DashStyle::Solid => String::new(),
+        DashStyle::Dash => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 8.0 * sw, 4.0 * sw),
+        DashStyle::Dot => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 2.0 * sw, 2.0 * sw),
+        DashStyle::DashDot => format!(
+            " stroke-dasharray=\"{:.1} {:.1} {:.1} {:.1}\"",
+            8.0 * sw,
+            4.0 * sw,
+            2.0 * sw,
+            4.0 * sw
+        ),
+        DashStyle::LongDash => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 12.0 * sw, 4.0 * sw),
+        DashStyle::LongDashDot => format!(
+            " stroke-dasharray=\"{:.1} {:.1} {:.1} {:.1}\"",
+            12.0 * sw,
+            4.0 * sw,
+            2.0 * sw,
+            4.0 * sw
+        ),
+        DashStyle::LongDashDotDot => format!(
+            " stroke-dasharray=\"{:.1} {:.1} {:.1} {:.1} {:.1} {:.1}\"",
+            12.0 * sw,
+            4.0 * sw,
+            2.0 * sw,
+            4.0 * sw,
+            2.0 * sw,
+            4.0 * sw
+        ),
+        DashStyle::SystemDash => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 6.0 * sw, 3.0 * sw),
+        DashStyle::SystemDot => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 1.0 * sw, 2.0 * sw),
+    }
+}
+
+/// Emit an SVG <marker> definition for a line ending (arrowhead)
+fn emit_marker_def(
+    html: &mut String,
+    id_suffix: &str,
+    line_end: &LineEnd,
+    color: &str,
+    stroke_width: f64,
+) {
+    let w_mult = line_end.width.multiplier();
+    let l_mult = line_end.length.multiplier();
+    let marker_w = w_mult * stroke_width;
+    let marker_h = l_mult * stroke_width;
+    let half_w = marker_w / 2.0;
+
+    let (path, fill_attr) = match line_end.end_type {
+        LineEndType::Arrow => (
+            format!(
+                "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1}",
+            ),
+            "none".to_string(),
+        ),
+        LineEndType::Triangle => (
+            format!(
+                "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} Z",
+            ),
+            color.to_string(),
+        ),
+        LineEndType::Stealth => (
+            format!(
+                "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} L{back:.1},{half_w:.1} Z",
+                back = marker_h * 0.4,
+            ),
+            color.to_string(),
+        ),
+        LineEndType::Diamond => {
+            let mid_h = marker_h / 2.0;
+            (
+                format!(
+                    "M0,{half_w:.1} L{mid_h:.1},0 L{marker_h:.1},{half_w:.1} L{mid_h:.1},{marker_w:.1} Z",
+                ),
+                color.to_string(),
+            )
+        }
+        LineEndType::Oval => {
+            let rx = marker_h / 2.0;
+            let ry = half_w;
+            let cx = rx;
+            let cy = ry;
+            (
+                format!(
+                    "M{start:.1},{cy:.1} A{rx:.1},{ry:.1} 0 1,1 {end:.1},{cy:.1} A{rx:.1},{ry:.1} 0 1,1 {start:.1},{cy:.1} Z",
+                    start = cx - rx,
+                    end = cx + rx,
+                ),
+                color.to_string(),
+            )
+        }
+        LineEndType::None => return,
+    };
+
+    let _ = write!(
+        html,
+        "<marker id=\"marker-{id_suffix}\" viewBox=\"0 0 {marker_h:.1} {marker_w:.1}\" \
+         refX=\"{marker_h:.1}\" refY=\"{half_w:.1}\" \
+         markerWidth=\"{marker_h:.1}\" markerHeight=\"{marker_w:.1}\" \
+         orient=\"auto-start-reverse\">\
+         <path d=\"{path}\" fill=\"{fill_attr}\" stroke=\"{color}\" stroke-width=\"0.5\"/>\
+         </marker>"
+    );
 }
