@@ -17,8 +17,8 @@ pub use hierarchy::{
 };
 pub use presentation::{ClrMap, Presentation};
 pub use slide::{
-    AutoFit, Bullet, PictureData, Shape, ShapeType, Slide, TableCell, TableData, TableRow,
-    TextBody, TextMargins, TextParagraph, TextRun, VerticalAlign,
+    AutoFit, Bullet, BulletAutoNum, BulletChar, PictureData, Shape, ShapeType, Slide, TableCell,
+    TableData, TableRow, TextBody, TextMargins, TextParagraph, TextRun, VerticalAlign,
 };
 pub use style::{
     Alignment, Border, BorderStyle, Fill, FontStyle, GradientFill, GradientStop, SolidFill,

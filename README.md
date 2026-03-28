@@ -51,8 +51,11 @@ let html = pptx2html_rs::convert_bytes(&pptx_data)?;
 | Images (base64 inline) | ✅ |
 | Hyperlinks | ✅ |
 | Preset shapes (rect, ellipse, roundRect, etc.) | ✅ |
-| Slide Master / Layout inheritance | 🔜 |
-| Placeholder content inheritance | 🔜 |
+| Slide Master / Layout inheritance | ✅ |
+| Placeholder content inheritance | ✅ |
+| Shape style refs (fillRef / lnRef / fontRef) | ✅ |
+| Paragraph spacing (lnSpc / spcBef / spcAft) | ✅ |
+| defaultTextStyle | ✅ |
 | Tables | 🔜 |
 | Bullets (multi-level) | 🔜 |
 | Group shapes | 🔜 |
@@ -63,20 +66,27 @@ let html = pptx2html_rs::convert_bytes(&pptx_data)?;
 ## Architecture
 
 ```
-PPTX (ZIP) → XML Parsing → Model → HTML Rendering
+PPTX (ZIP) → XML Parsing → Model → Resolver (inheritance) → HTML Rendering
 
 src/
-├── model/              # Data model (Color, Shape, Slide, Presentation)
+├── model/              # Data model
 │   ├── color.rs        # Theme-aware color system + modifiers + HSL
-│   ├── presentation.rs # Presentation, Theme, ClrMap
+│   ├── hierarchy.rs    # SlideMaster, SlideLayout, TxStyles, PlaceholderInfo
+│   ├── presentation.rs # Presentation, Theme, ClrMap, FmtScheme
 │   ├── slide.rs        # Slide, Shape, TextBody
 │   └── style.rs        # Fill, Border, TextStyle
 ├── parser/             # OOXML SAX parser
-│   ├── mod.rs          # PptxParser (ZIP → Model)
+│   ├── mod.rs          # PptxParser (7-stage pipeline)
 │   ├── slide_parser.rs # Slide XML parsing
-│   └── theme_parser.rs # Theme XML parsing
+│   ├── master_parser.rs # SlideMaster XML parsing
+│   ├── layout_parser.rs # SlideLayout XML parsing
+│   └── theme_parser.rs # Theme + FmtScheme parsing
+├── resolver/           # Property inheritance cascade
+│   ├── placeholder.rs  # Placeholder matching (type+idx)
+│   ├── inheritance.rs  # Background, fill, position, ClrMap cascade
+│   └── style_ref.rs    # fillRef/lnRef/fontRef resolution
 └── renderer/           # HTML/CSS generation
-    └── mod.rs          # HtmlRenderer
+    └── mod.rs          # HtmlRenderer with resolver integration
 ```
 
 ## Testing
@@ -85,8 +95,8 @@ src/
 cargo test
 ```
 
-- 15 unit tests: color resolution, HSL conversion, modifier application
-- 19 integration tests: PPTX generation → parsing → HTML verification
+- 52 unit tests: color resolution, HSL, modifiers, placeholder matching, inheritance, style refs
+- 37 integration tests: PPTX generation → parsing → rendering verification
 
 ## License
 

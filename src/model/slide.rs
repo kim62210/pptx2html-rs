@@ -79,6 +79,7 @@ pub struct TextParagraph {
     pub space_before: Option<SpacingValue>,
     pub space_after: Option<SpacingValue>,
     pub indent: Option<f64>,
+    pub margin_left: Option<f64>,
     pub bullet: Option<Bullet>,
     pub level: u32,
 }
@@ -176,7 +177,26 @@ impl Default for TextMargins {
 /// Bullet
 #[derive(Debug, Clone)]
 pub enum Bullet {
-    Char(String),
-    AutoNum(String),
+    Char(BulletChar),
+    AutoNum(BulletAutoNum),
     None,
+}
+
+/// Character bullet with optional font/size/color
+#[derive(Debug, Clone)]
+pub struct BulletChar {
+    pub char: String,
+    pub font: Option<String>,
+    pub size_pct: Option<f64>,   // percentage of text size, e.g. 1.0 = 100%
+    pub color: Option<super::color::Color>,
+}
+
+/// Auto-numbered bullet with optional font/size/color
+#[derive(Debug, Clone)]
+pub struct BulletAutoNum {
+    pub num_type: String,        // "arabicPeriod", "alphaLcPeriod", etc.
+    pub start_at: Option<i32>,
+    pub font: Option<String>,
+    pub size_pct: Option<f64>,
+    pub color: Option<super::color::Color>,
 }

@@ -291,8 +291,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             html.push_str(&format!(
                 "<div class=\"text-body {v_class}\" style=\"{margin_style}\">\n"
             ));
+            // Track auto-number counters per level for this text body
+            let mut auto_num_counters: [i32; 9] = [0; 9];
             for para in &text_body.paragraphs {
-                html.push_str(&Self::render_paragraph(para, ctx));
+                html.push_str(&Self::render_paragraph(para, ctx, &mut auto_num_counters));
             }
             html.push_str("</div>\n");
         }
@@ -301,7 +303,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         html
     }
 
-    fn render_paragraph(para: &TextParagraph, ctx: &RenderCtx<'_>) -> String {
+    fn render_paragraph(
+        para: &TextParagraph,
+        ctx: &RenderCtx<'_>,
+        auto_num_counters: &mut [i32; 9],
+    ) -> String {
         let align = para.alignment.to_css();
         let mut style_parts = vec![format!("text-align: {align}")];
 
@@ -338,6 +344,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 }
             }
         }
+
+        // Level-based indentation via margin_left and indent
+        if let Some(ml) = para.margin_left {
+            style_parts.push(format!("padding-left: {ml:.1}pt"));
+        } else if para.level > 0 {
+            // Fallback: ~36pt (0.5in) per level when no explicit margin
+            let margin = para.level as f64 * 36.0;
+            style_parts.push(format!("padding-left: {margin:.1}pt"));
+        }
         if let Some(indent) = para.indent {
             style_parts.push(format!("text-indent: {indent:.1}pt"));
         }
@@ -345,16 +360,85 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let style = style_parts.join("; ");
         let mut html = format!("<p class=\"paragraph\" style=\"{style}\">");
 
-        // Bullet
+        // Bullet rendering
+        let level = (para.level as usize).min(8);
         if let Some(ref bullet) = para.bullet {
             match bullet {
-                Bullet::Char(ch) => {
-                    html.push_str(&format!("<span class=\"bullet\">{} </span>", escape_html(ch)));
+                Bullet::Char(bc) => {
+                    // Reset counters at deeper levels when a char bullet is encountered
+                    for counter in auto_num_counters.iter_mut().skip(level) {
+                        *counter = 0;
+                    }
+                    let mut bullet_style = String::new();
+                    if let Some(ref font) = bc.font {
+                        bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
+                    }
+                    if let Some(ref color) = bc.color {
+                        if let Some(css) = ctx.color_to_css(color) {
+                            bullet_style.push_str(&format!("color: {}; ", css));
+                        }
+                    }
+                    if let Some(size_pct) = bc.size_pct {
+                        if size_pct < 0.0 {
+                            // Absolute points (stored as negative)
+                            let pts = -size_pct;
+                            bullet_style.push_str(&format!("font-size: {pts:.1}pt; "));
+                        } else if (size_pct - 1.0).abs() > 0.01 {
+                            // Percentage of text size (only if not 100%)
+                            let pct = size_pct * 100.0;
+                            bullet_style.push_str(&format!("font-size: {pct:.0}%; "));
+                        }
+                    }
+                    html.push_str(&format!(
+                        "<span class=\"bullet\" style=\"{bullet_style}\">{} </span>",
+                        escape_html(&bc.char)
+                    ));
                 }
-                Bullet::AutoNum(_) => {
-                    // Auto numbering to be implemented later (requires counter)
+                Bullet::AutoNum(an) => {
+                    // Increment counter for this level
+                    let start = an.start_at.unwrap_or(1);
+                    auto_num_counters[level] += 1;
+                    // Reset deeper level counters
+                    for counter in auto_num_counters.iter_mut().skip(level + 1) {
+                        *counter = 0;
+                    }
+                    let counter_val = start + auto_num_counters[level] - 1;
+
+                    let label = format_auto_num(&an.num_type, counter_val);
+                    let mut bullet_style = String::new();
+                    if let Some(ref font) = an.font {
+                        bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
+                    }
+                    if let Some(ref color) = an.color {
+                        if let Some(css) = ctx.color_to_css(color) {
+                            bullet_style.push_str(&format!("color: {}; ", css));
+                        }
+                    }
+                    if let Some(size_pct) = an.size_pct {
+                        if size_pct < 0.0 {
+                            let pts = -size_pct;
+                            bullet_style.push_str(&format!("font-size: {pts:.1}pt; "));
+                        } else if (size_pct - 1.0).abs() > 0.01 {
+                            let pct = size_pct * 100.0;
+                            bullet_style.push_str(&format!("font-size: {pct:.0}%; "));
+                        }
+                    }
+                    html.push_str(&format!(
+                        "<span class=\"bullet\" style=\"{bullet_style}\">{} </span>",
+                        escape_html(&label)
+                    ));
                 }
-                Bullet::None => {}
+                Bullet::None => {
+                    // Reset counters when bullet is explicitly suppressed
+                    for counter in auto_num_counters.iter_mut().skip(level) {
+                        *counter = 0;
+                    }
+                }
+            }
+        } else {
+            // No bullet specified — reset counters at this level
+            for counter in auto_num_counters.iter_mut().skip(level) {
+                *counter = 0;
             }
         }
 
@@ -466,6 +550,73 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             Fill::Image(_) => String::new(),
         }
     }
+}
+
+/// Format auto-numbered bullet label based on OOXML numbering type
+fn format_auto_num(num_type: &str, val: i32) -> String {
+    match num_type {
+        "arabicPeriod" => format!("{val}."),
+        "arabicParenR" => format!("{val})"),
+        "arabicParenBoth" => format!("({val})"),
+        "arabicPlain" => format!("{val}"),
+        "alphaLcPeriod" => format!("{}.", to_alpha_lc(val)),
+        "alphaLcParenR" => format!("{})", to_alpha_lc(val)),
+        "alphaLcParenBoth" => format!("({})", to_alpha_lc(val)),
+        "alphaUcPeriod" => format!("{}.", to_alpha_uc(val)),
+        "alphaUcParenR" => format!("{})", to_alpha_uc(val)),
+        "alphaUcParenBoth" => format!("({})", to_alpha_uc(val)),
+        "romanLcPeriod" => format!("{}.", to_roman_lc(val)),
+        "romanLcParenR" => format!("{})", to_roman_lc(val)),
+        "romanLcParenBoth" => format!("({})", to_roman_lc(val)),
+        "romanUcPeriod" => format!("{}.", to_roman_uc(val)),
+        "romanUcParenR" => format!("{})", to_roman_uc(val)),
+        "romanUcParenBoth" => format!("({})", to_roman_uc(val)),
+        _ => format!("{val}."),
+    }
+}
+
+/// Convert number to lowercase alphabetic (1=a, 2=b, ..., 26=z, 27=aa, ...)
+fn to_alpha_lc(mut val: i32) -> String {
+    if val <= 0 {
+        return "a".to_string();
+    }
+    let mut result = String::new();
+    while val > 0 {
+        val -= 1;
+        result.insert(0, (b'a' + (val % 26) as u8) as char);
+        val /= 26;
+    }
+    result
+}
+
+/// Convert number to uppercase alphabetic
+fn to_alpha_uc(val: i32) -> String {
+    to_alpha_lc(val).to_uppercase()
+}
+
+/// Convert number to lowercase Roman numerals
+fn to_roman_lc(val: i32) -> String {
+    to_roman_uc(val).to_lowercase()
+}
+
+/// Convert number to uppercase Roman numerals
+fn to_roman_uc(mut val: i32) -> String {
+    if val <= 0 || val > 3999 {
+        return val.to_string();
+    }
+    const NUMERALS: &[(i32, &str)] = &[
+        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
+        (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+        (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+    ];
+    let mut result = String::new();
+    for &(value, symbol) in NUMERALS {
+        while val >= value {
+            result.push_str(symbol);
+            val -= value;
+        }
+    }
+    result
 }
 
 fn escape_html(s: &str) -> String {

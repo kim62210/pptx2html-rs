@@ -40,6 +40,9 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_spc_bef = false;
     let mut in_spc_aft = false;
 
+    // Bullet color nesting state
+    let mut in_bu_clr = false;
+
     // Shape style reference (<p:style>) state
     let mut in_p_style = false;
     let mut p_style_builder: Option<ShapeStyleRef> = None;
@@ -106,6 +109,10 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     "spcAft" if current_paragraph.is_some() => {
                         in_spc_aft = true;
+                    }
+                    // Bullet color container
+                    "buClr" if current_paragraph.is_some() => {
+                        in_bu_clr = true;
                     }
                     // Text run
                     "r" if current_paragraph.is_some() => {
@@ -257,7 +264,11 @@ pub fn parse_slide<R: Read + Seek>(
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
-                            if in_p_style && p_style_current_ref.is_some() {
+                            if in_bu_clr {
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_p_style && p_style_current_ref.is_some() {
                                 assign_style_ref_color(
                                     p_style_current_ref.as_deref().unwrap_or(""),
                                     p_style_idx.as_deref().unwrap_or("0"),
@@ -280,7 +291,11 @@ pub fn parse_slide<R: Read + Seek>(
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
-                            if in_p_style && p_style_current_ref.is_some() {
+                            if in_bu_clr {
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_p_style && p_style_current_ref.is_some() {
                                 assign_style_ref_color(
                                     p_style_current_ref.as_deref().unwrap_or(""),
                                     p_style_idx.as_deref().unwrap_or("0"),
@@ -303,7 +318,11 @@ pub fn parse_slide<R: Read + Seek>(
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::preset(val);
-                            if in_p_style && p_style_current_ref.is_some() {
+                            if in_bu_clr {
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_p_style && p_style_current_ref.is_some() {
                                 assign_style_ref_color(
                                     p_style_current_ref.as_deref().unwrap_or(""),
                                     p_style_idx.as_deref().unwrap_or("0"),
@@ -332,7 +351,11 @@ pub fn parse_slide<R: Read + Seek>(
                             Color::none()
                         };
                         if !color.is_none() {
-                            if in_p_style && p_style_current_ref.is_some() {
+                            if in_bu_clr {
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_p_style && p_style_current_ref.is_some() {
                                 assign_style_ref_color(
                                     p_style_current_ref.as_deref().unwrap_or(""),
                                     p_style_idx.as_deref().unwrap_or("0"),
@@ -432,12 +455,35 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Bullet size (percentage and points)
-                    "buSzPct" if current_paragraph.is_some() => {
-                        // Parsed for completeness; bullet sizing stored if needed
+                    // Bullet font
+                    "buFont" if current_paragraph.is_some() => {
+                        if let Some(pb) = current_paragraph.as_mut() {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                pb.bu_font = Some(typeface);
+                            }
+                        }
                     }
+                    // Bullet size (percentage)
+                    "buSzPct" if current_paragraph.is_some() => {
+                        if let Some(pb) = current_paragraph.as_mut() {
+                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                                if let Ok(val) = val_str.parse::<f64>() {
+                                    pb.bu_size_pct = Some(val / 100_000.0);
+                                }
+                            }
+                        }
+                    }
+                    // Bullet size (points) — convert to percentage equivalent
                     "buSzPts" if current_paragraph.is_some() => {
-                        // Parsed for completeness; bullet sizing stored if needed
+                        if let Some(pb) = current_paragraph.as_mut() {
+                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                                if let Ok(val) = val_str.parse::<f64>() {
+                                    // Store as negative to distinguish from pct in rendering
+                                    // (points stored directly, renderer handles it)
+                                    pb.bu_size_pct = Some(-(val / 100.0));
+                                }
+                            }
+                        }
                     }
                     // Bullet
                     "buNone" => {
@@ -448,7 +494,12 @@ pub fn parse_slide<R: Read + Seek>(
                     "buChar" => {
                         if let Some(pb) = current_paragraph.as_mut() {
                             if let Some(ch) = xml_utils::attr_str(e, "char") {
-                                pb.bullet = Some(Bullet::Char(ch));
+                                pb.bullet = Some(Bullet::Char(BulletChar {
+                                    char: ch,
+                                    font: pb.bu_font.take(),
+                                    size_pct: pb.bu_size_pct.take(),
+                                    color: pb.bu_color.take(),
+                                }));
                             }
                         }
                     }
@@ -456,7 +507,15 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(pb) = current_paragraph.as_mut() {
                             let num_type = xml_utils::attr_str(e, "type")
                                 .unwrap_or_else(|| "arabicPeriod".to_string());
-                            pb.bullet = Some(Bullet::AutoNum(num_type));
+                            let start_at = xml_utils::attr_str(e, "startAt")
+                                .and_then(|v| v.parse::<i32>().ok());
+                            pb.bullet = Some(Bullet::AutoNum(BulletAutoNum {
+                                num_type,
+                                start_at,
+                                font: pb.bu_font.take(),
+                                size_pct: pb.bu_size_pct.take(),
+                                color: pb.bu_color.take(),
+                            }));
                         }
                     }
                     _ => {}
@@ -478,6 +537,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "lnSpc" => in_ln_spc = false,
                     "spcBef" => in_spc_bef = false,
                     "spcAft" => in_spc_aft = false,
+                    "buClr" => in_bu_clr = false,
                     "r" => {
                         if let (Some(pb), Some(rb)) =
                             (&mut current_paragraph, current_run.take())
@@ -495,7 +555,12 @@ pub fn parse_slide<R: Read + Seek>(
                     // End of color element — assign to target after applying modifiers
                     "srgbClr" | "schemeClr" | "prstClr" | "sysClr" => {
                         if let Some(color) = current_color.take() {
-                            if in_p_style && p_style_current_ref.is_some() {
+                            if in_bu_clr {
+                                // Bullet color
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    pb.bu_color = Some(color);
+                                }
+                            } else if in_p_style && p_style_current_ref.is_some() {
                                 assign_style_ref_color(
                                     p_style_current_ref.as_deref().unwrap_or(""),
                                     p_style_idx.as_deref().unwrap_or("0"),
@@ -958,6 +1023,10 @@ struct ParagraphBuilder {
     line_spacing: Option<SpacingValue>,
     space_before: Option<SpacingValue>,
     space_after: Option<SpacingValue>,
+    // Bullet property accumulation (applied when buChar/buAutoNum is encountered)
+    bu_font: Option<String>,
+    bu_size_pct: Option<f64>,
+    bu_color: Option<Color>,
 }
 
 impl ParagraphBuilder {
@@ -969,6 +1038,7 @@ impl ParagraphBuilder {
             space_before: self.space_before,
             space_after: self.space_after,
             indent: self.indent,
+            margin_left: self.margin_left,
             bullet: self.bullet,
             level: self.level,
         }
