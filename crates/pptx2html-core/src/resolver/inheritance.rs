@@ -439,6 +439,39 @@ mod tests {
         assert_eq!(pos.y, Emu(0));
     }
 
+    #[test]
+    fn position_negative_coordinate_uses_own() {
+        // Picture shape at (0, -6350) with valid size should use its own geometry.
+        // Negative coordinates are valid in OOXML (shape extends above slide edge).
+        let shape = Shape {
+            position: Position {
+                x: Emu(0),
+                y: Emu(-6350),
+            },
+            size: Size {
+                width: Emu(9144000),
+                height: Emu(952500),
+            },
+            ..Default::default()
+        };
+        let layout_match = Shape {
+            position: Position {
+                x: Emu(628650),
+                y: Emu(365125),
+            },
+            size: Size {
+                width: Emu(7886700),
+                height: Emu(1325563),
+            },
+            ..Default::default()
+        };
+        let (pos, sz) = resolve_position(&shape, Some(&layout_match), None);
+        assert_eq!(pos.x, Emu(0));
+        assert_eq!(pos.y, Emu(-6350));
+        assert_eq!(sz.width, Emu(9144000));
+        assert_eq!(sz.height, Emu(952500));
+    }
+
     // -- resolve_clr_map tests --
 
     #[test]

@@ -19,6 +19,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
     let mut reader = Reader::from_str(xml);
     let mut layout = SlideLayout::default();
 
+    let mut depth: Vec<String> = Vec::new();
     let mut in_sp_tree = false;
     let mut current_shape: Option<LayoutShapeBuilder> = None;
     let mut in_nv_pr = false;
@@ -30,6 +31,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
+                depth.push(local.clone());
 
                 match local.as_str() {
                     "sldLayout" => {
@@ -68,8 +70,8 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     "masterClrMapping" => {
                         layout.clr_map_ovr = Some(ClrMapOverride::UseMaster);
                     }
-                    // Position/size for shapes
-                    "off" if current_shape.is_some() => {
+                    // Position/size for shapes — only inside <a:xfrm>
+                    "off" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.position.x =
                                 Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
@@ -77,7 +79,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
                                 Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
-                    "ext" if current_shape.is_some() => {
+                    "ext" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.size.width =
                                 Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
@@ -100,6 +102,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
             }
             Ok(Event::End(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
+                depth.pop();
 
                 match local.as_str() {
                     "spTree" => in_sp_tree = false,

@@ -197,8 +197,8 @@ pub fn parse_slide_master<R: Read + Seek>(
                             pd.def_run_props = Some(rd);
                         }
                     }
-                    // Position/size for shapes
-                    "off" if current_shape.is_some() => {
+                    // Position/size for shapes — only inside <a:xfrm>
+                    "off" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.position.x =
                                 Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
@@ -206,7 +206,7 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
-                    "ext" if current_shape.is_some() => {
+                    "ext" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.size.width =
                                 Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());

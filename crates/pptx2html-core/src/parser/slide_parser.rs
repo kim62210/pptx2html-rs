@@ -591,8 +591,11 @@ pub fn parse_slide<R: Read + Seek>(
                     "rPr" if in_tc && cell_run.is_some() => {
                         parse_run_props(e, &mut cell_run);
                     }
-                    // Shape position/size — handle group child offset/extent
-                    "off" => {
+                    // Shape position/size — only inside <a:xfrm> (or group grpSpPr).
+                    // <a:off> and <a:ext> also appear inside <a:extLst> (extension
+                    // lists) where they carry a `uri` attribute but no cx/cy.
+                    // Parsing those would overwrite the shape size with zeros.
+                    "off" if depth_contains(&depth, "xfrm") || in_grp_sp_pr => {
                         if in_grp_sp_pr {
                             // Inside grpSpPr: "off" under xfrm is group position,
                             // "chOff" is handled separately below
@@ -617,7 +620,7 @@ pub fn parse_slide<R: Read + Seek>(
                                 Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
-                    "ext" => {
+                    "ext" if depth_contains(&depth, "xfrm") || in_grp_sp_pr => {
                         if in_grp_sp_pr {
                             if let Some(gc) = grp_stack.last_mut() {
                                 let cx = Emu::parse_emu(
