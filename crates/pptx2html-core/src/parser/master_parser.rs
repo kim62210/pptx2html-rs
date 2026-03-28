@@ -13,8 +13,8 @@ use crate::model::*;
 /// Parse slideMaster XML into SlideMaster
 pub fn parse_slide_master<R: Read + Seek>(
     xml: &str,
-    _rels: &HashMap<String, String>,
-    _archive: &mut ZipArchive<R>,
+    rels: &HashMap<String, String>,
+    archive: &mut ZipArchive<R>,
 ) -> PptxResult<SlideMaster> {
     let mut reader = Reader::from_str(xml);
     let mut master = SlideMaster::default();
@@ -38,6 +38,12 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut current_shape: Option<MasterShapeBuilder> = None;
     let mut in_nv_pr = false;
 
+    // Background parsing state
+    let mut in_bg_pr = false;
+    let mut in_bg_blip_fill = false;
+    let mut bg_blip_rel_id: Option<String> = None;
+    let mut bg_solid_color: Option<Color> = None;
+
     loop {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
@@ -45,6 +51,28 @@ pub fn parse_slide_master<R: Read + Seek>(
                 depth.push(local.clone());
 
                 match local.as_str() {
+                    // Background properties
+                    "bgPr" => in_bg_pr = true,
+                    "blipFill" if in_bg_pr => in_bg_blip_fill = true,
+                    "blip" if in_bg_blip_fill => {
+                        for attr in e.attributes().flatten() {
+                            let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                            if key.ends_with("embed") {
+                                bg_blip_rel_id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                            }
+                        }
+                    }
+                    "solidFill" if in_bg_pr && !in_bg_blip_fill => {}
+                    "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            bg_solid_color = Some(Color::rgb(val));
+                        }
+                    }
+                    "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            bg_solid_color = Some(Color::theme(val));
+                        }
+                    }
                     "spTree" => in_sp_tree = true,
                     "txStyles" => in_tx_styles = true,
                     "titleStyle" if in_tx_styles => {
@@ -105,6 +133,26 @@ pub fn parse_slide_master<R: Read + Seek>(
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
 
                 match local.as_str() {
+                    // Background blip (Empty variant)
+                    "blip" if in_bg_blip_fill => {
+                        for attr in e.attributes().flatten() {
+                            let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                            if key.ends_with("embed") {
+                                bg_blip_rel_id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                            }
+                        }
+                    }
+                    // Background solid color (Empty variant)
+                    "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            bg_solid_color = Some(Color::rgb(val));
+                        }
+                    }
+                    "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            bg_solid_color = Some(Color::theme(val));
+                        }
+                    }
                     // ClrMap
                     "clrMap" => {
                         master.clr_map = parse_clr_map_element(e);
@@ -222,6 +270,29 @@ pub fn parse_slide_master<R: Read + Seek>(
                 depth.pop();
 
                 match local.as_str() {
+                    "blipFill" if in_bg_blip_fill => in_bg_blip_fill = false,
+                    "bgPr" => {
+                        in_bg_pr = false;
+                        if let Some(rel_id) = bg_blip_rel_id.take() {
+                            if let Some(target) = rels.get(&rel_id) {
+                                let path = resolve_master_rel_path("ppt/slideMasters", target);
+                                if let Ok(mut entry) = archive.by_name(&path) {
+                                    let mut buf = Vec::new();
+                                    let _ = std::io::Read::read_to_end(&mut entry, &mut buf);
+                                    if !buf.is_empty() {
+                                        let ct = bg_mime_from_ext(&path);
+                                        master.background = Some(Fill::Image(ImageFill {
+                                            rel_id,
+                                            data: buf,
+                                            content_type: ct,
+                                        }));
+                                    }
+                                }
+                            }
+                        } else if let Some(color) = bg_solid_color.take() {
+                            master.background = Some(Fill::Solid(SolidFill { color }));
+                        }
+                    }
                     "txStyles" => {
                         in_tx_styles = false;
                         tx_style_kind = None;
@@ -391,4 +462,34 @@ impl MasterShapeBuilder {
             ..Default::default()
         }
     }
+}
+
+fn resolve_master_rel_path(base_dir: &str, target: &str) -> String {
+    if !target.contains("../") {
+        return format!("{base_dir}/{target}");
+    }
+    let mut parts: Vec<&str> = base_dir.split('/').collect();
+    for segment in target.split('/') {
+        if segment == ".." {
+            parts.pop();
+        } else if !segment.is_empty() && segment != "." {
+            parts.push(segment);
+        }
+    }
+    parts.join("/")
+}
+
+fn bg_mime_from_ext(path: &str) -> String {
+    let ext = path.rsplit('.').next().unwrap_or("").to_lowercase();
+    match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "bmp" => "image/bmp",
+        "svg" => "image/svg+xml",
+        "emf" => "image/x-emf",
+        "wmf" => "image/x-wmf",
+        _ => "image/png",
+    }
+    .to_string()
 }
