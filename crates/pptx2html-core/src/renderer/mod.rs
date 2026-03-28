@@ -792,17 +792,63 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
 
     fn render_group(
         children: &[Shape],
-        _parent: &Shape,
-        _group_data: &GroupData,
+        parent: &Shape,
+        group_data: &GroupData,
         ctx: &RenderCtx<'_>,
         html: &mut String,
     ) {
+        // Group coordinate transform:
+        // Child coords are in child coordinate space (chOff/chExt).
+        // We need to map them to the group's actual bounding box.
+        let (parent_pos, parent_size) =
+            crate::resolver::inheritance::resolve_position(parent, None, None);
+        let ch_off_x = group_data.child_offset.x.to_px();
+        let ch_off_y = group_data.child_offset.y.to_px();
+        let ch_ext_w = group_data.child_extent.width.to_px();
+        let ch_ext_h = group_data.child_extent.height.to_px();
+        let grp_w = parent_size.width.to_px();
+        let grp_h = parent_size.height.to_px();
+
         for child in children {
             if child.hidden {
                 continue;
             }
-            // Render each child shape with its own position relative to the group
-            Self::render_shape_resolved(child, None, None, ctx, html);
+            // Transform child position from child coordinate space to group-relative pixels
+            let child_x = child.position.x.to_px();
+            let child_y = child.position.y.to_px();
+            let child_w = child.size.width.to_px();
+            let child_h = child.size.height.to_px();
+
+            let (rel_x, rel_y, rel_w, rel_h) = if ch_ext_w > 0.0 && ch_ext_h > 0.0 {
+                let scale_x = grp_w / ch_ext_w;
+                let scale_y = grp_h / ch_ext_h;
+                (
+                    (child_x - ch_off_x) * scale_x,
+                    (child_y - ch_off_y) * scale_y,
+                    child_w * scale_x,
+                    child_h * scale_y,
+                )
+            } else {
+                // Fallback: use child coords relative to parent position
+                (
+                    child_x - parent_pos.x.to_px(),
+                    child_y - parent_pos.y.to_px(),
+                    child_w,
+                    child_h,
+                )
+            };
+
+            // Create a modified child shape with group-relative coordinates
+            let mut child_clone = child.clone();
+            child_clone.position = Position {
+                x: Emu((rel_x / 96.0 * 914400.0) as i64),
+                y: Emu((rel_y / 96.0 * 914400.0) as i64),
+            };
+            child_clone.size = Size {
+                width: Emu((rel_w / 96.0 * 914400.0) as i64),
+                height: Emu((rel_h / 96.0 * 914400.0) as i64),
+            };
+            Self::render_shape_resolved(&child_clone, None, None, ctx, html);
         }
     }
 
