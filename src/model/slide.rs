@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::geometry::{Position, Size};
 use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{Alignment, Border, Fill, FontStyle, TextStyle};
@@ -40,6 +42,7 @@ pub enum ShapeType {
     Picture(PictureData),
     Table(TableData),
     Group(Vec<Shape>, GroupData),
+    Chart(ChartData),
     Custom(String), // preset shape name
 }
 
@@ -58,6 +61,8 @@ pub struct Shape {
     pub hidden: bool,
     pub placeholder: Option<PlaceholderInfo>,
     pub style_ref: Option<ShapeStyleRef>,
+    pub adjust_values: Option<HashMap<String, f64>>,
+    pub vertical_text: Option<String>, // "vert", "vert270", "wordArtVert", etc.
 }
 
 /// Text body
@@ -91,6 +96,7 @@ pub struct TextRun {
     pub style: TextStyle,
     pub font: FontStyle,
     pub hyperlink: Option<String>,
+    pub is_break: bool, // <a:br> line break
 }
 
 /// Picture data
@@ -99,6 +105,24 @@ pub struct PictureData {
     pub rel_id: String,
     pub content_type: String,
     pub data: Vec<u8>,
+    pub crop: Option<CropRect>,
+}
+
+/// Image crop rectangle (values 0.0-1.0, representing percentage from each edge)
+#[derive(Debug, Clone, Default)]
+pub struct CropRect {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
+}
+
+/// Chart data (fallback rendering for embedded charts)
+#[derive(Debug, Clone, Default)]
+pub struct ChartData {
+    pub rel_id: String,
+    pub preview_image: Option<Vec<u8>>,
+    pub preview_mime: Option<String>,
 }
 
 /// Table data

@@ -462,6 +462,342 @@ fn test_multiple_shapes() {
     let html = render_html(&pptx);
     assert!(html.contains("#FF0000"));
     assert!(html.contains("#00FF00"));
-    assert!(html.contains("border-radius: 50%"));   // ellipse
-    assert!(html.contains("border-radius: 8px"));    // roundRect
+    // Ellipse and roundRect are now rendered as SVG paths
+    assert!(html.contains("shape-svg"), "Expected SVG rendering for preset shapes");
+    assert!(html.contains("<path d="), "Expected SVG path element");
+}
+
+// ── Month 4: Preset Shape SVG tests ──
+
+#[test]
+fn test_preset_shape_svg_diamond() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Diamond"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="diamond"/>
+        <a:solidFill><a:srgbClr val="4472C4"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("shape-svg"), "Diamond should be SVG rendered");
+    assert!(html.contains("<path d="), "Should contain SVG path");
+    assert!(html.contains("#4472C4"), "Should contain fill color");
+}
+
+#[test]
+fn test_preset_shape_svg_right_arrow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rightArrow"/>
+        <a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    assert!(
+        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Custom(name) if name == "rightArrow"),
+        "Should be Custom(rightArrow)"
+    );
+    let html = render_html(&pptx);
+    assert!(html.contains("shape-svg"));
+}
+
+#[test]
+fn test_preset_shape_with_adjust_values() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="RRect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="roundRect">
+          <a:avLst>
+            <a:gd name="adj" fmla="val 25000"/>
+          </a:avLst>
+        </a:prstGeom>
+        <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert!(shape.adjust_values.is_some(), "Should have adjust values");
+    let adj = shape.adjust_values.as_ref().unwrap();
+    assert_eq!(*adj.get("adj").unwrap() as i64, 25000, "adj should be 25000");
+}
+
+#[test]
+fn test_preset_shape_star5() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Star"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="star5"/>
+        <a:solidFill><a:srgbClr val="FFD700"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("shape-svg"));
+    assert!(html.contains("#FFD700"));
+}
+
+#[test]
+fn test_rect_shape_no_svg() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // rect is ShapeType::Rectangle (rendered without SVG path)
+    // Note: .shape-svg class exists in CSS, so we check for actual SVG element usage
+    assert!(!html.contains("<svg viewBox="), "Rect should not generate SVG viewBox");
+    assert!(html.contains("#0000FF"));
+}
+
+// ── Month 4: Text break (<a:br>) test ──
+
+#[test]
+fn test_text_break_renders_as_br() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:r><a:t>Line 1</a:t></a:r>
+          <a:br/>
+          <a:r><a:t>Line 2</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let para = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0];
+    assert_eq!(para.runs.len(), 3, "Should have 3 runs (text, break, text)");
+    assert!(para.runs[1].is_break, "Second run should be a break");
+
+    let html = render_html(&pptx);
+    assert!(html.contains("<br/>"), "Should render line break");
+    assert!(html.contains("Line 1"), "Should contain first line text");
+    assert!(html.contains("Line 2"), "Should contain second line text");
+}
+
+// ── Month 4: Vertical text test ──
+
+#[test]
+fn test_vertical_text_rendering() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="VertText"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1000000" cy="3000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr vert="vert"/>
+        <a:p><a:r><a:t>Vertical</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert_eq!(shape.vertical_text.as_deref(), Some("vert"));
+
+    let html = render_html(&pptx);
+    assert!(html.contains("writing-mode: vertical-rl"), "Should contain vertical writing mode");
+}
+
+#[test]
+fn test_vertical_text_270() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Vert270"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1000000" cy="3000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr vert="vert270"/>
+        <a:p><a:r><a:t>Rotated</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("writing-mode: vertical-lr"));
+}
+
+// ── Month 4: Text highlight test ──
+
+#[test]
+fn test_text_highlight() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Highlight"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:r>
+            <a:rPr>
+              <a:highlight><a:srgbClr val="FFFF00"/></a:highlight>
+            </a:rPr>
+            <a:t>Highlighted text</a:t>
+          </a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    assert!(run.style.highlight.is_some(), "Should have highlight color");
+
+    let html = render_html(&pptx);
+    assert!(html.contains("background-color: #FFFF00"), "Should render highlight as background-color");
+}
+
+// ── Month 4: Text shadow test ──
+
+#[test]
+fn test_text_shadow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Shadow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:r>
+            <a:rPr>
+              <a:effectLst>
+                <a:outerShdw blurRad="38100" dist="25400" dir="2700000">
+                  <a:srgbClr val="000000"/>
+                </a:outerShdw>
+              </a:effectLst>
+            </a:rPr>
+            <a:t>Shadow text</a:t>
+          </a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    assert!(run.style.shadow.is_some(), "Should have text shadow");
+    let shadow = run.style.shadow.as_ref().unwrap();
+    assert!(shadow.blur_rad > 0.0, "Blur radius should be positive");
+
+    let html = render_html(&pptx);
+    assert!(html.contains("text-shadow:"), "Should render text-shadow CSS");
+}
+
+// ── Month 4: Image crop test ──
+
+#[test]
+fn test_image_crop_parsing() {
+    let slide = r#"
+    <p:pic>
+      <p:nvPicPr><p:cNvPr id="2" name="Pic"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+      <p:blipFill>
+        <a:blip r:embed="rId1"/>
+        <a:srcRect l="10000" t="20000" r="15000" b="5000"/>
+      </p:blipFill>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1500000"/></a:xfrm>
+      </p:spPr>
+    </p:pic>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    if let ShapeType::Picture(pic) = &shape.shape_type {
+        assert!(pic.crop.is_some(), "Should have crop rect");
+        let crop = pic.crop.as_ref().unwrap();
+        assert!((crop.left - 0.1).abs() < 0.01, "Left crop should be ~0.1");
+        assert!((crop.top - 0.2).abs() < 0.01, "Top crop should be ~0.2");
+        assert!((crop.right - 0.15).abs() < 0.01, "Right crop should be ~0.15");
+        assert!((crop.bottom - 0.05).abs() < 0.01, "Bottom crop should be ~0.05");
+    } else {
+        panic!("Expected Picture shape type");
+    }
+}
+
+// ── Month 4: Chart detection test ──
+
+#[test]
+fn test_chart_detection() {
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart r:id="rId2" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert!(
+        matches!(&shape.shape_type, ShapeType::Chart(_)),
+        "Should detect chart in graphicFrame"
+    );
+}
+
+#[test]
+fn test_chart_renders_placeholder() {
+    let slide = r#"
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+      <a:graphic>
+        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+          <c:chart r:id="rId2" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>
+        </a:graphicData>
+      </a:graphic>
+    </p:graphicFrame>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("chart-placeholder"), "Should render chart placeholder");
+    assert!(html.contains("Chart"), "Should show Chart label");
+}
+
+// ── Month 4: CSS global classes test ──
+
+#[test]
+fn test_global_css_contains_svg_styles() {
+    let pptx = fixtures::MinimalPptx::new("").build();
+    let html = render_html(&pptx);
+    assert!(html.contains(".shape-svg"), "CSS should contain .shape-svg class");
+    assert!(html.contains(".chart-placeholder"), "CSS should contain .chart-placeholder class");
 }

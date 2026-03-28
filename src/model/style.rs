@@ -12,6 +12,17 @@ pub struct TextStyle {
     pub color: Color,
     pub baseline: Option<i32>,        // superscript(+)/subscript(-) offset (1/1000 %)
     pub letter_spacing: Option<f64>,  // in pt
+    pub highlight: Option<Color>,     // text highlight (background color)
+    pub shadow: Option<TextShadow>,   // text shadow from effectLst/outerShdw
+}
+
+/// Text shadow parameters
+#[derive(Debug, Clone)]
+pub struct TextShadow {
+    pub color: Color,
+    pub blur_rad: f64,  // blur radius in pt
+    pub dist: f64,      // distance in pt
+    pub dir: f64,       // direction angle in degrees
 }
 
 /// Font style (run-level)
@@ -59,7 +70,30 @@ pub enum Fill {
     None,
     Solid(SolidFill),
     Gradient(GradientFill),
-    Image(String), // image relationship ID
+    Image(ImageFill),
+}
+
+/// Image fill data for backgrounds
+#[derive(Debug, Clone, Default)]
+pub struct ImageFill {
+    pub rel_id: String,
+    pub data: Vec<u8>,
+    pub content_type: String,
+}
+
+impl Fill {
+    /// Extract the primary color reference from this fill (for SVG rendering)
+    pub fn color_ref(&self) -> Color {
+        match self {
+            Fill::Solid(sf) => sf.color.clone(),
+            Fill::Gradient(gf) => {
+                gf.stops.first()
+                    .map(|s| s.color.clone())
+                    .unwrap_or_else(Color::none)
+            }
+            _ => Color::none(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

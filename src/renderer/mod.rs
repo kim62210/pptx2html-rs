@@ -1,6 +1,10 @@
 //! HTML/CSS renderer
 //! Presentation model -> self-contained HTML string generation
 
+mod geometry;
+
+use std::collections::HashMap;
+
 use base64::Engine;
 
 use crate::error::PptxResult;
@@ -109,6 +113,9 @@ body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif
 .paragraph {{ margin: 0; }}
 .run {{ white-space: pre-wrap; }}
 img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
+.shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
+.shape-svg + .text-body {{ position: relative; z-index: 1; }}
+.chart-placeholder {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 "#
         )
     }
@@ -251,10 +258,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             ));
         }
 
-        match &shape.shape_type {
-            ShapeType::Ellipse => styles.push("border-radius: 50%".to_string()),
-            ShapeType::RoundedRectangle => styles.push("border-radius: 8px".to_string()),
-            _ => {}
+        // Determine SVG preset name for the shape (if applicable)
+        let svg_preset_name = match &shape.shape_type {
+            ShapeType::Ellipse => Some("ellipse"),
+            ShapeType::RoundedRectangle => Some("roundRect"),
+            ShapeType::Triangle => Some("triangle"),
+            ShapeType::Custom(name) => Some(name.as_str()),
+            _ => None,
+        };
+
+        // Only apply CSS border-radius for non-SVG shapes; SVG handles geometry
+        if svg_preset_name.is_none() {
+            match &shape.shape_type {
+                ShapeType::Ellipse => styles.push("border-radius: 50%".to_string()),
+                ShapeType::RoundedRectangle => styles.push("border-radius: 8px".to_string()),
+                _ => {}
+            }
         }
 
         let style_str = styles.join("; ");
@@ -274,6 +293,50 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             return html;
         }
 
+        // Chart
+        if let ShapeType::Chart(ref chart_data) = shape.shape_type {
+            if let Some(ref img_data) = chart_data.preview_image {
+                if !img_data.is_empty() {
+                    let b64 = base64::engine::general_purpose::STANDARD.encode(img_data);
+                    let mime = chart_data.preview_mime.as_deref().unwrap_or("image/png");
+                    html.push_str(&format!(
+                        "<img class=\"shape-image\" src=\"data:{mime};base64,{b64}\" alt=\"Chart\">\n"
+                    ));
+                }
+            } else {
+                html.push_str(
+                    "<div class=\"chart-placeholder\">\
+                     <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">\
+                     <rect x=\"3\" y=\"12\" width=\"4\" height=\"9\"/><rect x=\"10\" y=\"7\" width=\"4\" height=\"14\"/>\
+                     <rect x=\"17\" y=\"3\" width=\"4\" height=\"18\"/></svg>\
+                     <span style=\"margin-left:8px\">Chart</span></div>\n"
+                );
+            }
+            html.push_str("</div>\n");
+            return html;
+        }
+
+        // SVG preset shape rendering
+        if let Some(preset_name) = svg_preset_name {
+            let adj_values: HashMap<String, f64> = shape.adjust_values.clone().unwrap_or_default();
+            if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, &adj_values) {
+                let fill_color = ctx.color_to_css(&shape.fill.color_ref())
+                    .unwrap_or_else(|| "none".to_string());
+                let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
+                    let c = ctx.color_to_css(&resolved_border.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    (c, resolved_border.width)
+                } else {
+                    ("none".to_string(), 0.0)
+                };
+                html.push_str(&format!(
+                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">\
+                     <path d=\"{svg_path}\" fill=\"{fill_color}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>\
+                     </svg>\n"
+                ));
+            }
+        }
+
         // Image
         if let ShapeType::Picture(pic) = &shape.shape_type {
             if !pic.data.is_empty() {
@@ -283,8 +346,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 } else {
                     &pic.content_type
                 };
+                let mut img_styles = Vec::new();
+                if let Some(ref crop) = pic.crop {
+                    // CSS object-view-box or clip approach for cropping
+                    let left_pct = crop.left * 100.0;
+                    let top_pct = crop.top * 100.0;
+                    let right_pct = crop.right * 100.0;
+                    let bottom_pct = crop.bottom * 100.0;
+                    let clip_path = format!(
+                        "inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%)"
+                    );
+                    img_styles.push(format!("clip-path: {clip_path}"));
+                    // Scale image to fill the visible area
+                    let scale_x = 100.0 / (100.0 - left_pct - right_pct) * 100.0;
+                    let scale_y = 100.0 / (100.0 - top_pct - bottom_pct) * 100.0;
+                    img_styles.push(format!("width: {scale_x:.1}%"));
+                    img_styles.push(format!("height: {scale_y:.1}%"));
+                    let offset_x = -left_pct / (100.0 - left_pct - right_pct) * 100.0;
+                    let offset_y = -top_pct / (100.0 - top_pct - bottom_pct) * 100.0;
+                    img_styles.push(format!("margin-left: {offset_x:.1}%"));
+                    img_styles.push(format!("margin-top: {offset_y:.1}%"));
+                }
+                let style_attr = if img_styles.is_empty() {
+                    String::new()
+                } else {
+                    format!(" style=\"{}\"", img_styles.join("; "))
+                };
                 html.push_str(&format!(
-                    "<img class=\"shape-image\" src=\"data:{mime};base64,{b64}\" alt=\"\">\n"
+                    "<img class=\"shape-image\" src=\"data:{mime};base64,{b64}\" alt=\"\"{style_attr}>\n"
                 ));
             }
         }
@@ -302,13 +391,30 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 VerticalAlign::Middle => "v-middle",
                 VerticalAlign::Bottom => "v-bottom",
             };
-            let margin_style = format!(
+            let mut margin_parts = vec![format!(
                 "padding: {:.1}pt {:.1}pt {:.1}pt {:.1}pt",
                 text_body.margins.top,
                 text_body.margins.right,
                 text_body.margins.bottom,
                 text_body.margins.left,
-            );
+            )];
+            // Vertical text rendering
+            if let Some(ref vert) = shape.vertical_text {
+                match vert.as_str() {
+                    "vert" | "wordArtVert" | "eaVert" => {
+                        margin_parts.push("writing-mode: vertical-rl".to_string());
+                    }
+                    "vert270" => {
+                        margin_parts.push("writing-mode: vertical-lr".to_string());
+                        margin_parts.push("transform: rotate(180deg)".to_string());
+                    }
+                    "mongolianVert" => {
+                        margin_parts.push("writing-mode: vertical-lr".to_string());
+                    }
+                    _ => {}
+                }
+            }
+            let margin_style = margin_parts.join("; ");
             html.push_str(&format!(
                 "<div class=\"text-body {v_class}\" style=\"{margin_style}\">\n"
             ));
@@ -744,6 +850,31 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push(format!("letter-spacing: {spacing:.2}pt"));
         }
 
+        // Text highlight
+        if let Some(ref highlight) = run.style.highlight {
+            if let Some(hl_css) = ctx.color_to_css(highlight) {
+                styles.push(format!("background-color: {hl_css}"));
+            }
+        }
+
+        // Text shadow
+        if let Some(ref shadow) = run.style.shadow {
+            let angle_rad = shadow.dir.to_radians();
+            let dx = shadow.dist * angle_rad.cos();
+            let dy = shadow.dist * angle_rad.sin();
+            let shadow_color = ctx.color_to_css(&shadow.color)
+                .unwrap_or_else(|| "rgba(0,0,0,0.5)".to_string());
+            styles.push(format!(
+                "text-shadow: {dx:.1}pt {dy:.1}pt {blur:.1}pt {shadow_color}",
+                blur = shadow.blur_rad,
+            ));
+        }
+
+        // Line break
+        if run.is_break {
+            return "<br/>".to_string();
+        }
+
         let style_str = styles.join("; ");
         let text = escape_html(&run.text);
 
@@ -787,7 +918,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     )
                 }
             }
-            Fill::Image(_) => String::new(),
+            Fill::Image(img_fill) => {
+                if !img_fill.data.is_empty() {
+                    let b64 = base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
+                    let mime = if img_fill.content_type.is_empty() {
+                        "image/png"
+                    } else {
+                        &img_fill.content_type
+                    };
+                    format!("background-image: url(data:{mime};base64,{b64}); background-size: cover; background-position: center")
+                } else {
+                    String::new()
+                }
+            }
         }
     }
 }
