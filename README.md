@@ -59,10 +59,18 @@ let html = pptx2html_rs::convert_bytes(&pptx_data)?;
 | Text style inheritance (txStyles → defaultTextStyle) | ✅ |
 | Font theme refs (+mj-lt / +mn-lt resolution) | ✅ |
 | fontRef (major/minor → font-family) | ✅ |
-| Tables | 🔜 |
-| Bullets (multi-level) | 🔜 |
-| Group shapes | 🔜 |
-| Preset shape SVG paths | 🔜 |
+| Tables | ✅ |
+| Bullets (multi-level) | ✅ |
+| Group shapes | ✅ |
+| Preset shape SVG (30 shapes with adjust values) | ✅ |
+| Image cropping (srcRect) | ✅ |
+| Image MIME auto-detection | ✅ |
+| Background image fill | ✅ |
+| Chart fallback rendering | ✅ |
+| Text breaks (\<a:br\>) | ✅ |
+| Vertical text (vert, vert270, wordArtVert) | ✅ |
+| Text highlight | ✅ |
+| Text shadow (outerShdw) | ✅ |
 | PyO3 Python bindings | 🔜 |
 | WASM target | 🔜 |
 
@@ -89,7 +97,8 @@ src/
 │   ├── inheritance.rs  # Background, fill, position, ClrMap cascade
 │   └── style_ref.rs    # fillRef/lnRef/fontRef resolution
 └── renderer/           # HTML/CSS generation
-    └── mod.rs          # HtmlRenderer with resolver integration
+    ├── mod.rs          # HtmlRenderer with resolver integration
+    └── geometry.rs     # Preset shape SVG path generation (30 shapes)
 ```
 
 ## Testing
@@ -98,8 +107,9 @@ src/
 cargo test
 ```
 
-- 52 unit tests: color resolution, HSL, modifiers, placeholder matching, inheritance, style refs
-- 46 integration tests: PPTX generation → parsing → rendering verification (hierarchy + integration)
+- 59 unit tests: color resolution, HSL, modifiers, placeholder matching, inheritance, style refs, geometry SVG
+- 60 integration tests: PPTX generation → parsing → rendering verification (hierarchy + integration)
+- 119 tests total, all passing
 
 ## License
 
