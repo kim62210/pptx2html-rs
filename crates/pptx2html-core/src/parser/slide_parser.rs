@@ -1531,13 +1531,8 @@ pub fn parse_slide<R: Read + Seek>(
                             if let ShapeType::Picture(pic) = &mut shape.shape_type
                                 && let Some(target) = rels.get(&pic.rel_id)
                             {
-                                let img_path = format!("ppt/slides/{target}");
-                                let alt_path = format!("ppt/{target}");
-                                let path = if archive.by_name(&img_path).is_ok() {
-                                    img_path
-                                } else {
-                                    alt_path
-                                };
+                                // Resolve relative paths (e.g., "../media/image1.png")
+                                let path = resolve_rel_path("ppt/slides", target);
                                 if let Ok(mut entry) = archive.by_name(&path) {
                                     let mut buf = Vec::new();
                                     let _ = entry.read_to_end(&mut buf);
@@ -2136,6 +2131,23 @@ fn assign_tc_color(
         }
         _ => {}
     }
+}
+
+/// Resolve a relative path from a base directory within the ZIP archive.
+/// e.g., resolve_rel_path("ppt/slides", "../media/image1.png") -> "ppt/media/image1.png"
+fn resolve_rel_path(base_dir: &str, target: &str) -> String {
+    if !target.contains("../") {
+        return format!("{base_dir}/{target}");
+    }
+    let mut parts: Vec<&str> = base_dir.split('/').collect();
+    for segment in target.split('/') {
+        if segment == ".." {
+            parts.pop();
+        } else if !segment.is_empty() && segment != "." {
+            parts.push(segment);
+        }
+    }
+    parts.join("/")
 }
 
 /// Determine MIME type from file extension
