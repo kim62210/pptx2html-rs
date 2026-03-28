@@ -82,6 +82,18 @@ pub fn parse_slide<R: Read + Seek>(
     let mut outer_shdw_dir: f64 = 0.0;
     let mut in_highlight = false;
 
+    // Shape-level effectLst parsing state
+    let mut in_shape_effect_lst = false;
+    let mut in_shape_outer_shdw = false;
+    let mut shape_shdw_blur: f64 = 0.0;
+    let mut shape_shdw_dist: f64 = 0.0;
+    let mut shape_shdw_dir: f64 = 0.0;
+    let mut shape_shdw_alpha: f64 = 1.0;
+    let mut in_shape_glow = false;
+    let mut shape_glow_rad: f64 = 0.0;
+    let mut shape_glow_alpha: f64 = 1.0;
+    let mut shape_effect_color: Option<Color> = None;
+
     // Background fill state
     let mut in_bg_pr = false;
 
@@ -384,21 +396,39 @@ pub fn parse_slide<R: Read + Seek>(
                     // Color element (Start — may have child modifiers)
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            current_color = Some(Color::rgb(val));
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(Color::rgb(val));
+                            } else {
+                                current_color = Some(Color::rgb(val));
+                            }
                         }
                     }
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            current_color = Some(Color::theme(val));
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(Color::theme(val));
+                            } else {
+                                current_color = Some(Color::theme(val));
+                            }
                         }
                     }
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            current_color = Some(Color::preset(val));
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(Color::preset(val));
+                            } else {
+                                current_color = Some(Color::preset(val));
+                            }
                         }
                     }
                     "sysClr" => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                        if in_shape_outer_shdw || in_shape_glow {
+                            if let Some(val) = xml_utils::attr_str(e, "val") {
+                                shape_effect_color = Some(Color::system(val));
+                            } else if let Some(val) = xml_utils::attr_str(e, "lastClr") {
+                                shape_effect_color = Some(Color::rgb(val));
+                            }
+                        } else if let Some(val) = xml_utils::attr_str(e, "val") {
                             current_color = Some(Color::system(val));
                         } else if let Some(val) = xml_utils::attr_str(e, "lastClr") {
                             current_color = Some(Color::rgb(val));
@@ -437,7 +467,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "effectLst" if in_r_pr || in_cell_r_pr => {
                         in_effect_lst = true;
                     }
-                    // ── Outer shadow inside effectLst ──
+                    // ── Outer shadow inside text effectLst ──
                     "outerShdw" if in_effect_lst => {
                         in_outer_shdw = true;
                         outer_shdw_blur = xml_utils::attr_str(e, "blurRad")
@@ -452,6 +482,36 @@ pub fn parse_slide<R: Read + Seek>(
                             .and_then(|v| v.parse::<f64>().ok())
                             .map(|v| v / 60_000.0)
                             .unwrap_or(0.0);
+                    }
+                    // ── Shape-level effect list (<a:effectLst> inside <p:spPr>) ──
+                    "effectLst" if in_sp_pr && current_shape.is_some() => {
+                        in_shape_effect_lst = true;
+                    }
+                    // ── Shape-level outer shadow ──
+                    "outerShdw" if in_shape_effect_lst => {
+                        in_shape_outer_shdw = true;
+                        shape_shdw_blur = xml_utils::attr_str(e, "blurRad")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| Emu(v as i64).to_pt())
+                            .unwrap_or(0.0);
+                        shape_shdw_dist = xml_utils::attr_str(e, "dist")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| Emu(v as i64).to_pt())
+                            .unwrap_or(0.0);
+                        shape_shdw_dir = xml_utils::attr_str(e, "dir")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| v / 60_000.0)
+                            .unwrap_or(0.0);
+                        shape_shdw_alpha = 1.0;
+                    }
+                    // ── Shape-level glow ──
+                    "glow" if in_shape_effect_lst => {
+                        in_shape_glow = true;
+                        shape_glow_rad = xml_utils::attr_str(e, "rad")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| Emu(v as i64).to_pt())
+                            .unwrap_or(0.0);
+                        shape_glow_alpha = 1.0;
                     }
                     // ── Background blipFill ──
                     "blipFill" if in_bg_pr => {
@@ -631,7 +691,9 @@ pub fn parse_slide<R: Read + Seek>(
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
-                            if in_highlight {
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(color);
+                            } else if in_highlight {
                                 if in_cell_r_pr {
                                     if let Some(rb) = cell_run.as_mut() {
                                         rb.highlight = Some(color);
@@ -681,7 +743,9 @@ pub fn parse_slide<R: Read + Seek>(
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
-                            if in_highlight {
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(color);
+                            } else if in_highlight {
                                 if in_cell_r_pr {
                                     if let Some(rb) = cell_run.as_mut() {
                                         rb.highlight = Some(color);
@@ -731,7 +795,9 @@ pub fn parse_slide<R: Read + Seek>(
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::preset(val);
-                            if in_cell_bu_clr {
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(color);
+                            } else if in_cell_bu_clr {
                                 if let Some(pb) = cell_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -777,7 +843,9 @@ pub fn parse_slide<R: Read + Seek>(
                             Color::none()
                         };
                         if !color.is_none() {
-                            if in_cell_bu_clr {
+                            if in_shape_outer_shdw || in_shape_glow {
+                                shape_effect_color = Some(color);
+                            } else if in_cell_bu_clr {
                                 if let Some(pb) = cell_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
                                 }
@@ -817,10 +885,14 @@ pub fn parse_slide<R: Read + Seek>(
                     // Color modifiers (Empty tags)
                     "tint" | "shade" | "alpha" | "lumMod" | "lumOff" | "satMod" | "satOff"
                     | "hueMod" | "hueOff" | "comp" | "inv" | "gray" => {
-                        if let Some(ref mut color) = current_color {
-                            let val =
-                                xml_utils::attr_str(e, "val").and_then(|v| v.parse::<i32>().ok());
-                            if let Some(modifier) = ColorModifier::from_ooxml(&local, val) {
+                        let val =
+                            xml_utils::attr_str(e, "val").and_then(|v| v.parse::<i32>().ok());
+                        if let Some(modifier) = ColorModifier::from_ooxml(&local, val) {
+                            if in_shape_outer_shdw || in_shape_glow {
+                                if let Some(ref mut color) = shape_effect_color {
+                                    color.modifiers.push(modifier);
+                                }
+                            } else if let Some(ref mut color) = current_color {
                                 color.modifiers.push(modifier);
                             }
                         }
@@ -1269,6 +1341,7 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     "effectLst" if in_effect_lst => in_effect_lst = false,
+                    "effectLst" if in_shape_effect_lst => in_shape_effect_lst = false,
                     "outerShdw" if in_outer_shdw => {
                         in_outer_shdw = false;
                         if let Some(color) = current_color.take() {
@@ -1285,6 +1358,32 @@ pub fn parse_slide<R: Read + Seek>(
                             } else if in_r_pr && let Some(rb) = current_run.as_mut() {
                                 rb.shadow = Some(shadow);
                             }
+                        }
+                    }
+                    "outerShdw" if in_shape_outer_shdw => {
+                        in_shape_outer_shdw = false;
+                        if let Some(sb) = current_shape.as_mut() {
+                            let color = shape_effect_color.take()
+                                .unwrap_or_else(|| Color::rgb("000000"));
+                            sb.shape_outer_shadow = Some(OuterShadow {
+                                blur_radius: shape_shdw_blur,
+                                distance: shape_shdw_dist,
+                                direction: shape_shdw_dir,
+                                color,
+                                alpha: shape_shdw_alpha,
+                            });
+                        }
+                    }
+                    "glow" if in_shape_glow => {
+                        in_shape_glow = false;
+                        if let Some(sb) = current_shape.as_mut() {
+                            let color = shape_effect_color.take()
+                                .unwrap_or_else(|| Color::rgb("FFC000"));
+                            sb.shape_glow = Some(GlowEffect {
+                                radius: shape_glow_rad,
+                                color,
+                                alpha: shape_glow_alpha,
+                            });
                         }
                     }
                     "highlight" if in_highlight => {
@@ -1334,6 +1433,9 @@ pub fn parse_slide<R: Read + Seek>(
                             } else if in_outer_shdw {
                                 // Shadow color: don't consume, let outerShdw End handler use it
                                 current_color = Some(color);
+                            } else if in_shape_outer_shdw || in_shape_glow {
+                                // Shape effect color: store for End handler
+                                shape_effect_color = Some(color);
                             } else if in_cell_bu_clr {
                                 if let Some(pb) = cell_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
@@ -1754,6 +1856,9 @@ struct ShapeBuilder {
     unresolved_type: Option<slide::UnresolvedType>,
     // Raw XML captured from graphicData for unresolved content
     raw_xml_capture: Option<String>,
+    // Shape-level effects
+    shape_outer_shadow: Option<OuterShadow>,
+    shape_glow: Option<GlowEffect>,
 }
 
 impl ShapeBuilder {
@@ -1816,6 +1921,11 @@ impl ShapeBuilder {
             Some(self.adjust_values)
         };
 
+        let effects = ShapeEffects {
+            outer_shadow: self.shape_outer_shadow,
+            glow: self.shape_glow,
+        };
+
         Shape {
             position: self.position,
             size: self.size,
@@ -1827,6 +1937,7 @@ impl ShapeBuilder {
             style_ref: self.style_ref,
             adjust_values,
             vertical_text: self.vertical_text,
+            effects,
             ..Default::default()
         }
     }

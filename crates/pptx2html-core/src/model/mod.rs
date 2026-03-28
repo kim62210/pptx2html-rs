@@ -22,6 +22,6 @@ pub use slide::{
     TextRun, UnresolvedElement, UnresolvedType, UnsupportedData, VerticalAlign,
 };
 pub use style::{
-    Alignment, Border, BorderStyle, Fill, FontStyle, GradientFill, GradientStop, ImageFill,
-    SolidFill, TextShadow, TextStyle,
+    Alignment, Border, BorderStyle, Fill, FontStyle, GlowEffect, GradientFill, GradientStop,
+    ImageFill, OuterShadow, ShapeEffects, SolidFill, TextShadow, TextStyle,
 };

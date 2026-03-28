@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::geometry::{Position, Size};
 use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
-use super::style::{Alignment, Border, Fill, FontStyle, TextStyle};
+use super::style::{Alignment, Border, Fill, FontStyle, ShapeEffects, TextStyle};
 
 /// Slide
 #[derive(Debug, Clone)]
@@ -65,6 +65,7 @@ pub struct Shape {
     pub style_ref: Option<ShapeStyleRef>,
     pub adjust_values: Option<HashMap<String, f64>>,
     pub vertical_text: Option<String>, // "vert", "vert270", "wordArtVert", etc.
+    pub effects: ShapeEffects,
 }
 
 /// Text body

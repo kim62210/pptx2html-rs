@@ -852,6 +852,195 @@ fn test_chart_renders_placeholder() {
     assert!(html.contains("Chart"), "Should show Chart label");
 }
 
+// ── Shape effect tests (outerShdw / glow) ──
+
+#[test]
+fn test_shape_outer_shadow_parsing() {
+    // outerShdw: blurRad=50800 EMU (4pt), dist=38100 EMU (3pt), dir=2700000 (45deg)
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:solidFill><a:srgbClr val="4472C4"/></a:solidFill>
+        <a:effectLst>
+          <a:outerShdw blurRad="50800" dist="38100" dir="2700000">
+            <a:srgbClr val="000000"><a:alpha val="40000"/></a:srgbClr>
+          </a:outerShdw>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    let shadow = shape.effects.outer_shadow.as_ref().expect("outer_shadow should be parsed");
+    // blurRad: 50800 EMU / 12700 = 4pt
+    assert!((shadow.blur_radius - 4.0).abs() < 0.1, "blur_radius should be ~4pt, got {}", shadow.blur_radius);
+    // dist: 38100 EMU / 12700 = 3pt
+    assert!((shadow.distance - 3.0).abs() < 0.1, "distance should be ~3pt, got {}", shadow.distance);
+    // dir: 2700000 / 60000 = 45 deg
+    assert!((shadow.direction - 45.0).abs() < 0.1, "direction should be 45deg, got {}", shadow.direction);
+}
+
+#[test]
+fn test_shape_outer_shadow_css_rendering() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:effectLst>
+          <a:outerShdw blurRad="50800" dist="38100" dir="2700000">
+            <a:srgbClr val="000000"/>
+          </a:outerShdw>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("box-shadow:"),
+        "HTML should contain box-shadow for outerShdw: {html}"
+    );
+}
+
+#[test]
+fn test_shape_glow_parsing() {
+    // glow: rad=63500 EMU (5pt)
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:effectLst>
+          <a:glow rad="63500">
+            <a:srgbClr val="FFC000"><a:alpha val="60000"/></a:srgbClr>
+          </a:glow>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    let glow = shape.effects.glow.as_ref().expect("glow should be parsed");
+    // rad: 63500 EMU / 12700 = 5pt
+    assert!((glow.radius - 5.0).abs() < 0.1, "glow radius should be ~5pt, got {}", glow.radius);
+}
+
+#[test]
+fn test_shape_glow_css_rendering() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:effectLst>
+          <a:glow rad="63500">
+            <a:srgbClr val="FFC000"/>
+          </a:glow>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("box-shadow:"),
+        "HTML should contain box-shadow for glow: {html}"
+    );
+    // Glow uses spread with zero offset
+    assert!(
+        html.contains("0 0"),
+        "Glow box-shadow should have zero offsets: {html}"
+    );
+}
+
+#[test]
+fn test_shape_combined_shadow_and_glow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:effectLst>
+          <a:outerShdw blurRad="50800" dist="38100" dir="2700000">
+            <a:srgbClr val="000000"/>
+          </a:outerShdw>
+          <a:glow rad="63500">
+            <a:srgbClr val="FFC000"/>
+          </a:glow>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert!(shape.effects.outer_shadow.is_some(), "outer_shadow should be parsed");
+    assert!(shape.effects.glow.is_some(), "glow should be parsed");
+
+    let html = render_html(&pptx);
+    // Combined box-shadow should have comma-separated values
+    assert!(
+        html.contains("box-shadow:"),
+        "HTML should contain box-shadow: {html}"
+    );
+}
+
+#[test]
+fn test_shape_no_effects_no_box_shadow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // Extract the shape div's style attribute (not global CSS which has slide box-shadow)
+    let shape_div_start = html.find("<div class=\"shape\"").expect("shape div should exist");
+    let shape_section = &html[shape_div_start..shape_div_start + 300.min(html.len() - shape_div_start)];
+    assert!(
+        !shape_section.contains("box-shadow"),
+        "No effects means no box-shadow on shape div: {shape_section}"
+    );
+}
+
+#[test]
+fn test_shape_shadow_with_scheme_color() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:effectLst>
+          <a:outerShdw blurRad="50800" dist="38100" dir="5400000">
+            <a:schemeClr val="dk1"/>
+          </a:outerShdw>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    let shadow = shape.effects.outer_shadow.as_ref().expect("should parse scheme color shadow");
+    // dir: 5400000 / 60000 = 90 deg (straight down)
+    assert!((shadow.direction - 90.0).abs() < 0.1, "direction should be 90deg");
+}
+
 // ── Month 4: CSS global classes test ──
 
 #[test]

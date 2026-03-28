@@ -320,6 +320,38 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             );
         }
 
+        // Shape-level effects → CSS box-shadow
+        {
+            let mut shadows: Vec<String> = Vec::new();
+
+            // outerShdw → box-shadow with offset
+            if let Some(ref shadow) = shape.effects.outer_shadow {
+                let angle_rad = shadow.direction.to_radians();
+                let offset_x = shadow.distance * angle_rad.cos();
+                let offset_y = shadow.distance * angle_rad.sin();
+                let blur = shadow.blur_radius;
+                let color = ctx
+                    .color_to_css(&shadow.color)
+                    .unwrap_or_else(|| "rgba(0,0,0,0.4)".to_string());
+                shadows.push(format!(
+                    "{offset_x:.1}pt {offset_y:.1}pt {blur:.1}pt {color}"
+                ));
+            }
+
+            // glow → box-shadow with spread, no offset
+            if let Some(ref glow) = shape.effects.glow {
+                let spread = glow.radius;
+                let color = ctx
+                    .color_to_css(&glow.color)
+                    .unwrap_or_else(|| "rgba(255,215,0,0.5)".to_string());
+                shadows.push(format!("0 0 {spread:.1}pt {spread:.1}pt {color}"));
+            }
+
+            if !shadows.is_empty() {
+                let _ = write!(style_buf, "; box-shadow: {}", shadows.join(", "));
+            }
+        }
+
         // Determine SVG preset name for the shape (if applicable)
         let svg_preset_name = match &shape.shape_type {
             ShapeType::Ellipse => Some("ellipse"),
