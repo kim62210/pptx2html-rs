@@ -217,12 +217,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 if master_shape.hidden {
                     continue;
                 }
-                // Only render master shapes that don't have a matching slide shape
                 if let Some(ref ph) = master_shape.placeholder {
+                    // Skip if the slide already defines this placeholder
                     let has_slide_match =
                         placeholder::find_matching_placeholder(ph, &slide.shapes).is_some();
                     if has_slide_match {
                         continue;
+                    }
+                    // Per OOXML: master placeholder shapes only appear if the
+                    // layout also carries a matching placeholder.  When the
+                    // layout omits the placeholder the master shape is hidden.
+                    if let Some(l) = layout {
+                        let has_layout_match =
+                            placeholder::find_matching_placeholder(ph, &l.shapes).is_some();
+                        if !has_layout_match {
+                            continue;
+                        }
                     }
                 }
                 Self::render_shape_resolved(
@@ -976,24 +986,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
 
         let font_scheme = ctx.pres.primary_theme().map(|t| &t.font_scheme);
 
-        if let Some(f) = font {
-            // Resolve "+mj-lt"/"+mn-lt" references
-            let resolved = font_scheme
-                .and_then(|fs| fs.resolve_typeface(f))
-                .unwrap_or(f);
-            let _ = write!(run_style, "font-family: '{resolved}'");
-        } else if let Some(rd) = run_defaults {
-            // Fallback to inherited font
-            let inherited_font = rd.font_ea.as_deref().or(rd.font_latin.as_deref());
-            if let Some(f) = inherited_font {
-                let resolved = font_scheme
-                    .and_then(|fs| fs.resolve_typeface(f))
-                    .unwrap_or(f);
-                let _ = write!(run_style, "font-family: '{resolved}'");
-            } else if let Some(f) = font_ref_font {
-                let _ = write!(run_style, "font-family: '{f}'");
+        // Resolve font through typeface -> theme -> inherited -> fontRef chain,
+        // skipping empty strings and unresolved theme references ("+mj-*"/"+mn-*").
+        fn resolve_font_name<'a>(
+            name: &'a str,
+            font_scheme: Option<&'a FontScheme>,
+        ) -> Option<&'a str> {
+            if name.starts_with('+') {
+                font_scheme.and_then(|fs| fs.resolve_typeface(name))
+            } else if name.is_empty() {
+                None
+            } else {
+                Some(name)
             }
-        } else if let Some(f) = font_ref_font {
+        }
+
+        let resolved_font: Option<&str> = font
+            .and_then(|f| resolve_font_name(f, font_scheme))
+            .or_else(|| {
+                run_defaults.and_then(|rd| {
+                    let inherited = rd.font_ea.as_deref().or(rd.font_latin.as_deref())?;
+                    resolve_font_name(inherited, font_scheme)
+                })
+            })
+            .or_else(|| {
+                font_ref_font.and_then(|f| resolve_font_name(f, font_scheme))
+            });
+
+        if let Some(f) = resolved_font {
             let _ = write!(run_style, "font-family: '{f}'");
         }
 
