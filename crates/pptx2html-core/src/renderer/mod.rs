@@ -154,7 +154,7 @@ body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif
 }}
 .shape {{
   position: absolute;
-  overflow: hidden;
+  overflow: visible;
 }}
 .text-body {{
   width: 100%;
@@ -1166,7 +1166,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                         let _ = write!(
                             buf,
                             "background-image: url(data:{mime};base64,{b64}); \
-                             background-size: cover; background-position: center"
+                             background-size: cover; background-position: center; \
+                             background-repeat: no-repeat"
                         );
                     } else {
                         let ext = match mime {
@@ -1179,7 +1180,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                         let _ = write!(
                             buf,
                             "background-image: url(images/bg-{}.{ext}); \
-                             background-size: cover; background-position: center",
+                             background-size: cover; background-position: center; \
+                             background-repeat: no-repeat",
                             img_fill.data.len() % 100000
                         );
                     }
@@ -1239,7 +1241,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                         format!("images/bg-{}.{ext}", img_fill.data.len() % 100000)
                     };
                     format!(
-                        "background-image: url({url}); background-size: cover; background-position: center"
+                        "background-image: url({url}); background-size: cover; background-position: center; background-repeat: no-repeat"
                     )
                 } else {
                     String::new()
