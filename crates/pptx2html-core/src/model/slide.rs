@@ -44,6 +44,8 @@ pub enum ShapeType {
     Group(Vec<Shape>, GroupData),
     Chart(ChartData),
     Custom(String), // preset shape name
+    /// Unsupported content placeholder (SmartArt, OLE, Math, etc.)
+    Unsupported(String),
 }
 
 /// Shape
@@ -198,9 +200,9 @@ pub struct TextMargins {
 impl Default for TextMargins {
     fn default() -> Self {
         Self {
-            top: 3.6,  // OOXML default 45720 EMU ~ 3.6pt
+            top: 3.6, // OOXML default 45720 EMU ~ 3.6pt
             bottom: 3.6,
-            left: 7.2,  // 91440 EMU ~ 7.2pt
+            left: 7.2, // 91440 EMU ~ 7.2pt
             right: 7.2,
         }
     }
@@ -219,14 +221,14 @@ pub enum Bullet {
 pub struct BulletChar {
     pub char: String,
     pub font: Option<String>,
-    pub size_pct: Option<f64>,   // percentage of text size, e.g. 1.0 = 100%
+    pub size_pct: Option<f64>, // percentage of text size, e.g. 1.0 = 100%
     pub color: Option<super::color::Color>,
 }
 
 /// Auto-numbered bullet with optional font/size/color
 #[derive(Debug, Clone)]
 pub struct BulletAutoNum {
-    pub num_type: String,        // "arabicPeriod", "alphaLcPeriod", etc.
+    pub num_type: String, // "arabicPeriod", "alphaLcPeriod", etc.
     pub start_at: Option<i32>,
     pub font: Option<String>,
     pub size_pct: Option<f64>,

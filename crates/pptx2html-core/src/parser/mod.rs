@@ -12,32 +12,50 @@ use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::path::Path;
 
-use quick_xml::events::Event;
+use log::{info, warn};
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use zip::ZipArchive;
 
 use crate::error::{PptxError, PptxResult};
 use crate::model::{Emu, ListStyle, Presentation, Size};
 
+/// SAX-based streaming parser for PPTX (ZIP + OOXML) packages.
 pub struct PptxParser;
 
 impl PptxParser {
-    /// Parse PPTX from file path
+    /// Parse PPTX from file path.
     pub fn parse_file(path: &Path) -> PptxResult<Presentation> {
         let data = std::fs::read(path)?;
         Self::parse_bytes(&data)
     }
 
-    /// Parse PPTX from byte data
+    /// Parse PPTX from in-memory byte data.
     pub fn parse_bytes(data: &[u8]) -> PptxResult<Presentation> {
         let cursor = Cursor::new(data);
         let mut archive = ZipArchive::new(cursor)?;
 
+        // Detect password-protected PPTX (EncryptedPackage OLE stream)
+        let is_encrypted = (0..archive.len()).any(|i| {
+            archive
+                .by_index(i)
+                .map(|f| f.name() == "EncryptedPackage" || f.name() == "EncryptionInfo")
+                .unwrap_or(false)
+        });
+        if is_encrypted {
+            return Err(PptxError::UnsupportedFormat(
+                "password-protected PPTX".to_string(),
+            ));
+        }
+
         let mut presentation = Presentation::default();
 
         // 1. Parse slide size, slide rel IDs, and default text style from presentation.xml
-        let pres_xml = Self::read_entry(&mut archive, "ppt/presentation.xml")?;
-        let (slide_size, slide_rel_ids, default_text_style) = Self::parse_presentation_xml(&pres_xml)?;
+        let pres_xml = Self::read_entry(&mut archive, "ppt/presentation.xml").map_err(|_| {
+            PptxError::MissingFile("ppt/presentation.xml — not a valid PPTX".to_string())
+        })?;
+        let (slide_size, slide_rel_ids, default_text_style) =
+            Self::parse_presentation_xml(&pres_xml)?;
         presentation.slide_size = slide_size;
         presentation.default_text_style = default_text_style;
 
@@ -50,7 +68,9 @@ impl PptxParser {
         for theme_target in &theme_paths {
             let theme_full = normalize_ppt_path(theme_target);
             if let Ok(theme_xml) = Self::read_entry(&mut archive, &theme_full) {
-                presentation.themes.push(theme_parser::parse_theme(&theme_xml)?);
+                presentation
+                    .themes
+                    .push(theme_parser::parse_theme(&theme_xml)?);
             }
         }
 
@@ -67,21 +87,24 @@ impl PptxParser {
             };
 
             let master_rels_path = Self::rels_path_for(&master_full);
-            let master_rels = if let Ok(rels_xml) = Self::read_entry(&mut archive, &master_rels_path) {
-                relationships::parse_relationships(&rels_xml)?
-            } else {
-                HashMap::new()
-            };
+            let master_rels =
+                if let Ok(rels_xml) = Self::read_entry(&mut archive, &master_rels_path) {
+                    relationships::parse_relationships(&rels_xml)?
+                } else {
+                    HashMap::new()
+                };
 
-            let mut master = master_parser::parse_slide_master(&master_xml, &master_rels, &mut archive)?;
+            let mut master =
+                master_parser::parse_slide_master(&master_xml, &master_rels, &mut archive)?;
 
             // Find which theme this master references
             let theme_ref = find_target_by_type(&master_rels, "theme");
             if let Some(theme_target) = theme_ref {
                 let theme_full_path = resolve_relative_path(&master_full, &theme_target);
-                master.theme_idx = theme_paths.iter().position(|tp| {
-                    normalize_ppt_path(tp) == theme_full_path
-                }).unwrap_or(0);
+                master.theme_idx = theme_paths
+                    .iter()
+                    .position(|tp| normalize_ppt_path(tp) == theme_full_path)
+                    .unwrap_or(0);
             }
 
             let idx = presentation.masters.len();
@@ -91,10 +114,10 @@ impl PptxParser {
         }
 
         // Backward compat: copy ClrMap from first master into presentation
-        if let Some(first_master) = presentation.masters.first() {
-            if !first_master.clr_map.is_empty() {
-                presentation.clr_map = first_master.clr_map.clone();
-            }
+        if let Some(first_master) = presentation.masters.first()
+            && !first_master.clr_map.is_empty()
+        {
+            presentation.clr_map = first_master.clr_map.clone();
         }
 
         // 5. Parse slide layouts
@@ -104,14 +127,18 @@ impl PptxParser {
         for master_target in &master_targets {
             let master_full = normalize_ppt_path(master_target);
             let master_rels_path = Self::rels_path_for(&master_full);
-            let master_rels = if let Ok(rels_xml) = Self::read_entry(&mut archive, &master_rels_path) {
-                relationships::parse_relationships(&rels_xml)?
-            } else {
-                continue;
-            };
+            let master_rels =
+                if let Ok(rels_xml) = Self::read_entry(&mut archive, &master_rels_path) {
+                    relationships::parse_relationships(&rels_xml)?
+                } else {
+                    continue;
+                };
 
             let master_canonical = canonical_part_name(master_target);
-            let master_idx = master_path_to_idx.get(&master_canonical).copied().unwrap_or(0);
+            let master_idx = master_path_to_idx
+                .get(&master_canonical)
+                .copied()
+                .unwrap_or(0);
 
             let layout_targets = collect_targets_by_type(&master_rels, "slideLayout");
             for layout_target in &layout_targets {
@@ -128,13 +155,15 @@ impl PptxParser {
                 };
 
                 let layout_rels_path = Self::rels_path_for(&layout_full);
-                let layout_rels = if let Ok(rels_xml) = Self::read_entry(&mut archive, &layout_rels_path) {
-                    relationships::parse_relationships(&rels_xml)?
-                } else {
-                    HashMap::new()
-                };
+                let layout_rels =
+                    if let Ok(rels_xml) = Self::read_entry(&mut archive, &layout_rels_path) {
+                        relationships::parse_relationships(&rels_xml)?
+                    } else {
+                        HashMap::new()
+                    };
 
-                let mut layout = layout_parser::parse_slide_layout(&layout_xml, &layout_rels, &mut archive)?;
+                let mut layout =
+                    layout_parser::parse_slide_layout(&layout_xml, &layout_rels, &mut archive)?;
                 layout.master_idx = master_idx;
 
                 let idx = presentation.layouts.len();
@@ -144,33 +173,40 @@ impl PptxParser {
         }
 
         // 6. Parse slides
-        for rel_id in &slide_rel_ids {
+        let total_slides = slide_rel_ids.len();
+        info!("Parsing {total_slides} slide(s)");
+        for (slide_num, rel_id) in slide_rel_ids.iter().enumerate() {
+            info!("Parsing slide {} of {total_slides}", slide_num + 1);
             if let Some(slide_path) = pres_rels.get(rel_id) {
                 let full_path = normalize_ppt_path(slide_path);
                 if let Ok(slide_xml) = Self::read_entry(&mut archive, &full_path) {
                     let slide_rels_path = Self::rels_path_for(&full_path);
-                    let slide_rels = if let Ok(rels_xml) =
-                        Self::read_entry(&mut archive, &slide_rels_path)
-                    {
-                        relationships::parse_relationships(&rels_xml)?
-                    } else {
-                        HashMap::new()
-                    };
+                    let slide_rels =
+                        if let Ok(rels_xml) = Self::read_entry(&mut archive, &slide_rels_path) {
+                            relationships::parse_relationships(&rels_xml)?
+                        } else {
+                            HashMap::new()
+                        };
 
-                    let mut slide = slide_parser::parse_slide(
-                        &slide_xml,
-                        &slide_rels,
-                        &mut archive,
-                    )?;
+                    let mut slide =
+                        slide_parser::parse_slide(&slide_xml, &slide_rels, &mut archive)?;
 
                     // Find which layout this slide references
                     let layout_ref = find_target_by_type(&slide_rels, "slideLayout");
                     if let Some(layout_target) = layout_ref {
                         let layout_full = resolve_relative_path(&full_path, &layout_target);
-                        let layout_canonical = canonical_part_name(&layout_full.replace("ppt/", ""));
+                        let layout_canonical =
+                            canonical_part_name(&layout_full.replace("ppt/", ""));
                         slide.layout_idx = layout_path_to_idx.get(&layout_canonical).copied();
                     }
 
+                    let shape_count = slide.shapes.len();
+                    if shape_count > 100 {
+                        warn!(
+                            "Slide {} has {shape_count} shapes — rendering may be slow",
+                            slide_num + 1,
+                        );
+                    }
                     presentation.slides.push(slide);
                 }
             }
@@ -246,13 +282,19 @@ impl PptxParser {
                             current_run_defaults = Some(rd);
                         }
                         // Spacing containers inside defaultTextStyle lvlNpPr
-                        "lnSpc" if in_default_text_style && current_lvl.is_some() && !in_def_rpr => {
+                        "lnSpc"
+                            if in_default_text_style && current_lvl.is_some() && !in_def_rpr =>
+                        {
                             in_ln_spc = true;
                         }
-                        "spcBef" if in_default_text_style && current_lvl.is_some() && !in_def_rpr => {
+                        "spcBef"
+                            if in_default_text_style && current_lvl.is_some() && !in_def_rpr =>
+                        {
                             in_spc_bef = true;
                         }
-                        "spcAft" if in_default_text_style && current_lvl.is_some() && !in_def_rpr => {
+                        "spcAft"
+                            if in_default_text_style && current_lvl.is_some() && !in_def_rpr =>
+                        {
                             in_spc_aft = true;
                         }
                         // Color elements inside defRPr
@@ -278,16 +320,15 @@ impl PptxParser {
                                 let key = xml_utils::local_name(attr.key.as_ref());
                                 let val = String::from_utf8_lossy(&attr.value);
                                 match key {
-                                    "cx" => slide_size.width = Emu::from_str(&val),
-                                    "cy" => slide_size.height = Emu::from_str(&val),
+                                    "cx" => slide_size.width = Emu::parse_emu(&val),
+                                    "cy" => slide_size.height = Emu::parse_emu(&val),
                                     _ => {}
                                 }
                             }
                         }
                         "sldId" => {
                             for attr in e.attributes().flatten() {
-                                let key = std::str::from_utf8(attr.key.as_ref())
-                                    .unwrap_or("");
+                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                                 if key.ends_with("id") && key.contains(':') {
                                     let val = String::from_utf8_lossy(&attr.value);
                                     slide_rel_ids.push(val.to_string());
@@ -304,7 +345,9 @@ impl PptxParser {
                             }
                         }
                         // Empty defRPr inside defaultTextStyle
-                        "defRPr" if in_default_text_style && current_lvl.is_some() && !in_def_rpr => {
+                        "defRPr"
+                            if in_default_text_style && current_lvl.is_some() && !in_def_rpr =>
+                        {
                             let mut rd = crate::model::RunDefaults::default();
                             master_parser::parse_def_rpr_attrs(e, &mut rd);
                             if let Some(pd) = current_para_defaults.as_mut() {
@@ -312,66 +355,74 @@ impl PptxParser {
                             }
                         }
                         // Spacing percentage/points inside defaultTextStyle lvlNpPr
-                        "spcPct" if in_default_text_style && current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
-                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                                if let Ok(val) = val_str.parse::<f64>() {
-                                    let spacing = crate::model::SpacingValue::Percent(val / 100_000.0);
-                                    if let Some(pd) = current_para_defaults.as_mut() {
-                                        if in_ln_spc {
-                                            pd.line_spacing = Some(spacing);
-                                        } else if in_spc_bef {
-                                            pd.space_before = Some(spacing);
-                                        } else if in_spc_aft {
-                                            pd.space_after = Some(spacing);
-                                        }
+                        "spcPct"
+                            if in_default_text_style
+                                && current_lvl.is_some()
+                                && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                        {
+                            if let Some(val_str) = xml_utils::attr_str(e, "val")
+                                && let Ok(val) = val_str.parse::<f64>()
+                            {
+                                let spacing = crate::model::SpacingValue::Percent(val / 100_000.0);
+                                if let Some(pd) = current_para_defaults.as_mut() {
+                                    if in_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pd.space_after = Some(spacing);
                                     }
                                 }
                             }
                         }
-                        "spcPts" if in_default_text_style && current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
-                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                                if let Ok(val) = val_str.parse::<f64>() {
-                                    let spacing = crate::model::SpacingValue::Points(val / 100.0);
-                                    if let Some(pd) = current_para_defaults.as_mut() {
-                                        if in_ln_spc {
-                                            pd.line_spacing = Some(spacing);
-                                        } else if in_spc_bef {
-                                            pd.space_before = Some(spacing);
-                                        } else if in_spc_aft {
-                                            pd.space_after = Some(spacing);
-                                        }
+                        "spcPts"
+                            if in_default_text_style
+                                && current_lvl.is_some()
+                                && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                        {
+                            if let Some(val_str) = xml_utils::attr_str(e, "val")
+                                && let Ok(val) = val_str.parse::<f64>()
+                            {
+                                let spacing = crate::model::SpacingValue::Points(val / 100.0);
+                                if let Some(pd) = current_para_defaults.as_mut() {
+                                    if in_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pd.space_after = Some(spacing);
                                     }
                                 }
                             }
                         }
                         // Font inside defRPr
                         "latin" if in_def_rpr => {
-                            if let Some(rd) = current_run_defaults.as_mut() {
-                                if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                    rd.font_latin = Some(typeface);
-                                }
+                            if let Some(rd) = current_run_defaults.as_mut()
+                                && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            {
+                                rd.font_latin = Some(typeface);
                             }
                         }
                         "ea" if in_def_rpr => {
-                            if let Some(rd) = current_run_defaults.as_mut() {
-                                if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                    rd.font_ea = Some(typeface);
-                                }
+                            if let Some(rd) = current_run_defaults.as_mut()
+                                && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            {
+                                rd.font_ea = Some(typeface);
                             }
                         }
                         // Color (Empty variant) inside defRPr
                         "srgbClr" if in_def_rpr => {
-                            if let Some(val) = xml_utils::attr_str(e, "val") {
-                                if let Some(rd) = current_run_defaults.as_mut() {
-                                    rd.color = Some(crate::model::Color::rgb(val));
-                                }
+                            if let Some(val) = xml_utils::attr_str(e, "val")
+                                && let Some(rd) = current_run_defaults.as_mut()
+                            {
+                                rd.color = Some(crate::model::Color::rgb(val));
                             }
                         }
                         "schemeClr" if in_def_rpr => {
-                            if let Some(val) = xml_utils::attr_str(e, "val") {
-                                if let Some(rd) = current_run_defaults.as_mut() {
-                                    rd.color = Some(crate::model::Color::theme(val));
-                                }
+                            if let Some(val) = xml_utils::attr_str(e, "val")
+                                && let Some(rd) = current_run_defaults.as_mut()
+                            {
+                                rd.color = Some(crate::model::Color::theme(val));
                             }
                         }
                         _ => {}
@@ -387,10 +438,11 @@ impl PptxParser {
                         "defRPr" if in_def_rpr => {
                             in_def_rpr = false;
                             // Assign color from Start+child pattern
-                            if let (Some(color), Some(rd)) = (current_color.take(), current_run_defaults.as_mut()) {
-                                if rd.color.is_none() {
-                                    rd.color = Some(color);
-                                }
+                            if let (Some(color), Some(rd)) =
+                                (current_color.take(), current_run_defaults.as_mut())
+                                && rd.color.is_none()
+                            {
+                                rd.color = Some(color);
                             }
                             if let Some(pd) = current_para_defaults.as_mut() {
                                 pd.def_run_props = current_run_defaults.take();
@@ -406,20 +458,23 @@ impl PptxParser {
                         "spcAft" if in_default_text_style => {
                             in_spc_aft = false;
                         }
-                        s if in_default_text_style && master_parser::is_lvl_ppr(s) && current_lvl.is_some() => {
-                            if let Some(pd) = current_para_defaults.take() {
-                                let lvl = current_lvl.unwrap();
-                                if lvl < 9 {
-                                    default_text_style.levels[lvl] = Some(pd);
-                                }
+                        s if in_default_text_style
+                            && master_parser::is_lvl_ppr(s)
+                            && current_lvl.is_some() =>
+                        {
+                            if let (Some(pd), Some(lvl)) =
+                                (current_para_defaults.take(), current_lvl)
+                                && lvl < 9
+                            {
+                                default_text_style.levels[lvl] = Some(pd);
                             }
                             current_lvl = None;
                         }
                         "srgbClr" | "schemeClr" if in_def_rpr => {
-                            if let Some(color) = current_color.take() {
-                                if let Some(rd) = current_run_defaults.as_mut() {
-                                    rd.color = Some(color);
-                                }
+                            if let Some(color) = current_color.take()
+                                && let Some(rd) = current_run_defaults.as_mut()
+                            {
+                                rd.color = Some(color);
                             }
                         }
                         _ => {}
@@ -461,7 +516,11 @@ fn collect_targets_by_type(rels: &HashMap<String, String>, type_fragment: &str) 
             "slideLayout" if lower.contains("slidelayout") => {
                 targets.push(target.clone());
             }
-            "slide" if lower.contains("slide") && !lower.contains("master") && !lower.contains("layout") => {
+            "slide"
+                if lower.contains("slide")
+                    && !lower.contains("master")
+                    && !lower.contains("layout") =>
+            {
                 targets.push(target.clone());
             }
             _ => {}

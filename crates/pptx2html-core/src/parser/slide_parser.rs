@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
-use quick_xml::events::Event;
+use log::warn;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use zip::ZipArchive;
 
+use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::*;
-use super::xml_utils;
 
 /// Parse slide XML
 pub fn parse_slide<R: Read + Seek>(
@@ -118,7 +119,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_graphic_frame = true;
                         current_shape = Some(ShapeBuilder::default());
                     }
-                    // Graphic data with URI (detect charts)
+                    // Graphic data with URI (detect charts / SmartArt / OLE / Math)
                     "graphicData" if in_graphic_frame => {
                         in_graphic_data = true;
                         if let Some(uri) = xml_utils::attr_str(e, "uri") {
@@ -126,6 +127,21 @@ pub fn parse_slide<R: Read + Seek>(
                                 graphic_data_is_chart = true;
                                 if let Some(sb) = current_shape.as_mut() {
                                     sb.is_chart = true;
+                                }
+                            } else if uri.contains("diagram") || uri.contains("dgm") {
+                                warn!("SmartArt diagram detected — rendering placeholder");
+                                if let Some(sb) = current_shape.as_mut() {
+                                    sb.unsupported_content = Some("SmartArt".to_string());
+                                }
+                            } else if uri.contains("oleObject") {
+                                warn!("OLE object detected — rendering placeholder");
+                                if let Some(sb) = current_shape.as_mut() {
+                                    sb.unsupported_content = Some("OLE Object".to_string());
+                                }
+                            } else if uri.contains("math") || uri.contains("omml") {
+                                warn!("Math equation detected — rendering placeholder");
+                                if let Some(sb) = current_shape.as_mut() {
+                                    sb.unsupported_content = Some("Math Equation".to_string());
                                 }
                             }
                         }
@@ -139,7 +155,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "tr" if in_tbl => {
                         in_tr = true;
                         let h = xml_utils::attr_str(e, "h")
-                            .map(|v| Emu::from_str(&v).to_px())
+                            .map(|v| Emu::parse_emu(&v).to_px())
                             .unwrap_or(0.0);
                         current_row = Some(TableRowBuilder {
                             height: h,
@@ -179,7 +195,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "lnL" | "lnR" | "lnT" | "lnB" if in_tc_pr => {
                         tc_border_side = Some(local.clone());
                         if let Some(w) = xml_utils::attr_str(e, "w") {
-                            let width = Emu::from_str(&w).to_pt();
+                            let width = Emu::parse_emu(&w).to_pt();
                             if let Some(ref mut cell) = current_cell {
                                 match local.as_str() {
                                     "lnL" => cell.border_left.width = width,
@@ -235,10 +251,10 @@ pub fn parse_slide<R: Read + Seek>(
                     // Shape start
                     "sp" | "pic" | "cxnSp" => {
                         current_shape = Some(ShapeBuilder::default());
-                        if local == "pic" {
-                            if let Some(sb) = &mut current_shape {
-                                sb.is_picture = true;
-                            }
+                        if local == "pic"
+                            && let Some(sb) = &mut current_shape
+                        {
+                            sb.is_picture = true;
                         }
                     }
                     // Non-visual properties (contains placeholder)
@@ -252,10 +268,10 @@ pub fn parse_slide<R: Read + Seek>(
                     // Line/border
                     "ln" if in_sp_pr => {
                         in_ln = true;
-                        if let Some(sb) = &mut current_shape {
-                            if let Some(w) = xml_utils::attr_str(e, "w") {
-                                sb.border_width = Emu::from_str(&w).to_pt();
-                            }
+                        if let Some(sb) = &mut current_shape
+                            && let Some(w) = xml_utils::attr_str(e, "w")
+                        {
+                            sb.border_width = Emu::parse_emu(&w).to_pt();
                         }
                     }
                     // Line/border inside table cell border
@@ -362,18 +378,21 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // ── Text break (<a:br>) ──
                     "br" if current_paragraph.is_some() && !in_tc => {
-                        // Create a break run
-                        let mut br_run = RunBuilder::default();
-                        br_run.is_break = true;
-                        br_run.text = "\n".to_string();
+                        let br_run = RunBuilder {
+                            is_break: true,
+                            text: "\n".to_string(),
+                            ..Default::default()
+                        };
                         if let Some(pb) = current_paragraph.as_mut() {
                             pb.runs.push(br_run.build());
                         }
                     }
                     "br" if in_tc && cell_paragraph.is_some() => {
-                        let mut br_run = RunBuilder::default();
-                        br_run.is_break = true;
-                        br_run.text = "\n".to_string();
+                        let br_run = RunBuilder {
+                            is_break: true,
+                            text: "\n".to_string(),
+                            ..Default::default()
+                        };
                         if let Some(pb) = cell_paragraph.as_mut() {
                             pb.runs.push(br_run.build());
                         }
@@ -421,7 +440,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "gridCol" if in_tbl => {
                         if let Some(ref mut tb) = table_builder {
                             let w = xml_utils::attr_str(e, "w")
-                                .map(|v| Emu::from_str(&v).to_px())
+                                .map(|v| Emu::parse_emu(&v).to_px())
                                 .unwrap_or(0.0);
                             tb.col_widths.push(w);
                         }
@@ -440,8 +459,12 @@ pub fn parse_slide<R: Read + Seek>(
                             // Inside grpSpPr: "off" under xfrm is group position,
                             // "chOff" is handled separately below
                             if let Some(gc) = grp_stack.last_mut() {
-                                let x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                                let y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                                let x = Emu::parse_emu(
+                                    &xml_utils::attr_str(e, "x").unwrap_or_default(),
+                                );
+                                let y = Emu::parse_emu(
+                                    &xml_utils::attr_str(e, "y").unwrap_or_default(),
+                                );
                                 // Check if this is inside chOff or the outer xfrm off
                                 if depth_contains(&depth, "chOff") {
                                     gc.child_offset = Position { x, y };
@@ -450,45 +473,63 @@ pub fn parse_slide<R: Read + Seek>(
                                 }
                             }
                         } else if let Some(sb) = current_shape.as_mut() {
-                            sb.position.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                            sb.position.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                            sb.position.x =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                            sb.position.y =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
                     "ext" => {
                         if in_grp_sp_pr {
                             if let Some(gc) = grp_stack.last_mut() {
-                                let cx = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                                let cy = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                                let cx = Emu::parse_emu(
+                                    &xml_utils::attr_str(e, "cx").unwrap_or_default(),
+                                );
+                                let cy = Emu::parse_emu(
+                                    &xml_utils::attr_str(e, "cy").unwrap_or_default(),
+                                );
                                 if depth_contains(&depth, "chExt") {
-                                    gc.child_extent = Size { width: cx, height: cy };
+                                    gc.child_extent = Size {
+                                        width: cx,
+                                        height: cy,
+                                    };
                                 } else {
-                                    gc.size = Size { width: cx, height: cy };
+                                    gc.size = Size {
+                                        width: cx,
+                                        height: cy,
+                                    };
                                 }
                             }
                         } else if let Some(sb) = current_shape.as_mut() {
-                            sb.size.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                            sb.size.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                            sb.size.width =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                            sb.size.height =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
                         }
                     }
                     // Child offset/extent for group (self-closing variant)
                     "chOff" if in_grp_sp_pr => {
                         if let Some(gc) = grp_stack.last_mut() {
-                            gc.child_offset.x = Emu::from_str(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                            gc.child_offset.y = Emu::from_str(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                            gc.child_offset.x =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
+                            gc.child_offset.y =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
                         }
                     }
                     "chExt" if in_grp_sp_pr => {
                         if let Some(gc) = grp_stack.last_mut() {
-                            gc.child_extent.width = Emu::from_str(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                            gc.child_extent.height = Emu::from_str(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                            gc.child_extent.width =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+                            gc.child_extent.height =
+                                Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
                         }
                     }
                     // Preset geometry
                     "prstGeom" => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            if let Some(prst) = xml_utils::attr_str(e, "prst") {
-                                sb.preset_geometry = Some(prst);
-                            }
+                        if let Some(sb) = current_shape.as_mut()
+                            && let Some(prst) = xml_utils::attr_str(e, "prst")
+                        {
+                            sb.preset_geometry = Some(prst);
                         }
                     }
                     // bodyPr (Empty variant)
@@ -509,23 +550,23 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(sb) = &mut current_shape {
                                 sb.border_style = BorderStyle::None;
                             }
-                        } else if in_sp_pr {
-                            if let Some(sb) = &mut current_shape {
-                                sb.fill = Fill::None;
-                            }
+                        } else if in_sp_pr && let Some(sb) = &mut current_shape {
+                            sb.fill = Fill::None;
                         }
                     }
                     // Line dash style
                     "prstDash" if in_ln => {
-                        if let Some(sb) = &mut current_shape {
-                            if let Some(val) = xml_utils::attr_str(e, "val") {
-                                sb.border_style = match val.as_str() {
-                                    "solid" => BorderStyle::Solid,
-                                    "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                    "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" => BorderStyle::Dotted,
-                                    _ => BorderStyle::Solid,
-                                };
-                            }
+                        if let Some(sb) = &mut current_shape
+                            && let Some(val) = xml_utils::attr_str(e, "val")
+                        {
+                            sb.border_style = match val.as_str() {
+                                "solid" => BorderStyle::Solid,
+                                "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" => {
+                                    BorderStyle::Dotted
+                                }
+                                _ => BorderStyle::Solid,
+                            };
                         }
                     }
                     // Gradient direction
@@ -539,11 +580,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
                         // Self-closing style ref with no child color
                         if let Some(idx_val) = xml_utils::attr_str(e, "idx") {
-                            assign_style_ref_no_color(
-                                &local,
-                                &idx_val,
-                                &mut p_style_builder,
-                            );
+                            assign_style_ref_no_color(&local, &idx_val, &mut p_style_builder);
                         }
                     }
                     // Color element (Empty — simple color without modifiers)
@@ -552,9 +589,11 @@ pub fn parse_slide<R: Read + Seek>(
                             let color = Color::rgb(val);
                             if in_highlight {
                                 if in_cell_r_pr {
-                                    if let Some(rb) = cell_run.as_mut() { rb.highlight = Some(color); }
-                                } else if in_r_pr {
-                                    if let Some(rb) = current_run.as_mut() { rb.highlight = Some(color); }
+                                    if let Some(rb) = cell_run.as_mut() {
+                                        rb.highlight = Some(color);
+                                    }
+                                } else if in_r_pr && let Some(rb) = current_run.as_mut() {
+                                    rb.highlight = Some(color);
                                 }
                             } else if in_outer_shdw {
                                 current_color = Some(color);
@@ -583,7 +622,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 assign_color(
                                     color,
                                     &depth,
-                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    in_sp_pr,
+                                    in_ln,
+                                    in_r_pr,
+                                    in_grad_fill,
                                     current_gs_pos,
                                     &mut current_shape,
                                     &mut current_run,
@@ -597,9 +639,11 @@ pub fn parse_slide<R: Read + Seek>(
                             let color = Color::theme(val);
                             if in_highlight {
                                 if in_cell_r_pr {
-                                    if let Some(rb) = cell_run.as_mut() { rb.highlight = Some(color); }
-                                } else if in_r_pr {
-                                    if let Some(rb) = current_run.as_mut() { rb.highlight = Some(color); }
+                                    if let Some(rb) = cell_run.as_mut() {
+                                        rb.highlight = Some(color);
+                                    }
+                                } else if in_r_pr && let Some(rb) = current_run.as_mut() {
+                                    rb.highlight = Some(color);
                                 }
                             } else if in_outer_shdw {
                                 current_color = Some(color);
@@ -628,7 +672,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 assign_color(
                                     color,
                                     &depth,
-                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    in_sp_pr,
+                                    in_ln,
+                                    in_r_pr,
+                                    in_grad_fill,
                                     current_gs_pos,
                                     &mut current_shape,
                                     &mut current_run,
@@ -665,7 +712,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 assign_color(
                                     color,
                                     &depth,
-                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    in_sp_pr,
+                                    in_ln,
+                                    in_r_pr,
+                                    in_grad_fill,
                                     current_gs_pos,
                                     &mut current_shape,
                                     &mut current_run,
@@ -708,7 +758,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 assign_color(
                                     color,
                                     &depth,
-                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    in_sp_pr,
+                                    in_ln,
+                                    in_r_pr,
+                                    in_grad_fill,
                                     current_gs_pos,
                                     &mut current_shape,
                                     &mut current_run,
@@ -718,12 +771,11 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     // Color modifiers (Empty tags)
-                    "tint" | "shade" | "alpha" | "lumMod" | "lumOff"
-                    | "satMod" | "satOff" | "hueMod" | "hueOff"
-                    | "comp" | "inv" | "gray" => {
+                    "tint" | "shade" | "alpha" | "lumMod" | "lumOff" | "satMod" | "satOff"
+                    | "hueMod" | "hueOff" | "comp" | "inv" | "gray" => {
                         if let Some(ref mut color) = current_color {
-                            let val = xml_utils::attr_str(e, "val")
-                                .and_then(|v| v.parse::<i32>().ok());
+                            let val =
+                                xml_utils::attr_str(e, "val").and_then(|v| v.parse::<i32>().ok());
                             if let Some(modifier) = ColorModifier::from_ooxml(&local, val) {
                                 color.modifiers.push(modifier);
                             }
@@ -741,9 +793,8 @@ pub fn parse_slide<R: Read + Seek>(
                             for attr in e.attributes().flatten() {
                                 let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                                 if key.ends_with("embed") {
-                                    sb.image_rel_id = Some(
-                                        String::from_utf8_lossy(&attr.value).to_string(),
-                                    );
+                                    sb.image_rel_id =
+                                        Some(String::from_utf8_lossy(&attr.value).to_string());
                                 }
                             }
                         }
@@ -754,10 +805,10 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_latin = Some(typeface);
                             }
-                        } else if let Some(rb) = current_run.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rb.font_latin = Some(typeface);
-                            }
+                        } else if let Some(rb) = current_run.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rb.font_latin = Some(typeface);
                         }
                     }
                     "ea" => {
@@ -765,103 +816,133 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_ea = Some(typeface);
                             }
-                        } else if let Some(rb) = current_run.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rb.font_ea = Some(typeface);
-                            }
+                        } else if let Some(rb) = current_run.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rb.font_ea = Some(typeface);
                         }
                     }
                     // Spacing percentage (inside lnSpc/spcBef/spcAft) — cell or regular
                     "spcPct" => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                            if let Ok(val) = val_str.parse::<f64>() {
-                                let spacing = SpacingValue::Percent(val / 100_000.0);
-                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                                if let Some(pb) = target.as_mut() {
-                                    if in_ln_spc {
-                                        pb.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pb.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pb.space_after = Some(spacing);
-                                    }
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Percent(val / 100_000.0);
+                            let target = if in_tc {
+                                &mut cell_paragraph
+                            } else {
+                                &mut current_paragraph
+                            };
+                            if let Some(pb) = target.as_mut() {
+                                if in_ln_spc {
+                                    pb.line_spacing = Some(spacing);
+                                } else if in_spc_bef {
+                                    pb.space_before = Some(spacing);
+                                } else if in_spc_aft {
+                                    pb.space_after = Some(spacing);
                                 }
                             }
                         }
                     }
                     // Spacing points (inside lnSpc/spcBef/spcAft) — cell or regular
                     "spcPts" => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                            if let Ok(val) = val_str.parse::<f64>() {
-                                let spacing = SpacingValue::Points(val / 100.0);
-                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                                if let Some(pb) = target.as_mut() {
-                                    if in_ln_spc {
-                                        pb.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pb.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pb.space_after = Some(spacing);
-                                    }
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Points(val / 100.0);
+                            let target = if in_tc {
+                                &mut cell_paragraph
+                            } else {
+                                &mut current_paragraph
+                            };
+                            if let Some(pb) = target.as_mut() {
+                                if in_ln_spc {
+                                    pb.line_spacing = Some(spacing);
+                                } else if in_spc_bef {
+                                    pb.space_before = Some(spacing);
+                                } else if in_spc_aft {
+                                    pb.space_after = Some(spacing);
                                 }
                             }
                         }
                     }
                     // Bullet font (cell or regular)
                     "buFont" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                        if let Some(pb) = target.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                pb.bu_font = Some(typeface);
-                            }
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
+                        if let Some(pb) = target.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            pb.bu_font = Some(typeface);
                         }
                     }
                     // Bullet size (percentage, cell or regular)
                     "buSzPct" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                        if let Some(pb) = target.as_mut() {
-                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                                if let Ok(val) = val_str.parse::<f64>() {
-                                    pb.bu_size_pct = Some(val / 100_000.0);
-                                }
-                            }
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
+                        if let Some(pb) = target.as_mut()
+                            && let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            pb.bu_size_pct = Some(val / 100_000.0);
                         }
                     }
                     // Bullet size (points, cell or regular)
                     "buSzPts" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                        if let Some(pb) = target.as_mut() {
-                            if let Some(val_str) = xml_utils::attr_str(e, "val") {
-                                if let Ok(val) = val_str.parse::<f64>() {
-                                    // Store as negative to distinguish from pct in rendering
-                                    // (points stored directly, renderer handles it)
-                                    pb.bu_size_pct = Some(-(val / 100.0));
-                                }
-                            }
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
+                        if let Some(pb) = target.as_mut()
+                            && let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            // Store as negative to distinguish from pct in rendering
+                            // (points stored directly, renderer handles it)
+                            pb.bu_size_pct = Some(-(val / 100.0));
                         }
                     }
                     // Bullet (cell or regular)
                     "buNone" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
                         if let Some(pb) = target.as_mut() {
                             pb.bullet = Some(Bullet::None);
                         }
                     }
                     "buChar" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
-                        if let Some(pb) = target.as_mut() {
-                            if let Some(ch) = xml_utils::attr_str(e, "char") {
-                                pb.bullet = Some(Bullet::Char(BulletChar {
-                                    char: ch,
-                                    font: pb.bu_font.take(),
-                                    size_pct: pb.bu_size_pct.take(),
-                                    color: pb.bu_color.take(),
-                                }));
-                            }
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
+                        if let Some(pb) = target.as_mut()
+                            && let Some(ch) = xml_utils::attr_str(e, "char")
+                        {
+                            pb.bullet = Some(Bullet::Char(BulletChar {
+                                char: ch,
+                                font: pb.bu_font.take(),
+                                size_pct: pb.bu_size_pct.take(),
+                                color: pb.bu_color.take(),
+                            }));
                         }
                     }
                     "buAutoNum" => {
-                        let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                        let target = if in_tc {
+                            &mut cell_paragraph
+                        } else {
+                            &mut current_paragraph
+                        };
                         if let Some(pb) = target.as_mut() {
                             let num_type = xml_utils::attr_str(e, "type")
                                 .unwrap_or_else(|| "arabicPeriod".to_string());
@@ -878,17 +959,18 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // ── Adjust value guide (<a:gd>) inside avLst ──
                     "gd" if in_av_lst => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            if let (Some(name), Some(fmla)) = (
+                        if let Some(sb) = current_shape.as_mut()
+                            && let (Some(name), Some(fmla)) = (
                                 xml_utils::attr_str(e, "name"),
                                 xml_utils::attr_str(e, "fmla"),
-                            ) {
-                                // fmla is typically "val NNNNN"
-                                let val = fmla.strip_prefix("val ")
-                                    .and_then(|v| v.parse::<f64>().ok())
-                                    .unwrap_or(0.0);
-                                sb.adjust_values.insert(name, val);
-                            }
+                            )
+                        {
+                            // fmla is typically "val NNNNN"
+                            let val = fmla
+                                .strip_prefix("val ")
+                                .and_then(|v| v.parse::<f64>().ok())
+                                .unwrap_or(0.0);
+                            sb.adjust_values.insert(name, val);
                         }
                     }
                     // ── Image crop (<a:srcRect>) ──
@@ -912,7 +994,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 .unwrap_or(0.0);
                             if l > 0.0 || t > 0.0 || r > 0.0 || b > 0.0 {
                                 sb.crop = Some(CropRect {
-                                    left: l, top: t, right: r, bottom: b,
+                                    left: l,
+                                    top: t,
+                                    right: r,
+                                    bottom: b,
                                 });
                             }
                         }
@@ -923,26 +1008,29 @@ pub fn parse_slide<R: Read + Seek>(
                             for attr in e.attributes().flatten() {
                                 let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                                 if key.ends_with("id") && key.contains(':') {
-                                    sb.chart_rel_id = Some(
-                                        String::from_utf8_lossy(&attr.value).to_string(),
-                                    );
+                                    sb.chart_rel_id =
+                                        Some(String::from_utf8_lossy(&attr.value).to_string());
                                 }
                             }
                         }
                     }
                     // ── Text break (Empty variant) ──
                     "br" if current_paragraph.is_some() && !in_tc => {
-                        let mut br_run = RunBuilder::default();
-                        br_run.is_break = true;
-                        br_run.text = "\n".to_string();
+                        let br_run = RunBuilder {
+                            is_break: true,
+                            text: "\n".to_string(),
+                            ..Default::default()
+                        };
                         if let Some(pb) = current_paragraph.as_mut() {
                             pb.runs.push(br_run.build());
                         }
                     }
                     "br" if in_tc && cell_paragraph.is_some() => {
-                        let mut br_run = RunBuilder::default();
-                        br_run.is_break = true;
-                        br_run.text = "\n".to_string();
+                        let br_run = RunBuilder {
+                            is_break: true,
+                            text: "\n".to_string(),
+                            ..Default::default()
+                        };
                         if let Some(pb) = cell_paragraph.as_mut() {
                             pb.runs.push(br_run.build());
                         }
@@ -973,9 +1061,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_cell_r_pr = false;
                     }
                     "r" if in_tc && cell_paragraph.is_some() => {
-                        if let (Some(pb), Some(rb)) =
-                            (&mut cell_paragraph, cell_run.take())
-                        {
+                        if let (Some(pb), Some(rb)) = (&mut cell_paragraph, cell_run.take()) {
                             pb.runs.push(rb.build());
                         }
                     }
@@ -1016,10 +1102,10 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // End of table row
                     "tr" => {
-                        if let Some(row) = current_row.take() {
-                            if let Some(tb) = table_builder.as_mut() {
-                                tb.rows.push(row.build());
-                            }
+                        if let Some(row) = current_row.take()
+                            && let Some(tb) = table_builder.as_mut()
+                        {
+                            tb.rows.push(row.build());
                         }
                         in_tr = false;
                     }
@@ -1041,7 +1127,24 @@ pub fn parse_slide<R: Read + Seek>(
                                     slide.shapes.push(shape);
                                 }
                             }
-                        } else if let (Some(sb), Some(tb)) = (current_shape.take(), table_builder.take()) {
+                        } else if current_shape
+                            .as_ref()
+                            .is_some_and(|sb| sb.unsupported_content.is_some())
+                        {
+                            // Unsupported content (SmartArt, OLE, Math): build placeholder shape
+                            if let Some(sb) = current_shape.take() {
+                                let shape = sb.build();
+                                if !grp_stack.is_empty() {
+                                    if let Some(gc) = grp_stack.last_mut() {
+                                        gc.shapes.push(shape);
+                                    }
+                                } else {
+                                    slide.shapes.push(shape);
+                                }
+                            }
+                        } else if let (Some(sb), Some(tb)) =
+                            (current_shape.take(), table_builder.take())
+                        {
                             let table_data = tb.build();
                             let shape = Shape {
                                 position: sb.position,
@@ -1104,10 +1207,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 if let Some(rb) = cell_run.as_mut() {
                                     rb.shadow = Some(shadow);
                                 }
-                            } else if in_r_pr {
-                                if let Some(rb) = current_run.as_mut() {
-                                    rb.shadow = Some(shadow);
-                                }
+                            } else if in_r_pr && let Some(rb) = current_run.as_mut() {
+                                rb.shadow = Some(shadow);
                             }
                         }
                     }
@@ -1118,10 +1219,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 if let Some(rb) = cell_run.as_mut() {
                                     rb.highlight = Some(color);
                                 }
-                            } else if in_r_pr {
-                                if let Some(rb) = current_run.as_mut() {
-                                    rb.highlight = Some(color);
-                                }
+                            } else if in_r_pr && let Some(rb) = current_run.as_mut() {
+                                rb.highlight = Some(color);
                             }
                         }
                     }
@@ -1135,15 +1234,12 @@ pub fn parse_slide<R: Read + Seek>(
                     "spcAft" => in_spc_aft = false,
                     "buClr" => in_bu_clr = false,
                     "r" => {
-                        if let (Some(pb), Some(rb)) =
-                            (&mut current_paragraph, current_run.take())
-                        {
+                        if let (Some(pb), Some(rb)) = (&mut current_paragraph, current_run.take()) {
                             pb.runs.push(rb.build());
                         }
                     }
                     "p" if current_shape.is_some() => {
-                        if let (Some(sb), Some(pb)) =
-                            (&mut current_shape, current_paragraph.take())
+                        if let (Some(sb), Some(pb)) = (&mut current_shape, current_paragraph.take())
                         {
                             sb.paragraphs.push(pb.build());
                         }
@@ -1157,10 +1253,8 @@ pub fn parse_slide<R: Read + Seek>(
                                     if let Some(rb) = cell_run.as_mut() {
                                         rb.highlight = Some(color);
                                     }
-                                } else if in_r_pr {
-                                    if let Some(rb) = current_run.as_mut() {
-                                        rb.highlight = Some(color);
-                                    }
+                                } else if in_r_pr && let Some(rb) = current_run.as_mut() {
+                                    rb.highlight = Some(color);
                                 }
                             } else if in_outer_shdw {
                                 // Shadow color: don't consume, let outerShdw End handler use it
@@ -1191,7 +1285,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 assign_color(
                                     color,
                                     &depth,
-                                    in_sp_pr, in_ln, in_r_pr, in_grad_fill,
+                                    in_sp_pr,
+                                    in_ln,
+                                    in_r_pr,
+                                    in_grad_fill,
                                     current_gs_pos,
                                     &mut current_shape,
                                     &mut current_run,
@@ -1207,11 +1304,7 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(idx_val) = p_style_idx.take() {
                                 // Only create if builder doesn't already have this ref set
                                 // (it's already set if a color child was processed)
-                                ensure_style_ref(
-                                    &local,
-                                    &idx_val,
-                                    &mut p_style_builder,
-                                );
+                                ensure_style_ref(&local, &idx_val, &mut p_style_builder);
                             }
                             p_style_current_ref = None;
                         }
@@ -1258,23 +1351,23 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(sb) = current_shape.take() {
                             let mut shape = sb.build();
                             // Load image data
-                            if let ShapeType::Picture(pic) = &mut shape.shape_type {
-                                if let Some(target) = rels.get(&pic.rel_id) {
-                                    let img_path = format!("ppt/slides/{target}");
-                                    let alt_path = format!("ppt/{target}");
-                                    let path = if archive.by_name(&img_path).is_ok() {
-                                        img_path
-                                    } else {
-                                        alt_path
-                                    };
-                                    if let Ok(mut entry) = archive.by_name(&path) {
-                                        let mut buf = Vec::new();
-                                        let _ = entry.read_to_end(&mut buf);
-                                        pic.data = buf;
-                                        // Detect content type from extension
-                                        if pic.content_type.is_empty() {
-                                            pic.content_type = mime_from_extension(&path);
-                                        }
+                            if let ShapeType::Picture(pic) = &mut shape.shape_type
+                                && let Some(target) = rels.get(&pic.rel_id)
+                            {
+                                let img_path = format!("ppt/slides/{target}");
+                                let alt_path = format!("ppt/{target}");
+                                let path = if archive.by_name(&img_path).is_ok() {
+                                    img_path
+                                } else {
+                                    alt_path
+                                };
+                                if let Ok(mut entry) = archive.by_name(&path) {
+                                    let mut buf = Vec::new();
+                                    let _ = entry.read_to_end(&mut buf);
+                                    pic.data = buf;
+                                    // Detect content type from extension
+                                    if pic.content_type.is_empty() {
+                                        pic.content_type = mime_from_extension(&path);
                                     }
                                 }
                             }
@@ -1351,10 +1444,8 @@ fn assign_color(
     }
 
     // Other cases inside spPr (no solidFill ancestor)
-    if in_sp_pr {
-        if let Some(sb) = shape.as_mut() {
-            sb.fill = Fill::Solid(SolidFill { color });
-        }
+    if in_sp_pr && let Some(sb) = shape.as_mut() {
+        sb.fill = Fill::Solid(SolidFill { color });
     }
 }
 
@@ -1403,11 +1494,7 @@ fn assign_style_ref_color(
 }
 
 /// Ensure style ref exists (set idx but no color override, for End events when no child color was present)
-fn ensure_style_ref(
-    ref_kind: &str,
-    idx_str: &str,
-    builder: &mut Option<ShapeStyleRef>,
-) {
+fn ensure_style_ref(ref_kind: &str, idx_str: &str, builder: &mut Option<ShapeStyleRef>) {
     let builder = match builder.as_mut() {
         Some(b) => b,
         None => return,
@@ -1442,11 +1529,7 @@ fn ensure_style_ref(
 }
 
 /// Assign style ref with no color (Empty variant self-closing)
-fn assign_style_ref_no_color(
-    ref_kind: &str,
-    idx_str: &str,
-    builder: &mut Option<ShapeStyleRef>,
-) {
+fn assign_style_ref_no_color(ref_kind: &str, idx_str: &str, builder: &mut Option<ShapeStyleRef>) {
     let builder = match builder.as_mut() {
         Some(b) => b,
         None => return,
@@ -1481,10 +1564,7 @@ fn assign_style_ref_no_color(
 }
 
 /// Parse bodyPr attributes
-fn parse_body_pr(
-    e: &quick_xml::events::BytesStart<'_>,
-    shape: &mut Option<ShapeBuilder>,
-) {
+fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<ShapeBuilder>) {
     if let Some(sb) = shape.as_mut() {
         // Vertical alignment
         if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
@@ -1492,35 +1572,32 @@ fn parse_body_pr(
         }
         // Inner margins (EMU → pt)
         if let Some(v) = xml_utils::attr_str(e, "lIns") {
-            sb.text_margins.left = Emu::from_str(&v).to_pt();
+            sb.text_margins.left = Emu::parse_emu(&v).to_pt();
         }
         if let Some(v) = xml_utils::attr_str(e, "tIns") {
-            sb.text_margins.top = Emu::from_str(&v).to_pt();
+            sb.text_margins.top = Emu::parse_emu(&v).to_pt();
         }
         if let Some(v) = xml_utils::attr_str(e, "rIns") {
-            sb.text_margins.right = Emu::from_str(&v).to_pt();
+            sb.text_margins.right = Emu::parse_emu(&v).to_pt();
         }
         if let Some(v) = xml_utils::attr_str(e, "bIns") {
-            sb.text_margins.bottom = Emu::from_str(&v).to_pt();
+            sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
         }
         // Word wrap
         if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
             sb.text_word_wrap = wrap != "none";
         }
         // Vertical text direction
-        if let Some(vert) = xml_utils::attr_str(e, "vert") {
-            if vert != "horz" {
-                sb.vertical_text = Some(vert);
-            }
+        if let Some(vert) = xml_utils::attr_str(e, "vert")
+            && vert != "horz"
+        {
+            sb.vertical_text = Some(vert);
         }
     }
 }
 
 /// Parse pPr (paragraph properties)
-fn parse_para_props(
-    e: &quick_xml::events::BytesStart<'_>,
-    para: &mut Option<ParagraphBuilder>,
-) {
+fn parse_para_props(e: &quick_xml::events::BytesStart<'_>, para: &mut Option<ParagraphBuilder>) {
     if let Some(pb) = para.as_mut() {
         if let Some(algn) = xml_utils::attr_str(e, "algn") {
             pb.alignment = Alignment::from_ooxml(&algn);
@@ -1529,19 +1606,16 @@ fn parse_para_props(
             pb.level = lvl.parse::<u32>().unwrap_or(0);
         }
         if let Some(indent) = xml_utils::attr_str(e, "indent") {
-            pb.indent = Some(Emu::from_str(&indent).to_pt());
+            pb.indent = Some(Emu::parse_emu(&indent).to_pt());
         }
         if let Some(mar_l) = xml_utils::attr_str(e, "marL") {
-            pb.margin_left = Some(Emu::from_str(&mar_l).to_pt());
+            pb.margin_left = Some(Emu::parse_emu(&mar_l).to_pt());
         }
     }
 }
 
 /// Parse rPr (run properties)
-fn parse_run_props(
-    e: &quick_xml::events::BytesStart<'_>,
-    run: &mut Option<RunBuilder>,
-) {
+fn parse_run_props(e: &quick_xml::events::BytesStart<'_>, run: &mut Option<RunBuilder>) {
     if let Some(rb) = run.as_mut() {
         if let Some(sz) = xml_utils::attr_str(e, "sz") {
             rb.font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
@@ -1599,11 +1673,15 @@ struct ShapeBuilder {
     // Chart detection
     is_chart: bool,
     chart_rel_id: Option<String>,
+    // Unsupported content type (SmartArt, OLE, Math)
+    unsupported_content: Option<String>,
 }
 
 impl ShapeBuilder {
     fn build(self) -> Shape {
-        let shape_type = if self.is_chart {
+        let shape_type = if let Some(label) = self.unsupported_content {
+            ShapeType::Unsupported(label)
+        } else if self.is_chart {
             ShapeType::Chart(ChartData {
                 rel_id: self.chart_rel_id.unwrap_or_default(),
                 preview_image: None,
@@ -1839,7 +1917,8 @@ fn assign_tc_color(
         }
         Some("lnR") => {
             cell.border_right.color = color;
-            if matches!(cell.border_right.style, BorderStyle::None) && cell.border_right.width > 0.0 {
+            if matches!(cell.border_right.style, BorderStyle::None) && cell.border_right.width > 0.0
+            {
                 cell.border_right.style = BorderStyle::Solid;
             }
         }
@@ -1851,7 +1930,9 @@ fn assign_tc_color(
         }
         Some("lnB") => {
             cell.border_bottom.color = color;
-            if matches!(cell.border_bottom.style, BorderStyle::None) && cell.border_bottom.width > 0.0 {
+            if matches!(cell.border_bottom.style, BorderStyle::None)
+                && cell.border_bottom.width > 0.0
+            {
                 cell.border_bottom.style = BorderStyle::Solid;
             }
         }
@@ -1876,5 +1957,6 @@ fn mime_from_extension(path: &str) -> String {
         "emf" => "image/x-emf",
         "wmf" => "image/x-wmf",
         _ => "image/png",
-    }.to_string()
+    }
+    .to_string()
 }

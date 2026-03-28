@@ -54,14 +54,21 @@ impl HtmlRenderer {
     }
 
     /// Render entire Presentation to HTML with conversion options
-    pub fn render_with_options(pres: &Presentation, opts: &ConversionOptions) -> PptxResult<String> {
+    pub fn render_with_options(
+        pres: &Presentation,
+        opts: &ConversionOptions,
+    ) -> PptxResult<String> {
         let slide_w = pres.slide_size.width.to_px();
         let slide_h = pres.slide_size.height.to_px();
 
         let ctx = RenderCtx {
             pres,
             scheme: pres.primary_theme().map(|t| &t.color_scheme),
-            clr_map: if pres.clr_map.is_empty() { None } else { Some(&pres.clr_map) },
+            clr_map: if pres.clr_map.is_empty() {
+                None
+            } else {
+                Some(&pres.clr_map)
+            },
             embed_images: opts.embed_images,
         };
 
@@ -69,7 +76,9 @@ impl HtmlRenderer {
 
         html.push_str("<!DOCTYPE html>\n<html lang=\"ko\">\n<head>\n");
         html.push_str("<meta charset=\"UTF-8\">\n");
-        html.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str("<meta name=\"generator\" content=\"pptx2html-rs\">\n");
         if let Some(ref title) = pres.title {
             html.push_str(&format!("<title>{}</title>\n", escape_html(title)));
@@ -87,7 +96,9 @@ impl HtmlRenderer {
             if !opts.should_include_slide(one_based, slide.hidden) {
                 continue;
             }
-            html.push_str(&Self::render_slide(slide, one_based, slide_w, slide_h, &ctx));
+            html.push_str(&Self::render_slide(
+                slide, one_based, slide_w, slide_h, &ctx,
+            ));
         }
 
         html.push_str("</div>\n</body>\n</html>");
@@ -140,9 +151,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let mut html = String::new();
 
         // Look up layout and master for this slide
-        let layout = slide
-            .layout_idx
-            .and_then(|idx| ctx.pres.layouts.get(idx));
+        let layout = slide.layout_idx.and_then(|idx| ctx.pres.layouts.get(idx));
         let master = layout
             .map(|l| l.master_idx)
             .and_then(|idx| ctx.pres.masters.get(idx));
@@ -150,7 +159,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         // Resolve ClrMap per slide (considering overrides)
         let slide_ctx = if let Some(m) = master {
             let resolved_cm = inheritance::resolve_clr_map(slide, layout, m);
-            ctx.for_slide(if resolved_cm.is_empty() { None } else { Some(resolved_cm) })
+            ctx.for_slide(if resolved_cm.is_empty() {
+                None
+            } else {
+                Some(resolved_cm)
+            })
         } else {
             ctx.for_slide(None)
         };
@@ -163,24 +176,26 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         ));
 
         // Render master shapes if show_master_sp is true
-        let show_master = slide.show_master_sp
-            && layout.map_or(true, |l| l.show_master_sp);
-        if show_master {
-            if let Some(m) = master {
-                for master_shape in &m.shapes {
-                    if master_shape.hidden {
+        let show_master = slide.show_master_sp && layout.is_none_or(|l| l.show_master_sp);
+        if show_master && let Some(m) = master {
+            for master_shape in &m.shapes {
+                if master_shape.hidden {
+                    continue;
+                }
+                // Only render master shapes that don't have a matching slide shape
+                if let Some(ref ph) = master_shape.placeholder {
+                    let has_slide_match =
+                        placeholder::find_matching_placeholder(ph, &slide.shapes).is_some();
+                    if has_slide_match {
                         continue;
                     }
-                    // Only render master shapes that don't have a matching slide shape
-                    if let Some(ref ph) = master_shape.placeholder {
-                        let has_slide_match =
-                            placeholder::find_matching_placeholder(ph, &slide.shapes).is_some();
-                        if has_slide_match {
-                            continue;
-                        }
-                    }
-                    html.push_str(&Self::render_shape_resolved(master_shape, None, None, &slide_ctx));
                 }
+                html.push_str(&Self::render_shape_resolved(
+                    master_shape,
+                    None,
+                    None,
+                    &slide_ctx,
+                ));
             }
         }
 
@@ -197,7 +212,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 master.and_then(|m| placeholder::find_matching_placeholder(ph, &m.shapes))
             });
 
-            html.push_str(&Self::render_shape_resolved(shape, layout_match, master_match, &slide_ctx));
+            html.push_str(&Self::render_shape_resolved(
+                shape,
+                layout_match,
+                master_match,
+                &slide_ctx,
+            ));
         }
 
         html.push_str("</div>\n");
@@ -254,7 +274,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             ctx.clr_map,
         );
         if resolved_border.width > 0.0 {
-            let border_color = ctx.color_to_css(&resolved_border.color)
+            let border_color = ctx
+                .color_to_css(&resolved_border.color)
                 .unwrap_or_else(|| "#000".to_string());
             let border_style = match resolved_border.style {
                 BorderStyle::Solid => "solid",
@@ -303,6 +324,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             return html;
         }
 
+        // Unsupported content (SmartArt, OLE, Math)
+        if let ShapeType::Unsupported(ref label) = shape.shape_type {
+            let escaped = escape_html(label);
+            html.push_str(&format!(
+                "<div class=\"chart-placeholder\">\
+                 <span>[{escaped}]</span></div>\n"
+            ));
+            html.push_str("</div>\n");
+            return html;
+        }
+
         // Chart
         if let ShapeType::Chart(ref chart_data) = shape.shape_type {
             if let Some(ref img_data) = chart_data.preview_image {
@@ -335,10 +367,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         if let Some(preset_name) = svg_preset_name {
             let adj_values: HashMap<String, f64> = shape.adjust_values.clone().unwrap_or_default();
             if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, &adj_values) {
-                let fill_color = ctx.color_to_css(&shape.fill.color_ref())
+                let fill_color = ctx
+                    .color_to_css(&shape.fill.color_ref())
                     .unwrap_or_else(|| "none".to_string());
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
-                    let c = ctx.color_to_css(&resolved_border.color)
+                    let c = ctx
+                        .color_to_css(&resolved_border.color)
                         .unwrap_or_else(|| "#000".to_string());
                     (c, resolved_border.width)
                 } else {
@@ -353,56 +387,55 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         // Image
-        if let ShapeType::Picture(pic) = &shape.shape_type {
-            if !pic.data.is_empty() {
-                let mime = if pic.content_type.is_empty() {
-                    "image/png"
-                } else {
-                    &pic.content_type
+        if let ShapeType::Picture(pic) = &shape.shape_type
+            && !pic.data.is_empty()
+        {
+            let mime = if pic.content_type.is_empty() {
+                "image/png"
+            } else {
+                &pic.content_type
+            };
+            let src = if ctx.embed_images {
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&pic.data);
+                format!("data:{mime};base64,{b64}")
+            } else {
+                let ext = match mime {
+                    "image/jpeg" => "jpg",
+                    "image/gif" => "gif",
+                    "image/svg+xml" => "svg",
+                    "image/webp" => "webp",
+                    _ => "png",
                 };
-                let src = if ctx.embed_images {
-                    let b64 = base64::engine::general_purpose::STANDARD.encode(&pic.data);
-                    format!("data:{mime};base64,{b64}")
-                } else {
-                    let ext = match mime {
-                        "image/jpeg" => "jpg",
-                        "image/gif" => "gif",
-                        "image/svg+xml" => "svg",
-                        "image/webp" => "webp",
-                        _ => "png",
-                    };
-                    format!("images/image-{}.{ext}", pic.data.len() % 100000)
-                };
-                let mut img_styles = Vec::new();
-                if let Some(ref crop) = pic.crop {
-                    // CSS object-view-box or clip approach for cropping
-                    let left_pct = crop.left * 100.0;
-                    let top_pct = crop.top * 100.0;
-                    let right_pct = crop.right * 100.0;
-                    let bottom_pct = crop.bottom * 100.0;
-                    let clip_path = format!(
-                        "inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%)"
-                    );
-                    img_styles.push(format!("clip-path: {clip_path}"));
-                    // Scale image to fill the visible area
-                    let scale_x = 100.0 / (100.0 - left_pct - right_pct) * 100.0;
-                    let scale_y = 100.0 / (100.0 - top_pct - bottom_pct) * 100.0;
-                    img_styles.push(format!("width: {scale_x:.1}%"));
-                    img_styles.push(format!("height: {scale_y:.1}%"));
-                    let offset_x = -left_pct / (100.0 - left_pct - right_pct) * 100.0;
-                    let offset_y = -top_pct / (100.0 - top_pct - bottom_pct) * 100.0;
-                    img_styles.push(format!("margin-left: {offset_x:.1}%"));
-                    img_styles.push(format!("margin-top: {offset_y:.1}%"));
-                }
-                let style_attr = if img_styles.is_empty() {
-                    String::new()
-                } else {
-                    format!(" style=\"{}\"", img_styles.join("; "))
-                };
-                html.push_str(&format!(
-                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\"{style_attr}>\n"
-                ));
+                format!("images/image-{}.{ext}", pic.data.len() % 100000)
+            };
+            let mut img_styles = Vec::new();
+            if let Some(ref crop) = pic.crop {
+                // CSS object-view-box or clip approach for cropping
+                let left_pct = crop.left * 100.0;
+                let top_pct = crop.top * 100.0;
+                let right_pct = crop.right * 100.0;
+                let bottom_pct = crop.bottom * 100.0;
+                let clip_path =
+                    format!("inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%)");
+                img_styles.push(format!("clip-path: {clip_path}"));
+                // Scale image to fill the visible area
+                let scale_x = 100.0 / (100.0 - left_pct - right_pct) * 100.0;
+                let scale_y = 100.0 / (100.0 - top_pct - bottom_pct) * 100.0;
+                img_styles.push(format!("width: {scale_x:.1}%"));
+                img_styles.push(format!("height: {scale_y:.1}%"));
+                let offset_x = -left_pct / (100.0 - left_pct - right_pct) * 100.0;
+                let offset_y = -top_pct / (100.0 - top_pct - bottom_pct) * 100.0;
+                img_styles.push(format!("margin-left: {offset_x:.1}%"));
+                img_styles.push(format!("margin-top: {offset_y:.1}%"));
             }
+            let style_attr = if img_styles.is_empty() {
+                String::new()
+            } else {
+                format!(" style=\"{}\"", img_styles.join("; "))
+            };
+            html.push_str(&format!(
+                "<img class=\"shape-image\" src=\"{src}\" alt=\"\"{style_attr}>\n"
+            ));
         }
 
         // Resolve text style source for this shape's placeholder type
@@ -466,23 +499,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
     /// Build text style context from placeholder type and master txStyles / defaultTextStyle
     fn build_text_style_ctx<'a>(shape: &Shape, ctx: &RenderCtx<'a>) -> TextStyleCtx<'a> {
         // Determine which txStyles list to use based on placeholder type
-        let ph_type = shape.placeholder.as_ref().and_then(|ph| ph.ph_type.as_ref());
+        let ph_type = shape
+            .placeholder
+            .as_ref()
+            .and_then(|ph| ph.ph_type.as_ref());
         let source = placeholder::text_style_source(ph_type);
 
         // Find the master's txStyles list for this source
-        let layout = shape.placeholder.as_ref().and_then(|_| {
+        let layout = shape.placeholder.as_ref().and({
             // We don't have layout_idx on shape, get from slide context
             None::<&SlideLayout>
         });
         let _ = layout; // Layout-level lstStyle is not yet tracked
 
         // txStyles from first master
-        let master_list_style = ctx.pres.masters.first().and_then(|m| {
-            match source {
-                placeholder::TextStyleSource::TitleStyle => m.tx_styles.title_style.as_ref(),
-                placeholder::TextStyleSource::BodyStyle => m.tx_styles.body_style.as_ref(),
-                placeholder::TextStyleSource::OtherStyle => m.tx_styles.other_style.as_ref(),
-            }
+        let master_list_style = ctx.pres.masters.first().and_then(|m| match source {
+            placeholder::TextStyleSource::TitleStyle => m.tx_styles.title_style.as_ref(),
+            placeholder::TextStyleSource::BodyStyle => m.tx_styles.body_style.as_ref(),
+            placeholder::TextStyleSource::OtherStyle => m.tx_styles.other_style.as_ref(),
         });
 
         // defaultTextStyle from presentation
@@ -502,17 +536,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let font_scheme = &theme.font_scheme;
         let scheme = ctx.scheme?;
         let clr_map = ctx.clr_map?;
-        let (font_name, _color) = style_ref::resolve_font_ref(font_ref, font_scheme, scheme, clr_map)?;
+        let (font_name, _color) =
+            style_ref::resolve_font_ref(font_ref, font_scheme, scheme, clr_map)?;
         Some(font_name)
     }
 
     fn render_table(table: &TableData, ctx: &RenderCtx<'_>) -> String {
         let total_width: f64 = table.col_widths.iter().sum();
         let mut html = String::from(
-            "<table style=\"width:100%; height:100%; border-collapse:collapse; table-layout:fixed;\">\n<colgroup>\n"
+            "<table style=\"width:100%; height:100%; border-collapse:collapse; table-layout:fixed;\">\n<colgroup>\n",
         );
         for w in &table.col_widths {
-            let pct = if total_width > 0.0 { w / total_width * 100.0 } else { 0.0 };
+            let pct = if total_width > 0.0 {
+                w / total_width * 100.0
+            } else {
+                0.0
+            };
             html.push_str(&format!("<col style=\"width:{pct:.1}%\"/>\n"));
         }
         html.push_str("</colgroup>\n");
@@ -535,33 +574,60 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
 
                 // Cell borders
                 if cell.border_left.width > 0.0 {
-                    let color = ctx.color_to_css(&cell.border_left.color)
+                    let color = ctx
+                        .color_to_css(&cell.border_left.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!("border-left: {:.1}px solid {}", cell.border_left.width, color));
+                    td_styles.push(format!(
+                        "border-left: {:.1}px solid {}",
+                        cell.border_left.width, color
+                    ));
                 }
                 if cell.border_right.width > 0.0 {
-                    let color = ctx.color_to_css(&cell.border_right.color)
+                    let color = ctx
+                        .color_to_css(&cell.border_right.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!("border-right: {:.1}px solid {}", cell.border_right.width, color));
+                    td_styles.push(format!(
+                        "border-right: {:.1}px solid {}",
+                        cell.border_right.width, color
+                    ));
                 }
                 if cell.border_top.width > 0.0 {
-                    let color = ctx.color_to_css(&cell.border_top.color)
+                    let color = ctx
+                        .color_to_css(&cell.border_top.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!("border-top: {:.1}px solid {}", cell.border_top.width, color));
+                    td_styles.push(format!(
+                        "border-top: {:.1}px solid {}",
+                        cell.border_top.width, color
+                    ));
                 }
                 if cell.border_bottom.width > 0.0 {
-                    let color = ctx.color_to_css(&cell.border_bottom.color)
+                    let color = ctx
+                        .color_to_css(&cell.border_bottom.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!("border-bottom: {:.1}px solid {}", cell.border_bottom.width, color));
+                    td_styles.push(format!(
+                        "border-bottom: {:.1}px solid {}",
+                        cell.border_bottom.width, color
+                    ));
                 }
 
                 td_styles.push("padding: 4px".to_string());
                 td_styles.push("vertical-align: top".to_string());
 
-                let colspan = if cell.col_span > 1 { format!(" colspan=\"{}\"", cell.col_span) } else { String::new() };
-                let rowspan = if cell.row_span > 1 { format!(" rowspan=\"{}\"", cell.row_span) } else { String::new() };
+                let colspan = if cell.col_span > 1 {
+                    format!(" colspan=\"{}\"", cell.col_span)
+                } else {
+                    String::new()
+                };
+                let rowspan = if cell.row_span > 1 {
+                    format!(" rowspan=\"{}\"", cell.row_span)
+                } else {
+                    String::new()
+                };
 
-                html.push_str(&format!("<td{colspan}{rowspan} style=\"{}\">\n", td_styles.join("; ")));
+                html.push_str(&format!(
+                    "<td{colspan}{rowspan} style=\"{}\">\n",
+                    td_styles.join("; ")
+                ));
                 if let Some(ref tb) = cell.text_body {
                     let mut auto_num_counters: [i32; 9] = [0; 9];
                     for para in &tb.paragraphs {
@@ -598,7 +664,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         ctx: &RenderCtx<'_>,
         auto_num_counters: &mut [i32; 9],
     ) -> String {
-        Self::render_paragraph_with_defaults(para, ctx, auto_num_counters, &TextStyleCtx::default(), None)
+        Self::render_paragraph_with_defaults(
+            para,
+            ctx,
+            auto_num_counters,
+            &TextStyleCtx::default(),
+            None,
+        )
     }
 
     /// Render paragraph with inherited text style defaults from txStyles / defaultTextStyle
@@ -618,7 +690,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let mut style_parts = vec![format!("text-align: {align}")];
 
         // Line spacing (explicit > inherited)
-        let line_spacing = para.line_spacing.as_ref()
+        let line_spacing = para
+            .line_spacing
+            .as_ref()
             .or_else(|| inherited.and_then(|d| d.line_spacing.as_ref()));
         if let Some(ls) = line_spacing {
             match ls {
@@ -631,7 +705,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
         // Space before (explicit > inherited)
-        let space_before = para.space_before.as_ref()
+        let space_before = para
+            .space_before
+            .as_ref()
             .or_else(|| inherited.and_then(|d| d.space_before.as_ref()));
         if let Some(sb) = space_before {
             match sb {
@@ -644,7 +720,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
         // Space after (explicit > inherited)
-        let space_after = para.space_after.as_ref()
+        let space_after = para
+            .space_after
+            .as_ref()
             .or_else(|| inherited.and_then(|d| d.space_after.as_ref()));
         if let Some(sa) = space_after {
             match sa {
@@ -658,10 +736,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         // Level-based indentation via margin_left and indent (explicit > inherited)
-        let margin_left = para.margin_left
+        let margin_left = para
+            .margin_left
             .or_else(|| inherited.and_then(|d| d.margin_left));
-        let indent = para.indent
-            .or_else(|| inherited.and_then(|d| d.indent));
+        let indent = para.indent.or_else(|| inherited.and_then(|d| d.indent));
 
         if let Some(ml) = margin_left {
             style_parts.push(format!("padding-left: {ml:.1}pt"));
@@ -678,7 +756,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let mut html = format!("<p class=\"paragraph\" style=\"{style}\">");
 
         // Bullet rendering (explicit > inherited)
-        let bullet = para.bullet.as_ref()
+        let bullet = para
+            .bullet
+            .as_ref()
             .or_else(|| inherited.and_then(|d| d.bullet.as_ref()));
         if let Some(bullet) = bullet {
             match bullet {
@@ -691,10 +771,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     if let Some(ref font) = bc.font {
                         bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
                     }
-                    if let Some(ref color) = bc.color {
-                        if let Some(css) = ctx.color_to_css(color) {
-                            bullet_style.push_str(&format!("color: {}; ", css));
-                        }
+                    if let Some(ref color) = bc.color
+                        && let Some(css) = ctx.color_to_css(color)
+                    {
+                        bullet_style.push_str(&format!("color: {}; ", css));
                     }
                     if let Some(size_pct) = bc.size_pct {
                         if size_pct < 0.0 {
@@ -727,10 +807,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     if let Some(ref font) = an.font {
                         bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
                     }
-                    if let Some(ref color) = an.color {
-                        if let Some(css) = ctx.color_to_css(color) {
-                            bullet_style.push_str(&format!("color: {}; ", css));
-                        }
+                    if let Some(ref color) = an.color
+                        && let Some(css) = ctx.color_to_css(color)
+                    {
+                        bullet_style.push_str(&format!("color: {}; ", css));
                     }
                     if let Some(size_pct) = an.size_pct {
                         if size_pct < 0.0 {
@@ -764,7 +844,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let run_defaults = inherited.and_then(|d| d.def_run_props.as_ref());
 
         for run in &para.runs {
-            html.push_str(&Self::render_run_with_defaults(run, ctx, run_defaults, font_ref_font));
+            html.push_str(&Self::render_run_with_defaults(
+                run,
+                ctx,
+                run_defaults,
+                font_ref_font,
+            ));
         }
 
         if para.runs.is_empty() {
@@ -785,11 +870,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let mut styles = Vec::new();
 
         // Font family: explicit > inherited defRPr > fontRef > theme
-        let font = run
-            .font
-            .east_asian
-            .as_deref()
-            .or(run.font.latin.as_deref());
+        let font = run.font.east_asian.as_deref().or(run.font.latin.as_deref());
 
         let font_scheme = ctx.pres.primary_theme().map(|t| &t.font_scheme);
 
@@ -801,8 +882,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push(format!("font-family: '{resolved}'"));
         } else if let Some(rd) = run_defaults {
             // Fallback to inherited font
-            let inherited_font = rd.font_ea.as_deref()
-                .or(rd.font_latin.as_deref());
+            let inherited_font = rd.font_ea.as_deref().or(rd.font_latin.as_deref());
             if let Some(f) = inherited_font {
                 let resolved = font_scheme
                     .and_then(|fs| fs.resolve_typeface(f))
@@ -816,7 +896,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         // Font size: explicit > inherited
-        let font_size = run.style.font_size
+        let font_size = run
+            .style
+            .font_size
             .or_else(|| run_defaults.and_then(|rd| rd.font_size));
         if let Some(sz) = font_size {
             styles.push(format!("font-size: {sz:.1}pt"));
@@ -878,10 +960,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         // Text highlight
-        if let Some(ref highlight) = run.style.highlight {
-            if let Some(hl_css) = ctx.color_to_css(highlight) {
-                styles.push(format!("background-color: {hl_css}"));
-            }
+        if let Some(ref highlight) = run.style.highlight
+            && let Some(hl_css) = ctx.color_to_css(highlight)
+        {
+            styles.push(format!("background-color: {hl_css}"));
         }
 
         // Text shadow
@@ -889,7 +971,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             let angle_rad = shadow.dir.to_radians();
             let dx = shadow.dist * angle_rad.cos();
             let dy = shadow.dist * angle_rad.sin();
-            let shadow_color = ctx.color_to_css(&shadow.color)
+            let shadow_color = ctx
+                .color_to_css(&shadow.color)
                 .unwrap_or_else(|| "rgba(0,0,0,0.5)".to_string());
             styles.push(format!(
                 "text-shadow: {dx:.1}pt {dy:.1}pt {blur:.1}pt {shadow_color}",
@@ -965,7 +1048,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                         };
                         format!("images/bg-{}.{ext}", img_fill.data.len() % 100000)
                     };
-                    format!("background-image: url({url}); background-size: cover; background-position: center")
+                    format!(
+                        "background-image: url({url}); background-size: cover; background-position: center"
+                    )
                 } else {
                     String::new()
                 }
@@ -1027,9 +1112,19 @@ fn to_roman_uc(mut val: i32) -> String {
         return val.to_string();
     }
     const NUMERALS: &[(i32, &str)] = &[
-        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
-        (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
-        (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
     ];
     let mut result = String::new();
     for &(value, symbol) in NUMERALS {
@@ -1058,16 +1153,16 @@ impl<'a> TextStyleCtx<'a> {
             return None;
         }
         // txStyles takes priority
-        if let Some(ls) = self.master_list_style {
-            if let Some(ref pd) = ls.levels[level] {
-                return Some(pd);
-            }
+        if let Some(ls) = self.master_list_style
+            && let Some(ref pd) = ls.levels[level]
+        {
+            return Some(pd);
         }
         // Fallback to defaultTextStyle
-        if let Some(ls) = self.default_list_style {
-            if let Some(ref pd) = ls.levels[level] {
-                return Some(pd);
-            }
+        if let Some(ls) = self.default_list_style
+            && let Some(ref pd) = ls.levels[level]
+        {
+            return Some(pd);
         }
         None
     }
