@@ -275,14 +275,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let w = size.width.to_px();
         let h = size.height.to_px();
 
-        let mut styles = Vec::with_capacity(8);
-        styles.push(format!("left: {x:.1}px"));
-        styles.push(format!("top: {y:.1}px"));
-        styles.push(format!("width: {w:.1}px"));
-        styles.push(format!("height: {h:.1}px"));
+        let mut style_buf = String::with_capacity(256);
+        let _ = write!(style_buf, "left: {x:.1}px; top: {y:.1}px; width: {w:.1}px; height: {h:.1}px");
 
         if shape.rotation != 0.0 {
-            styles.push(format!("transform: rotate({:.1}deg)", shape.rotation));
+            let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
         }
 
         // Resolve fill via inheritance (with style_ref fallback)
@@ -295,10 +292,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             ctx.scheme,
             ctx.clr_map,
         );
-        let fill_css = Self::fill_to_css(&resolved_fill, ctx);
-        if !fill_css.is_empty() {
-            styles.push(fill_css);
-        }
+        Self::fill_to_css_buf(&resolved_fill, ctx, &mut style_buf);
 
         // Resolve border via inheritance (with style_ref fallback)
         let resolved_border = inheritance::resolve_border_with_theme(
@@ -319,10 +313,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 BorderStyle::Dotted => "dotted",
                 BorderStyle::None => "none",
             };
-            styles.push(format!(
-                "border: {:.1}px {border_style} {border_color}",
+            let _ = write!(
+                style_buf,
+                "; border: {:.1}px {border_style} {border_color}",
                 resolved_border.width
-            ));
+            );
         }
 
         // Determine SVG preset name for the shape (if applicable)
@@ -337,14 +332,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         // Only apply CSS border-radius for non-SVG shapes; SVG handles geometry
         if svg_preset_name.is_none() {
             match &shape.shape_type {
-                ShapeType::Ellipse => styles.push("border-radius: 50%".to_string()),
-                ShapeType::RoundedRectangle => styles.push("border-radius: 8px".to_string()),
+                ShapeType::Ellipse => style_buf.push_str("; border-radius: 50%"),
+                ShapeType::RoundedRectangle => style_buf.push_str("; border-radius: 8px"),
                 _ => {}
             }
         }
 
-        let style_str = styles.join("; ");
-        let _ = write!(html, "<div class=\"shape\" style=\"{style_str}\">\n");
+        let _ = write!(html, "<div class=\"shape\" style=\"{style_buf}\">\n");
 
         // Table
         if let ShapeType::Table(ref table) = shape.shape_type {
@@ -480,35 +474,29 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 };
                 format!("images/image-{}.{ext}", pic.data.len() % 100000)
             };
-            let mut img_styles = Vec::new();
             if let Some(ref crop) = pic.crop {
                 // CSS object-view-box or clip approach for cropping
                 let left_pct = crop.left * 100.0;
                 let top_pct = crop.top * 100.0;
                 let right_pct = crop.right * 100.0;
                 let bottom_pct = crop.bottom * 100.0;
-                let clip_path =
-                    format!("inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%)");
-                img_styles.push(format!("clip-path: {clip_path}"));
-                // Scale image to fill the visible area
                 let scale_x = 100.0 / (100.0 - left_pct - right_pct) * 100.0;
                 let scale_y = 100.0 / (100.0 - top_pct - bottom_pct) * 100.0;
-                img_styles.push(format!("width: {scale_x:.1}%"));
-                img_styles.push(format!("height: {scale_y:.1}%"));
                 let offset_x = -left_pct / (100.0 - left_pct - right_pct) * 100.0;
                 let offset_y = -top_pct / (100.0 - top_pct - bottom_pct) * 100.0;
-                img_styles.push(format!("margin-left: {offset_x:.1}%"));
-                img_styles.push(format!("margin-top: {offset_y:.1}%"));
-            }
-            let style_attr = if img_styles.is_empty() {
-                String::new()
+                let _ = write!(
+                    html,
+                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\" style=\"\
+                     clip-path: inset({top_pct:.1}% {right_pct:.1}% {bottom_pct:.1}% {left_pct:.1}%); \
+                     width: {scale_x:.1}%; height: {scale_y:.1}%; \
+                     margin-left: {offset_x:.1}%; margin-top: {offset_y:.1}%\">\n"
+                );
             } else {
-                format!(" style=\"{}\"", img_styles.join("; "))
-            };
-            let _ = write!(
-                html,
-                "<img class=\"shape-image\" src=\"{src}\" alt=\"\"{style_attr}>\n"
-            );
+                let _ = write!(
+                    html,
+                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n"
+                );
+            }
         }
 
         // Resolve text style source for this shape's placeholder type
@@ -524,33 +512,33 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 VerticalAlign::Middle => "v-middle",
                 VerticalAlign::Bottom => "v-bottom",
             };
-            let mut margin_parts = vec![format!(
+            let mut tb_style = String::with_capacity(128);
+            let _ = write!(
+                tb_style,
                 "padding: {:.1}pt {:.1}pt {:.1}pt {:.1}pt",
                 text_body.margins.top,
                 text_body.margins.right,
                 text_body.margins.bottom,
                 text_body.margins.left,
-            )];
+            );
             // Vertical text rendering
             if let Some(ref vert) = shape.vertical_text {
                 match vert.as_str() {
                     "vert" | "wordArtVert" | "eaVert" => {
-                        margin_parts.push("writing-mode: vertical-rl".to_string());
+                        tb_style.push_str("; writing-mode: vertical-rl");
                     }
                     "vert270" => {
-                        margin_parts.push("writing-mode: vertical-lr".to_string());
-                        margin_parts.push("transform: rotate(180deg)".to_string());
+                        tb_style.push_str("; writing-mode: vertical-lr; transform: rotate(180deg)");
                     }
                     "mongolianVert" => {
-                        margin_parts.push("writing-mode: vertical-lr".to_string());
+                        tb_style.push_str("; writing-mode: vertical-lr");
                     }
                     _ => {}
                 }
             }
-            let margin_style = margin_parts.join("; ");
             let _ = write!(
                 html,
-                "<div class=\"text-body {v_class}\" style=\"{margin_style}\">\n"
+                "<div class=\"text-body {v_class}\" style=\"{tb_style}\">\n"
             );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
@@ -638,71 +626,68 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     continue;
                 }
 
-                let mut td_styles = Vec::new();
+                let mut td_style = String::with_capacity(128);
 
                 // Cell fill
-                let fill_css = Self::fill_to_css(&cell.fill, ctx);
-                if !fill_css.is_empty() {
-                    td_styles.push(fill_css);
-                }
+                Self::fill_to_css_buf(&cell.fill, ctx, &mut td_style);
 
                 // Cell borders
                 if cell.border_left.width > 0.0 {
                     let color = ctx
                         .color_to_css(&cell.border_left.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!(
+                    push_sep(&mut td_style);
+                    let _ = write!(
+                        td_style,
                         "border-left: {:.1}px solid {}",
                         cell.border_left.width, color
-                    ));
+                    );
                 }
                 if cell.border_right.width > 0.0 {
                     let color = ctx
                         .color_to_css(&cell.border_right.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!(
+                    push_sep(&mut td_style);
+                    let _ = write!(
+                        td_style,
                         "border-right: {:.1}px solid {}",
                         cell.border_right.width, color
-                    ));
+                    );
                 }
                 if cell.border_top.width > 0.0 {
                     let color = ctx
                         .color_to_css(&cell.border_top.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!(
+                    push_sep(&mut td_style);
+                    let _ = write!(
+                        td_style,
                         "border-top: {:.1}px solid {}",
                         cell.border_top.width, color
-                    ));
+                    );
                 }
                 if cell.border_bottom.width > 0.0 {
                     let color = ctx
                         .color_to_css(&cell.border_bottom.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    td_styles.push(format!(
+                    push_sep(&mut td_style);
+                    let _ = write!(
+                        td_style,
                         "border-bottom: {:.1}px solid {}",
                         cell.border_bottom.width, color
-                    ));
+                    );
                 }
 
-                td_styles.push("padding: 4px".to_string());
-                td_styles.push("vertical-align: top".to_string());
+                push_sep(&mut td_style);
+                td_style.push_str("padding: 4px; vertical-align: top");
 
-                let colspan = if cell.col_span > 1 {
-                    format!(" colspan=\"{}\"", cell.col_span)
-                } else {
-                    String::new()
-                };
-                let rowspan = if cell.row_span > 1 {
-                    format!(" rowspan=\"{}\"", cell.row_span)
-                } else {
-                    String::new()
-                };
-
-                let _ = write!(
-                    html,
-                    "<td{colspan}{rowspan} style=\"{}\">\n",
-                    td_styles.join("; ")
-                );
+                let _ = write!(html, "<td");
+                if cell.col_span > 1 {
+                    let _ = write!(html, " colspan=\"{}\"", cell.col_span);
+                }
+                if cell.row_span > 1 {
+                    let _ = write!(html, " rowspan=\"{}\"", cell.row_span);
+                }
+                let _ = write!(html, " style=\"{td_style}\">\n");
                 if let Some(ref tb) = cell.text_body {
                     let mut auto_num_counters: [i32; 9] = [0; 9];
                     for para in &tb.paragraphs {
@@ -763,7 +748,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let inherited = text_ctx.get_level_defaults(level);
 
         let align = para.alignment.to_css();
-        let mut style_parts = vec![format!("text-align: {align}")];
+        let mut para_style = String::with_capacity(128);
+        let _ = write!(para_style, "text-align: {align}");
 
         // Line spacing (explicit > inherited)
         let line_spacing = para
@@ -773,10 +759,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         if let Some(ls) = line_spacing {
             match ls {
                 SpacingValue::Percent(p) => {
-                    style_parts.push(format!("line-height: {p:.2}"));
+                    let _ = write!(para_style, "; line-height: {p:.2}");
                 }
                 SpacingValue::Points(pt) => {
-                    style_parts.push(format!("line-height: {pt:.1}pt"));
+                    let _ = write!(para_style, "; line-height: {pt:.1}pt");
                 }
             }
         }
@@ -788,10 +774,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         if let Some(sb) = space_before {
             match sb {
                 SpacingValue::Percent(p) => {
-                    style_parts.push(format!("margin-top: {p:.1}em"));
+                    let _ = write!(para_style, "; margin-top: {p:.1}em");
                 }
                 SpacingValue::Points(pt) => {
-                    style_parts.push(format!("margin-top: {pt:.1}pt"));
+                    let _ = write!(para_style, "; margin-top: {pt:.1}pt");
                 }
             }
         }
@@ -803,10 +789,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         if let Some(sa) = space_after {
             match sa {
                 SpacingValue::Percent(p) => {
-                    style_parts.push(format!("margin-bottom: {p:.1}em"));
+                    let _ = write!(para_style, "; margin-bottom: {p:.1}em");
                 }
                 SpacingValue::Points(pt) => {
-                    style_parts.push(format!("margin-bottom: {pt:.1}pt"));
+                    let _ = write!(para_style, "; margin-bottom: {pt:.1}pt");
                 }
             }
         }
@@ -818,18 +804,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let indent = para.indent.or_else(|| inherited.and_then(|d| d.indent));
 
         if let Some(ml) = margin_left {
-            style_parts.push(format!("padding-left: {ml:.1}pt"));
+            let _ = write!(para_style, "; padding-left: {ml:.1}pt");
         } else if para.level > 0 {
             // Fallback: ~36pt (0.5in) per level when no explicit margin
             let margin = para.level as f64 * 36.0;
-            style_parts.push(format!("padding-left: {margin:.1}pt"));
+            let _ = write!(para_style, "; padding-left: {margin:.1}pt");
         }
         if let Some(ind) = indent {
-            style_parts.push(format!("text-indent: {ind:.1}pt"));
+            let _ = write!(para_style, "; text-indent: {ind:.1}pt");
         }
 
-        let style = style_parts.join("; ");
-        let _ = write!(html, "<p class=\"paragraph\" style=\"{style}\">");
+        let _ = write!(html, "<p class=\"paragraph\" style=\"{para_style}\">");
 
         // Bullet rendering (explicit > inherited)
         let bullet = para
@@ -952,7 +937,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             return;
         }
 
-        let mut styles = Vec::with_capacity(8);
+        let mut run_style = String::with_capacity(128);
 
         // Font family: explicit > inherited defRPr > fontRef > theme
         let font = run.font.east_asian.as_deref().or(run.font.latin.as_deref());
@@ -964,7 +949,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             let resolved = font_scheme
                 .and_then(|fs| fs.resolve_typeface(f))
                 .unwrap_or(f);
-            styles.push(format!("font-family: '{resolved}'"));
+            let _ = write!(run_style, "font-family: '{resolved}'");
         } else if let Some(rd) = run_defaults {
             // Fallback to inherited font
             let inherited_font = rd.font_ea.as_deref().or(rd.font_latin.as_deref());
@@ -972,12 +957,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 let resolved = font_scheme
                     .and_then(|fs| fs.resolve_typeface(f))
                     .unwrap_or(f);
-                styles.push(format!("font-family: '{resolved}'"));
+                let _ = write!(run_style, "font-family: '{resolved}'");
             } else if let Some(f) = font_ref_font {
-                styles.push(format!("font-family: '{f}'"));
+                let _ = write!(run_style, "font-family: '{f}'");
             }
         } else if let Some(f) = font_ref_font {
-            styles.push(format!("font-family: '{f}'"));
+            let _ = write!(run_style, "font-family: '{f}'");
         }
 
         // Font size: explicit > inherited
@@ -986,7 +971,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             .font_size
             .or_else(|| run_defaults.and_then(|rd| rd.font_size));
         if let Some(sz) = font_size {
-            styles.push(format!("font-size: {sz:.1}pt"));
+            push_sep(&mut run_style);
+            let _ = write!(run_style, "font-size: {sz:.1}pt");
         }
 
         // Bold: explicit > inherited
@@ -996,7 +982,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             run_defaults.and_then(|rd| rd.bold).unwrap_or(false)
         };
         if bold {
-            styles.push("font-weight: bold".to_string());
+            push_sep(&mut run_style);
+            run_style.push_str("font-weight: bold");
         }
 
         // Italic: explicit > inherited
@@ -1006,14 +993,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             run_defaults.and_then(|rd| rd.italic).unwrap_or(false)
         };
         if italic {
-            styles.push("font-style: italic".to_string());
+            push_sep(&mut run_style);
+            run_style.push_str("font-style: italic");
         }
 
         if run.style.underline {
-            styles.push("text-decoration: underline".to_string());
+            push_sep(&mut run_style);
+            run_style.push_str("text-decoration: underline");
         }
         if run.style.strikethrough {
-            styles.push("text-decoration: line-through".to_string());
+            push_sep(&mut run_style);
+            run_style.push_str("text-decoration: line-through");
         }
 
         // Color -- explicit > inherited > theme-aware resolution
@@ -1025,30 +1015,33 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             None
         };
         if let Some(css_color) = color_css {
-            styles.push(format!("color: {css_color}"));
+            push_sep(&mut run_style);
+            let _ = write!(run_style, "color: {css_color}");
         }
 
         // Superscript/subscript
         if let Some(baseline) = run.style.baseline {
             if baseline > 0 {
-                styles.push("vertical-align: super".to_string());
-                styles.push("font-size: 0.6em".to_string());
+                push_sep(&mut run_style);
+                run_style.push_str("vertical-align: super; font-size: 0.6em");
             } else if baseline < 0 {
-                styles.push("vertical-align: sub".to_string());
-                styles.push("font-size: 0.6em".to_string());
+                push_sep(&mut run_style);
+                run_style.push_str("vertical-align: sub; font-size: 0.6em");
             }
         }
 
         // Letter spacing
         if let Some(spacing) = run.style.letter_spacing {
-            styles.push(format!("letter-spacing: {spacing:.2}pt"));
+            push_sep(&mut run_style);
+            let _ = write!(run_style, "letter-spacing: {spacing:.2}pt");
         }
 
         // Text highlight
         if let Some(ref highlight) = run.style.highlight
             && let Some(hl_css) = ctx.color_to_css(highlight)
         {
-            styles.push(format!("background-color: {hl_css}"));
+            push_sep(&mut run_style);
+            let _ = write!(run_style, "background-color: {hl_css}");
         }
 
         // Text shadow
@@ -1059,23 +1052,87 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             let shadow_color = ctx
                 .color_to_css(&shadow.color)
                 .unwrap_or_else(|| "rgba(0,0,0,0.5)".to_string());
-            styles.push(format!(
+            push_sep(&mut run_style);
+            let _ = write!(
+                run_style,
                 "text-shadow: {dx:.1}pt {dy:.1}pt {blur:.1}pt {shadow_color}",
                 blur = shadow.blur_rad,
-            ));
+            );
         }
 
-        let style_str = styles.join("; ");
         let text = escape_html(&run.text);
 
         if let Some(ref href) = run.hyperlink {
             let _ = write!(
                 html,
-                "<a class=\"run\" href=\"{}\" style=\"{style_str}\">{text}</a>",
+                "<a class=\"run\" href=\"{}\" style=\"{run_style}\">{text}</a>",
                 escape_html(href)
             );
         } else {
-            let _ = write!(html, "<span class=\"run\" style=\"{style_str}\">{text}</span>");
+            let _ = write!(html, "<span class=\"run\" style=\"{run_style}\">{text}</span>");
+        }
+    }
+
+    /// Append fill CSS directly into an existing style buffer (avoids intermediate String)
+    fn fill_to_css_buf(fill: &Fill, ctx: &RenderCtx<'_>, buf: &mut String) {
+        match fill {
+            Fill::None => {}
+            Fill::Solid(sf) => {
+                if let Some(color_css) = ctx.color_to_css(&sf.color) {
+                    push_sep(buf);
+                    let _ = write!(buf, "background-color: {color_css}");
+                }
+            }
+            Fill::Gradient(gf) => {
+                let mut has_stops = false;
+                let mut stops_buf = String::with_capacity(64);
+                for s in &gf.stops {
+                    if let Some(c) = ctx.color_to_css(&s.color) {
+                        if has_stops {
+                            stops_buf.push_str(", ");
+                        }
+                        let _ = write!(stops_buf, "{c} {:.0}%", s.position * 100.0);
+                        has_stops = true;
+                    }
+                }
+                if has_stops {
+                    push_sep(buf);
+                    let _ = write!(buf, "background: linear-gradient({:.0}deg, {stops_buf})", gf.angle);
+                }
+            }
+            Fill::Image(img_fill) => {
+                if !img_fill.data.is_empty() {
+                    let mime = if img_fill.content_type.is_empty() {
+                        "image/png"
+                    } else {
+                        &img_fill.content_type
+                    };
+                    push_sep(buf);
+                    if ctx.embed_images {
+                        let b64 =
+                            base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
+                        let _ = write!(
+                            buf,
+                            "background-image: url(data:{mime};base64,{b64}); \
+                             background-size: cover; background-position: center"
+                        );
+                    } else {
+                        let ext = match mime {
+                            "image/jpeg" => "jpg",
+                            "image/gif" => "gif",
+                            "image/svg+xml" => "svg",
+                            "image/webp" => "webp",
+                            _ => "png",
+                        };
+                        let _ = write!(
+                            buf,
+                            "background-image: url(images/bg-{}.{ext}); \
+                             background-size: cover; background-position: center",
+                            img_fill.data.len() % 100000
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -1137,6 +1194,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 }
             }
         }
+    }
+}
+
+/// Append a "; " separator to the style buffer if it's non-empty
+#[inline]
+fn push_sep(buf: &mut String) {
+    if !buf.is_empty() {
+        buf.push_str("; ");
     }
 }
 
