@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-03-29
+
+### Performance
+- Eliminate intermediate String allocations in renderer (~28% faster rendering)
+- Optimize CSS style string building with direct write!() (~21% additional, ~43% cumulative)
+
+### Rendering — Shapes & Geometry
+- Expand preset shape geometries from 30 to 187 (full OOXML ECMA-376 coverage)
+- Implement custom geometry (`<a:custGeom>`) DrawingML path → SVG conversion
+  - Supports moveTo, lnTo, cubicBezTo, quadBezTo, arcTo, close commands
+  - DrawingML arc → SVG arc mathematical transformation
+- Add shape shadow (`<a:outerShdw>`) and glow (`<a:glow>`) → CSS box-shadow rendering
+- Implement auto-fit fontScale and lnSpcReduction for text body sizing
+- Add connector geometry paths (straightConnector1, bentConnector5)
+- Default 0.75pt stroke for connectors without explicit border
+
+### Rendering — Images
+- Fix relative path resolution for image relationship targets (`../media/` → correct ZIP path)
+- Handle `<a:blip>` elements with child nodes (Start event, not just Empty)
+- Parse background images from master and layout slides (`<a:blipFill>` in `<p:bgPr>`)
+- Load image data for shape-level blipFill (image-filled rectangles)
+- Fix image crop CSS: replace extreme percentage scaling with pixel-based offsets
+
+### Rendering — Colors & Fills
+- Correct OOXML color modifier application order per ECMA-376 spec (alpha→hue→sat→lum→tint/shade)
+- Fix HSL tint/shade formula to match OOXML definition
+- Distinguish explicit `<a:noFill>` from unspecified fill (prevent theme fillRef overriding transparency)
+- Resolve empty and unresolvable theme font references (filter `+mn-ea` → actual typeface)
+
+### Rendering — Layout
+- Fix group shape children coordinate transform (chOff/chExt → group bounding box scaling)
+- Guard `<a:off>`/`<a:ext>` parsing to `<a:xfrm>` context only (prevent extLst overwriting shape size)
+- Fix shape position resolution: treat (0,0) as valid position, not "unset"
+- Filter master placeholder shapes through layout matching per OOXML spec
+- Change `.shape` overflow from `hidden` to `visible` (prevent text clipping)
+- Add word-break/overflow-wrap to text body for proper wrapping
+- Remove CSS border duplication on SVG shapes (use SVG stroke only)
+
+### Infrastructure
+- Add autoresearch experiment loop (program.md, run_loop.sh, 4 phase programs)
+- Add evaluation infrastructure (SSIM fidelity scorer, golden set generator, reference/candidate renderers)
+- Add pptx2html-enhance LLM post-processing package (SmartArt/Math/Effects handlers)
+- Add ConversionResult with unresolved_elements metadata sideband
+- Python bindings: `convert_with_metadata()` API
+
+### Tests
+- Total tests: 195+ (was 145 in v0.5.0)
+- 16 color modifier edge case tests
+- 8 custom geometry integration tests
+- 7 shadow/glow effect tests
+- 7 auto-fit rendering tests
+- Hierarchy/position/background fill tests
+
 ## [0.5.0] - 2026-03-28
 
 ### Added
