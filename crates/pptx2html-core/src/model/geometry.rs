@@ -36,3 +36,41 @@ pub struct Size {
     pub width: Emu,
     pub height: Emu,
 }
+
+/// Custom geometry parsed from `<a:custGeom>`
+#[derive(Debug, Clone)]
+pub struct CustomGeometry {
+    pub paths: Vec<GeometryPath>,
+}
+
+/// A single path inside `<a:pathLst>`
+#[derive(Debug, Clone)]
+pub struct GeometryPath {
+    pub width: f64,
+    pub height: f64,
+    pub commands: Vec<PathCommand>,
+    pub fill: PathFill,
+}
+
+/// DrawingML path command
+#[derive(Debug, Clone)]
+pub enum PathCommand {
+    MoveTo { x: f64, y: f64 },
+    LineTo { x: f64, y: f64 },
+    CubicBezTo { x1: f64, y1: f64, x2: f64, y2: f64, x: f64, y: f64 },
+    QuadBezTo { x1: f64, y1: f64, x: f64, y: f64 },
+    ArcTo { wr: f64, hr: f64, start_angle: f64, swing_angle: f64 },
+    Close,
+}
+
+/// Path fill mode
+#[derive(Debug, Clone, Default)]
+pub enum PathFill {
+    #[default]
+    Norm,
+    None,
+    Lighten,
+    Darken,
+    LightenLess,
+    DarkenLess,
+}

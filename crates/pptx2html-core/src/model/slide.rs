@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::geometry::{Position, Size};
+use super::geometry::{CustomGeometry, Position, Size};
 use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{Alignment, Border, Fill, FontStyle, ShapeEffects, TextStyle};
 
@@ -44,6 +44,7 @@ pub enum ShapeType {
     Group(Vec<Shape>, GroupData),
     Chart(ChartData),
     Custom(String), // preset shape name
+    CustomGeom(CustomGeometry),
     /// Unsupported content placeholder (SmartArt, OLE, Math, etc.)
     Unsupported(UnsupportedData),
 }

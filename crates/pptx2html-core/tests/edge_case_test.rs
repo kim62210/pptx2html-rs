@@ -686,3 +686,300 @@ fn test_conversion_result_slide_count() {
         .expect("conversion failed");
     assert_eq!(result.slide_count, 1);
 }
+
+// ── Custom Geometry (custGeom) tests ──
+
+#[test]
+fn test_custgeom_triangle_parsed() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustTriangle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="21600"/></a:moveTo>
+              <a:lnTo><a:pt x="10800" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+        <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    assert_eq!(pres.slides[0].shapes.len(), 1);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.paths.len(), 1);
+            let path = &geom.paths[0];
+            assert!((path.width - 21600.0).abs() < 0.01);
+            assert!((path.height - 21600.0).abs() < 0.01);
+            assert_eq!(path.commands.len(), 4); // moveTo + 2 lnTo + close
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_renders_svg_path() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="100" h="100">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="100" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="100" y="100"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="100"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+        <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // SVG should be present with path element
+    assert!(html.contains("<svg viewBox="), "Should contain SVG element");
+    assert!(html.contains("<path d="), "Should contain SVG path");
+    assert!(html.contains("shape-svg"), "Should have shape-svg class");
+}
+
+#[test]
+fn test_custgeom_cubic_bezier() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustBez"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:cubicBezTo>
+                <a:pt x="7200" y="0"/>
+                <a:pt x="14400" y="21600"/>
+                <a:pt x="21600" y="21600"/>
+              </a:cubicBezTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.paths[0].commands.len(), 2); // moveTo + cubicBezTo
+            match &geom.paths[0].commands[1] {
+                PathCommand::CubicBezTo { x1, y1, x2, y2, x, y } => {
+                    assert!((x1 - 7200.0).abs() < 0.01);
+                    assert!((*y1).abs() < 0.01);
+                    assert!((x2 - 14400.0).abs() < 0.01);
+                    assert!((y2 - 21600.0).abs() < 0.01);
+                    assert!((x - 21600.0).abs() < 0.01);
+                    assert!((y - 21600.0).abs() < 0.01);
+                }
+                other => panic!("Expected CubicBezTo, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_quad_bezier() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustQuad"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="100" h="100">
+              <a:moveTo><a:pt x="0" y="100"/></a:moveTo>
+              <a:quadBezTo>
+                <a:pt x="50" y="0"/>
+                <a:pt x="100" y="100"/>
+              </a:quadBezTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.paths[0].commands.len(), 2); // moveTo + quadBezTo
+            match &geom.paths[0].commands[1] {
+                PathCommand::QuadBezTo { x1, y1, x, y } => {
+                    assert!((x1 - 50.0).abs() < 0.01);
+                    assert!((*y1).abs() < 0.01);
+                    assert!((x - 100.0).abs() < 0.01);
+                    assert!((y - 100.0).abs() < 0.01);
+                }
+                other => panic!("Expected QuadBezTo, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_arc_to() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustArc"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="10800"/></a:moveTo>
+              <a:arcTo wR="5400" hR="5400" stAng="0" swAng="5400000"/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.paths[0].commands.len(), 2); // moveTo + arcTo
+            match &geom.paths[0].commands[1] {
+                PathCommand::ArcTo { wr, hr, start_angle, swing_angle } => {
+                    assert!((wr - 5400.0).abs() < 0.01);
+                    assert!((hr - 5400.0).abs() < 0.01);
+                    assert!((*start_angle).abs() < 0.01);
+                    assert!((swing_angle - 5400000.0).abs() < 0.01);
+                }
+                other => panic!("Expected ArcTo, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+
+    // Verify it renders as SVG with arc command
+    let html = render_html(&pptx);
+    assert!(html.contains("<path d="), "Should render SVG path with arc");
+}
+
+#[test]
+fn test_custgeom_multiple_paths() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="MultiPath"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="100" h="100">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="100" y="100"/></a:lnTo>
+            </a:path>
+            <a:path w="100" h="100" fill="none">
+              <a:moveTo><a:pt x="100" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="0" y="100"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.paths.len(), 2);
+            assert!(matches!(geom.paths[0].fill, PathFill::Norm));
+            assert!(matches!(geom.paths[1].fill, PathFill::None));
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+
+    // Verify both paths render in SVG
+    let html = render_html(&pptx);
+    let path_count = html.matches("<path d=").count();
+    assert!(path_count >= 2, "Expected 2+ SVG paths, got {}", path_count);
+}
+
+#[test]
+fn test_custgeom_with_text_body() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CustWithText"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst>
+            <a:path w="100" h="100">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="100" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="50" y="100"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Hello Custom</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("Hello Custom"), "Text should be rendered alongside custom geometry");
+    assert!(html.contains("<path d="), "SVG path should be present");
+}
+
+#[test]
+fn test_custgeom_empty_pathlist() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="EmptyCust"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:pathLst/>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert!(geom.paths.is_empty());
+        }
+        other => panic!("Expected CustomGeom with empty paths, got {:?}", other),
+    }
+    // Should not crash when rendering
+    let _html = render_html(&pptx);
+}

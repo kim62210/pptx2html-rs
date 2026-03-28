@@ -98,7 +98,7 @@
 | rightArrow | planned | SVG path |
 | Other preset geometries (187 total) | planned | Phased implementation |
 | Adjustment values (avLst) | planned | Parameterized shapes |
-| Custom geometry (custGeom) | planned | SVG path generation |
+| Custom geometry (custGeom) | supported | DrawingML path -> SVG path conversion |
 | Geometry formula engine | planned | Guide evaluation |
 | Connection sites | deferred | Connector routing only |
 

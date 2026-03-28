@@ -494,6 +494,39 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
 
+        // Custom geometry SVG rendering
+        if let ShapeType::CustomGeom(ref geom) = shape.shape_type {
+            if let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h) {
+                let default_fill = ctx
+                    .color_to_css(&resolved_fill.color_ref())
+                    .unwrap_or_else(|| "none".to_string());
+                let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
+                    let c = ctx
+                        .color_to_css(&resolved_border.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    (c, resolved_border.width)
+                } else {
+                    ("none".to_string(), 0.0)
+                };
+                let _ = write!(
+                    html,
+                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+                );
+                for path_svg in &svg_geom.paths {
+                    let fill = match path_svg.fill {
+                        PathFill::None => "none".to_string(),
+                        _ => default_fill.clone(),
+                    };
+                    let _ = write!(
+                        html,
+                        "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>",
+                        path_svg.d
+                    );
+                }
+                html.push_str("</svg>\n");
+            }
+        }
+
         // Image
         if let ShapeType::Picture(pic) = &shape.shape_type
             && !pic.data.is_empty()

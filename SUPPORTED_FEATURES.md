@@ -32,7 +32,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Cross | `<a:prstGeom prst="plus">` | Supported |
 | Heart | `<a:prstGeom prst="heart">` | Supported |
 | Lightning Bolt | `<a:prstGeom prst="lightningBolt">` | Supported |
-| Custom Geometry | `<a:custGeom>` | Not yet |
+| Custom Geometry | `<a:custGeom>` | Supported |
 | Adjust Values | `<a:avLst><a:gd>` | Supported |
 
 ## Text

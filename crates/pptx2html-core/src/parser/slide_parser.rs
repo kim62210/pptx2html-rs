@@ -74,6 +74,17 @@ pub fn parse_slide<R: Read + Seek>(
     // Adjust value parsing state
     let mut in_av_lst = false;
 
+    // Custom geometry parsing state
+    let mut in_cust_geom = false;
+    let mut in_cust_geom_path = false;
+    let mut cust_geom_paths: Vec<GeometryPath> = Vec::new();
+    let mut cust_geom_cmds: Vec<PathCommand> = Vec::new();
+    let mut cust_geom_path_w: f64 = 0.0;
+    let mut cust_geom_path_h: f64 = 0.0;
+    let mut cust_geom_path_fill = PathFill::Norm;
+    let mut cust_geom_pts: Vec<(f64, f64)> = Vec::new();
+    let mut in_cust_geom_cmd: Option<String> = None;
+
     // Text shadow and highlight parsing state
     let mut in_effect_lst = false;
     let mut in_outer_shdw = false;
@@ -550,6 +561,60 @@ pub fn parse_slide<R: Read + Seek>(
                                 }
                             }
                         }
+                    }
+                    // ── Custom geometry (<a:custGeom>) — Start variant ──
+                    "custGeom" if in_sp_pr && current_shape.is_some() => {
+                        in_cust_geom = true;
+                        cust_geom_paths.clear();
+                    }
+                    // Path inside custGeom pathLst
+                    "path" if in_cust_geom => {
+                        in_cust_geom_path = true;
+                        cust_geom_cmds.clear();
+                        cust_geom_path_w = xml_utils::attr_str(e, "w")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        cust_geom_path_h = xml_utils::attr_str(e, "h")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        cust_geom_path_fill = match xml_utils::attr_str(e, "fill").as_deref() {
+                            Some("none") => PathFill::None,
+                            Some("lighten") => PathFill::Lighten,
+                            Some("darken") => PathFill::Darken,
+                            Some("lightenLess") => PathFill::LightenLess,
+                            Some("darkenLess") => PathFill::DarkenLess,
+                            _ => PathFill::Norm,
+                        };
+                    }
+                    // Path drawing commands (Start variants with child <a:pt> elements)
+                    "moveTo" | "lnTo" | "cubicBezTo" | "quadBezTo" if in_cust_geom_path => {
+                        in_cust_geom_cmd = Some(local.clone());
+                        cust_geom_pts.clear();
+                    }
+                    // arcTo as Start element (some generators emit it with children)
+                    "arcTo" if in_cust_geom_path => {
+                        let wr = xml_utils::attr_str(e, "wR")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let hr = xml_utils::attr_str(e, "hR")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let st_ang = xml_utils::attr_str(e, "stAng")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let sw_ang = xml_utils::attr_str(e, "swAng")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        cust_geom_cmds.push(PathCommand::ArcTo {
+                            wr,
+                            hr,
+                            start_angle: st_ang,
+                            swing_angle: sw_ang,
+                        });
+                    }
+                    // close as Start element
+                    "close" if in_cust_geom_path => {
+                        cust_geom_cmds.push(PathCommand::Close);
                     }
                     _ => {}
                 }
@@ -1141,6 +1206,64 @@ pub fn parse_slide<R: Read + Seek>(
                             sb.adjust_values.insert(name, val);
                         }
                     }
+                    // ── Custom geometry: point element (<a:pt/>) ──
+                    "pt" if in_cust_geom_cmd.is_some() => {
+                        let x = xml_utils::attr_str(e, "x")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let y = xml_utils::attr_str(e, "y")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        cust_geom_pts.push((x, y));
+                    }
+                    // ── Custom geometry: self-closing arcTo ──
+                    "arcTo" if in_cust_geom_path => {
+                        let wr = xml_utils::attr_str(e, "wR")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let hr = xml_utils::attr_str(e, "hR")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let st_ang = xml_utils::attr_str(e, "stAng")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let sw_ang = xml_utils::attr_str(e, "swAng")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        cust_geom_cmds.push(PathCommand::ArcTo {
+                            wr,
+                            hr,
+                            start_angle: st_ang,
+                            swing_angle: sw_ang,
+                        });
+                    }
+                    // ── Custom geometry: self-closing close ──
+                    "close" if in_cust_geom_path => {
+                        cust_geom_cmds.push(PathCommand::Close);
+                    }
+                    // ── Custom geometry: self-closing path (no commands) ──
+                    "path" if in_cust_geom => {
+                        let w = xml_utils::attr_str(e, "w")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let h = xml_utils::attr_str(e, "h")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .unwrap_or(0.0);
+                        let fill = match xml_utils::attr_str(e, "fill").as_deref() {
+                            Some("none") => PathFill::None,
+                            Some("lighten") => PathFill::Lighten,
+                            Some("darken") => PathFill::Darken,
+                            Some("lightenLess") => PathFill::LightenLess,
+                            Some("darkenLess") => PathFill::DarkenLess,
+                            _ => PathFill::Norm,
+                        };
+                        cust_geom_paths.push(GeometryPath {
+                            width: w,
+                            height: h,
+                            commands: Vec::new(),
+                            fill,
+                        });
+                    }
                     // ── Image crop (<a:srcRect>) ──
                     "srcRect" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
@@ -1375,6 +1498,63 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     "grpSpPr" => {
                         in_grp_sp_pr = false;
+                    }
+
+                    // ── Custom geometry end events ──
+                    "moveTo" | "lnTo" if in_cust_geom_cmd.as_deref() == Some(&local) => {
+                        if let Some((x, y)) = cust_geom_pts.first() {
+                            let cmd = if local == "moveTo" {
+                                PathCommand::MoveTo { x: *x, y: *y }
+                            } else {
+                                PathCommand::LineTo { x: *x, y: *y }
+                            };
+                            cust_geom_cmds.push(cmd);
+                        }
+                        in_cust_geom_cmd = None;
+                        cust_geom_pts.clear();
+                    }
+                    "cubicBezTo" if in_cust_geom_cmd.as_deref() == Some("cubicBezTo") => {
+                        if cust_geom_pts.len() >= 3 {
+                            cust_geom_cmds.push(PathCommand::CubicBezTo {
+                                x1: cust_geom_pts[0].0,
+                                y1: cust_geom_pts[0].1,
+                                x2: cust_geom_pts[1].0,
+                                y2: cust_geom_pts[1].1,
+                                x: cust_geom_pts[2].0,
+                                y: cust_geom_pts[2].1,
+                            });
+                        }
+                        in_cust_geom_cmd = None;
+                        cust_geom_pts.clear();
+                    }
+                    "quadBezTo" if in_cust_geom_cmd.as_deref() == Some("quadBezTo") => {
+                        if cust_geom_pts.len() >= 2 {
+                            cust_geom_cmds.push(PathCommand::QuadBezTo {
+                                x1: cust_geom_pts[0].0,
+                                y1: cust_geom_pts[0].1,
+                                x: cust_geom_pts[1].0,
+                                y: cust_geom_pts[1].1,
+                            });
+                        }
+                        in_cust_geom_cmd = None;
+                        cust_geom_pts.clear();
+                    }
+                    "path" if in_cust_geom_path => {
+                        in_cust_geom_path = false;
+                        cust_geom_paths.push(GeometryPath {
+                            width: cust_geom_path_w,
+                            height: cust_geom_path_h,
+                            commands: std::mem::take(&mut cust_geom_cmds),
+                            fill: cust_geom_path_fill.clone(),
+                        });
+                    }
+                    "custGeom" if in_cust_geom => {
+                        in_cust_geom = false;
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.custom_geometry = Some(CustomGeometry {
+                                paths: std::mem::take(&mut cust_geom_paths),
+                            });
+                        }
                     }
 
                     // ── New state end events ──
@@ -1973,6 +2153,8 @@ struct ShapeBuilder {
     // Shape-level effects
     shape_outer_shadow: Option<OuterShadow>,
     shape_glow: Option<GlowEffect>,
+    // Custom geometry
+    custom_geometry: Option<CustomGeometry>,
 }
 
 impl ShapeBuilder {
@@ -1995,6 +2177,8 @@ impl ShapeBuilder {
                 crop: self.crop,
                 ..Default::default()
             })
+        } else if let Some(geom) = self.custom_geometry {
+            ShapeType::CustomGeom(geom)
         } else if let Some(ref prst) = self.preset_geometry {
             match prst.as_str() {
                 "rect" => ShapeType::Rectangle,
