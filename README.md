@@ -163,12 +163,28 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 
 ## Architecture
 
+### Pipeline
+
 ```
-Cargo workspace
+PPTX → pptx2html-rs (Rust) → HTML + Metadata
+                                    │
+                                    ├─→ Direct HTML output (existing, zero dependencies)
+                                    └─→ pptx2html-enhance (Python, LLM) → Enhanced HTML
+                                              │
+                                              ├── SmartArt XML  → HTML/CSS layout
+                                              ├── OMML equations → MathML
+                                              └── DrawingML effects → CSS (shadow, glow, blur)
+```
+
+The Rust core converts PPTX to HTML with high fidelity. Elements it cannot fully render (SmartArt, Math, OLE) are emitted as structured placeholders with a metadata sideband containing the original XML. The optional Python `pptx2html-enhance` package uses LLM providers to transform these placeholders into semantic HTML.
+
+### Project Layout
+
+```
 ├── autoresearch/               # Autoresearch experiment loop
 │   ├── program.md              # Master protocol
 │   ├── run_loop.sh             # Experiment runner
-│   ├── phases/                 # Phase-scoped programs
+│   ├── phases/                 # Phase-scoped programs (4 phases)
 │   └── results.tsv             # Experiment audit log
 ├── crates/
 │   ├── pptx2html-core/        # Core library (model, parser, resolver, renderer)
@@ -177,8 +193,8 @@ Cargo workspace
 │   └── pptx2html-wasm/        # WASM bindings (wasm-bindgen) + demo page
 ├── evaluate/                   # Fidelity evaluation (sacred — do not modify)
 │   ├── evaluate_fidelity.py   # Composite scoring (SSIM + text + tests + perf)
-│   ├── reference_render.py    # LibreOffice headless -> reference PNGs
-│   ├── candidate_render.py    # Playwright HTML -> candidate PNGs
+│   ├── reference_render.py    # LibreOffice headless → reference PNGs
+│   ├── candidate_render.py    # Playwright HTML → candidate PNGs
 │   ├── create_golden_set.py   # Generate 50 golden PPTX test files
 │   ├── golden_set/            # Golden PPTX files (generated)
 │   └── golden_references/     # Reference PNG renders (generated)
@@ -193,62 +209,100 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline diagram and module 
 ## Testing
 
 ```bash
-# Run all tests
+# Rust tests (154 tests)
 cargo test --workspace
 
-# Run benchmarks
+# Python tests (32 tests)
+cd pptx2html-enhance && .venv/bin/python -m pytest tests/ -v
+
+# Benchmarks
 cargo bench --package pptx2html-core
 ```
 
-154 tests across 4 crates, all passing:
-- 59 unit tests: color resolution, HSL, modifiers, placeholder matching, style refs, SVG geometry
-- 87 integration tests: PPTX generation / parsing / rendering verification + edge cases + metadata sideband
-- 6 CLI tests: slide selection parser
-- 2 doc-tests
+186 tests total, all passing:
+- **Rust (154):** 59 unit tests (color, HSL, modifiers, placeholders, style refs, SVG geometry) + 87 integration tests (PPTX generation/parsing/rendering + edge cases + metadata sideband) + 6 CLI tests + 2 doc-tests
+- **Python (32):** Enhancer pipeline, SmartArt/Math/Effects handlers, HTML patching (mock LLM provider)
 
-## Autoresearch (Experiment Loop)
+## Autoresearch
 
-Karpathy autoresearch 패턴을 적용한 자동 실험 루프 인프라입니다.
-LLM이 코드를 수정하고, 빌드/테스트/평가를 거쳐 점수가 개선되면 유지, 아니면 되돌리는 무한 루프입니다.
+Automated experiment loop inspired by the [Karpathy autoresearch](https://x.com/karpathy/status/1886192184808149383) pattern. An LLM agent modifies source code, runs build/test/evaluation, and keeps the change only if the fidelity score improves — otherwise it reverts.
 
 ```bash
-# Phase 1: 테마 컬러 변환 정확도 개선
+# Run a specific phase
 ./autoresearch/run_loop.sh --phase 01_color_fidelity
 
-# 최대 50회 반복으로 제한
+# Limit iterations
 ./autoresearch/run_loop.sh --phase 02_performance --max-iterations 50
 ```
 
-| Phase | 대상 |
-|-------|------|
-| `01_color_fidelity` | 테마 컬러 12종 모디파이어 변환 정확도 |
-| `02_performance` | 렌더링 처리량 최적화 |
-| `03_effect_rendering` | 그림자/glow CSS 변환 |
-| `04_geometry_coverage` | 프리셋 도형 확장 (30 → 187) |
+| Phase | Target |
+|-------|--------|
+| `01_color_fidelity` | Theme color modifier accuracy (12 modifier types) |
+| `02_performance` | Rendering throughput optimization |
+| `03_effect_rendering` | Shadow/glow DrawingML → CSS conversion |
+| `04_geometry_coverage` | Preset shape expansion (30 → 187) |
 
-실험 결과는 `autoresearch/results.tsv`에 기록됩니다. 자세한 프로토콜은 `autoresearch/program.md`를 참조하세요.
+Results are logged to `autoresearch/results.tsv`. See `autoresearch/program.md` for the full protocol.
 
-### Evaluation Infrastructure
+## Evaluation
 
-평가 인프라 설정 및 실행:
+SSIM-based fidelity scoring system that compares Rust-rendered HTML against LibreOffice reference renders.
 
 ```bash
 cd evaluate
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && playwright install chromium
 
-# 1. 골든 테스트셋 생성 (50 PPTX, 10 categories)
+# 1. Generate golden test set (50 PPTX files, 10 categories)
 python create_golden_set.py
 
-# 2. LibreOffice 레퍼런스 렌더링
+# 2. Render references via LibreOffice headless
 python reference_render.py --input golden_set/ --output golden_references/
 
-# 3. 복합 점수 산출
+# 3. Compute composite fidelity score
 python evaluate_fidelity.py --project-root ..
 ```
 
-복합 점수: `0.40*SSIM + 0.25*TextMatch + 0.25*TestPassRate + 0.10*Performance`
-자세한 사용법은 [`evaluate/README.md`](evaluate/README.md)를 참조하세요.
+Composite score: `0.40*SSIM + 0.25*TextMatch + 0.25*TestPassRate + 0.10*Performance`
+
+See [`evaluate/README.md`](evaluate/README.md) for details.
+
+## pptx2html-enhance (LLM Post-Processing)
+
+Optional Python package that uses LLM providers to enhance the Rust converter's output. Replaces structured placeholders (SmartArt, Math, OLE) with semantic HTML generated by an LLM.
+
+### Install
+
+```bash
+pip install ./pptx2html-enhance[anthropic]   # or [openai] or [all]
+```
+
+### Quick Usage
+
+```python
+import pptx2html
+from pptx2html_enhance import enhance
+
+# Step 1: Convert with metadata sideband
+result = pptx2html.convert_with_metadata("presentation.pptx")
+
+# Step 2: Enhance placeholders via LLM
+enhanced_html = await enhance(
+    result.html,
+    [e.__dict__ for e in result.unresolved_elements],
+    provider="anthropic",       # or "openai"
+    timeout=30.0,
+    max_concurrent=5,
+)
+```
+
+### Supported Element Types
+
+| Type | Handler | Strategy |
+|------|---------|----------|
+| SmartArt | `SmartArtHandler` | LLM converts raw DrawingML XML to HTML/CSS layout |
+| Math (OMML) | `MathHandler` | Rule-based for simple formulas (fractions, scripts, roots); LLM fallback for complex equations |
+| Effects | `EffectsHandler` | Rule-based: outer shadow → `box-shadow`, glow → `box-shadow`, soft edge → `filter: blur()` |
 
 ## Contributing
 
