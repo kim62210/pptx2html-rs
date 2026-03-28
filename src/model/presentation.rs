@@ -85,6 +85,20 @@ pub struct FontScheme {
     pub minor_east_asian: Option<String>,
 }
 
+impl FontScheme {
+    /// Resolve "+mj-lt" / "+mn-lt" / "+mj-ea" / "+mn-ea" theme font references
+    /// to actual typeface names. Returns None if the reference is not recognized.
+    pub fn resolve_typeface<'a>(&'a self, typeface: &str) -> Option<&'a str> {
+        match typeface {
+            "+mj-lt" => Some(&self.major_latin),
+            "+mn-lt" => Some(&self.minor_latin),
+            "+mj-ea" => self.major_east_asian.as_deref(),
+            "+mn-ea" => self.minor_east_asian.as_deref(),
+            _ => None,
+        }
+    }
+}
+
 /// ClrMap -- color name mapping (from slideMaster `<a:clrMap>`)
 ///
 /// e.g. stores tx1->dk1, bg1->lt1 mappings

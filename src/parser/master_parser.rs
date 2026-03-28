@@ -28,6 +28,11 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut in_def_rpr = false;
     let mut current_color: Option<Color> = None;
 
+    // Spacing parsing state for txStyles
+    let mut in_ln_spc = false;
+    let mut in_spc_bef = false;
+    let mut in_spc_aft = false;
+
     // Shape parsing state
     let mut in_sp_tree = false;
     let mut current_shape: Option<MasterShapeBuilder> = None;
@@ -64,6 +69,16 @@ pub fn parse_slide_master<R: Read + Seek>(
                         let mut rd = RunDefaults::default();
                         parse_def_rpr_attrs(e, &mut rd);
                         current_run_defaults = Some(rd);
+                    }
+                    // Spacing containers inside lvlNpPr
+                    "lnSpc" if current_lvl.is_some() && !in_def_rpr => {
+                        in_ln_spc = true;
+                    }
+                    "spcBef" if current_lvl.is_some() && !in_def_rpr => {
+                        in_spc_bef = true;
+                    }
+                    "spcAft" if current_lvl.is_some() && !in_def_rpr => {
+                        in_spc_aft = true;
                     }
                     // Color elements inside defRPr
                     "srgbClr" if in_def_rpr => {
@@ -127,6 +142,39 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             if let Some(rd) = current_run_defaults.as_mut() {
                                 rd.color = Some(Color::theme(val));
+                            }
+                        }
+                    }
+                    // Spacing percentage/points (inside lnSpc/spcBef/spcAft)
+                    "spcPct" if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                            if let Ok(val) = val_str.parse::<f64>() {
+                                let spacing = SpacingValue::Percent(val / 100_000.0);
+                                if let Some(pd) = current_para_defaults.as_mut() {
+                                    if in_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pd.space_after = Some(spacing);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "spcPts" if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                            if let Ok(val) = val_str.parse::<f64>() {
+                                let spacing = SpacingValue::Points(val / 100.0);
+                                if let Some(pd) = current_para_defaults.as_mut() {
+                                    if in_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pd.space_after = Some(spacing);
+                                    }
+                                }
                             }
                         }
                     }
@@ -208,6 +256,10 @@ pub fn parse_slide_master<R: Read + Seek>(
                             }
                         }
                     }
+                    // End of spacing containers
+                    "lnSpc" => in_ln_spc = false,
+                    "spcBef" => in_spc_bef = false,
+                    "spcAft" => in_spc_aft = false,
                     "spTree" => in_sp_tree = false,
                     "nvPr" => in_nv_pr = false,
                     "sp" if current_shape.is_some() => {

@@ -714,3 +714,469 @@ fn test_bullet_char_rendered() {
     assert!(html.contains("class=\"bullet\""), "Bullet span not found: {html}");
     assert!(html.contains("Bullet item"), "Bullet text not found: {html}");
 }
+
+// ── FmtScheme convenience methods test ──
+
+#[test]
+fn test_fmt_scheme_get_fill_style() {
+    use pptx2html_rs::model::hierarchy::FmtScheme;
+    use pptx2html_rs::model::{Fill, SolidFill, Color};
+
+    let fmt = FmtScheme {
+        fill_style_lst: vec![
+            Fill::Solid(SolidFill { color: Color::rgb("AA0000") }),
+            Fill::Solid(SolidFill { color: Color::rgb("BB0000") }),
+        ],
+        ln_style_lst: vec![],
+        bg_fill_style_lst: vec![
+            Fill::Solid(SolidFill { color: Color::rgb("CC0000") }),
+        ],
+    };
+
+    // idx 0 → None
+    assert!(fmt.get_fill_style(0).is_none());
+    // idx 1 → fill_style_lst[0]
+    assert!(matches!(fmt.get_fill_style(1), Some(Fill::Solid(_))));
+    // idx 2 → fill_style_lst[1]
+    assert!(matches!(fmt.get_fill_style(2), Some(Fill::Solid(_))));
+    // idx 3 → out of range
+    assert!(fmt.get_fill_style(3).is_none());
+    // idx 1001 → bg_fill_style_lst[0]
+    assert!(matches!(fmt.get_fill_style(1001), Some(Fill::Solid(_))));
+    // idx 1002 → out of range
+    assert!(fmt.get_fill_style(1002).is_none());
+}
+
+#[test]
+fn test_fmt_scheme_get_line_style() {
+    use pptx2html_rs::model::hierarchy::FmtScheme;
+    use pptx2html_rs::model::{Border, BorderStyle, Color};
+
+    let fmt = FmtScheme {
+        fill_style_lst: vec![],
+        ln_style_lst: vec![
+            Border { width: 0.75, color: Color::none(), style: BorderStyle::Solid },
+        ],
+        bg_fill_style_lst: vec![],
+    };
+
+    assert!(fmt.get_line_style(0).is_none());
+    let ln = fmt.get_line_style(1).unwrap();
+    assert!((ln.width - 0.75).abs() < 0.01);
+    assert!(fmt.get_line_style(2).is_none());
+}
+
+// ── FontScheme resolve_typeface test ──
+
+#[test]
+fn test_font_scheme_resolve_typeface() {
+    use pptx2html_rs::model::presentation::FontScheme;
+
+    let fs = FontScheme {
+        major_latin: "Calibri Light".to_string(),
+        minor_latin: "Calibri".to_string(),
+        major_east_asian: Some("Malgun Gothic".to_string()),
+        minor_east_asian: Some("Malgun Gothic".to_string()),
+    };
+
+    assert_eq!(fs.resolve_typeface("+mj-lt"), Some("Calibri Light"));
+    assert_eq!(fs.resolve_typeface("+mn-lt"), Some("Calibri"));
+    assert_eq!(fs.resolve_typeface("+mj-ea"), Some("Malgun Gothic"));
+    assert_eq!(fs.resolve_typeface("+mn-ea"), Some("Malgun Gothic"));
+    assert_eq!(fs.resolve_typeface("Arial"), None);
+}
+
+// ── Text style inheritance tests ──
+
+#[test]
+fn test_title_inherits_font_size_from_tx_styles() {
+    // Master with txStyles titleStyle that sets font size to 4400 (44pt)
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr algn="l">
+        <a:defRPr sz="4400" b="1">
+          <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+        </a:defRPr>
+      </a:lvl1pPr>
+    </p:titleStyle>
+    <p:bodyStyle>
+      <a:lvl1pPr>
+        <a:defRPr sz="2400"/>
+      </a:lvl1pPr>
+    </p:bodyStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    // Slide with title placeholder — no explicit font size on run
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr/><a:t>Inherited Title</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // Title should inherit 44pt font size from titleStyle lvl1pPr defRPr
+    assert!(html.contains("font-size: 44.0pt"), "Title should inherit 44pt font size: {html}");
+    // Title should inherit bold from titleStyle
+    assert!(html.contains("font-weight: bold"), "Title should inherit bold: {html}");
+    // Title should inherit red color from titleStyle
+    assert!(html.contains("color: #FF0000"), "Title should inherit red color: {html}");
+}
+
+#[test]
+fn test_explicit_style_overrides_inherited() {
+    // Master with txStyles that sets 44pt for title
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr>
+        <a:defRPr sz="4400"/>
+      </a:lvl1pPr>
+    </p:titleStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    // Slide with title and explicit 20pt font size — should override inherited 44pt
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="2000"/><a:t>Explicit 20pt</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // Explicit 20pt should override inherited 44pt
+    assert!(html.contains("font-size: 20.0pt"), "Explicit font-size should override inherited: {html}");
+    assert!(!html.contains("font-size: 44.0pt"), "Inherited 44pt should not appear: {html}");
+}
+
+#[test]
+fn test_body_inherits_spacing_from_tx_styles() {
+    // Master with bodyStyle lvl1pPr that has space-before 10pt
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:bodyStyle>
+      <a:lvl1pPr marL="342900" indent="-342900">
+        <a:spcBef><a:spcPts val="1000"/></a:spcBef>
+        <a:defRPr sz="2800"/>
+      </a:lvl1pPr>
+    </p:bodyStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Body"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="1600200"/><a:ext cx="8229600" cy="4525963"/></a:xfrm>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    // Slide with body placeholder — no explicit spacing
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Content"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr/><a:t>Body text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // Body should inherit space-before 10pt from bodyStyle
+    assert!(html.contains("margin-top: 10.0pt"), "Body should inherit space-before: {html}");
+    // Body should inherit font-size 28pt from bodyStyle defRPr
+    assert!(html.contains("font-size: 28.0pt"), "Body should inherit font-size 28pt: {html}");
+}
+
+#[test]
+fn test_default_text_style_inherited_by_non_placeholder() {
+    // defaultTextStyle sets lvl1pPr defRPr sz=1800 (18pt)
+    let pres_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:defaultTextStyle>
+    <a:lvl1pPr>
+      <a:defRPr sz="1800"/>
+    </a:lvl1pPr>
+  </p:defaultTextStyle>
+</p:presentation>"#;
+
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    // Non-placeholder shape — should get font-size from defaultTextStyle
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Text Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr/><a:t>Default size text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_presentation_xml(pres_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // Non-placeholder shapes get otherStyle first, then defaultTextStyle
+    assert!(html.contains("font-size: 18.0pt"), "Non-placeholder should inherit 18pt from defaultTextStyle: {html}");
+}
+
+#[test]
+fn test_font_ref_provides_font_family() {
+    // Theme with fmtScheme
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TestTheme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont><a:latin typeface="Calibri Light"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="Office">
+      <a:fillStyleLst>
+        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
+      </a:fillStyleLst>
+      <a:lnStyleLst>
+        <a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+      </a:lnStyleLst>
+      <a:bgFillStyleLst>
+        <a:solidFill><a:schemeClr val="phClr"/></a:solidFill>
+      </a:bgFillStyleLst>
+    </a:fmtScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    // Shape with fontRef pointing to "minor" (should resolve to Calibri)
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:style>
+        <a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>
+        <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+        <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+        <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
+      </p:style>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Font from ref</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_full_theme(theme_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // fontRef "minor" should resolve to "Calibri" from theme font scheme
+    assert!(html.contains("font-family: 'Calibri'"), "fontRef should resolve to Calibri: {html}");
+}
+
+#[test]
+fn test_font_typeface_theme_ref_resolved() {
+    // Shape with explicit font "+mn-lt" (theme minor latin reference)
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TestTheme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont><a:latin typeface="Noto Sans KR"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Pretendard"/></a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="2000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="+mn-lt"/></a:rPr><a:t>Theme font</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_theme(theme_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    // "+mn-lt" should resolve to "Pretendard"
+    assert!(html.contains("font-family: 'Pretendard'"), "+mn-lt should resolve to Pretendard: {html}");
+}

@@ -176,3 +176,26 @@ pub struct FmtScheme {
     pub ln_style_lst: Vec<Border>,
     pub bg_fill_style_lst: Vec<Fill>,
 }
+
+impl FmtScheme {
+    /// Retrieve fill style by 1-based idx.
+    /// idx 1~999 → fill_style_lst, idx 1001+ → bg_fill_style_lst.
+    pub fn get_fill_style(&self, idx: u32) -> Option<&Fill> {
+        if idx == 0 {
+            return None;
+        }
+        if idx >= 1001 {
+            self.bg_fill_style_lst.get((idx - 1001) as usize)
+        } else {
+            self.fill_style_lst.get((idx - 1) as usize)
+        }
+    }
+
+    /// Retrieve line style by 1-based idx.
+    pub fn get_line_style(&self, idx: u32) -> Option<&Border> {
+        if idx == 0 {
+            return None;
+        }
+        self.ln_style_lst.get((idx - 1) as usize)
+    }
+}

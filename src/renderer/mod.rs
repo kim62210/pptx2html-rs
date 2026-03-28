@@ -8,6 +8,7 @@ use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
 use crate::resolver::inheritance;
 use crate::resolver::placeholder;
+use crate::resolver::style_ref;
 
 /// Rendering context -- propagates theme/ClrMap references and full presentation
 struct RenderCtx<'a> {
@@ -288,6 +289,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
 
+        // Resolve text style source for this shape's placeholder type
+        let text_style_ctx = Self::build_text_style_ctx(shape, ctx);
+
+        // Resolve fontRef from <p:style> for font-family fallback
+        let font_ref_font = Self::resolve_font_ref_font(shape, ctx);
+
         // Text
         if let Some(ref text_body) = shape.text_body {
             let v_class = match text_body.vertical_align {
@@ -308,13 +315,62 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
             for para in &text_body.paragraphs {
-                html.push_str(&Self::render_paragraph(para, ctx, &mut auto_num_counters));
+                html.push_str(&Self::render_paragraph_with_defaults(
+                    para,
+                    ctx,
+                    &mut auto_num_counters,
+                    &text_style_ctx,
+                    font_ref_font.as_deref(),
+                ));
             }
             html.push_str("</div>\n");
         }
 
         html.push_str("</div>\n");
         html
+    }
+
+    /// Build text style context from placeholder type and master txStyles / defaultTextStyle
+    fn build_text_style_ctx<'a>(shape: &Shape, ctx: &RenderCtx<'a>) -> TextStyleCtx<'a> {
+        // Determine which txStyles list to use based on placeholder type
+        let ph_type = shape.placeholder.as_ref().and_then(|ph| ph.ph_type.as_ref());
+        let source = placeholder::text_style_source(ph_type);
+
+        // Find the master's txStyles list for this source
+        let layout = shape.placeholder.as_ref().and_then(|_| {
+            // We don't have layout_idx on shape, get from slide context
+            None::<&SlideLayout>
+        });
+        let _ = layout; // Layout-level lstStyle is not yet tracked
+
+        // txStyles from first master
+        let master_list_style = ctx.pres.masters.first().and_then(|m| {
+            match source {
+                placeholder::TextStyleSource::TitleStyle => m.tx_styles.title_style.as_ref(),
+                placeholder::TextStyleSource::BodyStyle => m.tx_styles.body_style.as_ref(),
+                placeholder::TextStyleSource::OtherStyle => m.tx_styles.other_style.as_ref(),
+            }
+        });
+
+        // defaultTextStyle from presentation
+        let default_list_style = ctx.pres.default_text_style.as_ref();
+
+        TextStyleCtx {
+            master_list_style,
+            default_list_style,
+        }
+    }
+
+    /// Resolve fontRef from shape's <p:style> to a font-family name
+    fn resolve_font_ref_font(shape: &Shape, ctx: &RenderCtx<'_>) -> Option<String> {
+        let sr = shape.style_ref.as_ref()?;
+        let font_ref = sr.font_ref.as_ref()?;
+        let theme = ctx.pres.primary_theme()?;
+        let font_scheme = &theme.font_scheme;
+        let scheme = ctx.scheme?;
+        let clr_map = ctx.clr_map?;
+        let (font_name, _color) = style_ref::resolve_font_ref(font_ref, font_scheme, scheme, clr_map)?;
+        Some(font_name)
     }
 
     fn render_table(table: &TableData, ctx: &RenderCtx<'_>) -> String {
@@ -409,11 +465,29 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         ctx: &RenderCtx<'_>,
         auto_num_counters: &mut [i32; 9],
     ) -> String {
+        Self::render_paragraph_with_defaults(para, ctx, auto_num_counters, &TextStyleCtx::default(), None)
+    }
+
+    /// Render paragraph with inherited text style defaults from txStyles / defaultTextStyle
+    fn render_paragraph_with_defaults(
+        para: &TextParagraph,
+        ctx: &RenderCtx<'_>,
+        auto_num_counters: &mut [i32; 9],
+        text_ctx: &TextStyleCtx<'_>,
+        font_ref_font: Option<&str>,
+    ) -> String {
+        let level = (para.level as usize).min(8);
+
+        // Look up inherited paragraph defaults for this level
+        let inherited = text_ctx.get_level_defaults(level);
+
         let align = para.alignment.to_css();
         let mut style_parts = vec![format!("text-align: {align}")];
 
-        // Line spacing
-        if let Some(ref ls) = para.line_spacing {
+        // Line spacing (explicit > inherited)
+        let line_spacing = para.line_spacing.as_ref()
+            .or_else(|| inherited.and_then(|d| d.line_spacing.as_ref()));
+        if let Some(ls) = line_spacing {
             match ls {
                 SpacingValue::Percent(p) => {
                     style_parts.push(format!("line-height: {p:.2}"));
@@ -423,8 +497,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 }
             }
         }
-        // Space before
-        if let Some(ref sb) = para.space_before {
+        // Space before (explicit > inherited)
+        let space_before = para.space_before.as_ref()
+            .or_else(|| inherited.and_then(|d| d.space_before.as_ref()));
+        if let Some(sb) = space_before {
             match sb {
                 SpacingValue::Percent(p) => {
                     style_parts.push(format!("margin-top: {p:.1}em"));
@@ -434,8 +510,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 }
             }
         }
-        // Space after
-        if let Some(ref sa) = para.space_after {
+        // Space after (explicit > inherited)
+        let space_after = para.space_after.as_ref()
+            .or_else(|| inherited.and_then(|d| d.space_after.as_ref()));
+        if let Some(sa) = space_after {
             match sa {
                 SpacingValue::Percent(p) => {
                     style_parts.push(format!("margin-bottom: {p:.1}em"));
@@ -446,24 +524,30 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
 
-        // Level-based indentation via margin_left and indent
-        if let Some(ml) = para.margin_left {
+        // Level-based indentation via margin_left and indent (explicit > inherited)
+        let margin_left = para.margin_left
+            .or_else(|| inherited.and_then(|d| d.margin_left));
+        let indent = para.indent
+            .or_else(|| inherited.and_then(|d| d.indent));
+
+        if let Some(ml) = margin_left {
             style_parts.push(format!("padding-left: {ml:.1}pt"));
         } else if para.level > 0 {
             // Fallback: ~36pt (0.5in) per level when no explicit margin
             let margin = para.level as f64 * 36.0;
             style_parts.push(format!("padding-left: {margin:.1}pt"));
         }
-        if let Some(indent) = para.indent {
-            style_parts.push(format!("text-indent: {indent:.1}pt"));
+        if let Some(ind) = indent {
+            style_parts.push(format!("text-indent: {ind:.1}pt"));
         }
 
         let style = style_parts.join("; ");
         let mut html = format!("<p class=\"paragraph\" style=\"{style}\">");
 
-        // Bullet rendering
-        let level = (para.level as usize).min(8);
-        if let Some(ref bullet) = para.bullet {
+        // Bullet rendering (explicit > inherited)
+        let bullet = para.bullet.as_ref()
+            .or_else(|| inherited.and_then(|d| d.bullet.as_ref()));
+        if let Some(bullet) = bullet {
             match bullet {
                 Bullet::Char(bc) => {
                     // Reset counters at deeper levels when a char bullet is encountered
@@ -543,8 +627,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             }
         }
 
+        // Get inherited run defaults for this level
+        let run_defaults = inherited.and_then(|d| d.def_run_props.as_ref());
+
         for run in &para.runs {
-            html.push_str(&Self::render_run(run, ctx));
+            html.push_str(&Self::render_run_with_defaults(run, ctx, run_defaults, font_ref_font));
         }
 
         if para.runs.is_empty() {
@@ -555,28 +642,73 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         html
     }
 
-    fn render_run(run: &TextRun, ctx: &RenderCtx<'_>) -> String {
+    /// Render run with inherited defaults from txStyles/defaultTextStyle
+    fn render_run_with_defaults(
+        run: &TextRun,
+        ctx: &RenderCtx<'_>,
+        run_defaults: Option<&RunDefaults>,
+        font_ref_font: Option<&str>,
+    ) -> String {
         let mut styles = Vec::new();
 
+        // Font family: explicit > inherited defRPr > fontRef > theme
         let font = run
             .font
             .east_asian
             .as_deref()
             .or(run.font.latin.as_deref());
+
+        let font_scheme = ctx.pres.primary_theme().map(|t| &t.font_scheme);
+
         if let Some(f) = font {
+            // Resolve "+mj-lt"/"+mn-lt" references
+            let resolved = font_scheme
+                .and_then(|fs| fs.resolve_typeface(f))
+                .unwrap_or(f);
+            styles.push(format!("font-family: '{resolved}'"));
+        } else if let Some(rd) = run_defaults {
+            // Fallback to inherited font
+            let inherited_font = rd.font_ea.as_deref()
+                .or(rd.font_latin.as_deref());
+            if let Some(f) = inherited_font {
+                let resolved = font_scheme
+                    .and_then(|fs| fs.resolve_typeface(f))
+                    .unwrap_or(f);
+                styles.push(format!("font-family: '{resolved}'"));
+            } else if let Some(f) = font_ref_font {
+                styles.push(format!("font-family: '{f}'"));
+            }
+        } else if let Some(f) = font_ref_font {
             styles.push(format!("font-family: '{f}'"));
         }
 
-        if let Some(sz) = run.style.font_size {
+        // Font size: explicit > inherited
+        let font_size = run.style.font_size
+            .or_else(|| run_defaults.and_then(|rd| rd.font_size));
+        if let Some(sz) = font_size {
             styles.push(format!("font-size: {sz:.1}pt"));
         }
 
-        if run.style.bold {
+        // Bold: explicit > inherited
+        let bold = if run.style.bold {
+            true
+        } else {
+            run_defaults.and_then(|rd| rd.bold).unwrap_or(false)
+        };
+        if bold {
             styles.push("font-weight: bold".to_string());
         }
-        if run.style.italic {
+
+        // Italic: explicit > inherited
+        let italic = if run.style.italic {
+            true
+        } else {
+            run_defaults.and_then(|rd| rd.italic).unwrap_or(false)
+        };
+        if italic {
             styles.push("font-style: italic".to_string());
         }
+
         if run.style.underline {
             styles.push("text-decoration: underline".to_string());
         }
@@ -584,8 +716,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             styles.push("text-decoration: line-through".to_string());
         }
 
-        // Color -- theme-aware resolution
-        if let Some(css_color) = ctx.color_to_css(&run.style.color) {
+        // Color -- explicit > inherited > theme-aware resolution
+        let color_css = if !run.style.color.is_none() {
+            ctx.color_to_css(&run.style.color)
+        } else if let Some(rd) = run_defaults {
+            rd.color.as_ref().and_then(|c| ctx.color_to_css(c))
+        } else {
+            None
+        };
+        if let Some(css_color) = color_css {
             styles.push(format!("color: {css_color}"));
         }
 
@@ -718,6 +857,38 @@ fn to_roman_uc(mut val: i32) -> String {
         }
     }
     result
+}
+
+/// Context for resolving inherited text styles from txStyles/defaultTextStyle
+#[derive(Default)]
+struct TextStyleCtx<'a> {
+    /// txStyles list matching placeholder type (titleStyle/bodyStyle/otherStyle)
+    master_list_style: Option<&'a ListStyle>,
+    /// presentation defaultTextStyle
+    default_list_style: Option<&'a ListStyle>,
+}
+
+impl<'a> TextStyleCtx<'a> {
+    /// Get paragraph defaults for a given level (0-based).
+    /// Priority: master txStyles > defaultTextStyle
+    fn get_level_defaults(&self, level: usize) -> Option<&'a ParagraphDefaults> {
+        if level >= 9 {
+            return None;
+        }
+        // txStyles takes priority
+        if let Some(ls) = self.master_list_style {
+            if let Some(ref pd) = ls.levels[level] {
+                return Some(pd);
+            }
+        }
+        // Fallback to defaultTextStyle
+        if let Some(ls) = self.default_list_style {
+            if let Some(ref pd) = ls.levels[level] {
+                return Some(pd);
+            }
+        }
+        None
+    }
 }
 
 fn escape_html(s: &str) -> String {

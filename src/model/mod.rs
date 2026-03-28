@@ -15,7 +15,7 @@ pub use hierarchy::{
     PlaceholderType, RunDefaults, ShapeStyleRef, SlideLayout, SlideMaster, SpacingValue, StyleRef,
     TxStyles,
 };
-pub use presentation::{ClrMap, Presentation};
+pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
     AutoFit, Bullet, BulletAutoNum, BulletChar, GroupData, PictureData, Shape, ShapeType, Slide,
     TableCell, TableData, TableRow, TextBody, TextMargins, TextParagraph, TextRun, VerticalAlign,
