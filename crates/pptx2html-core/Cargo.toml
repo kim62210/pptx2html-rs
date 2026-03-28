@@ -18,3 +18,8 @@ log = "0.4"
 [dev-dependencies]
 pretty_assertions = "1"
 tempfile = "3"
+criterion = "0.5"
+
+[[bench]]
+name = "pipeline"
+harness = false
