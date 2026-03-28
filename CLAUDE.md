@@ -105,4 +105,4 @@ slide shape → layout placeholder → master placeholder → txStyles → defau
 | 3 | Table + Bullets + Group shapes | Done |
 | 4 | Advanced text + Preset shape SVG + Image crop | Done |
 | 5 | PyO3 bindings + WASM + Performance + CLI | Done |
-| 6 | Polish + Real-world testing + Release v0.5.0 | Planned |
+| 6 | Polish + Real-world testing + Release v0.5.0 | Done |
