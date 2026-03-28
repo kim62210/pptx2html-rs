@@ -29,6 +29,7 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_sp_pr = false;
     let mut in_ln = false;
     let mut in_r_pr = false;
+    let mut in_nv_pr = false;
     let mut in_grad_fill = false;
     let mut grad_stops: Vec<GradientStop> = Vec::new();
     let mut grad_angle: f64 = 0.0;
@@ -49,6 +50,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 sb.is_picture = true;
                             }
                         }
+                    }
+                    // Non-visual properties (contains placeholder)
+                    "nvPr" if current_shape.is_some() => {
+                        in_nv_pr = true;
                     }
                     // Shape properties
                     "spPr" if current_shape.is_some() => {
@@ -281,6 +286,12 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
+                    // Placeholder
+                    "ph" if in_nv_pr && current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.placeholder = Some(super::master_parser::parse_placeholder_attrs(e));
+                        }
+                    }
                     // Image reference
                     "blip" => {
                         if let Some(sb) = current_shape.as_mut() {
@@ -393,6 +404,10 @@ pub fn parse_slide<R: Read + Seek>(
                     // End of line/border
                     "ln" if in_ln => {
                         in_ln = false;
+                    }
+                    // End of non-visual properties
+                    "nvPr" => {
+                        in_nv_pr = false;
                     }
                     // End of shape properties
                     "spPr" => {
