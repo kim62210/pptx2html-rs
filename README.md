@@ -10,6 +10,8 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Theme color resolution with 12 color modifiers (tint, shade, lumMod, etc.)
 - Slide master / layout inheritance chain with placeholder matching
 - 30 preset shape SVG rendering with adjust value support
+- SVG stroke dash styles (solid, dash, dot, dashDot, etc.)
+- Line ending markers (arrow, triangle, stealth, diamond, oval)
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
 - Text styling: bold, italic, underline, bullets, vertical text, shadows

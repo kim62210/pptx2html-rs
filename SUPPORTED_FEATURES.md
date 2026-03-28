@@ -91,6 +91,21 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | No fill | `<a:noFill>` | Supported |
 | Fill style reference | `<a:fillRef>` | Supported |
 
+## Borders and Lines
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Shape outline | `<a:ln>` | Supported |
+| Line width | `<a:ln w="...">` | Supported |
+| Line color (RGB/theme) | `<a:ln><a:solidFill>` | Supported |
+| Dash style (solid/dash/dot/dashDot) | `<a:prstDash>` | Supported |
+| Line style reference | `<a:lnRef>` | Supported |
+| Arrow head (line start) | `<a:headEnd>` | Supported |
+| Arrow tail (line end) | `<a:tailEnd>` | Supported |
+| Arrow types (arrow/triangle/stealth/diamond/oval) | `type` attr | Supported |
+| Arrow size (sm/med/lg) | `w` / `len` attrs | Supported |
+| No fill (transparent line) | `<a:noFill>` in `<a:ln>` | Supported |
+
 ## Colors
 
 | Feature | ECMA-376 Element | Status |
@@ -140,7 +155,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Shape position / size | `<a:xfrm>` | Supported |
 | Shape rotation | `<a:xfrm rot="...">` | Supported |
 | Group shapes | `<p:grpSp>` | Supported |
-| Connectors | `<p:cxnSp>` | Partial |
+| Connectors | `<p:cxnSp>` | Supported |
 | Placeholder matching | `<p:ph type="..." idx="...">` | Supported |
 | Slide → Layout inheritance | slide.rels → slideLayout | Supported |
 | Layout → Master inheritance | layout.rels → slideMaster | Supported |
