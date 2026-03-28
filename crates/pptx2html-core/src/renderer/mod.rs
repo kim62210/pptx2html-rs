@@ -315,7 +315,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ctx.scheme,
             ctx.clr_map,
         );
-        if resolved_border.width > 0.0 {
+
+        // Determine SVG preset name early so we know whether to emit CSS border
+        let svg_preset_name = match &shape.shape_type {
+            ShapeType::Ellipse => Some("ellipse"),
+            ShapeType::RoundedRectangle => Some("roundRect"),
+            ShapeType::Triangle => Some("triangle"),
+            ShapeType::Custom(name) => Some(name.as_str()),
+            _ => None,
+        };
+        let uses_svg = svg_preset_name.is_some()
+            || matches!(shape.shape_type, ShapeType::CustomGeom(_));
+
+        // Only apply CSS border for non-SVG shapes; SVG shapes use stroke instead
+        if resolved_border.width > 0.0 && !uses_svg {
             let border_color = ctx
                 .color_to_css(&resolved_border.color)
                 .unwrap_or_else(|| "#000".to_string());
@@ -364,23 +377,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
         }
 
-        // Determine SVG preset name for the shape (if applicable)
-        let svg_preset_name = match &shape.shape_type {
-            ShapeType::Ellipse => Some("ellipse"),
-            ShapeType::RoundedRectangle => Some("roundRect"),
-            ShapeType::Triangle => Some("triangle"),
-            ShapeType::Custom(name) => Some(name.as_str()),
-            _ => None,
-        };
-
-        // Only apply CSS border-radius for non-SVG shapes; SVG handles geometry
-        if svg_preset_name.is_none() {
-            match &shape.shape_type {
-                ShapeType::Ellipse => style_buf.push_str("; border-radius: 50%"),
-                ShapeType::RoundedRectangle => style_buf.push_str("; border-radius: 8px"),
-                _ => {}
-            }
-        }
+        // Note: svg_preset_name was determined above (before border handling)
 
         // Cropped images need overflow:hidden on the shape container
         if let ShapeType::Picture(pic) = &shape.shape_type {
@@ -484,20 +481,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let adj_values = shape.adjust_values.as_ref().unwrap_or(&empty_adj);
             if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, adj_values) {
                 let fill_color = ctx
-                    .color_to_css(&shape.fill.color_ref())
+                    .color_to_css(&resolved_fill.color_ref())
                     .unwrap_or_else(|| "none".to_string());
+                // Connector/line shapes need a default visible stroke
+                let is_line_shape = matches!(
+                    preset_name,
+                    "line" | "lineInv"
+                        | "straightConnector1"
+                        | "bentConnector2" | "bentConnector3"
+                        | "bentConnector4" | "bentConnector5"
+                        | "curvedConnector2" | "curvedConnector3"
+                        | "curvedConnector4" | "curvedConnector5"
+                );
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
                         .color_to_css(&resolved_border.color)
                         .unwrap_or_else(|| "#000".to_string());
                     (c, resolved_border.width)
+                } else if is_line_shape {
+                    // Default 0.75pt stroke for connectors with no explicit line
+                    ("#000".to_string(), 0.75)
                 } else {
                     ("none".to_string(), 0.0)
                 };
+                let fill_attr = if is_line_shape { "none" } else { &fill_color };
                 let _ = write!(
                     html,
                     "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">\
-                     <path d=\"{svg_path}\" fill=\"{fill_color}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>\
+                     <path d=\"{svg_path}\" fill=\"{fill_attr}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>\
                      </svg>\n"
                 );
             }
@@ -559,39 +570,32 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 format!("images/image-{}.{ext}", pic.data.len() % 100000)
             };
             if let Some(ref crop) = pic.crop {
-                // Use object-fit/object-position for image cropping.
-                // The shape div already has the correct final dimensions.
-                // We compute the visible portion and position within those bounds.
-                let left_pct = crop.left * 100.0;
-                let top_pct = crop.top * 100.0;
-                let right_pct = crop.right * 100.0;
-                let bottom_pct = crop.bottom * 100.0;
-                let vis_w = 100.0 - left_pct - right_pct;
-                let vis_h = 100.0 - top_pct - bottom_pct;
+                // OOXML srcRect: l/t/r/b are fractions (0..1) to crop from each
+                // edge of the SOURCE image.  The shape bounding box is the final
+                // visible area.  We scale the <img> beyond 100% so the full source
+                // fills more than the shape, then shift it so the crop region's
+                // top-left aligns with the shape origin.  overflow:hidden on the
+                // parent div clips the excess.
+                let l = crop.left * 100.0;   // left crop %
+                let t = crop.top * 100.0;    // top crop %
+                let r = crop.right * 100.0;  // right crop %
+                let b = crop.bottom * 100.0; // bottom crop %
+                let vis_w = 100.0 - l - r;
+                let vis_h = 100.0 - t - b;
                 if vis_w > 0.001 && vis_h > 0.001 {
-                    // Scale image so the visible portion fills the shape exactly.
-                    // object-fit:none keeps the image at its natural size, so we
-                    // set explicit width/height as percentages of the shape.
-                    let scale_x = 100.0 / vis_w * 100.0;
-                    let scale_y = 100.0 / vis_h * 100.0;
-                    // Position: shift image so the crop region's top-left aligns
-                    // with the shape's top-left.
-                    let pos_x = if left_pct.abs() < 0.001 {
-                        0.0
-                    } else {
-                        -left_pct / vis_w * 100.0
-                    };
-                    let pos_y = if top_pct.abs() < 0.001 {
-                        0.0
-                    } else {
-                        -top_pct / vis_h * 100.0
-                    };
+                    let img_w_pct = 100.0 / vis_w * 100.0;
+                    let img_h_pct = 100.0 / vis_h * 100.0;
+                    // Use absolute px offsets for positioning (margin-%
+                    // in CSS is always relative to container width, even
+                    // for vertical — that gives wrong results).
+                    let off_x_px = -(l / 100.0) * w * (img_w_pct / 100.0);
+                    let off_y_px = -(t / 100.0) * h * (img_h_pct / 100.0);
                     let _ = write!(
                         html,
                         "<img class=\"shape-image\" src=\"{src}\" alt=\"\" style=\"\
                          object-fit: fill; \
-                         width: {scale_x:.1}%; height: {scale_y:.1}%; \
-                         margin-left: {pos_x:.1}%; margin-top: {pos_y:.1}%\">\n"
+                         width: {img_w_pct:.2}%; height: {img_h_pct:.2}%; \
+                         margin-left: {off_x_px:.2}px; margin-top: {off_y_px:.2}px\">\n"
                     );
                 } else {
                     // Degenerate crop — show the whole image
@@ -1269,7 +1273,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     /// Append fill CSS directly into an existing style buffer (avoids intermediate String)
     fn fill_to_css_buf(fill: &Fill, ctx: &RenderCtx<'_>, buf: &mut String) {
         match fill {
-            Fill::None => {}
+            Fill::None | Fill::NoFill => {}
             Fill::Solid(sf) => {
                 if let Some(color_css) = ctx.color_to_css(&sf.color) {
                     push_sep(buf);
@@ -1334,7 +1338,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     /// Convert Fill to CSS (theme-aware)
     fn fill_to_css(fill: &Fill, ctx: &RenderCtx<'_>) -> String {
         match fill {
-            Fill::None => String::new(),
+            Fill::None | Fill::NoFill => String::new(),
             Fill::Solid(sf) => {
                 if let Some(color_css) = ctx.color_to_css(&sf.color) {
                     format!("background-color: {color_css}")
