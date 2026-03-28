@@ -96,6 +96,13 @@ pub fn parse_slide<R: Read + Seek>(
 
     // Background fill state
     let mut in_bg_pr = false;
+    let mut in_bg_blip_fill = false;
+    let mut bg_blip_rel_id: Option<String> = None;
+    let mut bg_solid_color: Option<Color> = None;
+    let mut in_bg_grad_fill = false;
+    let mut bg_grad_stops: Vec<GradientStop> = Vec::new();
+    let mut bg_grad_angle: f64 = 0.0;
+    let mut bg_gs_pos: f64 = 0.0;
 
     // Chart detection state
     let mut in_graphic_data = false;
@@ -513,18 +520,33 @@ pub fn parse_slide<R: Read + Seek>(
                             .unwrap_or(0.0);
                         shape_glow_alpha = 1.0;
                     }
+                    // ── Background gradFill ──
+                    "gradFill" if in_bg_pr => {
+                        in_bg_grad_fill = true;
+                        bg_grad_stops.clear();
+                        bg_grad_angle = 0.0;
+                    }
+                    // ── Background gradient stop ──
+                    "gs" if in_bg_grad_fill => {
+                        bg_gs_pos = xml_utils::attr_str(e, "pos")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| v / 100_000.0)
+                            .unwrap_or(0.0);
+                    }
                     // ── Background blipFill ──
                     "blipFill" if in_bg_pr => {
-                        // Will be handled when we encounter the blip child
+                        in_bg_blip_fill = true;
                     }
                     // Image reference (Start variant — blip with child elements)
                     "blip" => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            for attr in e.attributes().flatten() {
-                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
-                                if key.ends_with("embed") {
-                                    sb.image_rel_id =
-                                        Some(String::from_utf8_lossy(&attr.value).to_string());
+                        for attr in e.attributes().flatten() {
+                            let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                            if key.ends_with("embed") {
+                                let rel_id = String::from_utf8_lossy(&attr.value).to_string();
+                                if in_bg_blip_fill {
+                                    bg_blip_rel_id = Some(rel_id);
+                                } else if let Some(sb) = current_shape.as_mut() {
+                                    sb.image_rel_id = Some(rel_id);
                                 }
                             }
                         }
@@ -686,6 +708,11 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     // Gradient direction
+                    "lin" if in_bg_grad_fill => {
+                        if let Some(ang) = xml_utils::attr_str(e, "ang") {
+                            bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                        }
+                    }
                     "lin" if in_grad_fill => {
                         if let Some(ang) = xml_utils::attr_str(e, "ang") {
                             // OOXML angle: in 1/60000 degree units
@@ -736,6 +763,8 @@ pub fn parse_slide<R: Read + Seek>(
                                     color,
                                     &mut p_style_builder,
                                 );
+                            } else if in_bg_pr && !in_bg_blip_fill {
+                                bg_solid_color = Some(color);
                             } else {
                                 assign_color(
                                     color,
@@ -788,6 +817,8 @@ pub fn parse_slide<R: Read + Seek>(
                                     color,
                                     &mut p_style_builder,
                                 );
+                            } else if in_bg_pr && !in_bg_blip_fill {
+                                bg_solid_color = Some(color);
                             } else {
                                 assign_color(
                                     color,
@@ -830,6 +861,8 @@ pub fn parse_slide<R: Read + Seek>(
                                     color,
                                     &mut p_style_builder,
                                 );
+                            } else if in_bg_pr && !in_bg_blip_fill {
+                                bg_solid_color = Some(color);
                             } else {
                                 assign_color(
                                     color,
@@ -878,6 +911,8 @@ pub fn parse_slide<R: Read + Seek>(
                                     color,
                                     &mut p_style_builder,
                                 );
+                            } else if in_bg_pr && !in_bg_blip_fill {
+                                bg_solid_color = Some(color);
                             } else {
                                 assign_color(
                                     color,
@@ -915,14 +950,16 @@ pub fn parse_slide<R: Read + Seek>(
                             sb.placeholder = Some(super::master_parser::parse_placeholder_attrs(e));
                         }
                     }
-                    // Image reference
+                    // Image reference (Empty variant)
                     "blip" => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            for attr in e.attributes().flatten() {
-                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
-                                if key.ends_with("embed") {
-                                    sb.image_rel_id =
-                                        Some(String::from_utf8_lossy(&attr.value).to_string());
+                        for attr in e.attributes().flatten() {
+                            let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+                            if key.ends_with("embed") {
+                                let rel_id = String::from_utf8_lossy(&attr.value).to_string();
+                                if in_bg_blip_fill {
+                                    bg_blip_rel_id = Some(rel_id);
+                                } else if let Some(sb) = current_shape.as_mut() {
+                                    sb.image_rel_id = Some(rel_id);
                                 }
                             }
                         }
@@ -1339,7 +1376,39 @@ pub fn parse_slide<R: Read + Seek>(
 
                     // ── New state end events ──
                     "avLst" => in_av_lst = false,
-                    "bgPr" => in_bg_pr = false,
+                    "blipFill" if in_bg_blip_fill => {
+                        in_bg_blip_fill = false;
+                    }
+                    "bgPr" => {
+                        in_bg_pr = false;
+                        // Load background image if blipFill was present
+                        if let Some(rel_id) = bg_blip_rel_id.take() {
+                            if let Some(target) = rels.get(&rel_id) {
+                                let path = resolve_rel_path("ppt/slides", target);
+                                if let Ok(mut entry) = archive.by_name(&path) {
+                                    let mut buf = Vec::new();
+                                    let _ = entry.read_to_end(&mut buf);
+                                    if !buf.is_empty() {
+                                        let content_type = mime_from_extension(&path);
+                                        slide.background = Some(Fill::Image(ImageFill {
+                                            rel_id,
+                                            data: buf,
+                                            content_type,
+                                        }));
+                                    }
+                                }
+                            }
+                        } else if let Some(color) = bg_solid_color.take() {
+                            // Background solid fill
+                            slide.background = Some(Fill::Solid(SolidFill { color }));
+                        } else if !bg_grad_stops.is_empty() {
+                            // Background gradient fill
+                            slide.background = Some(Fill::Gradient(GradientFill {
+                                stops: std::mem::take(&mut bg_grad_stops),
+                                angle: bg_grad_angle,
+                            }));
+                        }
+                    }
                     "graphicData" => {
                         in_graphic_data = false;
                         if capturing_raw_xml {
@@ -1470,6 +1539,16 @@ pub fn parse_slide<R: Read + Seek>(
                                     color,
                                     &mut p_style_builder,
                                 );
+                            } else if in_bg_pr && !in_bg_blip_fill {
+                                // Background solid/gradient fill color
+                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
+                                    bg_grad_stops.push(GradientStop {
+                                        position: bg_gs_pos,
+                                        color,
+                                    });
+                                } else {
+                                    bg_solid_color = Some(color);
+                                }
                             } else {
                                 assign_color(
                                     color,
@@ -1513,6 +1592,11 @@ pub fn parse_slide<R: Read + Seek>(
                     "gs" => {
                         // Color added to grad_stops in assign_color
                     }
+                    // End of background gradient fill
+                    "gradFill" if in_bg_grad_fill => {
+                        in_bg_grad_fill = false;
+                        // bg_grad_stops will be consumed when bgPr ends
+                    }
                     // End of gradient fill
                     "gradFill" if in_grad_fill => {
                         in_grad_fill = false;
@@ -1537,9 +1621,29 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // End of shape
                     "sp" | "pic" | "cxnSp" => {
-                        if let Some(sb) = current_shape.take() {
+                        if let Some(mut sb) = current_shape.take() {
+                            // For non-picture shapes with blipFill (image-filled rectangles etc.),
+                            // load the image data and set Fill::Image before building
+                            if !sb.is_picture
+                                && let Some(ref rel_id) = sb.image_rel_id
+                                && let Some(target) = rels.get(rel_id)
+                            {
+                                let path = resolve_rel_path("ppt/slides", target);
+                                if let Ok(mut entry) = archive.by_name(&path) {
+                                    let mut buf = Vec::new();
+                                    let _ = entry.read_to_end(&mut buf);
+                                    if !buf.is_empty() {
+                                        let content_type = mime_from_extension(&path);
+                                        sb.fill = Fill::Image(ImageFill {
+                                            rel_id: rel_id.clone(),
+                                            data: buf,
+                                            content_type,
+                                        });
+                                    }
+                                }
+                            }
                             let mut shape = sb.build();
-                            // Load image data
+                            // Load image data for picture shapes
                             if let ShapeType::Picture(pic) = &mut shape.shape_type
                                 && let Some(target) = rels.get(&pic.rel_id)
                             {

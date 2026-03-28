@@ -125,22 +125,24 @@ pub fn resolve_border_with_theme(
 }
 
 /// Resolve effective position/size for a placeholder shape.
-/// Use shape's own position if it has non-zero size, otherwise fall back.
+/// Use shape's own geometry if it has non-zero size or non-zero position
+/// (position (0,0) with non-zero size is valid top-left placement).
+/// Falls back to layout then master if the shape has no geometry at all.
 pub fn resolve_position(
     shape: &Shape,
     layout_match: Option<&Shape>,
     master_match: Option<&Shape>,
 ) -> (Position, Size) {
-    if has_nonzero_size(&shape.size) {
+    if has_own_geometry(&shape.position, &shape.size) {
         return (shape.position, shape.size);
     }
     if let Some(lm) = layout_match
-        && has_nonzero_size(&lm.size)
+        && has_own_geometry(&lm.position, &lm.size)
     {
         return (lm.position, lm.size);
     }
     if let Some(mm) = master_match
-        && has_nonzero_size(&mm.size)
+        && has_own_geometry(&mm.position, &mm.size)
     {
         return (mm.position, mm.size);
     }
@@ -171,8 +173,11 @@ pub fn resolve_clr_map<'a>(
     &master.clr_map
 }
 
-fn has_nonzero_size(size: &Size) -> bool {
-    size.width.0 != 0 || size.height.0 != 0
+/// Check if a shape has its own geometry (xfrm was present in the XML).
+/// A shape has own geometry if it has non-zero size OR non-zero position.
+/// This correctly handles shapes placed at (0,0) with valid size.
+fn has_own_geometry(pos: &Position, size: &Size) -> bool {
+    size.width.0 != 0 || size.height.0 != 0 || pos.x.0 != 0 || pos.y.0 != 0
 }
 
 #[cfg(test)]
@@ -376,6 +381,62 @@ mod tests {
         let (pos, sz) = resolve_position(&shape, Some(&layout_match), Some(&master_match));
         assert_eq!(pos.x, Emu(9000));
         assert_eq!(sz.width, Emu(7000));
+    }
+
+    #[test]
+    fn position_nonzero_position_zero_size_uses_own() {
+        // Shape at (100, 200) with zero size should still use its own position
+        // (not fall through to layout) because it has explicit geometry
+        let shape = Shape {
+            position: Position {
+                x: Emu(100),
+                y: Emu(200),
+            },
+            size: Size::default(), // zero
+            ..Default::default()
+        };
+        let layout_match = Shape {
+            position: Position {
+                x: Emu(5000),
+                y: Emu(6000),
+            },
+            size: Size {
+                width: Emu(3000),
+                height: Emu(4000),
+            },
+            ..Default::default()
+        };
+        let (pos, _) = resolve_position(&shape, Some(&layout_match), None);
+        assert_eq!(pos.x, Emu(100));
+        assert_eq!(pos.y, Emu(200));
+    }
+
+    #[test]
+    fn position_zero_position_nonzero_size_uses_own() {
+        // Shape at (0, 0) with valid size should use its own position (0,0)
+        // not fall through to layout
+        let shape = Shape {
+            position: Position::default(), // (0, 0)
+            size: Size {
+                width: Emu(5000),
+                height: Emu(3000),
+            },
+            ..Default::default()
+        };
+        let layout_match = Shape {
+            position: Position {
+                x: Emu(1000),
+                y: Emu(2000),
+            },
+            size: Size {
+                width: Emu(5000),
+                height: Emu(3000),
+            },
+            ..Default::default()
+        };
+        let (pos, _) = resolve_position(&shape, Some(&layout_match), None);
+        assert_eq!(pos.x, Emu(0));
+        assert_eq!(pos.y, Emu(0));
     }
 
     // -- resolve_clr_map tests --
