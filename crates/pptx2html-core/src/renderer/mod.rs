@@ -4,6 +4,7 @@
 mod geometry;
 
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use base64::Engine;
 
@@ -108,7 +109,7 @@ impl HtmlRenderer {
         );
         html.push_str("<meta name=\"generator\" content=\"pptx2html-rs\">\n");
         if let Some(ref title) = pres.title {
-            html.push_str(&format!("<title>{}</title>\n", escape_html(title)));
+            let _ = write!(html, "<title>{}</title>\n", escape_html(title));
         } else {
             html.push_str("<title>Presentation</title>\n");
         }
@@ -125,9 +126,7 @@ impl HtmlRenderer {
                 continue;
             }
             collector.borrow_mut().current_slide_index = i;
-            html.push_str(&Self::render_slide(
-                slide, one_based, slide_w, slide_h, &ctx,
-            ));
+            Self::render_slide(slide, one_based, slide_w, slide_h, &ctx, &mut html);
             slide_count += 1;
         }
 
@@ -183,9 +182,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         _slide_w: f64,
         _slide_h: f64,
         ctx: &RenderCtx<'_>,
-    ) -> String {
-        let mut html = String::new();
-
+        html: &mut String,
+    ) {
         // Look up layout and master for this slide
         let layout = slide.layout_idx.and_then(|idx| ctx.pres.layouts.get(idx));
         let master = layout
@@ -207,9 +205,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         // Resolve background via inheritance
         let bg = inheritance::resolve_background(slide, layout, master);
         let bg_style = Self::fill_to_css(&bg, &slide_ctx);
-        html.push_str(&format!(
+        let _ = write!(
+            html,
             "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">\n"
-        ));
+        );
 
         // Render master shapes if show_master_sp is true
         let show_master = slide.show_master_sp && layout.is_none_or(|l| l.show_master_sp);
@@ -226,12 +225,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                         continue;
                     }
                 }
-                html.push_str(&Self::render_shape_resolved(
+                Self::render_shape_resolved(
                     master_shape,
                     None,
                     None,
                     &slide_ctx,
-                ));
+                    html,
+                );
             }
         }
 
@@ -248,16 +248,16 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 master.and_then(|m| placeholder::find_matching_placeholder(ph, &m.shapes))
             });
 
-            html.push_str(&Self::render_shape_resolved(
+            Self::render_shape_resolved(
                 shape,
                 layout_match,
                 master_match,
                 &slide_ctx,
-            ));
+                html,
+            );
         }
 
         html.push_str("</div>\n");
-        html
     }
 
     /// Render shape with resolved properties from inheritance cascade
@@ -266,7 +266,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         layout_match: Option<&Shape>,
         master_match: Option<&Shape>,
         ctx: &RenderCtx<'_>,
-    ) -> String {
+        html: &mut String,
+    ) {
         // Resolve position/size via inheritance
         let (pos, size) = inheritance::resolve_position(shape, layout_match, master_match);
         let x = pos.x.to_px();
@@ -274,12 +275,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let w = size.width.to_px();
         let h = size.height.to_px();
 
-        let mut styles = vec![
-            format!("left: {x:.1}px"),
-            format!("top: {y:.1}px"),
-            format!("width: {w:.1}px"),
-            format!("height: {h:.1}px"),
-        ];
+        let mut styles = Vec::with_capacity(8);
+        styles.push(format!("left: {x:.1}px"));
+        styles.push(format!("top: {y:.1}px"));
+        styles.push(format!("width: {w:.1}px"));
+        styles.push(format!("height: {h:.1}px"));
 
         if shape.rotation != 0.0 {
             styles.push(format!("transform: rotate({:.1}deg)", shape.rotation));
@@ -344,20 +344,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         let style_str = styles.join("; ");
-        let mut html = format!("<div class=\"shape\" style=\"{style_str}\">\n");
+        let _ = write!(html, "<div class=\"shape\" style=\"{style_str}\">\n");
 
         // Table
         if let ShapeType::Table(ref table) = shape.shape_type {
-            html.push_str(&Self::render_table(table, ctx));
+            Self::render_table(table, ctx, html);
             html.push_str("</div>\n");
-            return html;
+            return;
         }
 
         // Group
         if let ShapeType::Group(ref children, ref group_data) = shape.shape_type {
-            html.push_str(&Self::render_group(children, shape, group_data, ctx));
+            Self::render_group(children, shape, group_data, ctx, html);
             html.push_str("</div>\n");
-            return html;
+            return;
         }
 
         // Unsupported content (SmartArt, OLE, Math)
@@ -377,12 +377,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             };
 
             let escaped = escape_html(&data.label);
-            html.push_str(&format!(
+            let _ = write!(
+                html,
                 "<div class=\"unresolved-element\" id=\"{placeholder_id}\" \
                  data-type=\"{type_attr}\" data-slide=\"{}\">\
                  <span>[{escaped}]</span></div>\n",
                 coll.current_slide_index
-            ));
+            );
 
             let pos_non_zero = pos.x.0 != 0 || pos.y.0 != 0;
             let size_non_zero = size.width.0 != 0 || size.height.0 != 0;
@@ -400,7 +401,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
 
             drop(coll);
             html.push_str("</div>\n");
-            return html;
+            return;
         }
 
         // Chart
@@ -414,9 +415,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     } else {
                         format!("images/chart-{}.png", img_data.len() % 100000)
                     };
-                    html.push_str(&format!(
+                    let _ = write!(
+                        html,
                         "<img class=\"shape-image\" src=\"{src}\" alt=\"Chart\">\n"
-                    ));
+                    );
                 }
             } else {
                 html.push_str(
@@ -428,13 +430,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 );
             }
             html.push_str("</div>\n");
-            return html;
+            return;
         }
 
         // SVG preset shape rendering
         if let Some(preset_name) = svg_preset_name {
-            let adj_values: HashMap<String, f64> = shape.adjust_values.clone().unwrap_or_default();
-            if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, &adj_values) {
+            let empty_adj: HashMap<String, f64> = HashMap::new();
+            let adj_values = shape.adjust_values.as_ref().unwrap_or(&empty_adj);
+            if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, adj_values) {
                 let fill_color = ctx
                     .color_to_css(&shape.fill.color_ref())
                     .unwrap_or_else(|| "none".to_string());
@@ -446,11 +449,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 } else {
                     ("none".to_string(), 0.0)
                 };
-                html.push_str(&format!(
+                let _ = write!(
+                    html,
                     "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">\
                      <path d=\"{svg_path}\" fill=\"{fill_color}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"/>\
                      </svg>\n"
-                ));
+                );
             }
         }
 
@@ -501,9 +505,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             } else {
                 format!(" style=\"{}\"", img_styles.join("; "))
             };
-            html.push_str(&format!(
+            let _ = write!(
+                html,
                 "<img class=\"shape-image\" src=\"{src}\" alt=\"\"{style_attr}>\n"
-            ));
+            );
         }
 
         // Resolve text style source for this shape's placeholder type
@@ -543,25 +548,26 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                 }
             }
             let margin_style = margin_parts.join("; ");
-            html.push_str(&format!(
+            let _ = write!(
+                html,
                 "<div class=\"text-body {v_class}\" style=\"{margin_style}\">\n"
-            ));
+            );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
             for para in &text_body.paragraphs {
-                html.push_str(&Self::render_paragraph_with_defaults(
+                Self::render_paragraph_with_defaults(
                     para,
                     ctx,
                     &mut auto_num_counters,
                     &text_style_ctx,
                     font_ref_font.as_deref(),
-                ));
+                    html,
+                );
             }
             html.push_str("</div>\n");
         }
 
         html.push_str("</div>\n");
-        html
     }
 
     /// Build text style context from placeholder type and master txStyles / defaultTextStyle
@@ -609,9 +615,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         Some(font_name)
     }
 
-    fn render_table(table: &TableData, ctx: &RenderCtx<'_>) -> String {
+    fn render_table(table: &TableData, ctx: &RenderCtx<'_>, html: &mut String) {
         let total_width: f64 = table.col_widths.iter().sum();
-        let mut html = String::from(
+        html.push_str(
             "<table style=\"width:100%; height:100%; border-collapse:collapse; table-layout:fixed;\">\n<colgroup>\n",
         );
         for w in &table.col_widths {
@@ -620,12 +626,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             } else {
                 0.0
             };
-            html.push_str(&format!("<col style=\"width:{pct:.1}%\"/>\n"));
+            let _ = write!(html, "<col style=\"width:{pct:.1}%\"/>\n");
         }
         html.push_str("</colgroup>\n");
 
         for row in &table.rows {
-            html.push_str(&format!("<tr style=\"height:{:.1}px;\">\n", row.height));
+            let _ = write!(html, "<tr style=\"height:{:.1}px;\">\n", row.height);
             for cell in &row.cells {
                 // Skip cells that are continuation of a vertical merge
                 if cell.v_merge {
@@ -692,14 +698,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     String::new()
                 };
 
-                html.push_str(&format!(
+                let _ = write!(
+                    html,
                     "<td{colspan}{rowspan} style=\"{}\">\n",
                     td_styles.join("; ")
-                ));
+                );
                 if let Some(ref tb) = cell.text_body {
                     let mut auto_num_counters: [i32; 9] = [0; 9];
                     for para in &tb.paragraphs {
-                        html.push_str(&Self::render_paragraph(para, ctx, &mut auto_num_counters));
+                        Self::render_paragraph(para, ctx, &mut auto_num_counters, html);
                     }
                 }
                 html.push_str("</td>\n");
@@ -707,7 +714,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             html.push_str("</tr>\n");
         }
         html.push_str("</table>\n");
-        html
     }
 
     fn render_group(
@@ -715,30 +721,31 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         _parent: &Shape,
         _group_data: &GroupData,
         ctx: &RenderCtx<'_>,
-    ) -> String {
-        let mut html = String::new();
+        html: &mut String,
+    ) {
         for child in children {
             if child.hidden {
                 continue;
             }
             // Render each child shape with its own position relative to the group
-            html.push_str(&Self::render_shape_resolved(child, None, None, ctx));
+            Self::render_shape_resolved(child, None, None, ctx, html);
         }
-        html
     }
 
     fn render_paragraph(
         para: &TextParagraph,
         ctx: &RenderCtx<'_>,
         auto_num_counters: &mut [i32; 9],
-    ) -> String {
+        html: &mut String,
+    ) {
         Self::render_paragraph_with_defaults(
             para,
             ctx,
             auto_num_counters,
             &TextStyleCtx::default(),
             None,
-        )
+            html,
+        );
     }
 
     /// Render paragraph with inherited text style defaults from txStyles / defaultTextStyle
@@ -748,7 +755,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         auto_num_counters: &mut [i32; 9],
         text_ctx: &TextStyleCtx<'_>,
         font_ref_font: Option<&str>,
-    ) -> String {
+        html: &mut String,
+    ) {
         let level = (para.level as usize).min(8);
 
         // Look up inherited paragraph defaults for this level
@@ -821,7 +829,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         let style = style_parts.join("; ");
-        let mut html = format!("<p class=\"paragraph\" style=\"{style}\">");
+        let _ = write!(html, "<p class=\"paragraph\" style=\"{style}\">");
 
         // Bullet rendering (explicit > inherited)
         let bullet = para
@@ -837,28 +845,29 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     }
                     let mut bullet_style = String::new();
                     if let Some(ref font) = bc.font {
-                        bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
+                        let _ = write!(bullet_style, "font-family: '{}'; ", escape_html(font));
                     }
                     if let Some(ref color) = bc.color
                         && let Some(css) = ctx.color_to_css(color)
                     {
-                        bullet_style.push_str(&format!("color: {}; ", css));
+                        let _ = write!(bullet_style, "color: {}; ", css);
                     }
                     if let Some(size_pct) = bc.size_pct {
                         if size_pct < 0.0 {
                             // Absolute points (stored as negative)
                             let pts = -size_pct;
-                            bullet_style.push_str(&format!("font-size: {pts:.1}pt; "));
+                            let _ = write!(bullet_style, "font-size: {pts:.1}pt; ");
                         } else if (size_pct - 1.0).abs() > 0.01 {
                             // Percentage of text size (only if not 100%)
                             let pct = size_pct * 100.0;
-                            bullet_style.push_str(&format!("font-size: {pct:.0}%; "));
+                            let _ = write!(bullet_style, "font-size: {pct:.0}%; ");
                         }
                     }
-                    html.push_str(&format!(
+                    let _ = write!(
+                        html,
                         "<span class=\"bullet\" style=\"{bullet_style}\">{} </span>",
                         escape_html(&bc.char)
-                    ));
+                    );
                 }
                 Bullet::AutoNum(an) => {
                     // Increment counter for this level
@@ -873,26 +882,27 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
                     let label = format_auto_num(&an.num_type, counter_val);
                     let mut bullet_style = String::new();
                     if let Some(ref font) = an.font {
-                        bullet_style.push_str(&format!("font-family: '{}'; ", escape_html(font)));
+                        let _ = write!(bullet_style, "font-family: '{}'; ", escape_html(font));
                     }
                     if let Some(ref color) = an.color
                         && let Some(css) = ctx.color_to_css(color)
                     {
-                        bullet_style.push_str(&format!("color: {}; ", css));
+                        let _ = write!(bullet_style, "color: {}; ", css);
                     }
                     if let Some(size_pct) = an.size_pct {
                         if size_pct < 0.0 {
                             let pts = -size_pct;
-                            bullet_style.push_str(&format!("font-size: {pts:.1}pt; "));
+                            let _ = write!(bullet_style, "font-size: {pts:.1}pt; ");
                         } else if (size_pct - 1.0).abs() > 0.01 {
                             let pct = size_pct * 100.0;
-                            bullet_style.push_str(&format!("font-size: {pct:.0}%; "));
+                            let _ = write!(bullet_style, "font-size: {pct:.0}%; ");
                         }
                     }
-                    html.push_str(&format!(
+                    let _ = write!(
+                        html,
                         "<span class=\"bullet\" style=\"{bullet_style}\">{} </span>",
                         escape_html(&label)
-                    ));
+                    );
                 }
                 Bullet::None => {
                     // Reset counters when bullet is explicitly suppressed
@@ -912,12 +922,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         let run_defaults = inherited.and_then(|d| d.def_run_props.as_ref());
 
         for run in &para.runs {
-            html.push_str(&Self::render_run_with_defaults(
+            Self::render_run_with_defaults(
                 run,
                 ctx,
                 run_defaults,
                 font_ref_font,
-            ));
+                html,
+            );
         }
 
         if para.runs.is_empty() {
@@ -925,7 +936,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         }
 
         html.push_str("</p>\n");
-        html
     }
 
     /// Render run with inherited defaults from txStyles/defaultTextStyle
@@ -934,8 +944,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
         ctx: &RenderCtx<'_>,
         run_defaults: Option<&RunDefaults>,
         font_ref_font: Option<&str>,
-    ) -> String {
-        let mut styles = Vec::new();
+        html: &mut String,
+    ) {
+        // Line break (early return)
+        if run.is_break {
+            html.push_str("<br/>");
+            return;
+        }
+
+        let mut styles = Vec::with_capacity(8);
 
         // Font family: explicit > inherited defRPr > fontRef > theme
         let font = run.font.east_asian.as_deref().or(run.font.latin.as_deref());
@@ -1048,21 +1065,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; }}
             ));
         }
 
-        // Line break
-        if run.is_break {
-            return "<br/>".to_string();
-        }
-
         let style_str = styles.join("; ");
         let text = escape_html(&run.text);
 
         if let Some(ref href) = run.hyperlink {
-            format!(
+            let _ = write!(
+                html,
                 "<a class=\"run\" href=\"{}\" style=\"{style_str}\">{text}</a>",
                 escape_html(href)
-            )
+            );
         } else {
-            format!("<span class=\"run\" style=\"{style_str}\">{text}</span>")
+            let _ = write!(html, "<span class=\"run\" style=\"{style_str}\">{text}</span>");
         }
     }
 
