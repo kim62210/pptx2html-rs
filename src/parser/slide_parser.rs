@@ -35,6 +35,11 @@ pub fn parse_slide<R: Read + Seek>(
     let mut grad_angle: f64 = 0.0;
     let mut current_gs_pos: f64 = 0.0;
 
+    // Paragraph spacing nesting state
+    let mut in_ln_spc = false;
+    let mut in_spc_bef = false;
+    let mut in_spc_aft = false;
+
     loop {
         match reader.read_event() {
             Ok(Event::Start(ref e)) => {
@@ -85,6 +90,16 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph properties
                     "pPr" if current_paragraph.is_some() => {
                         parse_para_props(e, &mut current_paragraph);
+                    }
+                    // Paragraph spacing containers
+                    "lnSpc" if current_paragraph.is_some() => {
+                        in_ln_spc = true;
+                    }
+                    "spcBef" if current_paragraph.is_some() => {
+                        in_spc_bef = true;
+                    }
+                    "spcAft" if current_paragraph.is_some() => {
+                        in_spc_aft = true;
                     }
                     // Text run
                     "r" if current_paragraph.is_some() => {
@@ -320,6 +335,47 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
+                    // Spacing percentage (inside lnSpc/spcBef/spcAft)
+                    "spcPct" if current_paragraph.is_some() => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                            if let Ok(val) = val_str.parse::<f64>() {
+                                let spacing = SpacingValue::Percent(val / 100_000.0);
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    if in_ln_spc {
+                                        pb.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pb.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pb.space_after = Some(spacing);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Spacing points (inside lnSpc/spcBef/spcAft)
+                    "spcPts" if current_paragraph.is_some() => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val") {
+                            if let Ok(val) = val_str.parse::<f64>() {
+                                let spacing = SpacingValue::Points(val / 100.0);
+                                if let Some(pb) = current_paragraph.as_mut() {
+                                    if in_ln_spc {
+                                        pb.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pb.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pb.space_after = Some(spacing);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Bullet size (percentage and points)
+                    "buSzPct" if current_paragraph.is_some() => {
+                        // Parsed for completeness; bullet sizing stored if needed
+                    }
+                    "buSzPts" if current_paragraph.is_some() => {
+                        // Parsed for completeness; bullet sizing stored if needed
+                    }
                     // Bullet
                     "buNone" => {
                         if let Some(pb) = current_paragraph.as_mut() {
@@ -355,6 +411,10 @@ pub fn parse_slide<R: Read + Seek>(
                 match local.as_str() {
                     "t" => in_text = false,
                     "rPr" => in_r_pr = false,
+                    // End of paragraph spacing containers
+                    "lnSpc" => in_ln_spc = false,
+                    "spcBef" => in_spc_bef = false,
+                    "spcAft" => in_spc_aft = false,
                     "r" => {
                         if let (Some(pb), Some(rb)) =
                             (&mut current_paragraph, current_run.take())

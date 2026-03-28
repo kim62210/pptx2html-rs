@@ -235,7 +235,7 @@ enum TxStyleKind {
     Other,
 }
 
-fn is_lvl_ppr(s: &str) -> bool {
+pub fn is_lvl_ppr(s: &str) -> bool {
     matches!(
         s,
         "lvl1pPr" | "lvl2pPr" | "lvl3pPr" | "lvl4pPr" | "lvl5pPr"
@@ -243,7 +243,7 @@ fn is_lvl_ppr(s: &str) -> bool {
     )
 }
 
-fn parse_lvl_index(s: &str) -> usize {
+pub fn parse_lvl_index(s: &str) -> usize {
     // "lvl1pPr" -> 0, "lvl2pPr" -> 1, ...
     s.chars()
         .find(|c| c.is_ascii_digit())
@@ -252,7 +252,7 @@ fn parse_lvl_index(s: &str) -> usize {
         .unwrap_or(0)
 }
 
-fn parse_lvl_ppr_attrs(e: &quick_xml::events::BytesStart<'_>, pd: &mut ParagraphDefaults) {
+pub fn parse_lvl_ppr_attrs(e: &quick_xml::events::BytesStart<'_>, pd: &mut ParagraphDefaults) {
     if let Some(algn) = xml_utils::attr_str(e, "algn") {
         pd.alignment = Some(Alignment::from_ooxml(&algn));
     }
@@ -264,7 +264,7 @@ fn parse_lvl_ppr_attrs(e: &quick_xml::events::BytesStart<'_>, pd: &mut Paragraph
     }
 }
 
-fn parse_def_rpr_attrs(e: &quick_xml::events::BytesStart<'_>, rd: &mut RunDefaults) {
+pub fn parse_def_rpr_attrs(e: &quick_xml::events::BytesStart<'_>, rd: &mut RunDefaults) {
     if let Some(sz) = xml_utils::attr_str(e, "sz") {
         rd.font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
     }

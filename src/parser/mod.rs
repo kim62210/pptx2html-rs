@@ -17,7 +17,7 @@ use quick_xml::Reader;
 use zip::ZipArchive;
 
 use crate::error::{PptxError, PptxResult};
-use crate::model::{Emu, Presentation, Size};
+use crate::model::{Emu, ListStyle, Presentation, Size};
 
 pub struct PptxParser;
 
@@ -35,10 +35,11 @@ impl PptxParser {
 
         let mut presentation = Presentation::default();
 
-        // 1. Parse slide size and slide rel IDs from presentation.xml
+        // 1. Parse slide size, slide rel IDs, and default text style from presentation.xml
         let pres_xml = Self::read_entry(&mut archive, "ppt/presentation.xml")?;
-        let (slide_size, slide_rel_ids) = Self::parse_presentation_xml(&pres_xml)?;
+        let (slide_size, slide_rel_ids, default_text_style) = Self::parse_presentation_xml(&pres_xml)?;
         presentation.slide_size = slide_size;
+        presentation.default_text_style = default_text_style;
 
         // 2. Parse presentation.xml.rels (all relationships)
         let rels_xml = Self::read_entry(&mut archive, "ppt/_rels/presentation.xml.rels")?;
@@ -201,15 +202,61 @@ impl PptxParser {
         }
     }
 
-    /// Extract slide size and slide relationship ID list from presentation.xml
-    fn parse_presentation_xml(xml: &str) -> PptxResult<(Size, Vec<String>)> {
+    /// Extract slide size, slide relationship IDs, and defaultTextStyle from presentation.xml
+    fn parse_presentation_xml(xml: &str) -> PptxResult<(Size, Vec<String>, Option<ListStyle>)> {
         let mut reader = Reader::from_str(xml);
         let mut slide_size = Size::default();
         let mut slide_rel_ids = Vec::new();
 
+        // defaultTextStyle parsing state
+        let mut in_default_text_style = false;
+        let mut default_text_style = ListStyle::default();
+        let mut has_default_text_style = false;
+        let mut current_lvl: Option<usize> = None;
+        let mut current_para_defaults: Option<crate::model::ParagraphDefaults> = None;
+        let mut current_run_defaults: Option<crate::model::RunDefaults> = None;
+        let mut in_def_rpr = false;
+        let mut current_color: Option<crate::model::Color> = None;
+
         loop {
             match reader.read_event() {
-                Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) => {
+                Ok(Event::Start(ref e)) => {
+                    let name = e.name();
+                    let local = xml_utils::local_name(name.as_ref());
+                    match local {
+                        "defaultTextStyle" => {
+                            in_default_text_style = true;
+                            has_default_text_style = true;
+                        }
+                        // Level paragraph properties inside defaultTextStyle
+                        s if in_default_text_style && master_parser::is_lvl_ppr(s) => {
+                            let lvl = master_parser::parse_lvl_index(s);
+                            current_lvl = Some(lvl);
+                            let mut pd = crate::model::ParagraphDefaults::default();
+                            master_parser::parse_lvl_ppr_attrs(e, &mut pd);
+                            current_para_defaults = Some(pd);
+                        }
+                        "defRPr" if in_default_text_style && current_lvl.is_some() => {
+                            in_def_rpr = true;
+                            let mut rd = crate::model::RunDefaults::default();
+                            master_parser::parse_def_rpr_attrs(e, &mut rd);
+                            current_run_defaults = Some(rd);
+                        }
+                        // Color elements inside defRPr
+                        "srgbClr" if in_def_rpr => {
+                            if let Some(val) = xml_utils::attr_str(e, "val") {
+                                current_color = Some(crate::model::Color::rgb(val));
+                            }
+                        }
+                        "schemeClr" if in_def_rpr => {
+                            if let Some(val) = xml_utils::attr_str(e, "val") {
+                                current_color = Some(crate::model::Color::theme(val));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(Event::Empty(ref e)) => {
                     let name = e.name();
                     let local = xml_utils::local_name(name.as_ref());
                     match local {
@@ -234,6 +281,91 @@ impl PptxParser {
                                 }
                             }
                         }
+                        // Empty lvlNpPr inside defaultTextStyle
+                        s if in_default_text_style && master_parser::is_lvl_ppr(s) => {
+                            let lvl = master_parser::parse_lvl_index(s);
+                            if lvl < 9 {
+                                let mut pd = crate::model::ParagraphDefaults::default();
+                                master_parser::parse_lvl_ppr_attrs(e, &mut pd);
+                                default_text_style.levels[lvl] = Some(pd);
+                            }
+                        }
+                        // Empty defRPr inside defaultTextStyle
+                        "defRPr" if in_default_text_style && current_lvl.is_some() && !in_def_rpr => {
+                            let mut rd = crate::model::RunDefaults::default();
+                            master_parser::parse_def_rpr_attrs(e, &mut rd);
+                            if let Some(pd) = current_para_defaults.as_mut() {
+                                pd.def_run_props = Some(rd);
+                            }
+                        }
+                        // Font inside defRPr
+                        "latin" if in_def_rpr => {
+                            if let Some(rd) = current_run_defaults.as_mut() {
+                                if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                    rd.font_latin = Some(typeface);
+                                }
+                            }
+                        }
+                        "ea" if in_def_rpr => {
+                            if let Some(rd) = current_run_defaults.as_mut() {
+                                if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                    rd.font_ea = Some(typeface);
+                                }
+                            }
+                        }
+                        // Color (Empty variant) inside defRPr
+                        "srgbClr" if in_def_rpr => {
+                            if let Some(val) = xml_utils::attr_str(e, "val") {
+                                if let Some(rd) = current_run_defaults.as_mut() {
+                                    rd.color = Some(crate::model::Color::rgb(val));
+                                }
+                            }
+                        }
+                        "schemeClr" if in_def_rpr => {
+                            if let Some(val) = xml_utils::attr_str(e, "val") {
+                                if let Some(rd) = current_run_defaults.as_mut() {
+                                    rd.color = Some(crate::model::Color::theme(val));
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(Event::End(ref e)) => {
+                    let qname = e.name();
+                    let local = xml_utils::local_name(qname.as_ref());
+                    match local {
+                        "defaultTextStyle" => {
+                            in_default_text_style = false;
+                        }
+                        "defRPr" if in_def_rpr => {
+                            in_def_rpr = false;
+                            // Assign color from Start+child pattern
+                            if let (Some(color), Some(rd)) = (current_color.take(), current_run_defaults.as_mut()) {
+                                if rd.color.is_none() {
+                                    rd.color = Some(color);
+                                }
+                            }
+                            if let Some(pd) = current_para_defaults.as_mut() {
+                                pd.def_run_props = current_run_defaults.take();
+                            }
+                        }
+                        s if in_default_text_style && master_parser::is_lvl_ppr(s) && current_lvl.is_some() => {
+                            if let Some(pd) = current_para_defaults.take() {
+                                let lvl = current_lvl.unwrap();
+                                if lvl < 9 {
+                                    default_text_style.levels[lvl] = Some(pd);
+                                }
+                            }
+                            current_lvl = None;
+                        }
+                        "srgbClr" | "schemeClr" if in_def_rpr => {
+                            if let Some(color) = current_color.take() {
+                                if let Some(rd) = current_run_defaults.as_mut() {
+                                    rd.color = Some(color);
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -243,7 +375,13 @@ impl PptxParser {
             }
         }
 
-        Ok((slide_size, slide_rel_ids))
+        let dts = if has_default_text_style {
+            Some(default_text_style)
+        } else {
+            None
+        };
+
+        Ok((slide_size, slide_rel_ids, dts))
     }
 }
 
