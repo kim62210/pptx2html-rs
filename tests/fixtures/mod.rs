@@ -4,11 +4,15 @@ use std::io::{Cursor, Write};
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
-/// Minimal PPTX builder — generates various test cases by swapping slide XML
+/// Minimal PPTX builder -- generates various test cases by swapping slide XML
 pub struct MinimalPptx {
     slide_xml: String,
     theme_xml: Option<String>,
     master_xml: Option<String>,
+    layout_xml: Option<String>,
+    has_layout_rel: bool,
+    presentation_xml: Option<String>,
+    custom_theme_xml: Option<String>,
 }
 
 impl MinimalPptx {
@@ -28,7 +32,17 @@ impl MinimalPptx {
             ),
             theme_xml: None,
             master_xml: None,
+            layout_xml: None,
+            has_layout_rel: false,
+            presentation_xml: None,
+            custom_theme_xml: None,
         }
+    }
+
+    /// Set a custom slide XML (full document, not just body)
+    pub fn with_raw_slide(mut self, slide_xml: &str) -> Self {
+        self.slide_xml = slide_xml.to_string();
+        self
     }
 
     pub fn with_theme(mut self, color_scheme_body: &str) -> Self {
@@ -49,6 +63,12 @@ impl MinimalPptx {
         self
     }
 
+    /// Set a full custom theme XML (complete document)
+    pub fn with_full_theme(mut self, theme_xml: &str) -> Self {
+        self.custom_theme_xml = Some(theme_xml.to_string());
+        self
+    }
+
     pub fn with_clr_map(mut self, clr_map_attrs: &str) -> Self {
         self.master_xml = Some(format!(
             r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -64,6 +84,52 @@ impl MinimalPptx {
         self
     }
 
+    /// Set master XML with shapes and clrMap
+    pub fn with_master_shapes(mut self, shapes_xml: &str) -> Self {
+        self.master_xml = Some(format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      {shapes_xml}
+    </p:spTree>
+  </p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#
+        ));
+        self
+    }
+
+    /// Set a full custom master XML (complete document)
+    pub fn with_full_master(mut self, master_xml: &str) -> Self {
+        self.master_xml = Some(master_xml.to_string());
+        self
+    }
+
+    /// Set layout XML (complete document)
+    pub fn with_layout(mut self, layout_xml: &str) -> Self {
+        self.layout_xml = Some(layout_xml.to_string());
+        self.has_layout_rel = true;
+        self
+    }
+
+    /// Wire slide -> layout relationships
+    pub fn with_slide_layout_rel(mut self) -> Self {
+        self.has_layout_rel = true;
+        self
+    }
+
+    /// Set custom presentation.xml (complete document)
+    pub fn with_presentation_xml(mut self, pres_xml: &str) -> Self {
+        self.presentation_xml = Some(pres_xml.to_string());
+        self
+    }
+
     pub fn build(&self) -> Vec<u8> {
         let buf = Vec::new();
         let cursor = Cursor::new(buf);
@@ -71,16 +137,22 @@ impl MinimalPptx {
         let opts = SimpleFileOptions::default();
 
         // [Content_Types].xml
+        let content_types = if self.layout_xml.is_some() {
+            CONTENT_TYPES_WITH_LAYOUT
+        } else {
+            CONTENT_TYPES
+        };
         zip.start_file("[Content_Types].xml", opts).unwrap();
-        zip.write_all(CONTENT_TYPES.as_bytes()).unwrap();
+        zip.write_all(content_types.as_bytes()).unwrap();
 
         // _rels/.rels
         zip.start_file("_rels/.rels", opts).unwrap();
         zip.write_all(ROOT_RELS.as_bytes()).unwrap();
 
         // ppt/presentation.xml
+        let pres_xml = self.presentation_xml.as_deref().unwrap_or(PRESENTATION_XML);
         zip.start_file("ppt/presentation.xml", opts).unwrap();
-        zip.write_all(PRESENTATION_XML.as_bytes()).unwrap();
+        zip.write_all(pres_xml.as_bytes()).unwrap();
 
         // ppt/_rels/presentation.xml.rels
         zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
@@ -91,11 +163,18 @@ impl MinimalPptx {
         zip.write_all(self.slide_xml.as_bytes()).unwrap();
 
         // ppt/slides/_rels/slide1.xml.rels
+        let slide_rels = if self.has_layout_rel {
+            SLIDE_RELS_WITH_LAYOUT
+        } else {
+            SLIDE_RELS
+        };
         zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
-        zip.write_all(SLIDE_RELS.as_bytes()).unwrap();
+        zip.write_all(slide_rels.as_bytes()).unwrap();
 
         // ppt/theme/theme1.xml
-        let theme = self.theme_xml.as_deref().unwrap_or(DEFAULT_THEME);
+        let theme = self.custom_theme_xml.as_deref()
+            .or(self.theme_xml.as_deref())
+            .unwrap_or(DEFAULT_THEME);
         zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
         zip.write_all(theme.as_bytes()).unwrap();
 
@@ -103,6 +182,25 @@ impl MinimalPptx {
         if let Some(ref master) = self.master_xml {
             zip.start_file("ppt/slideMasters/slideMaster1.xml", opts).unwrap();
             zip.write_all(master.as_bytes()).unwrap();
+
+            // Master rels (references theme and layout)
+            let master_rels = if self.layout_xml.is_some() {
+                MASTER_RELS_WITH_LAYOUT
+            } else {
+                MASTER_RELS
+            };
+            zip.start_file("ppt/slideMasters/_rels/slideMaster1.xml.rels", opts).unwrap();
+            zip.write_all(master_rels.as_bytes()).unwrap();
+        }
+
+        // ppt/slideLayouts/slideLayout1.xml
+        if let Some(ref layout) = self.layout_xml {
+            zip.start_file("ppt/slideLayouts/slideLayout1.xml", opts).unwrap();
+            zip.write_all(layout.as_bytes()).unwrap();
+
+            // Layout rels (references master)
+            zip.start_file("ppt/slideLayouts/_rels/slideLayout1.xml.rels", opts).unwrap();
+            zip.write_all(LAYOUT_RELS.as_bytes()).unwrap();
         }
 
         zip.finish().unwrap().into_inner()
@@ -115,6 +213,17 @@ const CONTENT_TYPES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+const CONTENT_TYPES_WITH_LAYOUT: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
 
@@ -141,6 +250,27 @@ const PRESENTATION_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalo
 
 const SLIDE_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>"#;
+
+const SLIDE_RELS_WITH_LAYOUT: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+</Relationships>"#;
+
+const MASTER_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+</Relationships>"#;
+
+const MASTER_RELS_WITH_LAYOUT: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+</Relationships>"#;
+
+const LAYOUT_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
 </Relationships>"#;
 
 const DEFAULT_THEME: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
