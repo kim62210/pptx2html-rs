@@ -151,11 +151,17 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 
 ```
 Cargo workspace
+├── autoresearch/               # Autoresearch experiment loop
+│   ├── program.md              # Master protocol
+│   ├── run_loop.sh             # Experiment runner
+│   ├── phases/                 # Phase-scoped programs
+│   └── results.tsv             # Experiment audit log
 ├── crates/
 │   ├── pptx2html-core/        # Core library (model, parser, resolver, renderer)
 │   ├── pptx2html-cli/         # CLI binary (clap)
 │   ├── pptx2html-py/          # PyO3 Python bindings (maturin)
 │   └── pptx2html-wasm/        # WASM bindings (wasm-bindgen) + demo page
+├── evaluate/                   # Fidelity evaluation (sacred — do not modify)
 └── Cargo.toml                 # Workspace root
 ```
 
@@ -175,6 +181,28 @@ cargo bench --package pptx2html-core
 - 59 unit tests: color resolution, HSL, modifiers, placeholder matching, style refs, SVG geometry
 - 80 integration tests: PPTX generation / parsing / rendering verification + edge cases
 - 6 CLI tests: slide selection parser
+
+## Autoresearch (Experiment Loop)
+
+Karpathy autoresearch 패턴을 적용한 자동 실험 루프 인프라입니다.
+LLM이 코드를 수정하고, 빌드/테스트/평가를 거쳐 점수가 개선되면 유지, 아니면 되돌리는 무한 루프입니다.
+
+```bash
+# Phase 1: 테마 컬러 변환 정확도 개선
+./autoresearch/run_loop.sh --phase 01_color_fidelity
+
+# 최대 50회 반복으로 제한
+./autoresearch/run_loop.sh --phase 02_performance --max-iterations 50
+```
+
+| Phase | 대상 |
+|-------|------|
+| `01_color_fidelity` | 테마 컬러 12종 모디파이어 변환 정확도 |
+| `02_performance` | 렌더링 처리량 최적화 |
+| `03_effect_rendering` | 그림자/glow CSS 변환 |
+| `04_geometry_coverage` | 프리셋 도형 확장 (30 → 187) |
+
+실험 결과는 `autoresearch/results.tsv`에 기록됩니다. 자세한 프로토콜은 `autoresearch/program.md`를 참조하세요.
 
 ## Contributing
 
