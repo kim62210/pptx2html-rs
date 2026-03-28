@@ -87,15 +87,17 @@ pub struct FontScheme {
 
 impl FontScheme {
     /// Resolve "+mj-lt" / "+mn-lt" / "+mj-ea" / "+mn-ea" theme font references
-    /// to actual typeface names. Returns None if the reference is not recognized.
+    /// to actual typeface names. Returns None if the reference is not recognized
+    /// or if the resolved name is empty.
     pub fn resolve_typeface<'a>(&'a self, typeface: &str) -> Option<&'a str> {
-        match typeface {
-            "+mj-lt" => Some(&self.major_latin),
-            "+mn-lt" => Some(&self.minor_latin),
+        let result = match typeface {
+            "+mj-lt" => Some(self.major_latin.as_str()),
+            "+mn-lt" => Some(self.minor_latin.as_str()),
             "+mj-ea" => self.major_east_asian.as_deref(),
             "+mn-ea" => self.minor_east_asian.as_deref(),
             _ => None,
-        }
+        };
+        result.filter(|s| !s.is_empty())
     }
 }
 
