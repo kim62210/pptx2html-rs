@@ -1,0 +1,176 @@
+# Supported PPTX Features
+
+Status legend: Supported / Partial / Placeholder / Not yet
+
+## Shapes
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Rectangle | `<a:prstGeom prst="rect">` | Supported |
+| Rounded Rectangle | `<a:prstGeom prst="roundRect">` | Supported |
+| Ellipse | `<a:prstGeom prst="ellipse">` | Supported |
+| Triangle | `<a:prstGeom prst="triangle">` | Supported |
+| Right Triangle | `<a:prstGeom prst="rtTriangle">` | Supported |
+| Diamond | `<a:prstGeom prst="diamond">` | Supported |
+| Parallelogram | `<a:prstGeom prst="parallelogram">` | Supported |
+| Trapezoid | `<a:prstGeom prst="trapezoid">` | Supported |
+| Pentagon | `<a:prstGeom prst="pentagon">` | Supported |
+| Hexagon | `<a:prstGeom prst="hexagon">` | Supported |
+| Octagon | `<a:prstGeom prst="octagon">` | Supported |
+| Right Arrow | `<a:prstGeom prst="rightArrow">` | Supported |
+| Left Arrow | `<a:prstGeom prst="leftArrow">` | Supported |
+| Up Arrow | `<a:prstGeom prst="upArrow">` | Supported |
+| Down Arrow | `<a:prstGeom prst="downArrow">` | Supported |
+| Left-Right Arrow | `<a:prstGeom prst="leftRightArrow">` | Supported |
+| Up-Down Arrow | `<a:prstGeom prst="upDownArrow">` | Supported |
+| Chevron | `<a:prstGeom prst="chevron">` | Supported |
+| Bent Arrow | `<a:prstGeom prst="bentArrow">` | Supported |
+| Callouts | `<a:prstGeom prst="wedge*Callout">` | Supported |
+| Stars | `<a:prstGeom prst="star*">` | Supported |
+| Plus | `<a:prstGeom prst="mathPlus">` | Supported |
+| Minus | `<a:prstGeom prst="mathMinus">` | Supported |
+| Cross | `<a:prstGeom prst="plus">` | Supported |
+| Heart | `<a:prstGeom prst="heart">` | Supported |
+| Lightning Bolt | `<a:prstGeom prst="lightningBolt">` | Supported |
+| Custom Geometry | `<a:custGeom>` | Not yet |
+| Adjust Values | `<a:avLst><a:gd>` | Supported |
+
+## Text
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Plain text | `<a:t>` | Supported |
+| Bold | `<a:rPr b="1">` | Supported |
+| Italic | `<a:rPr i="1">` | Supported |
+| Underline | `<a:rPr u="sng">` | Supported |
+| Strikethrough | `<a:rPr strike="sngStrike">` | Supported |
+| Font size | `<a:rPr sz="2400">` | Supported |
+| Font family | `<a:latin typeface="...">` | Supported |
+| East Asian font | `<a:ea typeface="...">` | Supported |
+| Text color (RGB) | `<a:solidFill><a:srgbClr>` | Supported |
+| Text color (theme) | `<a:solidFill><a:schemeClr>` | Supported |
+| Superscript / Subscript | `<a:rPr baseline="...">` | Supported |
+| Letter spacing | `<a:rPr spc="...">` | Supported |
+| Text highlight | `<a:highlight>` | Supported |
+| Text shadow | `<a:effectLst><a:outerShdw>` | Supported |
+| Line break | `<a:br>` | Supported |
+| Hyperlink | `<a:hlinkClick>` | Supported |
+| Text alignment | `<a:pPr algn="...">` | Supported |
+| Line spacing | `<a:lnSpc>` | Supported |
+| Space before/after | `<a:spcBef>` / `<a:spcAft>` | Supported |
+| Paragraph indent | `<a:pPr indent="...">` | Supported |
+| Paragraph margin | `<a:pPr marL="...">` | Supported |
+| Vertical text | `<a:bodyPr vert="...">` | Supported |
+| Vertical alignment | `<a:bodyPr anchor="...">` | Supported |
+| Text wrapping | `<a:bodyPr wrap="...">` | Supported |
+| Auto-fit / Shrink | `<a:normAutofit>` | Partial |
+| Text margins (insets) | `<a:bodyPr lIns="...">` | Supported |
+| RTL text | `<a:pPr rtl="1">` | Not yet |
+
+## Bullets and Numbering
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Character bullet | `<a:buChar char="...">` | Supported |
+| Auto-numbered bullet | `<a:buAutoNum type="...">` | Supported |
+| Bullet font | `<a:buFont typeface="...">` | Supported |
+| Bullet size | `<a:buSzPct>` / `<a:buSzPts>` | Supported |
+| Bullet color | `<a:buClr>` | Supported |
+| No bullet | `<a:buNone>` | Supported |
+| Picture bullet | `<a:buBlip>` | Not yet |
+
+## Fills
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Solid fill (RGB) | `<a:solidFill><a:srgbClr>` | Supported |
+| Solid fill (theme) | `<a:solidFill><a:schemeClr>` | Supported |
+| Gradient fill | `<a:gradFill>` | Supported |
+| Image fill | `<a:blipFill>` | Supported |
+| Pattern fill | `<a:pattFill>` | Not yet |
+| No fill | `<a:noFill>` | Supported |
+| Fill style reference | `<a:fillRef>` | Supported |
+
+## Colors
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| RGB color | `<a:srgbClr>` | Supported |
+| Theme color | `<a:schemeClr>` | Supported |
+| System color | `<a:sysClr>` | Supported |
+| Preset color | `<a:prstClr>` | Supported |
+| Tint modifier | `<a:tint>` | Supported |
+| Shade modifier | `<a:shade>` | Supported |
+| Alpha modifier | `<a:alpha>` | Supported |
+| LumMod / LumOff | `<a:lumMod>` / `<a:lumOff>` | Supported |
+| SatMod / SatOff | `<a:satMod>` / `<a:satOff>` | Supported |
+| HueMod / HueOff | `<a:hueMod>` / `<a:hueOff>` | Supported |
+| Complement | `<a:comp>` | Supported |
+| Inverse | `<a:inv>` | Supported |
+| Grayscale | `<a:gray>` | Supported |
+
+## Tables
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Table rendering | `<a:tbl>` | Supported |
+| Cell fill | `<a:tcPr>` fill | Supported |
+| Cell borders | `<a:tcPr>` borders | Supported |
+| Column widths | `<a:gridCol>` | Supported |
+| Row heights | `<a:tr h="...">` | Supported |
+| Column span | `gridSpan` | Supported |
+| Row span | `rowSpan` + `vMerge` | Supported |
+| Table styles | `<a:tblStyle>` | Not yet |
+
+## Images
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Embedded images | `<p:pic>` | Supported |
+| Image cropping | `<a:srcRect>` | Supported |
+| Base64 embedding | — | Supported |
+| External references | — | Supported |
+| Background image fill | `<a:blipFill>` in `<p:bg>` | Supported |
+
+## Layout and Hierarchy
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Slide size | `<p:sldSz>` | Supported |
+| Shape position / size | `<a:xfrm>` | Supported |
+| Shape rotation | `<a:xfrm rot="...">` | Supported |
+| Group shapes | `<p:grpSp>` | Supported |
+| Connectors | `<p:cxnSp>` | Partial |
+| Placeholder matching | `<p:ph type="..." idx="...">` | Supported |
+| Slide → Layout inheritance | slide.rels → slideLayout | Supported |
+| Layout → Master inheritance | layout.rels → slideMaster | Supported |
+| Master → Theme reference | master.rels → theme | Supported |
+| ClrMap | `<p:clrMap>` | Supported |
+| ClrMap override | `<p:clrMapOvr>` | Supported |
+| Background inheritance | `<p:bg>` cascade | Supported |
+| TxStyles (title/body/other) | `<p:txStyles>` | Supported |
+| defaultTextStyle | `<p:defaultTextStyle>` | Supported |
+| Show master shapes | `showMasterSp` | Supported |
+| Hidden slides | `show="0"` | Supported |
+| Multiple themes | theme1.xml, theme2.xml, ... | Supported |
+
+## Charts and Embedded Content
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Chart detection | `<c:chart>` URI | Supported |
+| Chart preview image | embedded preview | Supported |
+| Chart placeholder | — | Supported |
+| SmartArt | `<dgm:*>` | Placeholder |
+| OLE objects | `<p:oleObj>` | Placeholder |
+| Math equations | `<m:*>` | Placeholder |
+
+## Effects
+
+| Feature | ECMA-376 Element | Status |
+|---------|-----------------|--------|
+| Text shadow | `<a:outerShdw>` | Supported |
+| Shape shadow | `<a:effectLst>` | Not yet |
+| Reflection | `<a:reflection>` | Not yet |
+| Glow | `<a:glow>` | Not yet |
+| 3D effects | `<a:sp3d>` | Not yet |

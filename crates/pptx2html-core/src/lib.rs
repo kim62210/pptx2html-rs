@@ -1,7 +1,32 @@
-//! # pptx2html-rs
+//! # pptx2html-core
 //!
-//! Library for converting PPTX files to HTML while preserving original layout/styles.
-//! Pure Rust implementation based on the ECMA-376 (OOXML) open standard.
+//! Pure Rust library for converting PPTX presentations to self-contained HTML.
+//! Built on the ECMA-376 (OOXML) open standard — no Microsoft dependencies.
+//!
+//! ## Quick Start
+//!
+//! ```no_run
+//! use std::path::Path;
+//!
+//! // Convert a file
+//! let html = pptx2html_core::convert_file(Path::new("input.pptx")).unwrap();
+//! std::fs::write("output.html", &html).unwrap();
+//!
+//! // Convert from bytes
+//! let pptx_data = std::fs::read("input.pptx").unwrap();
+//! let html = pptx2html_core::convert_bytes(&pptx_data).unwrap();
+//! ```
+//!
+//! ## Features
+//!
+//! - High-fidelity layout preservation (absolute positioning in EMU coordinates)
+//! - Theme color resolution with 12 color modifiers (tint, shade, lumMod, etc.)
+//! - Slide master / layout inheritance chain
+//! - 30 preset shape SVG rendering
+//! - Table, group shape, and connector support
+//! - Image embedding (base64) or external references
+//! - Text styling: bold, italic, underline, bullets, vertical text, shadows
+//! - Graceful fallback for unsupported content (SmartArt, OLE, Math)
 
 pub mod error;
 pub mod model;
@@ -15,17 +40,29 @@ use error::PptxResult;
 use parser::PptxParser;
 use renderer::HtmlRenderer;
 
-/// Conversion options for controlling output behavior
+/// Options controlling how PPTX content is converted to HTML.
+///
+/// Use [`Default::default()`] for sensible defaults (embed images, exclude hidden slides).
+///
+/// ```
+/// use pptx2html_core::ConversionOptions;
+///
+/// let opts = ConversionOptions {
+///     embed_images: false,                 // external image refs
+///     slide_indices: Some(vec![1, 3, 5]),  // specific slides only
+///     ..Default::default()
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct ConversionOptions {
     /// Embed images as base64 data URIs (default: true).
     /// When false, outputs `<img src="images/{name}">` references.
     pub embed_images: bool,
-    /// Include hidden slides in output (default: false)
+    /// Include hidden slides in output (default: false).
     pub include_hidden: bool,
-    /// Render only slides in this 1-based inclusive range (e.g. (2, 5) = slides 2..=5)
+    /// Render only slides in this 1-based inclusive range (e.g. `(2, 5)` = slides 2..=5).
     pub slide_range: Option<(usize, usize)>,
-    /// Render only slides at these 1-based indices (e.g. vec![1, 3, 5])
+    /// Render only slides at these 1-based indices (e.g. `vec![1, 3, 5]`).
     pub slide_indices: Option<Vec<usize>>,
 }
 
@@ -41,7 +78,7 @@ impl Default for ConversionOptions {
 }
 
 impl ConversionOptions {
-    /// Check whether a slide at the given 1-based index should be included
+    /// Check whether a slide at the given 1-based index should be included.
     pub fn should_include_slide(&self, one_based_index: usize, hidden: bool) -> bool {
         if hidden && !self.include_hidden {
             return false;
@@ -56,44 +93,53 @@ impl ConversionOptions {
     }
 }
 
-/// Convert a PPTX file to an HTML string
+/// Convert a PPTX file at `path` to a self-contained HTML string.
+///
+/// Images are embedded as base64 data URIs by default.
+/// Returns [`PptxError`](error::PptxError) on I/O, ZIP, or XML errors.
 pub fn convert_file(path: &Path) -> PptxResult<String> {
     let presentation = PptxParser::parse_file(path)?;
     let html = HtmlRenderer::render(&presentation)?;
     Ok(html)
 }
 
-/// Convert PPTX byte data to an HTML string
+/// Convert PPTX byte data to a self-contained HTML string.
+///
+/// Useful when the PPTX is already loaded in memory (e.g. from a network request).
 pub fn convert_bytes(data: &[u8]) -> PptxResult<String> {
     let presentation = PptxParser::parse_bytes(data)?;
     let html = HtmlRenderer::render(&presentation)?;
     Ok(html)
 }
 
-/// Convert a PPTX file to HTML with options
+/// Convert a PPTX file to HTML with custom [`ConversionOptions`].
 pub fn convert_file_with_options(path: &Path, opts: &ConversionOptions) -> PptxResult<String> {
     let presentation = PptxParser::parse_file(path)?;
     let html = HtmlRenderer::render_with_options(&presentation, opts)?;
     Ok(html)
 }
 
-/// Convert PPTX byte data to HTML with options
+/// Convert PPTX byte data to HTML with custom [`ConversionOptions`].
 pub fn convert_bytes_with_options(data: &[u8], opts: &ConversionOptions) -> PptxResult<String> {
     let presentation = PptxParser::parse_bytes(data)?;
     let html = HtmlRenderer::render_with_options(&presentation, opts)?;
     Ok(html)
 }
 
-/// Presentation metadata
+/// Lightweight presentation metadata (no rendering performed).
 #[derive(Debug, Clone)]
 pub struct PresentationInfo {
+    /// Number of slides in the presentation.
     pub slide_count: usize,
+    /// Slide width in CSS pixels (96 DPI).
     pub width_px: f64,
+    /// Slide height in CSS pixels (96 DPI).
     pub height_px: f64,
+    /// Presentation title from core properties, if present.
     pub title: Option<String>,
 }
 
-/// Get presentation metadata from a file
+/// Extract metadata from a PPTX file without rendering.
 pub fn get_info(path: &Path) -> PptxResult<PresentationInfo> {
     let presentation = PptxParser::parse_file(path)?;
     Ok(PresentationInfo {
@@ -104,7 +150,7 @@ pub fn get_info(path: &Path) -> PptxResult<PresentationInfo> {
     })
 }
 
-/// Get presentation metadata from bytes
+/// Extract metadata from in-memory PPTX byte data without rendering.
 pub fn get_info_from_bytes(data: &[u8]) -> PptxResult<PresentationInfo> {
     let presentation = PptxParser::parse_bytes(data)?;
     Ok(PresentationInfo {
