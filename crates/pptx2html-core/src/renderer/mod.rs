@@ -705,13 +705,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 text_body.margins.left,
             );
             // Vertical text rendering
+            let mut has_vert270 = false;
             if let Some(ref vert) = shape.vertical_text {
                 match vert.as_str() {
                     "vert" | "wordArtVert" | "eaVert" => {
                         tb_style.push_str("; writing-mode: vertical-rl");
                     }
                     "vert270" => {
-                        tb_style.push_str("; writing-mode: vertical-lr; transform: rotate(180deg)");
+                        tb_style.push_str("; writing-mode: vertical-lr");
+                        has_vert270 = true;
                     }
                     "mongolianVert" => {
                         tb_style.push_str("; writing-mode: vertical-lr");
@@ -730,6 +732,21 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             // Add overflow:hidden when text is auto-fitted with fontScale
             if font_scale.is_some() {
                 tb_style.push_str("; overflow: hidden");
+            }
+            // Build combined transform for text-body: vert270 rotate + flip counter-scale
+            // PowerPoint flips the shape geometry but keeps text left-to-right,
+            // so we counter-flip the text container.
+            if has_vert270 || shape.flip_h || shape.flip_v {
+                let mut transforms = Vec::new();
+                if shape.flip_h || shape.flip_v {
+                    let tx = if shape.flip_h { -1 } else { 1 };
+                    let ty = if shape.flip_v { -1 } else { 1 };
+                    transforms.push(format!("scale({tx},{ty})"));
+                }
+                if has_vert270 {
+                    transforms.push("rotate(180deg)".to_string());
+                }
+                let _ = write!(tb_style, "; transform: {}", transforms.join(" "));
             }
             let _ = write!(
                 html,
