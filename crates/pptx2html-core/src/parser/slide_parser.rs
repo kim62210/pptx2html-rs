@@ -326,10 +326,13 @@ pub fn parse_slide<R: Read + Seek>(
                     // Line/border
                     "ln" if in_sp_pr => {
                         in_ln = true;
-                        if let Some(sb) = &mut current_shape
-                            && let Some(w) = xml_utils::attr_str(e, "w")
-                        {
-                            sb.border_width = Emu::parse_emu(&w).to_pt();
+                        if let Some(sb) = &mut current_shape {
+                            if let Some(w) = xml_utils::attr_str(e, "w") {
+                                sb.border_width = Emu::parse_emu(&w).to_pt();
+                            } else {
+                                // OOXML default: <a:ln> without w= means 12700 EMU = 1pt
+                                sb.border_width = 1.0;
+                            }
                         }
                     }
                     // Line/border inside table cell border

@@ -501,8 +501,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         .unwrap_or_else(|| "#000".to_string());
                     (c, resolved_border.width)
                 } else if is_line_shape {
-                    // Default 0.75pt stroke for connectors with no explicit line
-                    ("#000".to_string(), 0.75)
+                    // Default 0.75pt stroke for connectors with no explicit line;
+                    // still respect parsed color if available
+                    let c = ctx
+                        .color_to_css(&resolved_border.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    (c, 0.75)
                 } else {
                     ("none".to_string(), 0.0)
                 };
