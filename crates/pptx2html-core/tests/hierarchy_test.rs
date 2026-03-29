@@ -243,6 +243,9 @@ fn test_space_before_after_rendering() {
 
 #[test]
 fn test_show_master_sp_default_true() {
+    // Master has both a placeholder shape (ftr) and a non-placeholder decorative shape.
+    // Only the non-placeholder shape should render; placeholder shapes are
+    // property-inheritance sources, not renderable content.
     let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -260,11 +263,21 @@ fn test_show_master_sp_default_true() {
         <a:xfrm><a:off x="100000" y="6000000"/><a:ext cx="3000000" cy="500000"/></a:xfrm>
       </p:spPr>
     </p:sp>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="20" name="Decorative Bar"/>
+        <p:cNvSpPr/>
+        <p:nvPr/>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="0" y="6500000"/><a:ext cx="9144000" cy="358000"/></a:xfrm>
+        <a:solidFill><a:srgbClr val="0070C0"/></a:solidFill>
+      </p:spPr>
+    </p:sp>
   </p:spTree></p:cSld>
   <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
 </p:sldMaster>"#;
 
-    // Layout carries a matching ftr placeholder -> master shape should render
     let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -291,15 +304,72 @@ fn test_show_master_sp_default_true() {
         .build();
     let pres = parse_pptx(&pptx);
 
-    // Master should have a footer placeholder shape
+    // Master should have both shapes parsed
     assert!(!pres.masters.is_empty(), "No masters parsed");
-    assert!(!pres.masters[0].shapes.is_empty(), "Master has no shapes");
+    assert_eq!(pres.masters[0].shapes.len(), 2, "Master should have 2 shapes");
 
-    // Layout carries ftr placeholder -> master footer renders
+    // Only the non-placeholder decorative shape should render
+    let html = render_html(&pptx);
+    let shape_count = html.matches("class=\"shape\"").count();
+    assert_eq!(
+        shape_count, 1,
+        "Expected exactly 1 non-placeholder master shape rendered, got {shape_count}: {html}"
+    );
+}
+
+#[test]
+fn test_master_placeholder_not_rendered() {
+    // Master has only a placeholder shape -- nothing should render
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="10" name="Footer"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="ftr"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="6000000"/><a:ext cx="3000000" cy="500000"/></a:xfrm>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Footer Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="ftr"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="6000000"/><a:ext cx="3000000" cy="500000"/></a:xfrm>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
     let html = render_html(&pptx);
     assert!(
-        html.contains("class=\"shape\""),
-        "Master shape not rendered when layout carries matching placeholder: {html}"
+        !html.contains("class=\"shape\""),
+        "Master placeholder shape should not render as standalone HTML: {html}"
     );
 }
 

@@ -221,30 +221,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">\n"
         );
 
-        // Render master shapes if show_master_sp is true
+        // Render master shapes if show_master_sp is true.
+        // Only non-placeholder master shapes (decorative elements) are rendered
+        // directly. Placeholder shapes from the master are property-inheritance
+        // sources only -- they must never appear as standalone HTML elements.
         let show_master = slide.show_master_sp && layout.is_none_or(|l| l.show_master_sp);
         if show_master && let Some(m) = master {
             for master_shape in &m.shapes {
                 if master_shape.hidden {
                     continue;
                 }
-                if let Some(ref ph) = master_shape.placeholder {
-                    // Skip if the slide already defines this placeholder
-                    let has_slide_match =
-                        placeholder::find_matching_placeholder(ph, &slide.shapes).is_some();
-                    if has_slide_match {
-                        continue;
-                    }
-                    // Per OOXML: master placeholder shapes only appear if the
-                    // layout also carries a matching placeholder.  When the
-                    // layout omits the placeholder the master shape is hidden.
-                    if let Some(l) = layout {
-                        let has_layout_match =
-                            placeholder::find_matching_placeholder(ph, &l.shapes).is_some();
-                        if !has_layout_match {
-                            continue;
-                        }
-                    }
+                // Skip ALL placeholder shapes -- they are property templates,
+                // not renderable content.  Slide shapes inherit from them via
+                // the layout/master cascade; rendering them here produces
+                // duplicate shapes with template text (e.g. "마스터 제목 스타일 편집").
+                if master_shape.placeholder.is_some() {
+                    continue;
                 }
                 Self::render_shape_resolved(
                     master_shape,
