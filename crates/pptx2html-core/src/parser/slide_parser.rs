@@ -839,6 +839,8 @@ pub fn parse_slide<R: Read + Seek>(
                         if in_ln {
                             if let Some(sb) = &mut current_shape {
                                 sb.border_style = BorderStyle::None;
+                                sb.border_width = 0.0;
+                                sb.border_no_fill = true;
                             }
                         } else if in_sp_pr && let Some(sb) = &mut current_shape {
                             sb.fill = Fill::NoFill;
@@ -940,7 +942,14 @@ pub fn parse_slide<R: Read + Seek>(
                                     &mut p_style_builder,
                                 );
                             } else if in_bg_pr && !in_bg_blip_fill {
-                                bg_solid_color = Some(color);
+                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
+                                    bg_grad_stops.push(GradientStop {
+                                        position: bg_gs_pos,
+                                        color,
+                                    });
+                                } else {
+                                    bg_solid_color = Some(color);
+                                }
                             } else {
                                 assign_color(
                                     color,
@@ -994,7 +1003,14 @@ pub fn parse_slide<R: Read + Seek>(
                                     &mut p_style_builder,
                                 );
                             } else if in_bg_pr && !in_bg_blip_fill {
-                                bg_solid_color = Some(color);
+                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
+                                    bg_grad_stops.push(GradientStop {
+                                        position: bg_gs_pos,
+                                        color,
+                                    });
+                                } else {
+                                    bg_solid_color = Some(color);
+                                }
                             } else {
                                 assign_color(
                                     color,
@@ -1038,7 +1054,14 @@ pub fn parse_slide<R: Read + Seek>(
                                     &mut p_style_builder,
                                 );
                             } else if in_bg_pr && !in_bg_blip_fill {
-                                bg_solid_color = Some(color);
+                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
+                                    bg_grad_stops.push(GradientStop {
+                                        position: bg_gs_pos,
+                                        color,
+                                    });
+                                } else {
+                                    bg_solid_color = Some(color);
+                                }
                             } else {
                                 assign_color(
                                     color,
@@ -1088,7 +1111,14 @@ pub fn parse_slide<R: Read + Seek>(
                                     &mut p_style_builder,
                                 );
                             } else if in_bg_pr && !in_bg_blip_fill {
-                                bg_solid_color = Some(color);
+                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
+                                    bg_grad_stops.push(GradientStop {
+                                        position: bg_gs_pos,
+                                        color,
+                                    });
+                                } else {
+                                    bg_solid_color = Some(color);
+                                }
                             } else {
                                 assign_color(
                                     color,
@@ -2270,6 +2300,7 @@ struct ShapeBuilder {
     border_width: f64,
     border_color: Color,
     border_style: BorderStyle,
+    border_no_fill: bool,
     dash_style: DashStyle,
     head_end: Option<LineEnd>,
     tail_end: Option<LineEnd>,
@@ -2349,7 +2380,12 @@ impl ShapeBuilder {
         let border = Border {
             width: self.border_width,
             color: self.border_color,
-            style: if self.border_width > 0.0 && matches!(self.border_style, BorderStyle::None) {
+            style: if self.border_no_fill {
+                // Explicit <a:noFill/> inside <a:ln>: keep None
+                BorderStyle::None
+            } else if self.border_width > 0.0
+                && matches!(self.border_style, BorderStyle::None)
+            {
                 BorderStyle::Solid
             } else {
                 self.border_style
@@ -2357,6 +2393,7 @@ impl ShapeBuilder {
             dash_style: self.dash_style,
             head_end: self.head_end,
             tail_end: self.tail_end,
+            no_fill: self.border_no_fill,
         };
 
         let adjust_values = if self.adjust_values.is_empty() {

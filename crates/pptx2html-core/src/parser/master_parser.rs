@@ -43,6 +43,10 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut in_bg_blip_fill = false;
     let mut bg_blip_rel_id: Option<String> = None;
     let mut bg_solid_color: Option<Color> = None;
+    let mut in_bg_grad_fill = false;
+    let mut bg_grad_stops: Vec<GradientStop> = Vec::new();
+    let mut bg_grad_angle: f64 = 0.0;
+    let mut bg_gs_pos: f64 = 0.0;
 
     loop {
         match reader.read_event() {
@@ -63,14 +67,35 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     "solidFill" if in_bg_pr && !in_bg_blip_fill => {}
+                    "gradFill" if in_bg_pr => {
+                        in_bg_grad_fill = true;
+                        bg_grad_stops.clear();
+                        bg_grad_angle = 0.0;
+                    }
+                    "gs" if in_bg_grad_fill => {
+                        bg_gs_pos = xml_utils::attr_str(e, "pos")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| v / 100_000.0)
+                            .unwrap_or(0.0);
+                    }
                     "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            bg_solid_color = Some(Color::rgb(val));
+                            let color = Color::rgb(val);
+                            if in_bg_grad_fill {
+                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                            } else {
+                                bg_solid_color = Some(color);
+                            }
                         }
                     }
                     "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            bg_solid_color = Some(Color::theme(val));
+                            let color = Color::theme(val);
+                            if in_bg_grad_fill {
+                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                            } else {
+                                bg_solid_color = Some(color);
+                            }
                         }
                     }
                     "spTree" => in_sp_tree = true,
@@ -142,15 +167,31 @@ pub fn parse_slide_master<R: Read + Seek>(
                             }
                         }
                     }
-                    // Background solid color (Empty variant)
+                    // Background gradient direction (Empty variant)
+                    "lin" if in_bg_grad_fill => {
+                        if let Some(ang) = xml_utils::attr_str(e, "ang") {
+                            bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                        }
+                    }
+                    // Background solid/gradient color (Empty variant)
                     "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            bg_solid_color = Some(Color::rgb(val));
+                            let color = Color::rgb(val);
+                            if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
+                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                            } else {
+                                bg_solid_color = Some(color);
+                            }
                         }
                     }
                     "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            bg_solid_color = Some(Color::theme(val));
+                            let color = Color::theme(val);
+                            if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
+                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                            } else {
+                                bg_solid_color = Some(color);
+                            }
                         }
                     }
                     // ClrMap
@@ -271,6 +312,9 @@ pub fn parse_slide_master<R: Read + Seek>(
 
                 match local.as_str() {
                     "blipFill" if in_bg_blip_fill => in_bg_blip_fill = false,
+                    "gradFill" if in_bg_grad_fill => {
+                        in_bg_grad_fill = false;
+                    }
                     "bgPr" => {
                         in_bg_pr = false;
                         if let Some(rel_id) = bg_blip_rel_id.take() {
@@ -291,6 +335,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                             }
                         } else if let Some(color) = bg_solid_color.take() {
                             master.background = Some(Fill::Solid(SolidFill { color }));
+                        } else if !bg_grad_stops.is_empty() {
+                            master.background = Some(Fill::Gradient(GradientFill {
+                                stops: std::mem::take(&mut bg_grad_stops),
+                                angle: bg_grad_angle,
+                            }));
                         }
                     }
                     "txStyles" => {

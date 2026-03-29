@@ -109,21 +109,32 @@ pub fn resolve_border_with_theme(
     scheme: Option<&ColorScheme>,
     clr_map: Option<&ClrMap>,
 ) -> Border {
+    // Explicit <a:noFill/> inside <a:ln> — no border, stop inheritance
+    // (analogous to Fill::NoFill for shape fills)
+    if shape.border.no_fill {
+        return Border::default();
+    }
     // Check shape's own border first
     if shape.border.width > 0.0 {
         return shape.border.clone();
     }
     // Check layout match
-    if let Some(lm) = layout_match
-        && lm.border.width > 0.0
-    {
-        return lm.border.clone();
+    if let Some(lm) = layout_match {
+        if lm.border.no_fill {
+            return Border::default();
+        }
+        if lm.border.width > 0.0 {
+            return lm.border.clone();
+        }
     }
     // Check master match
-    if let Some(mm) = master_match
-        && mm.border.width > 0.0
-    {
-        return mm.border.clone();
+    if let Some(mm) = master_match {
+        if mm.border.no_fill {
+            return Border::default();
+        }
+        if mm.border.width > 0.0 {
+            return mm.border.clone();
+        }
     }
 
     // Try style_ref lnRef as fallback

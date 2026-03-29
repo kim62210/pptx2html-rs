@@ -150,6 +150,9 @@ pub struct Border {
     pub dash_style: DashStyle,
     pub head_end: Option<LineEnd>,
     pub tail_end: Option<LineEnd>,
+    /// Explicit `<a:noFill/>` inside `<a:ln>` — suppress border, do NOT
+    /// inherit from theme lnRef (analogous to `Fill::NoFill`).
+    pub no_fill: bool,
 }
 
 #[derive(Debug, Clone, Default)]
