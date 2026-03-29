@@ -118,7 +118,7 @@ impl HtmlRenderer {
         );
         html.push_str("<meta name=\"generator\" content=\"pptx2html-rs\">\n");
         if let Some(ref title) = pres.title {
-            let _ = write!(html, "<title>{}</title>\n", escape_html(title));
+            let _ = writeln!(html, "<title>{}</title>", escape_html(title));
         } else {
             html.push_str("<title>Presentation</title>\n");
         }
@@ -216,9 +216,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Resolve background via inheritance
         let bg = inheritance::resolve_background(slide, layout, master);
         let bg_style = Self::fill_to_css(&bg, &slide_ctx);
-        let _ = write!(
+        let _ = writeln!(
             html,
-            "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">\n"
+            "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">"
         );
 
         // Render master shapes if show_master_sp is true.
@@ -389,13 +389,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Cropped images need overflow:hidden on the shape container
-        if let ShapeType::Picture(pic) = &shape.shape_type {
-            if pic.crop.is_some() {
-                style_buf.push_str("; overflow: hidden");
-            }
+        if let ShapeType::Picture(pic) = &shape.shape_type
+            && pic.crop.is_some()
+        {
+            style_buf.push_str("; overflow: hidden");
         }
 
-        let _ = write!(html, "<div class=\"shape\" style=\"{style_buf}\">\n");
+        let _ = writeln!(html, "<div class=\"shape\" style=\"{style_buf}\">");
 
         // Table
         if let ShapeType::Table(ref table) = shape.shape_type {
@@ -426,11 +426,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             };
 
             let escaped = escape_html(&data.label);
-            let _ = write!(
+            let _ = writeln!(
                 html,
                 "<div class=\"unresolved-element\" id=\"{placeholder_id}\" \
                  data-type=\"{type_attr}\" data-slide=\"{}\">\
-                 <span>[{escaped}]</span></div>\n",
+                 <span>[{escaped}]</span></div>",
                 coll.current_slide_index
             );
 
@@ -464,9 +464,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     } else {
                         format!("images/chart-{}.png", img_data.len() % 100000)
                     };
-                    let _ = write!(
+                    let _ = writeln!(
                         html,
-                        "<img class=\"shape-image\" src=\"{src}\" alt=\"Chart\">\n"
+                        "<img class=\"shape-image\" src=\"{src}\" alt=\"Chart\">"
                     );
                 }
             } else {
@@ -534,11 +534,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
                     if let Some(ref he) = resolved_border.head_end {
                         emit_marker_def(&mut defs_buf, "head", he, &stroke_color, stroke_width);
-                        marker_start_attr = format!(" marker-start=\"url(#marker-head)\"");
+                        marker_start_attr = " marker-start=\"url(#marker-head)\"".to_string();
                     }
                     if let Some(ref te) = resolved_border.tail_end {
                         emit_marker_def(&mut defs_buf, "tail", te, &stroke_color, stroke_width);
-                        marker_end_attr = format!(" marker-end=\"url(#marker-tail)\"");
+                        marker_end_attr = " marker-end=\"url(#marker-tail)\"".to_string();
                     }
                 }
                 if !defs_buf.is_empty() {
@@ -561,62 +561,61 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ""
                 };
-                let _ = write!(
+                let _ = writeln!(
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
                      {dash_attr}{marker_start_attr}{marker_end_attr}/>\
-                     </svg>\n"
+                     </svg>"
                 );
             }
         }
 
         // Custom geometry SVG rendering
-        if let ShapeType::CustomGeom(ref geom) = shape.shape_type {
-            if let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h) {
-                // Convert border width from pt to px for SVG (viewBox is in px)
-                let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
-                    let c = ctx
-                        .color_to_css(&resolved_border.color)
-                        .unwrap_or_else(|| "#000".to_string());
-                    (c, resolved_border.width * 4.0 / 3.0)
-                } else {
-                    ("none".to_string(), 0.0)
+        if let ShapeType::CustomGeom(ref geom) = shape.shape_type
+            && let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h)
+        {
+            // Convert border width from pt to px for SVG (viewBox is in px)
+            let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
+                let c = ctx
+                    .color_to_css(&resolved_border.color)
+                    .unwrap_or_else(|| "#000".to_string());
+                (c, resolved_border.width * 4.0 / 3.0)
+            } else {
+                ("none".to_string(), 0.0)
+            };
+            let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
+            let _ = write!(
+                html,
+                "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+            );
+            // Gradient fill support for custom geometry
+            let grad_id = ctx.next_gradient_id();
+            let mut defs_buf = String::new();
+            let gradient_fill_ref = svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
+            if !defs_buf.is_empty() {
+                html.push_str("<defs>");
+                html.push_str(&defs_buf);
+                html.push_str("</defs>");
+            }
+            let default_fill = if let Some(ref grad_ref) = gradient_fill_ref {
+                grad_ref.clone()
+            } else {
+                ctx.color_to_css(&resolved_fill.color_ref())
+                    .unwrap_or_else(|| "none".to_string())
+            };
+            for path_svg in &svg_geom.paths {
+                let fill = match path_svg.fill {
+                    PathFill::None => "none".to_string(),
+                    _ => default_fill.clone(),
                 };
-                let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let _ = write!(
                     html,
-                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+                    "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"{dash_attr}/>",
+                    path_svg.d
                 );
-                // Gradient fill support for custom geometry
-                let grad_id = ctx.next_gradient_id();
-                let mut defs_buf = String::new();
-                let gradient_fill_ref =
-                    svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
-                if !defs_buf.is_empty() {
-                    html.push_str("<defs>");
-                    html.push_str(&defs_buf);
-                    html.push_str("</defs>");
-                }
-                let default_fill = if let Some(ref grad_ref) = gradient_fill_ref {
-                    grad_ref.clone()
-                } else {
-                    ctx.color_to_css(&resolved_fill.color_ref())
-                        .unwrap_or_else(|| "none".to_string())
-                };
-                for path_svg in &svg_geom.paths {
-                    let fill = match path_svg.fill {
-                        PathFill::None => "none".to_string(),
-                        _ => default_fill.clone(),
-                    };
-                    let _ = write!(
-                        html,
-                        "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"{dash_attr}/>",
-                        path_svg.d
-                    );
-                }
-                html.push_str("</svg>\n");
             }
+            html.push_str("</svg>\n");
         }
 
         // Image
@@ -662,19 +661,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     // for vertical — that gives wrong results).
                     let off_x_px = -(l / 100.0) * w * (img_w_pct / 100.0);
                     let off_y_px = -(t / 100.0) * h * (img_h_pct / 100.0);
-                    let _ = write!(
+                    let _ = writeln!(
                         html,
                         "<img class=\"shape-image\" src=\"{src}\" alt=\"\" style=\"\
                          object-fit: fill; \
                          width: {img_w_pct:.2}%; height: {img_h_pct:.2}%; \
-                         margin-left: {off_x_px:.2}px; margin-top: {off_y_px:.2}px\">\n"
+                         margin-left: {off_x_px:.2}px; margin-top: {off_y_px:.2}px\">"
                     );
                 } else {
                     // Degenerate crop — show the whole image
-                    let _ = write!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n");
+                    let _ = writeln!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">");
                 }
             } else {
-                let _ = write!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n");
+                let _ = writeln!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">");
             }
         }
 
@@ -744,9 +743,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
                 let _ = write!(tb_style, "; transform: {}", transforms.join(" "));
             }
-            let _ = write!(
+            let _ = writeln!(
                 html,
-                "<div class=\"text-body {v_class}\" style=\"{tb_style}\">\n"
+                "<div class=\"text-body {v_class}\" style=\"{tb_style}\">"
             );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
@@ -824,12 +823,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             } else {
                 0.0
             };
-            let _ = write!(html, "<col style=\"width:{pct:.1}%\"/>\n");
+            let _ = writeln!(html, "<col style=\"width:{pct:.1}%\"/>");
         }
         html.push_str("</colgroup>\n");
 
         for row in &table.rows {
-            let _ = write!(html, "<tr style=\"height:{:.1}px;\">\n", row.height);
+            let _ = writeln!(html, "<tr style=\"height:{:.1}px;\">", row.height);
             for cell in &row.cells {
                 // Skip cells that are continuation of a vertical merge
                 if cell.v_merge {
@@ -897,7 +896,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if cell.row_span > 1 {
                     let _ = write!(html, " rowspan=\"{}\"", cell.row_span);
                 }
-                let _ = write!(html, " style=\"{td_style}\">\n");
+                let _ = writeln!(html, " style=\"{td_style}\">");
                 if let Some(ref tb) = cell.text_body {
                     let mut auto_num_counters: [i32; 9] = [0; 9];
                     for para in &tb.paragraphs {
@@ -992,6 +991,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     }
 
     /// Render paragraph with inherited text style defaults from txStyles / defaultTextStyle
+    #[allow(clippy::too_many_arguments)]
     fn render_paragraph_with_defaults(
         para: &TextParagraph,
         ctx: &RenderCtx<'_>,

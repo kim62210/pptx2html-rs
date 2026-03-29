@@ -647,10 +647,10 @@ pub fn parse_slide<R: Read + Seek>(
                     // In real PPTX files, prstGeom is usually a Start event
                     // (e.g., <a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>)
                     "prstGeom" if current_shape.is_some() => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            if let Some(prst) = xml_utils::attr_str(e, "prst") {
-                                sb.preset_geometry = Some(prst);
-                            }
+                        if let Some(sb) = current_shape.as_mut()
+                            && let Some(prst) = xml_utils::attr_str(e, "prst")
+                        {
+                            sb.preset_geometry = Some(prst);
                         }
                     }
                     // ── Custom geometry (<a:custGeom>) — Start variant ──
@@ -1565,10 +1565,8 @@ pub fn parse_slide<R: Read + Seek>(
                     if let Some(rb) = &mut cell_run {
                         rb.text.push_str(&e.unescape().unwrap_or_default());
                     }
-                } else if in_text {
-                    if let Some(rb) = &mut current_run {
-                        rb.text.push_str(&e.unescape().unwrap_or_default());
-                    }
+                } else if in_text && let Some(rb) = &mut current_run {
+                    rb.text.push_str(&e.unescape().unwrap_or_default());
                 }
             }
             Ok(Event::Text(ref e)) if in_cell_text => {
@@ -1825,10 +1823,10 @@ pub fn parse_slide<R: Read + Seek>(
                         in_graphic_data = false;
                         if capturing_raw_xml {
                             capturing_raw_xml = false;
-                            if let Some(sb) = current_shape.as_mut() {
-                                if !raw_xml_buf.is_empty() {
-                                    sb.raw_xml_capture = Some(raw_xml_buf.clone());
-                                }
+                            if let Some(sb) = current_shape.as_mut()
+                                && !raw_xml_buf.is_empty()
+                            {
+                                sb.raw_xml_capture = Some(raw_xml_buf.clone());
                             }
                             raw_xml_buf.clear();
                         }

@@ -122,17 +122,17 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         }
                     }
                     "ea" if in_major_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                            if !typeface.is_empty() {
-                                theme.font_scheme.major_east_asian = Some(typeface);
-                            }
+                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            && !typeface.is_empty()
+                        {
+                            theme.font_scheme.major_east_asian = Some(typeface);
                         }
                     }
                     "ea" if in_minor_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                            if !typeface.is_empty() {
-                                theme.font_scheme.minor_east_asian = Some(typeface);
-                            }
+                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            && !typeface.is_empty()
+                        {
+                            theme.font_scheme.minor_east_asian = Some(typeface);
                         }
                     }
                     // Empty color elements inside fmtScheme lists
