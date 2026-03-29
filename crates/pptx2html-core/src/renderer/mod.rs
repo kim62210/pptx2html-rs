@@ -360,7 +360,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             };
             let _ = write!(
                 style_buf,
-                "; border: {:.1}px {border_style} {border_color}",
+                "; border: {:.1}pt {border_style} {border_color}",
                 resolved_border.width
             );
         }
@@ -508,18 +508,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         | "curvedConnector2" | "curvedConnector3"
                         | "curvedConnector4" | "curvedConnector5"
                 );
+                // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
                         .color_to_css(&resolved_border.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    (c, resolved_border.width)
+                    (c, resolved_border.width * 4.0 / 3.0)
                 } else if is_line_shape {
                     // Default 0.75pt stroke for connectors with no explicit line;
                     // still respect parsed color if available
                     let c = ctx
                         .color_to_css(&resolved_border.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    (c, 0.75)
+                    (c, 1.0) // 0.75pt = 1.0px
                 } else {
                     ("none".to_string(), 0.0)
                 };
@@ -560,9 +561,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     ctx.color_to_css(&resolved_fill.color_ref())
                         .unwrap_or_else(|| "none".to_string())
                 };
+                // Shapes with holes (donut, frame, etc.) need evenodd fill rule
+                let fill_rule_attr = if geometry::needs_evenodd_fill(preset_name) {
+                    " fill-rule=\"evenodd\""
+                } else {
+                    ""
+                };
                 let _ = write!(
                     html,
-                    "<path d=\"{svg_path}\" fill=\"{fill_attr}\" \
+                    "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
                      {dash_attr}{marker_start_attr}{marker_end_attr}/>\
                      </svg>\n"
@@ -573,11 +580,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Custom geometry SVG rendering
         if let ShapeType::CustomGeom(ref geom) = shape.shape_type {
             if let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h) {
+                // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
                         .color_to_css(&resolved_border.color)
                         .unwrap_or_else(|| "#000".to_string());
-                    (c, resolved_border.width)
+                    (c, resolved_border.width * 4.0 / 3.0)
                 } else {
                     ("none".to_string(), 0.0)
                 };
@@ -853,7 +861,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-left: {:.1}px solid {}",
+                        "border-left: {:.1}pt solid {}",
                         cell.border_left.width, color
                     );
                 }
@@ -864,7 +872,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-right: {:.1}px solid {}",
+                        "border-right: {:.1}pt solid {}",
                         cell.border_right.width, color
                     );
                 }
@@ -875,7 +883,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-top: {:.1}px solid {}",
+                        "border-top: {:.1}pt solid {}",
                         cell.border_top.width, color
                     );
                 }
@@ -886,7 +894,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-bottom: {:.1}px solid {}",
+                        "border-bottom: {:.1}pt solid {}",
                         cell.border_bottom.width, color
                     );
                 }
@@ -1181,6 +1189,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             Self::render_run_with_defaults(
                 run,
                 ctx,
+                para.def_rpr.as_ref(),
                 run_defaults,
                 font_ref_font,
                 font_scale,
@@ -1199,6 +1208,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     fn render_run_with_defaults(
         run: &TextRun,
         ctx: &RenderCtx<'_>,
+        para_def_rpr: Option<&ParagraphDefRPr>,
         run_defaults: Option<&RunDefaults>,
         font_ref_font: Option<&str>,
         font_scale: Option<f64>,
@@ -1212,7 +1222,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         let mut run_style = String::with_capacity(128);
 
-        // Font family: explicit > inherited defRPr > fontRef > theme
+        // Font family: explicit > para defRPr > inherited defRPr > fontRef > theme
         let font = run.font.east_asian.as_deref().or(run.font.latin.as_deref());
 
         let font_scheme = ctx.pres.primary_theme().map(|t| &t.font_scheme);
@@ -1235,6 +1245,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let resolved_font: Option<&str> = font
             .and_then(|f| resolve_font_name(f, font_scheme))
             .or_else(|| {
+                para_def_rpr.and_then(|pd| {
+                    let f = pd.font_ea.as_deref().or(pd.font_latin.as_deref())?;
+                    resolve_font_name(f, font_scheme)
+                })
+            })
+            .or_else(|| {
                 run_defaults.and_then(|rd| {
                     let inherited = rd.font_ea.as_deref().or(rd.font_latin.as_deref())?;
                     resolve_font_name(inherited, font_scheme)
@@ -1248,10 +1264,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(run_style, "font-family: '{f}'");
         }
 
-        // Font size: explicit > inherited, scaled by fontScale from normAutofit
+        // Font size: explicit > para defRPr > inherited, scaled by fontScale from normAutofit
         let font_size = run
             .style
             .font_size
+            .or_else(|| para_def_rpr.and_then(|pd| pd.font_size))
             .or_else(|| run_defaults.and_then(|rd| rd.font_size));
         if let Some(sz) = font_size {
             let effective_sz = sz * font_scale.unwrap_or(1.0);
@@ -1259,9 +1276,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(run_style, "font-size: {effective_sz:.1}pt");
         }
 
-        // Bold: explicit > inherited
+        // Bold: explicit > para defRPr > inherited
         let bold = if run.style.bold {
             true
+        } else if let Some(b) = para_def_rpr.and_then(|pd| pd.bold) {
+            b
         } else {
             run_defaults.and_then(|rd| rd.bold).unwrap_or(false)
         };
@@ -1270,9 +1289,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             run_style.push_str("font-weight: bold");
         }
 
-        // Italic: explicit > inherited
+        // Italic: explicit > para defRPr > inherited
         let italic = if run.style.italic {
             true
+        } else if let Some(i) = para_def_rpr.and_then(|pd| pd.italic) {
+            i
         } else {
             run_defaults.and_then(|rd| rd.italic).unwrap_or(false)
         };
@@ -1290,9 +1311,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             run_style.push_str("text-decoration: line-through");
         }
 
-        // Color -- explicit > inherited > theme-aware resolution
+        // Color -- explicit > para defRPr > inherited > theme-aware resolution
         let color_css = if !run.style.color.is_none() {
             ctx.color_to_css(&run.style.color)
+        } else if let Some(pd) = para_def_rpr {
+            pd.color.as_ref().and_then(|c| ctx.color_to_css(c))
         } else if let Some(rd) = run_defaults {
             rd.color.as_ref().and_then(|c| ctx.color_to_css(c))
         } else {

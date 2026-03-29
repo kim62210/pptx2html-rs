@@ -41,6 +41,9 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_spc_bef = false;
     let mut in_spc_aft = false;
 
+    // Paragraph-level defRPr nesting state
+    let mut in_para_def_rpr = false;
+
     // Bullet color nesting state
     let mut in_bu_clr = false;
 
@@ -209,6 +212,15 @@ pub fn parse_slide<R: Read + Seek>(
                         in_tbl = true;
                         table_builder = Some(TableBuilder::default());
                     }
+                    // Table column width (open-tag variant: <a:gridCol w="..."></a:gridCol>)
+                    "gridCol" if in_tbl => {
+                        if let Some(ref mut tb) = table_builder {
+                            let w = xml_utils::attr_str(e, "w")
+                                .map(|v| Emu::parse_emu(&v).to_px())
+                                .unwrap_or(0.0);
+                            tb.col_widths.push(w);
+                        }
+                    }
                     // Table row
                     "tr" if in_tbl => {
                         in_tr = true;
@@ -276,6 +288,21 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph properties inside table cell
                     "pPr" if in_tc && cell_paragraph.is_some() => {
                         parse_para_props(e, &mut cell_paragraph);
+                    }
+                    // Paragraph-level defRPr inside table cell paragraph
+                    "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
+                        in_para_def_rpr = true;
+                        if let Some(pb) = cell_paragraph.as_mut() {
+                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
+                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(b) = xml_utils::attr_str(e, "b") {
+                                pb.def_rpr_bold = Some(b == "1" || b == "true");
+                            }
+                            if let Some(i) = xml_utils::attr_str(e, "i") {
+                                pb.def_rpr_italic = Some(i == "1" || i == "true");
+                            }
+                        }
                     }
                     // Spacing containers inside table cell
                     "lnSpc" if in_tc && cell_paragraph.is_some() => {
@@ -392,6 +419,21 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph properties
                     "pPr" if current_paragraph.is_some() && !in_tc => {
                         parse_para_props(e, &mut current_paragraph);
+                    }
+                    // Paragraph-level defRPr (default run properties inside pPr)
+                    "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
+                        in_para_def_rpr = true;
+                        if let Some(pb) = current_paragraph.as_mut() {
+                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
+                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(b) = xml_utils::attr_str(e, "b") {
+                                pb.def_rpr_bold = Some(b == "1" || b == "true");
+                            }
+                            if let Some(i) = xml_utils::attr_str(e, "i") {
+                                pb.def_rpr_italic = Some(i == "1" || i == "true");
+                            }
+                        }
                     }
                     // Paragraph spacing containers (non-table)
                     "lnSpc" if current_paragraph.is_some() && !in_tc => {
@@ -701,6 +743,20 @@ pub fn parse_slide<R: Read + Seek>(
                     "pPr" if in_tc && cell_paragraph.is_some() => {
                         parse_para_props(e, &mut cell_paragraph);
                     }
+                    // Paragraph-level defRPr inside table cell (Empty variant)
+                    "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
+                        if let Some(pb) = cell_paragraph.as_mut() {
+                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
+                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(b) = xml_utils::attr_str(e, "b") {
+                                pb.def_rpr_bold = Some(b == "1" || b == "true");
+                            }
+                            if let Some(i) = xml_utils::attr_str(e, "i") {
+                                pb.def_rpr_italic = Some(i == "1" || i == "true");
+                            }
+                        }
+                    }
                     // Run properties inside table cell (Empty variant)
                     "rPr" if in_tc && cell_run.is_some() => {
                         parse_run_props(e, &mut cell_run);
@@ -829,6 +885,20 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph properties (Empty variant, non-table)
                     "pPr" if current_paragraph.is_some() && !in_tc => {
                         parse_para_props(e, &mut current_paragraph);
+                    }
+                    // Paragraph-level defRPr (Empty variant — self-closing, no children)
+                    "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
+                        if let Some(pb) = current_paragraph.as_mut() {
+                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
+                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(b) = xml_utils::attr_str(e, "b") {
+                                pb.def_rpr_bold = Some(b == "1" || b == "true");
+                            }
+                            if let Some(i) = xml_utils::attr_str(e, "i") {
+                                pb.def_rpr_italic = Some(i == "1" || i == "true");
+                            }
+                        }
                     }
                     // Run properties (Empty variant, non-table)
                     "rPr" if current_run.is_some() && !in_tc => {
@@ -1170,11 +1240,18 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Font (table cell or regular)
+                    // Font (table cell, paragraph defRPr, or regular run)
                     "latin" => {
                         if let Some(rb) = cell_run.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_latin = Some(typeface);
+                            }
+                        } else if in_para_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                if let Some(pb) = target.as_mut() {
+                                    pb.def_rpr_font_latin = Some(typeface);
+                                }
                             }
                         } else if let Some(rb) = current_run.as_mut()
                             && let Some(typeface) = xml_utils::attr_str(e, "typeface")
@@ -1186,6 +1263,13 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(rb) = cell_run.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_ea = Some(typeface);
+                            }
+                        } else if in_para_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                if let Some(pb) = target.as_mut() {
+                                    pb.def_rpr_font_ea = Some(typeface);
+                                }
                             }
                         } else if let Some(rb) = current_run.as_mut()
                             && let Some(typeface) = xml_utils::attr_str(e, "typeface")
@@ -1804,6 +1888,19 @@ pub fn parse_slide<R: Read + Seek>(
                     // ── Original shape end events ──
                     "t" => in_text = false,
                     "rPr" => in_r_pr = false,
+                    "defRPr" if in_para_def_rpr => {
+                        // Assign accumulated color to paragraph defRPr (table cell or regular)
+                        if let Some(color) = current_color.take() {
+                            if in_tc {
+                                if let Some(pb) = cell_paragraph.as_mut() {
+                                    pb.def_rpr_color = Some(color);
+                                }
+                            } else if let Some(pb) = current_paragraph.as_mut() {
+                                pb.def_rpr_color = Some(color);
+                            }
+                        }
+                        in_para_def_rpr = false;
+                    }
                     // End of paragraph spacing containers
                     "lnSpc" => in_ln_spc = false,
                     "spcBef" => in_spc_bef = false,
@@ -2442,10 +2539,35 @@ struct ParagraphBuilder {
     bu_font: Option<String>,
     bu_size_pct: Option<f64>,
     bu_color: Option<Color>,
+    // Paragraph-level defRPr properties
+    def_rpr_font_size: Option<f64>,
+    def_rpr_bold: Option<bool>,
+    def_rpr_italic: Option<bool>,
+    def_rpr_color: Option<Color>,
+    def_rpr_font_latin: Option<String>,
+    def_rpr_font_ea: Option<String>,
 }
 
 impl ParagraphBuilder {
     fn build(self) -> TextParagraph {
+        let def_rpr = if self.def_rpr_font_size.is_some()
+            || self.def_rpr_bold.is_some()
+            || self.def_rpr_italic.is_some()
+            || self.def_rpr_color.is_some()
+            || self.def_rpr_font_latin.is_some()
+            || self.def_rpr_font_ea.is_some()
+        {
+            Some(ParagraphDefRPr {
+                font_size: self.def_rpr_font_size,
+                bold: self.def_rpr_bold,
+                italic: self.def_rpr_italic,
+                color: self.def_rpr_color,
+                font_latin: self.def_rpr_font_latin,
+                font_ea: self.def_rpr_font_ea,
+            })
+        } else {
+            None
+        };
         TextParagraph {
             runs: self.runs,
             alignment: self.alignment,
@@ -2456,6 +2578,7 @@ impl ParagraphBuilder {
             margin_left: self.margin_left,
             bullet: self.bullet,
             level: self.level,
+            def_rpr,
         }
     }
 }

@@ -17,9 +17,9 @@ pub use hierarchy::{
 };
 pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
-    AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, CropRect, GroupData, PictureData, Shape,
-    ShapeType, Slide, TableCell, TableData, TableRow, TextBody, TextMargins, TextParagraph,
-    TextRun, UnresolvedElement, UnresolvedType, UnsupportedData, VerticalAlign,
+    AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, CropRect, GroupData, ParagraphDefRPr,
+    PictureData, Shape, ShapeType, Slide, TableCell, TableData, TableRow, TextBody, TextMargins,
+    TextParagraph, TextRun, UnresolvedElement, UnresolvedType, UnsupportedData, VerticalAlign,
 };
 pub use style::{
     Alignment, Border, BorderStyle, DashStyle, Fill, FontStyle, GlowEffect, GradientFill,

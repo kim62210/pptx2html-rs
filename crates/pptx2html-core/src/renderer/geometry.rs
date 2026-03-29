@@ -6,6 +6,23 @@
 
 use std::collections::HashMap;
 
+/// Returns true if this preset shape needs `fill-rule="evenodd"` to render holes correctly.
+/// Shapes with inner cutouts (donut, frame, noSmoking, blockArc, etc.) use two subpaths
+/// where the inner subpath winds in the opposite direction to create a hole.
+pub fn needs_evenodd_fill(name: &str) -> bool {
+    matches!(
+        name,
+        "donut"
+            | "frame"
+            | "noSmoking"
+            | "blockArc"
+            | "bracePair"
+            | "bracketPair"
+            | "bevel"
+            | "can"
+    )
+}
+
 /// Generate an SVG path string for a named preset shape.
 /// Returns `None` if the shape name is not supported.
 pub fn preset_shape_svg(
@@ -218,7 +235,7 @@ pub fn preset_shape_svg(
         "curvedConnector4" => Some(curved_connector4_path(w, h)),
         "curvedConnector5" => Some(curved_connector5_path(w, h)),
         "bentConnector2" => Some(bent_connector2_path(w, h)),
-        "bentConnector3" => Some(bent_connector3_path(w, h)),
+        "bentConnector3" => Some(bent_connector3_path(w, h, adjust_values)),
         "bentConnector4" => Some(bent_connector4_path(w, h)),
         "bentConnector5" => Some(bent_connector5_path(w, h)),
         _ => None,
@@ -250,7 +267,7 @@ fn plaque_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let m=w.m
 fn brace_pair_path(w: f64, h: f64) -> String { let r=w.min(h)*0.08; let cy=h/2.0; let i=r*2.0; format!("M{i:.1},0 Q0,0 0,{r:.1} L0,{y1:.1} Q0,{cy:.1} {n:.1},{cy:.1} Q0,{cy:.1} 0,{y2:.1} L0,{y3:.1} Q0,{h:.1} {i:.1},{h:.1} M{x1:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y1:.1} Q{w:.1},{cy:.1} {x2:.1},{cy:.1} Q{w:.1},{cy:.1} {w:.1},{y2:.1} L{w:.1},{y3:.1} Q{w:.1},{h:.1} {x1:.1},{h:.1}", i=i, r=r, cy=cy, y1=cy-r, n=-r*0.5, y2=cy+r, y3=h-r, h=h, x1=w-i, w=w, x2=w+r*0.5) }
 fn bracket_pair_path(w: f64, h: f64) -> String { let r=w.min(h)*0.1; format!("M{r:.1},0 L0,0 L0,{h:.1} L{r:.1},{h:.1} M{x:.1},0 L{w:.1},0 L{w:.1},{h:.1} L{x:.1},{h:.1}", r=r, x=w-r, w=w, h=h) }
 fn half_frame_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let ty=h*adj.get("adj1").copied().unwrap_or(33333.0)/100_000.0; let tx=w*adj.get("adj2").copied().unwrap_or(33333.0)/100_000.0; format!("M0,0 L{w:.1},0 L{w:.1},{ty:.1} L{tx:.1},{ty:.1} L{tx:.1},{h:.1} L0,{h:.1} Z", w=w, ty=ty, tx=tx, h=h) }
-fn line_path(w: f64, h: f64) -> String { format!("M0,{h:.1} L{w:.1},0") }
+fn line_path(w: f64, h: f64) -> String { format!("M0,0 L{w:.1},{h:.1}") }
 fn right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let a1=adj.get("adj1").copied().unwrap_or(50000.0); let a2=adj.get("adj2").copied().unwrap_or(50000.0); let s=h*a1/100_000.0/2.0; let hw=w*a2/100_000.0; let cy=h/2.0; let(yt,yb,xh)=(cy-s,cy+s,w-hw); format!("M0,{yt:.1} L{xh:.1},{yt:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{yb:.1} L0,{yb:.1} Z") }
 fn left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let a1=adj.get("adj1").copied().unwrap_or(50000.0); let a2=adj.get("adj2").copied().unwrap_or(50000.0); let s=h*a1/100_000.0/2.0; let hw=w*a2/100_000.0; let cy=h/2.0; let(yt,yb)=(cy-s,cy+s); format!("M{w:.1},{yt:.1} L{hw:.1},{yt:.1} L{hw:.1},0 L0,{cy:.1} L{hw:.1},{h:.1} L{hw:.1},{yb:.1} L{w:.1},{yb:.1} Z") }
 fn up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let a1=adj.get("adj1").copied().unwrap_or(50000.0); let a2=adj.get("adj2").copied().unwrap_or(50000.0); let s=w*a1/100_000.0/2.0; let hh=h*a2/100_000.0; let cx=w/2.0; let(xl,xr)=(cx-s,cx+s); format!("M{xl:.1},{h:.1} L{xl:.1},{hh:.1} L0,{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{xr:.1},{hh:.1} L{xr:.1},{h:.1} Z") }
@@ -401,7 +418,7 @@ fn curved_connector3_path(w: f64, h: f64) -> String { let cx=w/2.0; format!("M0,
 fn curved_connector4_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {c3:.1},{y3:.1} C{c3:.1},{h:.1} {c4:.1},{h:.1} {w:.1},{h:.1}", c1=w*0.15, c2=w*0.33, y1=h*0.25, y2=h*0.5, c3=w*0.67, y3=h*0.75, c4=w*0.85, w=w, h=h) }
 fn curved_connector5_path(w: f64, h: f64) -> String { format!("M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {cx:.1},{cy:.1} C{c4:.1},{y2:.1} {c5:.1},{y3:.1} {c5:.1},{y3:.1} C{c5:.1},{h:.1} {c6:.1},{h:.1} {w:.1},{h:.1}", c1=w*0.1, c2=w*0.25, y1=h*0.2, y2=h*0.35, c3=w*0.35, cx=w*0.5, cy=h*0.5, c4=w*0.65, c5=w*0.75, y3=h*0.8, c6=w*0.9, w=w, h=h) }
 fn bent_connector2_path(w: f64, h: f64) -> String { format!("M0,0 L{w:.1},0 L{w:.1},{h:.1}", w=w, h=h) }
-fn bent_connector3_path(w: f64, h: f64) -> String { let cx=w/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{h:.1} L{w:.1},{h:.1}", cx=cx, w=w, h=h) }
+fn bent_connector3_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String { let adj1 = adj.get("adj1").copied().unwrap_or(50000.0); let cx = w * adj1 / 100000.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{h:.1} L{w:.1},{h:.1}", cx=cx, w=w, h=h) }
 fn bent_connector4_path(w: f64, h: f64) -> String { let cy=h/2.0; format!("M0,0 L{cx:.1},0 L{cx:.1},{cy:.1} L{w:.1},{cy:.1} L{w:.1},{h:.1}", cx=w*0.33, cy=cy, w=w, h=h) }
 fn bent_connector5_path(w: f64, h: f64) -> String { let cy=h/2.0; format!("M0,0 L{x1:.1},0 L{x1:.1},{y1:.1} L{x2:.1},{y1:.1} L{x2:.1},{cy:.1} L{x3:.1},{cy:.1} L{x3:.1},{h:.1} L{w:.1},{h:.1}", x1=w*0.25, y1=h*0.25, x2=w*0.5, cy=cy, x3=w*0.75, h=h, w=w) }
 

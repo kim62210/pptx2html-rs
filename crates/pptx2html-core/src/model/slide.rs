@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::color::Color;
 use super::geometry::{CustomGeometry, Position, Size};
 use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{Alignment, Border, Fill, FontStyle, ShapeEffects, TextStyle};
@@ -93,6 +94,19 @@ pub struct TextParagraph {
     pub margin_left: Option<f64>,
     pub bullet: Option<Bullet>,
     pub level: u32,
+    /// Paragraph-level default run properties (from <a:defRPr> inside <a:pPr>)
+    pub def_rpr: Option<ParagraphDefRPr>,
+}
+
+/// Paragraph-level default run properties parsed from <a:defRPr> inside <a:pPr>
+#[derive(Debug, Clone, Default)]
+pub struct ParagraphDefRPr {
+    pub font_size: Option<f64>,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
+    pub color: Option<Color>,
+    pub font_latin: Option<String>,
+    pub font_ea: Option<String>,
 }
 
 /// Text run (text segment with uniform style)
