@@ -1473,3 +1473,171 @@ fn test_background_image_fill() {
         "Background image should be embedded as base64"
     );
 }
+
+// ── Gradient fill with color modifiers (Start+End events) ──
+
+#[test]
+fn test_gradient_fill_with_modifiers() {
+    // Real-world gradient: colors have child modifiers (tint, satMod),
+    // making them Start+End events instead of Empty events.
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="roundRect"/>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0">
+              <a:srgbClr val="FF0000">
+                <a:tint val="50000"/>
+              </a:srgbClr>
+            </a:gs>
+            <a:gs pos="100000">
+              <a:srgbClr val="0000FF">
+                <a:shade val="80000"/>
+              </a:srgbClr>
+            </a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000" scaled="1"/>
+        </a:gradFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.fill {
+        Fill::Gradient(gf) => {
+            assert_eq!(gf.stops.len(), 2, "Expected 2 gradient stops, got {}", gf.stops.len());
+            assert!((gf.stops[0].position - 0.0).abs() < 0.01);
+            assert!((gf.stops[1].position - 1.0).abs() < 0.01);
+            assert!((gf.angle - 90.0).abs() < 0.1);
+        }
+        other => panic!("Expected Fill::Gradient with modifiers, got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_gradient_fill_with_modifiers_html() {
+    // Gradient with color modifiers should produce SVG linearGradient for SVG shapes
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="roundRect"/>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0">
+              <a:srgbClr val="FF0000">
+                <a:tint val="50000"/>
+              </a:srgbClr>
+            </a:gs>
+            <a:gs pos="100000">
+              <a:srgbClr val="0000FF">
+                <a:shade val="80000"/>
+              </a:srgbClr>
+            </a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000"/>
+        </a:gradFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    // SVG shapes (roundRect) use SVG <linearGradient> + url(#gradN)
+    assert!(
+        html.contains("linearGradient"),
+        "SVG gradient def not found in HTML: {html}"
+    );
+    assert!(
+        html.contains("url(#grad"),
+        "SVG gradient url reference not found in HTML: {html}"
+    );
+}
+
+#[test]
+fn test_gradient_fill_rect_css() {
+    // Non-SVG rect shapes should use CSS linear-gradient
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0">
+              <a:srgbClr val="FF0000">
+                <a:tint val="50000"/>
+              </a:srgbClr>
+            </a:gs>
+            <a:gs pos="100000">
+              <a:srgbClr val="0000FF">
+                <a:shade val="80000"/>
+              </a:srgbClr>
+            </a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000"/>
+        </a:gradFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("linear-gradient"),
+        "CSS gradient not found in HTML for rect shape: {html}"
+    );
+}
+
+#[test]
+fn test_gradient_fill_scheme_colors_with_modifiers() {
+    // Real-world pattern: schemeClr with tint/satMod modifiers in shape gradient
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Rect"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="roundRect"/>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0">
+              <a:schemeClr val="accent1">
+                <a:tint val="66000"/>
+                <a:satMod val="160000"/>
+              </a:schemeClr>
+            </a:gs>
+            <a:gs pos="50000">
+              <a:schemeClr val="accent1">
+                <a:tint val="44500"/>
+                <a:satMod val="160000"/>
+              </a:schemeClr>
+            </a:gs>
+            <a:gs pos="100000">
+              <a:schemeClr val="accent1">
+                <a:tint val="23500"/>
+                <a:satMod val="160000"/>
+              </a:schemeClr>
+            </a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000" scaled="0"/>
+        </a:gradFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.fill {
+        Fill::Gradient(gf) => {
+            assert_eq!(gf.stops.len(), 3, "Expected 3 gradient stops, got {}", gf.stops.len());
+            assert!((gf.stops[0].position - 0.0).abs() < 0.01);
+            assert!((gf.stops[1].position - 0.5).abs() < 0.01);
+            assert!((gf.stops[2].position - 1.0).abs() < 0.01);
+        }
+        other => panic!("Expected Fill::Gradient with scheme colors, got: {other:?}"),
+    }
+}

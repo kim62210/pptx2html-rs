@@ -1,0 +1,98 @@
+{
+  "project": "pptx2html-rs visual fidelity regression loop",
+  "goal": "HTML output visually identical to original PPTX rendering",
+  "testFile": "03. 신규 입사자 HR제도 안내_V6_250219.pptx",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Shape fill renders only inside SVG path boundary",
+      "priority": 1,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Ellipse/circle shapes show color ONLY within the circular area, not the rectangular bounding box",
+        "Triangle shapes show color ONLY within the triangular area",
+        "RoundRect shapes show rounded corners visually (not sharp rectangle with color)",
+        "No background-color CSS on .shape div when SVG is used"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Connector lines render with correct color and width",
+      "priority": 2,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Red connectors (#C00000) render with red SVG stroke",
+        "Blue connectors (#0000FF) render with blue SVG stroke",
+        "stroke-width matches <a:ln w='...'/> EMU value converted to pt",
+        "Theme color connectors (tx1) resolve to actual theme dark1 color"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Text color inside shapes matches PPTX exactly",
+      "priority": 3,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Text with explicit srgbClr (e.g., #0070C0) renders in that color",
+        "Text with schemeClr (e.g., BACKGROUND_1) resolves to correct theme color",
+        "White text on dark shapes is visible (not black-on-dark)",
+        "No text color defaults to inherited/theme color, not hardcoded black"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Image crop shows correct visible region",
+      "priority": 4,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Cropped images display the correct portion of the source image",
+        "Image fills the shape bounding box after crop (no gaps or overflow)",
+        "Banner images (e.g., 960x18px crop from larger image) display correctly"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Background images from master/layout render correctly",
+      "priority": 5,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Slide backgrounds with blipFill show the image",
+        "Master/layout background images inherited by slides",
+        "Background image covers full slide area (background-size: cover)"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Gradient fills render correctly",
+      "priority": 6,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Linear gradients render with correct direction and color stops",
+        "Gradient stops use correct theme-resolved colors",
+        "CSS linear-gradient output matches PPTX gradient definition"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Text wrapping and autofit match PPTX layout",
+      "priority": 7,
+      "passes": false,
+      "acceptanceCriteria": [
+        "fontScale auto-fit reduces text size to fit shape",
+        "Word wrapping breaks at same positions as PPTX (within 1 word tolerance)",
+        "Text insets (lIns/tIns/rIns/bIns) correctly offset text from shape edge"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Group shape children positioned correctly",
+      "priority": 8,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Group child shapes positioned relative to group bounding box",
+        "chOff/chExt coordinate transform applied correctly",
+        "No double-offset from group position + child absolute position"
+      ]
+    }
+  ]
+}

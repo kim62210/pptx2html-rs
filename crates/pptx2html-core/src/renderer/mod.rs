@@ -24,6 +24,7 @@ struct UnresolvedCollector {
     elements: Vec<UnresolvedElement>,
     counter: usize,
     current_slide_index: usize,
+    gradient_counter: usize,
 }
 
 /// Rendering context -- propagates theme/ClrMap references and full presentation
@@ -44,6 +45,13 @@ impl<'a> RenderCtx<'a> {
         self.resolve_color(color)
             .map(|c| c.to_css())
             .or_else(|| color.to_css())
+    }
+
+    fn next_gradient_id(&self) -> String {
+        let mut coll = self.collector.borrow_mut();
+        let id = coll.gradient_counter;
+        coll.gradient_counter += 1;
+        format!("grad{id}")
     }
 
     /// Create a slide-scoped context with resolved ClrMap
@@ -86,6 +94,7 @@ impl HtmlRenderer {
             elements: Vec::new(),
             counter: 0,
             current_slide_index: 0,
+            gradient_counter: 0,
         });
 
         let ctx = RenderCtx {
@@ -497,9 +506,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let empty_adj: HashMap<String, f64> = HashMap::new();
             let adj_values = shape.adjust_values.as_ref().unwrap_or(&empty_adj);
             if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, adj_values) {
-                let fill_color = ctx
-                    .color_to_css(&resolved_fill.color_ref())
-                    .unwrap_or_else(|| "none".to_string());
                 // Connector/line shapes need a default visible stroke
                 let is_line_shape = matches!(
                     preset_name,
@@ -525,27 +531,43 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("none".to_string(), 0.0)
                 };
-                let fill_attr = if is_line_shape { "none" } else { &fill_color };
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let _ = write!(
                     html,
                     "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
                 );
+                // Build <defs> for gradient and/or marker definitions
+                let grad_id = ctx.next_gradient_id();
+                let mut defs_buf = String::new();
+                let gradient_fill_ref =
+                    svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
                 // Emit marker defs for line endings (arrows)
                 let mut marker_start_attr = String::new();
                 let mut marker_end_attr = String::new();
                 if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
-                    html.push_str("<defs>");
                     if let Some(ref he) = resolved_border.head_end {
-                        emit_marker_def(html, "head", he, &stroke_color, stroke_width);
+                        emit_marker_def(&mut defs_buf, "head", he, &stroke_color, stroke_width);
                         marker_start_attr = format!(" marker-start=\"url(#marker-head)\"");
                     }
                     if let Some(ref te) = resolved_border.tail_end {
-                        emit_marker_def(html, "tail", te, &stroke_color, stroke_width);
+                        emit_marker_def(&mut defs_buf, "tail", te, &stroke_color, stroke_width);
                         marker_end_attr = format!(" marker-end=\"url(#marker-tail)\"");
                     }
+                }
+                if !defs_buf.is_empty() {
+                    html.push_str("<defs>");
+                    html.push_str(&defs_buf);
                     html.push_str("</defs>");
                 }
+                // Determine fill attribute: gradient url > solid color > none
+                let fill_attr = if is_line_shape {
+                    "none".to_string()
+                } else if let Some(ref grad_ref) = gradient_fill_ref {
+                    grad_ref.clone()
+                } else {
+                    ctx.color_to_css(&resolved_fill.color_ref())
+                        .unwrap_or_else(|| "none".to_string())
+                };
                 let _ = write!(
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\" \
@@ -559,9 +581,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Custom geometry SVG rendering
         if let ShapeType::CustomGeom(ref geom) = shape.shape_type {
             if let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h) {
-                let default_fill = ctx
-                    .color_to_css(&resolved_fill.color_ref())
-                    .unwrap_or_else(|| "none".to_string());
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
                         .color_to_css(&resolved_border.color)
@@ -575,6 +594,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     html,
                     "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
                 );
+                // Gradient fill support for custom geometry
+                let grad_id = ctx.next_gradient_id();
+                let mut defs_buf = String::new();
+                let gradient_fill_ref =
+                    svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
+                if !defs_buf.is_empty() {
+                    html.push_str("<defs>");
+                    html.push_str(&defs_buf);
+                    html.push_str("</defs>");
+                }
+                let default_fill = if let Some(ref grad_ref) = gradient_fill_ref {
+                    grad_ref.clone()
+                } else {
+                    ctx.color_to_css(&resolved_fill.color_ref())
+                        .unwrap_or_else(|| "none".to_string())
+                };
                 for path_svg in &svg_geom.paths {
                     let fill = match path_svg.fill {
                         PathFill::None => "none".to_string(),
@@ -1601,6 +1636,51 @@ fn dash_style_to_svg(style: &DashStyle, stroke_width: f64) -> String {
         DashStyle::SystemDash => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 6.0 * sw, 3.0 * sw),
         DashStyle::SystemDot => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 1.0 * sw, 2.0 * sw),
     }
+}
+
+/// Emit an SVG `<linearGradient>` definition and return the fill attribute string.
+/// Returns `None` if the fill is not a gradient or has no resolvable stops.
+fn svg_gradient_def(
+    fill: &Fill,
+    grad_id: &str,
+    ctx: &RenderCtx<'_>,
+    html: &mut String,
+) -> Option<String> {
+    if let Fill::Gradient(gf) = fill {
+        let stops: Vec<(f64, String)> = gf
+            .stops
+            .iter()
+            .filter_map(|s| {
+                ctx.color_to_css(&s.color)
+                    .map(|c| (s.position, c))
+            })
+            .collect();
+        if stops.is_empty() {
+            return None;
+        }
+        // Convert OOXML angle (clockwise from top) to SVG linear-gradient coordinates.
+        // SVG linearGradient uses x1,y1 -> x2,y2 as the gradient vector.
+        let angle_rad = (gf.angle - 90.0_f64).to_radians();
+        let x1 = 50.0 - 50.0 * angle_rad.cos();
+        let y1 = 50.0 - 50.0 * angle_rad.sin();
+        let x2 = 50.0 + 50.0 * angle_rad.cos();
+        let y2 = 50.0 + 50.0 * angle_rad.sin();
+        let _ = write!(
+            html,
+            "<linearGradient id=\"{grad_id}\" \
+             x1=\"{x1:.1}%\" y1=\"{y1:.1}%\" x2=\"{x2:.1}%\" y2=\"{y2:.1}%\">"
+        );
+        for (pos, color) in &stops {
+            let _ = write!(
+                html,
+                "<stop offset=\"{:.0}%\" stop-color=\"{color}\"/>",
+                pos * 100.0
+            );
+        }
+        html.push_str("</linearGradient>");
+        return Some(format!("url(#{grad_id})"));
+    }
+    None
 }
 
 /// Emit an SVG <marker> definition for a line ending (arrowhead)

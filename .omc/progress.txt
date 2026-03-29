@@ -1,0 +1,9 @@
+# Ralph Progress — pptx2html-rs Visual Fidelity
+## Iteration 1 — Starting
+
+### Environment
+- Project: /Users/adminstrator/Desktop/hyungjoo-drb/open-source/pptx-to-html
+- Test PPTX dir: /Users/adminstrator/Desktop/hyungjoo-drb/prompter-be/app/service/rules/drb_rules/documents
+- Output: /tmp/pptx2html-output/
+- Eval venv: /tmp/eval-venv/bin/python3
+- CLI: target/release/pptx2html
