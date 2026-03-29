@@ -128,12 +128,10 @@ impl Color {
                 // OOXML default aliases: tx1->dk1, tx2->dk2, bg1->lt1, bg2->lt2
                 // These apply when ClrMap has no explicit mapping and ColorScheme
                 // doesn't recognize the name directly (e.g. "tx1" is not a scheme slot).
-                let scheme_key = scheme
-                    .and_then(|s| s.get(mapped))
-                    .or_else(|| {
-                        let alias = ooxml_color_alias(mapped)?;
-                        scheme.and_then(|s| s.get(alias))
-                    })?;
+                let scheme_key = scheme.and_then(|s| s.get(mapped)).or_else(|| {
+                    let alias = ooxml_color_alias(mapped)?;
+                    scheme.and_then(|s| s.get(alias))
+                })?;
                 parse_hex_rgb(&scheme_key)?
             }
             ColorKind::System(name) => parse_hex_rgb(system_color_fallback(name)?)?,
@@ -834,8 +832,7 @@ mod tests {
         let r = color.resolve(None, None).unwrap();
         // LumMod darkens to ~half luminance, then tint pushes toward white
         // Result should be a lighter color than just LumMod alone
-        let color_lum_only = Color::rgb("4472C4")
-            .with_modifier(ColorModifier::LumMod(50000));
+        let color_lum_only = Color::rgb("4472C4").with_modifier(ColorModifier::LumMod(50000));
         let r_lum = color_lum_only.resolve(None, None).unwrap();
         // Tinted result should have higher luminance values
         let avg_tinted = (r.r as u16 + r.g as u16 + r.b as u16) / 3;

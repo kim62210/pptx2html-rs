@@ -306,7 +306,11 @@ fn test_show_master_sp_default_true() {
 
     // Master should have both shapes parsed
     assert!(!pres.masters.is_empty(), "No masters parsed");
-    assert_eq!(pres.masters[0].shapes.len(), 2, "Master should have 2 shapes");
+    assert_eq!(
+        pres.masters[0].shapes.len(),
+        2,
+        "Master should have 2 shapes"
+    );
 
     // Only the non-placeholder decorative shape should render
     let html = render_html(&pptx);

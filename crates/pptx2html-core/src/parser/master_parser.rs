@@ -62,7 +62,8 @@ pub fn parse_slide_master<R: Read + Seek>(
                         for attr in e.attributes().flatten() {
                             let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                             if key.ends_with("embed") {
-                                bg_blip_rel_id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                bg_blip_rel_id =
+                                    Some(String::from_utf8_lossy(&attr.value).to_string());
                             }
                         }
                     }
@@ -82,7 +83,10 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
                             if in_bg_grad_fill {
-                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                                bg_grad_stops.push(GradientStop {
+                                    position: bg_gs_pos,
+                                    color,
+                                });
                             } else {
                                 bg_solid_color = Some(color);
                             }
@@ -92,7 +96,10 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
                             if in_bg_grad_fill {
-                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                                bg_grad_stops.push(GradientStop {
+                                    position: bg_gs_pos,
+                                    color,
+                                });
                             } else {
                                 bg_solid_color = Some(color);
                             }
@@ -163,7 +170,8 @@ pub fn parse_slide_master<R: Read + Seek>(
                         for attr in e.attributes().flatten() {
                             let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                             if key.ends_with("embed") {
-                                bg_blip_rel_id = Some(String::from_utf8_lossy(&attr.value).to_string());
+                                bg_blip_rel_id =
+                                    Some(String::from_utf8_lossy(&attr.value).to_string());
                             }
                         }
                     }
@@ -178,7 +186,10 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::rgb(val);
                             if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
-                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                                bg_grad_stops.push(GradientStop {
+                                    position: bg_gs_pos,
+                                    color,
+                                });
                             } else {
                                 bg_solid_color = Some(color);
                             }
@@ -188,7 +199,10 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             let color = Color::theme(val);
                             if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
-                                bg_grad_stops.push(GradientStop { position: bg_gs_pos, color });
+                                bg_grad_stops.push(GradientStop {
+                                    position: bg_gs_pos,
+                                    color,
+                                });
                             } else {
                                 bg_solid_color = Some(color);
                             }

@@ -1208,8 +1208,7 @@ pub fn parse_slide<R: Read + Seek>(
                     // Color modifiers (Empty tags)
                     "tint" | "shade" | "alpha" | "lumMod" | "lumOff" | "satMod" | "satOff"
                     | "hueMod" | "hueOff" | "comp" | "inv" | "gray" => {
-                        let val =
-                            xml_utils::attr_str(e, "val").and_then(|v| v.parse::<i32>().ok());
+                        let val = xml_utils::attr_str(e, "val").and_then(|v| v.parse::<i32>().ok());
                         if let Some(modifier) = ColorModifier::from_ooxml(&local, val) {
                             if in_shape_outer_shdw || in_shape_glow {
                                 if let Some(ref mut color) = shape_effect_color {
@@ -1248,7 +1247,11 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         } else if in_para_def_rpr {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                let target = if in_tc {
+                                    &mut cell_paragraph
+                                } else {
+                                    &mut current_paragraph
+                                };
                                 if let Some(pb) = target.as_mut() {
                                     pb.def_rpr_font_latin = Some(typeface);
                                 }
@@ -1266,7 +1269,11 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         } else if in_para_def_rpr {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                let target = if in_tc { &mut cell_paragraph } else { &mut current_paragraph };
+                                let target = if in_tc {
+                                    &mut cell_paragraph
+                                } else {
+                                    &mut current_paragraph
+                                };
                                 if let Some(pb) = target.as_mut() {
                                     pb.def_rpr_font_ea = Some(typeface);
                                 }
@@ -1849,7 +1856,8 @@ pub fn parse_slide<R: Read + Seek>(
                     "outerShdw" if in_shape_outer_shdw => {
                         in_shape_outer_shdw = false;
                         if let Some(sb) = current_shape.as_mut() {
-                            let color = shape_effect_color.take()
+                            let color = shape_effect_color
+                                .take()
                                 .unwrap_or_else(|| Color::rgb("000000"));
                             sb.shape_outer_shadow = Some(OuterShadow {
                                 blur_radius: shape_shdw_blur,
@@ -1863,7 +1871,8 @@ pub fn parse_slide<R: Read + Seek>(
                     "glow" if in_shape_glow => {
                         in_shape_glow = false;
                         if let Some(sb) = current_shape.as_mut() {
-                            let color = shape_effect_color.take()
+                            let color = shape_effect_color
+                                .take()
                                 .unwrap_or_else(|| Color::rgb("FFC000"));
                             sb.shape_glow = Some(GlowEffect {
                                 radius: shape_glow_rad,
@@ -2433,7 +2442,9 @@ impl ShapeBuilder {
         let shape_type = if let Some(label) = self.unsupported_content {
             ShapeType::Unsupported(slide::UnsupportedData {
                 label,
-                element_type: self.unresolved_type.unwrap_or(slide::UnresolvedType::SmartArt),
+                element_type: self
+                    .unresolved_type
+                    .unwrap_or(slide::UnresolvedType::SmartArt),
                 raw_xml: self.raw_xml_capture,
             })
         } else if self.is_chart {
@@ -2480,9 +2491,7 @@ impl ShapeBuilder {
             style: if self.border_no_fill {
                 // Explicit <a:noFill/> inside <a:ln>: keep None
                 BorderStyle::None
-            } else if self.border_width > 0.0
-                && matches!(self.border_style, BorderStyle::None)
-            {
+            } else if self.border_width > 0.0 && matches!(self.border_style, BorderStyle::None) {
                 BorderStyle::Solid
             } else {
                 self.border_style

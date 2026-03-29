@@ -875,13 +875,29 @@ fn test_shape_outer_shadow_parsing() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
-    let shadow = shape.effects.outer_shadow.as_ref().expect("outer_shadow should be parsed");
+    let shadow = shape
+        .effects
+        .outer_shadow
+        .as_ref()
+        .expect("outer_shadow should be parsed");
     // blurRad: 50800 EMU / 12700 = 4pt
-    assert!((shadow.blur_radius - 4.0).abs() < 0.1, "blur_radius should be ~4pt, got {}", shadow.blur_radius);
+    assert!(
+        (shadow.blur_radius - 4.0).abs() < 0.1,
+        "blur_radius should be ~4pt, got {}",
+        shadow.blur_radius
+    );
     // dist: 38100 EMU / 12700 = 3pt
-    assert!((shadow.distance - 3.0).abs() < 0.1, "distance should be ~3pt, got {}", shadow.distance);
+    assert!(
+        (shadow.distance - 3.0).abs() < 0.1,
+        "distance should be ~3pt, got {}",
+        shadow.distance
+    );
     // dir: 2700000 / 60000 = 45 deg
-    assert!((shadow.direction - 45.0).abs() < 0.1, "direction should be 45deg, got {}", shadow.direction);
+    assert!(
+        (shadow.direction - 45.0).abs() < 0.1,
+        "direction should be 45deg, got {}",
+        shadow.direction
+    );
 }
 
 #[test]
@@ -930,7 +946,11 @@ fn test_shape_glow_parsing() {
     let shape = &pres.slides[0].shapes[0];
     let glow = shape.effects.glow.as_ref().expect("glow should be parsed");
     // rad: 63500 EMU / 12700 = 5pt
-    assert!((glow.radius - 5.0).abs() < 0.1, "glow radius should be ~5pt, got {}", glow.radius);
+    assert!(
+        (glow.radius - 5.0).abs() < 0.1,
+        "glow radius should be ~5pt, got {}",
+        glow.radius
+    );
 }
 
 #[test]
@@ -984,7 +1004,10 @@ fn test_shape_combined_shadow_and_glow() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
-    assert!(shape.effects.outer_shadow.is_some(), "outer_shadow should be parsed");
+    assert!(
+        shape.effects.outer_shadow.is_some(),
+        "outer_shadow should be parsed"
+    );
     assert!(shape.effects.glow.is_some(), "glow should be parsed");
 
     let html = render_html(&pptx);
@@ -1009,8 +1032,11 @@ fn test_shape_no_effects_no_box_shadow() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
     // Extract the shape div's style attribute (not global CSS which has slide box-shadow)
-    let shape_div_start = html.find("<div class=\"shape\"").expect("shape div should exist");
-    let shape_section = &html[shape_div_start..shape_div_start + 300.min(html.len() - shape_div_start)];
+    let shape_div_start = html
+        .find("<div class=\"shape\"")
+        .expect("shape div should exist");
+    let shape_section =
+        &html[shape_div_start..shape_div_start + 300.min(html.len() - shape_div_start)];
     assert!(
         !shape_section.contains("box-shadow"),
         "No effects means no box-shadow on shape div: {shape_section}"
@@ -1036,9 +1062,16 @@ fn test_shape_shadow_with_scheme_color() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
-    let shadow = shape.effects.outer_shadow.as_ref().expect("should parse scheme color shadow");
+    let shadow = shape
+        .effects
+        .outer_shadow
+        .as_ref()
+        .expect("should parse scheme color shadow");
     // dir: 5400000 / 60000 = 90 deg (straight down)
-    assert!((shadow.direction - 90.0).abs() < 0.1, "direction should be 90deg");
+    assert!(
+        (shadow.direction - 90.0).abs() < 0.1,
+        "direction should be 90deg"
+    );
 }
 
 // ── Month 4: CSS global classes test ──
@@ -1237,7 +1270,9 @@ fn test_background_gradient_fill_parsing() {
   </p:cSld>
 </p:sld>"#;
 
-    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .build();
     let pres = parse_pptx(&pptx);
     let slide = &pres.slides[0];
     match &slide.background {
@@ -1277,7 +1312,9 @@ fn test_background_gradient_fill_html() {
   </p:cSld>
 </p:sld>"#;
 
-    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .build();
     let html = render_html(&pptx);
     assert!(
         html.contains("linear-gradient"),
@@ -1319,7 +1356,9 @@ fn test_background_gradient_with_scheme_colors() {
   </p:cSld>
 </p:sld>"#;
 
-    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .build();
     let pres = parse_pptx(&pptx);
     let slide = &pres.slides[0];
     match &slide.background {
@@ -1370,9 +1409,8 @@ fn test_background_image_fill() {
         0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
         0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, // 8-bit RGB
         0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
-        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00,
-        0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33,
-        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
+        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
         0xAE, 0x42, 0x60, 0x82,
     ];
 
@@ -1401,16 +1439,20 @@ fn test_background_image_fill() {
 </Relationships>"#).unwrap();
 
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
 
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1421,7 +1463,8 @@ fn test_background_image_fill() {
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
 
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
 
     zip.start_file("ppt/media/image1.png", opts).unwrap();
@@ -1509,7 +1552,12 @@ fn test_gradient_fill_with_modifiers() {
     let shape = &pres.slides[0].shapes[0];
     match &shape.fill {
         Fill::Gradient(gf) => {
-            assert_eq!(gf.stops.len(), 2, "Expected 2 gradient stops, got {}", gf.stops.len());
+            assert_eq!(
+                gf.stops.len(),
+                2,
+                "Expected 2 gradient stops, got {}",
+                gf.stops.len()
+            );
             assert!((gf.stops[0].position - 0.0).abs() < 0.01);
             assert!((gf.stops[1].position - 1.0).abs() < 0.01);
             assert!((gf.angle - 90.0).abs() < 0.1);
@@ -1633,7 +1681,12 @@ fn test_gradient_fill_scheme_colors_with_modifiers() {
     let shape = &pres.slides[0].shapes[0];
     match &shape.fill {
         Fill::Gradient(gf) => {
-            assert_eq!(gf.stops.len(), 3, "Expected 3 gradient stops, got {}", gf.stops.len());
+            assert_eq!(
+                gf.stops.len(),
+                3,
+                "Expected 3 gradient stops, got {}",
+                gf.stops.len()
+            );
             assert!((gf.stops[0].position - 0.0).abs() < 0.01);
             assert!((gf.stops[1].position - 0.5).abs() < 0.01);
             assert!((gf.stops[2].position - 1.0).abs() < 0.01);

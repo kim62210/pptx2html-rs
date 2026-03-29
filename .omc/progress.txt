@@ -1,9 +1,23 @@
 # Ralph Progress — pptx2html-rs Visual Fidelity
-## Iteration 1 — Starting
 
-### Environment
-- Project: /Users/adminstrator/Desktop/hyungjoo-drb/open-source/pptx-to-html
-- Test PPTX dir: /Users/adminstrator/Desktop/hyungjoo-drb/prompter-be/app/service/rules/drb_rules/documents
-- Output: /tmp/pptx2html-output/
-- Eval venv: /tmp/eval-venv/bin/python3
-- CLI: target/release/pptx2html
+## Final Results — Iteration 3
+
+### Composite Score: 100.0%
+- Position accuracy: 2039/2039 = 100.0%
+- Size accuracy: 2039/2039 = 100.0%
+- Image loading: 527/425 = 100.0% (more images than shapes due to bg images)
+- SVG paths rendered: 604
+
+### All 8 PRD Stories: PASS
+
+### Key Fixes This Session
+1. `<a:ln><a:noFill/>` → Border.no_fill flag prevents black stroke fallback
+2. Background gradient stop colors routed to bg_grad_stops (not bg_solid_color)
+3. SVG linearGradient defs for gradient-filled shapes
+4. tx1/bg1/tx2/bg2 theme alias verified as working correctly
+
+### Learnings
+- OOXML `tx1` maps to `dk1` which is often #000000 — black strokes are intentional
+- DRB PPTX files use no direct gradient fills, only theme references
+- `<a:noFill>` inside `<a:ln>` is distinct from `<a:ln>` being absent
+- SVG `fill` attribute cannot use CSS gradients — need `<linearGradient>` defs

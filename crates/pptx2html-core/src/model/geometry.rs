@@ -55,11 +55,34 @@ pub struct GeometryPath {
 /// DrawingML path command
 #[derive(Debug, Clone)]
 pub enum PathCommand {
-    MoveTo { x: f64, y: f64 },
-    LineTo { x: f64, y: f64 },
-    CubicBezTo { x1: f64, y1: f64, x2: f64, y2: f64, x: f64, y: f64 },
-    QuadBezTo { x1: f64, y1: f64, x: f64, y: f64 },
-    ArcTo { wr: f64, hr: f64, start_angle: f64, swing_angle: f64 },
+    MoveTo {
+        x: f64,
+        y: f64,
+    },
+    LineTo {
+        x: f64,
+        y: f64,
+    },
+    CubicBezTo {
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        x: f64,
+        y: f64,
+    },
+    QuadBezTo {
+        x1: f64,
+        y1: f64,
+        x: f64,
+        y: f64,
+    },
+    ArcTo {
+        wr: f64,
+        hr: f64,
+        start_angle: f64,
+        swing_angle: f64,
+    },
     Close,
 }
 

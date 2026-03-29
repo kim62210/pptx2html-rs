@@ -620,7 +620,10 @@ fn test_backward_compat_convert_bytes() {
 
     // Existing API still returns String, not ConversionResult
     let html: String = pptx2html_core::convert_bytes(&pptx).expect("conversion failed");
-    assert!(html.contains("[SmartArt]"), "Backward compat: label should still appear");
+    assert!(
+        html.contains("[SmartArt]"),
+        "Backward compat: label should still appear"
+    );
     assert!(html.contains("<!DOCTYPE html>"), "Should be complete HTML");
 }
 
@@ -787,7 +790,14 @@ fn test_custgeom_cubic_bezier() {
         ShapeType::CustomGeom(geom) => {
             assert_eq!(geom.paths[0].commands.len(), 2); // moveTo + cubicBezTo
             match &geom.paths[0].commands[1] {
-                PathCommand::CubicBezTo { x1, y1, x2, y2, x, y } => {
+                PathCommand::CubicBezTo {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    x,
+                    y,
+                } => {
                     assert!((x1 - 7200.0).abs() < 0.01);
                     assert!((*y1).abs() < 0.01);
                     assert!((x2 - 14400.0).abs() < 0.01);
@@ -870,7 +880,12 @@ fn test_custgeom_arc_to() {
         ShapeType::CustomGeom(geom) => {
             assert_eq!(geom.paths[0].commands.len(), 2); // moveTo + arcTo
             match &geom.paths[0].commands[1] {
-                PathCommand::ArcTo { wr, hr, start_angle, swing_angle } => {
+                PathCommand::ArcTo {
+                    wr,
+                    hr,
+                    start_angle,
+                    swing_angle,
+                } => {
                     assert!((wr - 5400.0).abs() < 0.01);
                     assert!((hr - 5400.0).abs() < 0.01);
                     assert!((*start_angle).abs() < 0.01);
@@ -954,7 +969,10 @@ fn test_custgeom_with_text_body() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
-    assert!(html.contains("Hello Custom"), "Text should be rendered alongside custom geometry");
+    assert!(
+        html.contains("Hello Custom"),
+        "Text should be rendered alongside custom geometry"
+    );
     assert!(html.contains("<path d="), "SVG path should be present");
 }
 
@@ -1014,9 +1032,15 @@ fn test_norm_autofit_font_scale_parsed() {
             line_spacing_reduction,
         } => {
             let fs = font_scale.expect("font_scale should be Some");
-            assert!((fs - 0.625).abs() < 0.001, "font_scale: expected ~0.625, got {fs}");
+            assert!(
+                (fs - 0.625).abs() < 0.001,
+                "font_scale: expected ~0.625, got {fs}"
+            );
             let lr = line_spacing_reduction.expect("line_spacing_reduction should be Some");
-            assert!((lr - 0.2).abs() < 0.001, "line_spacing_reduction: expected ~0.2, got {lr}");
+            assert!(
+                (lr - 0.2).abs() < 0.001,
+                "line_spacing_reduction: expected ~0.2, got {lr}"
+            );
         }
         other => panic!("Expected AutoFit::Normal, got {:?}", other),
     }

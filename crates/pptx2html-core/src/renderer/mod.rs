@@ -238,13 +238,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if master_shape.placeholder.is_some() {
                     continue;
                 }
-                Self::render_shape_resolved(
-                    master_shape,
-                    None,
-                    None,
-                    &slide_ctx,
-                    html,
-                );
+                Self::render_shape_resolved(master_shape, None, None, &slide_ctx, html);
             }
         }
 
@@ -261,13 +255,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 master.and_then(|m| placeholder::find_matching_placeholder(ph, &m.shapes))
             });
 
-            Self::render_shape_resolved(
-                shape,
-                layout_match,
-                master_match,
-                &slide_ctx,
-                html,
-            );
+            Self::render_shape_resolved(shape, layout_match, master_match, &slide_ctx, html);
         }
 
         html.push_str("</div>\n");
@@ -289,7 +277,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let h = size.height.to_px();
 
         let mut style_buf = String::with_capacity(256);
-        let _ = write!(style_buf, "left: {x:.1}px; top: {y:.1}px; width: {w:.1}px; height: {h:.1}px");
+        let _ = write!(
+            style_buf,
+            "left: {x:.1}px; top: {y:.1}px; width: {w:.1}px; height: {h:.1}px"
+        );
 
         // Build transform: flip + rotation
         if shape.rotation != 0.0 || shape.flip_h || shape.flip_v {
@@ -318,8 +309,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ShapeType::Custom(name) => Some(name.as_str()),
             _ => None,
         };
-        let uses_svg = svg_preset_name.is_some()
-            || matches!(shape.shape_type, ShapeType::CustomGeom(_));
+        let uses_svg =
+            svg_preset_name.is_some() || matches!(shape.shape_type, ShapeType::CustomGeom(_));
 
         // Resolve fill via inheritance (with style_ref fallback)
         let fmt_scheme = ctx.pres.primary_theme().map(|t| &t.fmt_scheme);
@@ -423,10 +414,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Unsupported content (SmartArt, OLE, Math)
         if let ShapeType::Unsupported(ref data) = shape.shape_type {
             let mut coll = ctx.collector.borrow_mut();
-            let placeholder_id = format!(
-                "unresolved-s{}-e{}",
-                coll.current_slide_index, coll.counter
-            );
+            let placeholder_id =
+                format!("unresolved-s{}-e{}", coll.current_slide_index, coll.counter);
             coll.counter += 1;
 
             let type_attr = match data.element_type {
@@ -501,12 +490,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 // Connector/line shapes need a default visible stroke
                 let is_line_shape = matches!(
                     preset_name,
-                    "line" | "lineInv"
+                    "line"
+                        | "lineInv"
                         | "straightConnector1"
-                        | "bentConnector2" | "bentConnector3"
-                        | "bentConnector4" | "bentConnector5"
-                        | "curvedConnector2" | "curvedConnector3"
-                        | "curvedConnector4" | "curvedConnector5"
+                        | "bentConnector2"
+                        | "bentConnector3"
+                        | "bentConnector4"
+                        | "bentConnector5"
+                        | "curvedConnector2"
+                        | "curvedConnector3"
+                        | "curvedConnector4"
+                        | "curvedConnector5"
                 );
                 // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
@@ -654,9 +648,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 // fills more than the shape, then shift it so the crop region's
                 // top-left aligns with the shape origin.  overflow:hidden on the
                 // parent div clips the excess.
-                let l = crop.left * 100.0;   // left crop %
-                let t = crop.top * 100.0;    // top crop %
-                let r = crop.right * 100.0;  // right crop %
+                let l = crop.left * 100.0; // left crop %
+                let t = crop.top * 100.0; // top crop %
+                let r = crop.right * 100.0; // right crop %
                 let b = crop.bottom * 100.0; // bottom crop %
                 let vis_w = 100.0 - l - r;
                 let vis_h = 100.0 - t - b;
@@ -677,16 +671,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     );
                 } else {
                     // Degenerate crop — show the whole image
-                    let _ = write!(
-                        html,
-                        "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n"
-                    );
+                    let _ = write!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n");
                 }
             } else {
-                let _ = write!(
-                    html,
-                    "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n"
-                );
+                let _ = write!(html, "<img class=\"shape-image\" src=\"{src}\" alt=\"\">\n");
             }
         }
 
@@ -1256,9 +1244,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     resolve_font_name(inherited, font_scheme)
                 })
             })
-            .or_else(|| {
-                font_ref_font.and_then(|f| resolve_font_name(f, font_scheme))
-            });
+            .or_else(|| font_ref_font.and_then(|f| resolve_font_name(f, font_scheme)));
 
         if let Some(f) = resolved_font {
             let _ = write!(run_style, "font-family: '{f}'");
@@ -1376,7 +1362,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 escape_html(href)
             );
         } else {
-            let _ = write!(html, "<span class=\"run\" style=\"{run_style}\">{text}</span>");
+            let _ = write!(
+                html,
+                "<span class=\"run\" style=\"{run_style}\">{text}</span>"
+            );
         }
     }
 
@@ -1404,7 +1393,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
                 if has_stops {
                     push_sep(buf);
-                    let _ = write!(buf, "background: linear-gradient({:.0}deg, {stops_buf})", gf.angle);
+                    let _ = write!(
+                        buf,
+                        "background: linear-gradient({:.0}deg, {stops_buf})",
+                        gf.angle
+                    );
                 }
             }
             Fill::Image(img_fill) => {
@@ -1416,8 +1409,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     };
                     push_sep(buf);
                     if ctx.embed_images {
-                        let b64 =
-                            base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
                         let _ = write!(
                             buf,
                             "background-image: url(data:{mime};base64,{b64}); \
@@ -1682,10 +1674,7 @@ fn svg_gradient_def(
         let stops: Vec<(f64, String)> = gf
             .stops
             .iter()
-            .filter_map(|s| {
-                ctx.color_to_css(&s.color)
-                    .map(|c| (s.position, c))
-            })
+            .filter_map(|s| ctx.color_to_css(&s.color).map(|c| (s.position, c)))
             .collect();
         if stops.is_empty() {
             return None;
@@ -1731,15 +1720,11 @@ fn emit_marker_def(
 
     let (path, fill_attr) = match line_end.end_type {
         LineEndType::Arrow => (
-            format!(
-                "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1}",
-            ),
+            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1}",),
             "none".to_string(),
         ),
         LineEndType::Triangle => (
-            format!(
-                "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} Z",
-            ),
+            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} Z",),
             color.to_string(),
         ),
         LineEndType::Stealth => (
