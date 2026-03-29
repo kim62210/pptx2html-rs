@@ -1056,3 +1056,420 @@ fn test_global_css_contains_svg_styles() {
         "CSS should contain .chart-placeholder class"
     );
 }
+
+// ── Connector line color tests ──
+
+#[test]
+fn test_connector_border_color_srgb() {
+    // Connector with inline srgbClr in <a:ln> — must parse border color
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Connector"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="0"/></a:xfrm>
+        <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+        <a:ln w="9525">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+        </a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert!(
+        shape.border.width > 0.0,
+        "border width should be > 0, got {}",
+        shape.border.width
+    );
+    assert_eq!(
+        shape.border.color.kind,
+        color::ColorKind::Rgb("C00000".to_string()),
+        "border color should be C00000, got {:?}",
+        shape.border.color
+    );
+}
+
+#[test]
+fn test_connector_with_style_and_inline_color() {
+    // Connector with both inline <a:ln> color AND <p:style> (real-world pattern)
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Connector"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="0"/></a:xfrm>
+        <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+        <a:ln w="9525" cap="flat" cmpd="sng" algn="ctr">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+          <a:prstDash val="dash"/>
+          <a:round/>
+          <a:headEnd type="none" w="med" len="med"/>
+          <a:tailEnd type="none" w="med" len="med"/>
+        </a:ln>
+      </p:spPr>
+      <p:style>
+        <a:lnRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef>
+        <a:fillRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>
+        <a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef>
+        <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>
+      </p:style>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert!(
+        shape.border.width > 0.0,
+        "border width should be > 0, got {}",
+        shape.border.width
+    );
+    assert_eq!(
+        shape.border.color.kind,
+        color::ColorKind::Rgb("C00000".to_string()),
+        "border color should be C00000 with style element present, got {:?}",
+        shape.border.color
+    );
+}
+
+#[test]
+fn test_connector_border_color_srgb_html() {
+    // Connector rendered as SVG should use the parsed stroke color, not black
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Connector"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="0"/></a:xfrm>
+        <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+        <a:ln w="9525">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+        </a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("#C00000"),
+        "HTML should contain connector stroke color #C00000, got: {html}"
+    );
+}
+
+// ── noFill inside <a:ln> suppresses border ──
+
+#[test]
+fn test_ln_nofill_suppresses_border() {
+    // Shape with <a:ln><a:noFill/></a:ln> must have zero-width border
+    // even though <a:ln> is present (regression: was defaulting to 1pt black)
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Donut"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="200000" cy="200000"/></a:xfrm>
+        <a:prstGeom prst="donut"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+    assert_eq!(
+        shape.border.width, 0.0,
+        "noFill inside <a:ln> should yield border width 0, got {}",
+        shape.border.width
+    );
+    assert!(
+        shape.border.no_fill,
+        "noFill inside <a:ln> should set no_fill flag"
+    );
+}
+
+#[test]
+fn test_ln_nofill_no_black_stroke_in_svg() {
+    // SVG output for shape with <a:ln><a:noFill/></a:ln> must NOT have #000 stroke
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Donut"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="200000" cy="200000"/></a:xfrm>
+        <a:prstGeom prst="donut"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+        <a:ln><a:noFill/></a:ln>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        !html.contains("stroke=\"#000\""),
+        "noFill inside <a:ln> must not produce #000 stroke: {html}"
+    );
+}
+
+// ── Background gradient fill tests ──
+
+#[test]
+fn test_background_gradient_fill_parsing() {
+    // Slide with background gradient fill using self-closing color tags (Empty events)
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+            <a:gs pos="50000"><a:srgbClr val="00FF00"/></a:gs>
+            <a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000" scaled="0"/>
+        </a:gradFill>
+        <a:effectLst/>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let pres = parse_pptx(&pptx);
+    let slide = &pres.slides[0];
+    match &slide.background {
+        Some(Fill::Gradient(gf)) => {
+            assert_eq!(gf.stops.len(), 3, "Expected 3 gradient stops");
+            assert!((gf.stops[0].position - 0.0).abs() < 0.01);
+            assert!((gf.stops[1].position - 0.5).abs() < 0.01);
+            assert!((gf.stops[2].position - 1.0).abs() < 0.01);
+            assert!((gf.angle - 90.0).abs() < 0.1);
+        }
+        other => panic!("Expected Fill::Gradient for background, got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_background_gradient_fill_html() {
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+            <a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs>
+          </a:gsLst>
+          <a:lin ang="5400000"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("linear-gradient"),
+        "Background gradient should produce linear-gradient CSS: {html}"
+    );
+    assert!(
+        html.contains("#FF0000"),
+        "Start color not found in gradient CSS"
+    );
+    assert!(
+        html.contains("#0000FF"),
+        "End color not found in gradient CSS"
+    );
+}
+
+#[test]
+fn test_background_gradient_with_scheme_colors() {
+    // Background gradient using schemeClr (self-closing Empty event)
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:schemeClr val="accent1"/></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent2"/></a:gs>
+          </a:gsLst>
+          <a:lin ang="0"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = fixtures::MinimalPptx::new("").with_raw_slide(slide_xml).build();
+    let pres = parse_pptx(&pptx);
+    let slide = &pres.slides[0];
+    match &slide.background {
+        Some(Fill::Gradient(gf)) => {
+            assert_eq!(gf.stops.len(), 2, "Expected 2 gradient stops");
+        }
+        other => panic!("Expected Fill::Gradient for scheme color background, got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_background_image_fill() {
+    // Build a PPTX with a background image using blipFill
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill>
+          <a:blip r:embed="rId2"/>
+          <a:stretch><a:fillRect/></a:stretch>
+        </a:blipFill>
+        <a:effectLst/>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+</Relationships>"#;
+
+    // Create a minimal 1x1 PNG
+    let png_data: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, // 8-bit RGB
+        0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
+        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00,
+        0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
+        0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#).unwrap();
+
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#).unwrap();
+
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#).unwrap();
+
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+
+    zip.start_file("ppt/media/image1.png", opts).unwrap();
+    zip.write_all(&png_data).unwrap();
+
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T">
+  <a:themeElements>
+    <a:clrScheme name="O">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme>
+  </a:themeElements>
+</a:theme>"#).unwrap();
+
+    let data = zip.finish().unwrap().into_inner();
+
+    // Verify parsing produces Fill::Image
+    let pres = parse_pptx(&data);
+    let slide = &pres.slides[0];
+    match &slide.background {
+        Some(Fill::Image(img)) => {
+            assert!(!img.data.is_empty(), "Image data should not be empty");
+            assert_eq!(img.content_type, "image/png");
+        }
+        other => panic!("Expected Fill::Image for background, got: {other:?}"),
+    }
+
+    // Verify HTML rendering produces background-image
+    let html = render_html(&data);
+    assert!(
+        html.contains("background-image"),
+        "Background image should produce background-image CSS"
+    );
+    assert!(
+        html.contains("data:image/png;base64,"),
+        "Background image should be embedded as base64"
+    );
+}
