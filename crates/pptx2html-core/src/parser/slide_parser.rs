@@ -323,6 +323,21 @@ pub fn parse_slide<R: Read + Seek>(
                     "spPr" if current_shape.is_some() => {
                         in_sp_pr = true;
                     }
+                    // Transform (rotation, flip)
+                    "xfrm" if in_sp_pr => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
+                                // rot is in 60000ths of a degree
+                                sb.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60000.0;
+                            }
+                            if let Some(fh) = xml_utils::attr_str(e, "flipH") {
+                                sb.flip_h = fh == "1" || fh == "true";
+                            }
+                            if let Some(fv) = xml_utils::attr_str(e, "flipV") {
+                                sb.flip_v = fv == "1" || fv == "true";
+                            }
+                        }
+                    }
                     // Line/border
                     "ln" if in_sp_pr => {
                         in_ln = true;
@@ -762,6 +777,20 @@ pub fn parse_slide<R: Read + Seek>(
                                 Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
                             gc.child_extent.height =
                                 Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                        }
+                    }
+                    // Transform (Empty variant, e.g. connector with no children)
+                    "xfrm" if in_sp_pr => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
+                                sb.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60000.0;
+                            }
+                            if let Some(fh) = xml_utils::attr_str(e, "flipH") {
+                                sb.flip_h = fh == "1" || fh == "true";
+                            }
+                            if let Some(fv) = xml_utils::attr_str(e, "flipV") {
+                                sb.flip_v = fv == "1" || fv == "true";
+                            }
                         }
                     }
                     // Preset geometry
@@ -2227,6 +2256,9 @@ fn parse_run_props(e: &quick_xml::events::BytesStart<'_>, run: &mut Option<RunBu
 struct ShapeBuilder {
     position: Position,
     size: Size,
+    rotation: f64,
+    flip_h: bool,
+    flip_v: bool,
     paragraphs: Vec<TextParagraph>,
     has_text_body: bool,
     is_picture: bool,
@@ -2341,6 +2373,9 @@ impl ShapeBuilder {
         Shape {
             position: self.position,
             size: self.size,
+            rotation: self.rotation,
+            flip_h: self.flip_h,
+            flip_v: self.flip_v,
             shape_type,
             text_body,
             fill: self.fill,

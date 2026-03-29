@@ -58,6 +58,8 @@ pub struct Shape {
     pub position: Position,
     pub size: Size,
     pub rotation: f64, // in degrees
+    pub flip_h: bool,
+    pub flip_v: bool,
     pub fill: Fill,
     pub border: Border,
     pub text_body: Option<TextBody>,

@@ -290,8 +290,23 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let mut style_buf = String::with_capacity(256);
         let _ = write!(style_buf, "left: {x:.1}px; top: {y:.1}px; width: {w:.1}px; height: {h:.1}px");
 
-        if shape.rotation != 0.0 {
-            let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
+        // Build transform: flip + rotation
+        if shape.rotation != 0.0 || shape.flip_h || shape.flip_v {
+            let sx = if shape.flip_h { -1 } else { 1 };
+            let sy = if shape.flip_v { -1 } else { 1 };
+            if shape.flip_h || shape.flip_v {
+                if shape.rotation != 0.0 {
+                    let _ = write!(
+                        style_buf,
+                        "; transform: scale({sx},{sy}) rotate({:.1}deg)",
+                        shape.rotation
+                    );
+                } else {
+                    let _ = write!(style_buf, "; transform: scale({sx},{sy})");
+                }
+            } else {
+                let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
+            }
         }
 
         // Determine SVG preset name early so we know whether to skip CSS fill/border
