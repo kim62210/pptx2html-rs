@@ -254,7 +254,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 // Skip ALL placeholder shapes -- they are property templates,
                 // not renderable content.  Slide shapes inherit from them via
                 // the layout/master cascade; rendering them here produces
-                // duplicate shapes with template text (e.g. "마스터 제목 스타일 편집").
+                // duplicate shapes with template text (e.g. "Click to edit Master title style").
                 if master_shape.placeholder.is_some() {
                     continue;
                 }
