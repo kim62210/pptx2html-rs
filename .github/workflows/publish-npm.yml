@@ -64,8 +64,8 @@ jobs:
           pkg.description = 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies';
           pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
           pkg.author = 'Brian Kim <hyungjoo.drb@gmail.com>';
-          pkg.homepage = 'https://github.com/hyungjoo-drb/pptx2html-turbo';
-          pkg.bugs = { url: 'https://github.com/hyungjoo-drb/pptx2html-turbo/issues' };
+          pkg.homepage = 'https://github.com/kim62210/pptx2html-turbo';
+          pkg.bugs = { url: 'https://github.com/kim62210/pptx2html-turbo/issues' };
           pkg.engines = { node: '>=16' };
           pkg.exports = {
             '.': {
