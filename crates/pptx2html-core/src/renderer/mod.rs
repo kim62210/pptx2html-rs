@@ -591,9 +591,49 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     Some(format!("M0,1.0 L{svg_w:.1},1.0"))
                 }
+            } else if connector_needs_swap {
+                // Connectors with 90°/270° rotation need rotated path variants.
+                // After dimension swap (w↔h), the original path direction is wrong.
+                // Generate the correct path based on rotation + flip.
+                let flip_h = shape.flip_h;
+                let flip_v = shape.flip_v;
+                match preset_name {
+                    "line" | "lineInv" | "straightConnector1" => {
+                        // Straight line: always diagonal or centered, rotation doesn't change path
+                        None
+                    }
+                    "bentConnector2" => {
+                        // Original: RIGHT→DOWN. After 270° rotation:
+                        // +flipH → DOWN→RIGHT; +flipV → UP→LEFT; no flip → DOWN→LEFT
+                        let path = if flip_h {
+                            format!("M0,0 L0,{h:.1} L{w:.1},{h:.1}", w = svg_w, h = svg_h)
+                        } else if flip_v {
+                            format!("M{w:.1},{h:.1} L{w:.1},0 L0,0", w = svg_w, h = svg_h)
+                        } else {
+                            format!("M{w:.1},0 L{w:.1},{h:.1} L0,{h:.1}", w = svg_w, h = svg_h)
+                        };
+                        Some(path)
+                    }
+                    "bentConnector3" => {
+                        // Original: RIGHT→DOWN→RIGHT with adj midpoint.
+                        // After 270° rotation + flipH → DOWN→RIGHT→DOWN
+                        let adj1 = adj_values.get("adj1").copied().unwrap_or(50000.0);
+                        let mid = svg_h * adj1 / 100_000.0;
+                        let path = if flip_h {
+                            format!("M0,0 L0,{mid:.1} L{w:.1},{mid:.1} L{w:.1},{h:.1}",
+                                w = svg_w, mid = mid, h = svg_h)
+                        } else {
+                            format!("M{w:.1},0 L{w:.1},{mid:.1} L0,{mid:.1} L0,{h:.1}",
+                                w = svg_w, mid = mid, h = svg_h)
+                        };
+                        Some(path)
+                    }
+                    _ => None, // Other connectors: fall through to default path + transform
+                }
             } else {
                 None
             };
+            let has_override = line_svg_override.is_some();
             let svg_path_opt = line_svg_override.or_else(|| geometry::preset_shape_svg(preset_name, svg_w, svg_h, adj_values));
             if let Some(svg_path) = svg_path_opt {
                 // Convert border width from pt to px for SVG (viewBox is in px)
@@ -657,8 +697,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ""
                 };
-                // For connectors with swapped dimensions, apply flip via SVG transform
-                let svg_transform = if connector_needs_swap && (shape.flip_h || shape.flip_v) {
+                // For connectors with swapped dimensions where the path was NOT
+                // directly generated (fallback case), apply flip via SVG transform
+                let svg_transform = if connector_needs_swap
+                    && !has_override
+                    && (shape.flip_h || shape.flip_v)
+                {
                     let sx = if shape.flip_h { -1.0 } else { 1.0 };
                     let sy = if shape.flip_v { -1.0 } else { 1.0 };
                     let tx = if shape.flip_h { svg_w } else { 0.0 };
