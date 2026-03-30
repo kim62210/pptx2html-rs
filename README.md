@@ -24,7 +24,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 
 ```bash
 # npm (WASM — browser)
-npm install pptx2html-turbo
+npm install @briank-dev/pptx2html-turbo
 
 # Rust library
 cargo add pptx2html-core
@@ -138,7 +138,7 @@ import init, {
   convert_with_options,
   convert_with_metadata,
   get_presentation_info,
-} from 'pptx2html-turbo';
+} from '@briank-dev/pptx2html-turbo';
 
 await init();
 

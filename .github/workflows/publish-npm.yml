@@ -59,7 +59,7 @@ jobs:
           # Create enhanced package.json using node
           node -e "
           const pkg = require('./package.json');
-          pkg.name = 'pptx2html-turbo';
+          pkg.name = '@briank-dev/pptx2html-turbo';
           pkg.version = '${VERSION}';
           pkg.description = 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies';
           pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
