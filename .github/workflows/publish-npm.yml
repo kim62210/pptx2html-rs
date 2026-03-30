@@ -45,6 +45,11 @@ jobs:
       - name: Build WASM package
         run: wasm-pack build crates/pptx2html-wasm --target web --release --scope pptx2html
 
+      - name: Copy README and LICENSE
+        run: |
+          cp README.md crates/pptx2html-wasm/pkg/
+          cp LICENSE crates/pptx2html-wasm/pkg/
+
       - name: Enhance package.json
         working-directory: crates/pptx2html-wasm/pkg
         run: |
