@@ -34,6 +34,7 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_grad_fill = false;
     let mut grad_stops: Vec<GradientStop> = Vec::new();
     let mut grad_angle: f64 = 0.0;
+    let mut grad_type = GradientType::Linear;
     let mut current_gs_pos: f64 = 0.0;
 
     // Paragraph spacing nesting state
@@ -116,6 +117,7 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_bg_grad_fill = false;
     let mut bg_grad_stops: Vec<GradientStop> = Vec::new();
     let mut bg_grad_angle: f64 = 0.0;
+    let mut bg_grad_type = GradientType::Linear;
     let mut bg_gs_pos: f64 = 0.0;
 
     // Chart detection state
@@ -564,6 +566,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_grad_fill = true;
                         grad_stops.clear();
                         grad_angle = 0.0;
+                        grad_type = GradientType::Linear;
                     }
                     // Gradient stop
                     "gs" if in_grad_fill => {
@@ -571,6 +574,17 @@ pub fn parse_slide<R: Read + Seek>(
                             .and_then(|v| v.parse::<f64>().ok())
                             .map(|v| v / 100_000.0)
                             .unwrap_or(0.0);
+                    }
+                    // Gradient path type (Start variant — has fillToRect child)
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
+                        }
+                    }
+                    "path" if in_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            grad_type = GradientType::from_path_attr(&val);
+                        }
                     }
                     // Color element (Start — may have child modifiers)
                     "srgbClr" => {
@@ -697,6 +711,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_bg_grad_fill = true;
                         bg_grad_stops.clear();
                         bg_grad_angle = 0.0;
+                        bg_grad_type = GradientType::Linear;
                     }
                     // ── Background gradient stop ──
                     "gs" if in_bg_grad_fill => {
@@ -1052,16 +1067,29 @@ pub fn parse_slide<R: Read + Seek>(
                             sb.tail_end = parse_line_end(e);
                         }
                     }
-                    // Gradient direction
+                    // Gradient direction (linear)
                     "lin" if in_bg_grad_fill => {
                         if let Some(ang) = xml_utils::attr_str(e, "ang") {
                             bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
                         }
+                        bg_grad_type = GradientType::Linear;
                     }
                     "lin" if in_grad_fill => {
                         if let Some(ang) = xml_utils::attr_str(e, "ang") {
                             // OOXML angle: in 1/60000 degree units
                             grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                        }
+                        grad_type = GradientType::Linear;
+                    }
+                    // Gradient path type (radial/rectangular/shape)
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
+                        }
+                    }
+                    "path" if in_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            grad_type = GradientType::from_path_attr(&val);
                         }
                     }
                     // Style ref elements (Empty variant -- self-closing with color child)
@@ -1911,6 +1939,7 @@ pub fn parse_slide<R: Read + Seek>(
                         } else if !bg_grad_stops.is_empty() {
                             // Background gradient fill
                             slide.background = Some(Fill::Gradient(GradientFill {
+                                gradient_type: std::mem::take(&mut bg_grad_type),
                                 stops: std::mem::take(&mut bg_grad_stops),
                                 angle: bg_grad_angle,
                             }));
@@ -2124,6 +2153,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_grad_fill = false;
                         if let Some(sb) = &mut current_shape {
                             sb.fill = Fill::Gradient(GradientFill {
+                                gradient_type: std::mem::take(&mut grad_type),
                                 stops: std::mem::take(&mut grad_stops),
                                 angle: grad_angle,
                             });

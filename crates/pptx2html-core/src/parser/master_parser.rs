@@ -46,6 +46,7 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut in_bg_grad_fill = false;
     let mut bg_grad_stops: Vec<GradientStop> = Vec::new();
     let mut bg_grad_angle: f64 = 0.0;
+    let mut bg_grad_type = GradientType::Linear;
     let mut bg_gs_pos: f64 = 0.0;
 
     loop {
@@ -72,6 +73,12 @@ pub fn parse_slide_master<R: Read + Seek>(
                         in_bg_grad_fill = true;
                         bg_grad_stops.clear();
                         bg_grad_angle = 0.0;
+                        bg_grad_type = GradientType::Linear;
+                    }
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
+                        }
                     }
                     "gs" if in_bg_grad_fill => {
                         bg_gs_pos = xml_utils::attr_str(e, "pos")
@@ -179,6 +186,13 @@ pub fn parse_slide_master<R: Read + Seek>(
                     "lin" if in_bg_grad_fill => {
                         if let Some(ang) = xml_utils::attr_str(e, "ang") {
                             bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                        }
+                        bg_grad_type = GradientType::Linear;
+                    }
+                    // Background gradient path type (Empty variant)
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
                         }
                     }
                     // Background solid/gradient color (Empty variant)
@@ -351,6 +365,7 @@ pub fn parse_slide_master<R: Read + Seek>(
                             master.background = Some(Fill::Solid(SolidFill { color }));
                         } else if !bg_grad_stops.is_empty() {
                             master.background = Some(Fill::Gradient(GradientFill {
+                                gradient_type: std::mem::take(&mut bg_grad_type),
                                 stops: std::mem::take(&mut bg_grad_stops),
                                 angle: bg_grad_angle,
                             }));

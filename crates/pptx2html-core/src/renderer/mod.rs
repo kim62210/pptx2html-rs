@@ -1637,11 +1637,33 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
                 if has_stops {
                     push_sep(buf);
-                    let _ = write!(
-                        buf,
-                        "background: linear-gradient({:.0}deg, {stops_buf})",
-                        gf.angle
-                    );
+                    match gf.gradient_type {
+                        GradientType::Linear => {
+                            let _ = write!(
+                                buf,
+                                "background: linear-gradient({:.0}deg, {stops_buf})",
+                                gf.angle
+                            );
+                        }
+                        GradientType::Radial => {
+                            let _ = write!(
+                                buf,
+                                "background: radial-gradient(circle, {stops_buf})"
+                            );
+                        }
+                        GradientType::Rectangular => {
+                            let _ = write!(
+                                buf,
+                                "background: radial-gradient(ellipse, {stops_buf})"
+                            );
+                        }
+                        GradientType::Shape => {
+                            let _ = write!(
+                                buf,
+                                "background: radial-gradient(closest-side, {stops_buf})"
+                            );
+                        }
+                    }
                 }
             }
             Fill::Image(img_fill) => {
@@ -1704,11 +1726,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if stops.is_empty() {
                     String::new()
                 } else {
-                    format!(
-                        "background: linear-gradient({:.0}deg, {})",
-                        gf.angle,
-                        stops.join(", ")
-                    )
+                    let joined = stops.join(", ");
+                    match gf.gradient_type {
+                        GradientType::Linear => {
+                            format!(
+                                "background: linear-gradient({:.0}deg, {joined})",
+                                gf.angle
+                            )
+                        }
+                        GradientType::Radial => {
+                            format!("background: radial-gradient(circle, {joined})")
+                        }
+                        GradientType::Rectangular => {
+                            format!("background: radial-gradient(ellipse, {joined})")
+                        }
+                        GradientType::Shape => {
+                            format!("background: radial-gradient(closest-side, {joined})")
+                        }
+                    }
                 }
             }
             Fill::Image(img_fill) => {
@@ -1956,7 +1991,8 @@ fn line_join_to_svg(join: &LineJoin) -> &'static str {
     }
 }
 
-/// Emit an SVG `<linearGradient>` definition and return the fill attribute string.
+/// Emit an SVG gradient definition (`<linearGradient>` or `<radialGradient>`)
+/// and return the fill attribute string.
 /// Returns `None` if the fill is not a gradient or has no resolvable stops.
 fn svg_gradient_def(
     fill: &Fill,
@@ -1973,18 +2009,29 @@ fn svg_gradient_def(
         if stops.is_empty() {
             return None;
         }
-        // Convert OOXML angle (clockwise from top) to SVG linear-gradient coordinates.
-        // SVG linearGradient uses x1,y1 -> x2,y2 as the gradient vector.
-        let angle_rad = (gf.angle - 90.0_f64).to_radians();
-        let x1 = 50.0 - 50.0 * angle_rad.cos();
-        let y1 = 50.0 - 50.0 * angle_rad.sin();
-        let x2 = 50.0 + 50.0 * angle_rad.cos();
-        let y2 = 50.0 + 50.0 * angle_rad.sin();
-        let _ = write!(
-            html,
-            "<linearGradient id=\"{grad_id}\" \
-             x1=\"{x1:.1}%\" y1=\"{y1:.1}%\" x2=\"{x2:.1}%\" y2=\"{y2:.1}%\">"
-        );
+        match gf.gradient_type {
+            GradientType::Linear => {
+                // Convert OOXML angle (clockwise from top) to SVG linearGradient coordinates.
+                // SVG linearGradient uses x1,y1 -> x2,y2 as the gradient vector.
+                let angle_rad = (gf.angle - 90.0_f64).to_radians();
+                let x1 = 50.0 - 50.0 * angle_rad.cos();
+                let y1 = 50.0 - 50.0 * angle_rad.sin();
+                let x2 = 50.0 + 50.0 * angle_rad.cos();
+                let y2 = 50.0 + 50.0 * angle_rad.sin();
+                let _ = write!(
+                    html,
+                    "<linearGradient id=\"{grad_id}\" \
+                     x1=\"{x1:.1}%\" y1=\"{y1:.1}%\" x2=\"{x2:.1}%\" y2=\"{y2:.1}%\">"
+                );
+            }
+            GradientType::Radial | GradientType::Rectangular | GradientType::Shape => {
+                let _ = write!(
+                    html,
+                    "<radialGradient id=\"{grad_id}\" \
+                     cx=\"50%\" cy=\"50%\" r=\"50%\">"
+                );
+            }
+        }
         for (pos, color) in &stops {
             let _ = write!(
                 html,
@@ -1992,7 +2039,10 @@ fn svg_gradient_def(
                 pos * 100.0
             );
         }
-        html.push_str("</linearGradient>");
+        match gf.gradient_type {
+            GradientType::Linear => html.push_str("</linearGradient>"),
+            _ => html.push_str("</radialGradient>"),
+        }
         return Some(format!("url(#{grad_id})"));
     }
     None

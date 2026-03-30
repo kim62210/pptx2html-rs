@@ -207,10 +207,33 @@ pub struct SolidFill {
     pub color: Color,
 }
 
+/// Gradient type (ECMA-376 §20.1.8.46 — a:path, a:lin)
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum GradientType {
+    #[default]
+    Linear,      // <a:lin ang="...">
+    Radial,      // <a:path path="circle">
+    Rectangular, // <a:path path="rect">
+    Shape,       // <a:path path="shape">
+}
+
+impl GradientType {
+    /// Parse OOXML `<a:path path="...">` attribute value
+    pub fn from_path_attr(val: &str) -> Self {
+        match val {
+            "circle" => Self::Radial,
+            "rect" => Self::Rectangular,
+            "shape" => Self::Shape,
+            _ => Self::Radial, // default for unrecognized path types
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct GradientFill {
+    pub gradient_type: GradientType,
     pub stops: Vec<GradientStop>,
-    pub angle: f64, // in degrees
+    pub angle: f64, // in degrees (used for Linear)
 }
 
 #[derive(Debug, Clone, Default)]

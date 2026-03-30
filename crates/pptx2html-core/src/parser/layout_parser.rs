@@ -32,6 +32,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
     let mut in_bg_grad_fill = false;
     let mut bg_grad_stops: Vec<GradientStop> = Vec::new();
     let mut bg_grad_angle: f64 = 0.0;
+    let mut bg_grad_type = GradientType::Linear;
     let mut bg_gs_pos: f64 = 0.0;
 
     // Parse root element attributes
@@ -69,6 +70,12 @@ pub fn parse_slide_layout<R: Read + Seek>(
                         in_bg_grad_fill = true;
                         bg_grad_stops.clear();
                         bg_grad_angle = 0.0;
+                        bg_grad_type = GradientType::Linear;
+                    }
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
+                        }
                     }
                     "gs" if in_bg_grad_fill => {
                         bg_gs_pos = xml_utils::attr_str(e, "pos")
@@ -132,6 +139,12 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     "lin" if in_bg_grad_fill => {
                         if let Some(ang) = xml_utils::attr_str(e, "ang") {
                             bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                        }
+                        bg_grad_type = GradientType::Linear;
+                    }
+                    "path" if in_bg_grad_fill => {
+                        if let Some(val) = xml_utils::attr_str(e, "path") {
+                            bg_grad_type = GradientType::from_path_attr(&val);
                         }
                     }
                     "srgbClr" if in_bg_pr && !in_bg_blip_fill => {
@@ -231,6 +244,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             layout.background = Some(Fill::Solid(SolidFill { color }));
                         } else if !bg_grad_stops.is_empty() {
                             layout.background = Some(Fill::Gradient(GradientFill {
+                                gradient_type: std::mem::take(&mut bg_grad_type),
                                 stops: std::mem::take(&mut bg_grad_stops),
                                 angle: bg_grad_angle,
                             }));
