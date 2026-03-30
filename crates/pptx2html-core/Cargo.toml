@@ -10,7 +10,7 @@ categories = ["parser-implementations"]
 
 [dependencies]
 quick-xml = { version = "0.37", features = ["serialize"] }
-zip = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 base64 = "0.22"
 thiserror = "2"
 log = "0.4"

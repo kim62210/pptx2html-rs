@@ -1,5 +1,8 @@
 /target
 
+# WASM build artifacts
+crates/pptx2html-wasm/pkg/
+
 # Python
 __pycache__/
 *.pyc
