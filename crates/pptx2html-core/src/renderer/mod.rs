@@ -1030,15 +1030,77 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
         html.push_str("</colgroup>\n");
 
-        for row in &table.rows {
-            let _ = writeln!(html, "<tr style=\"height:{:.1}px;\">", row.height);
-            for cell in &row.cells {
+        let row_count = table.rows.len();
+        for (row_idx, row) in table.rows.iter().enumerate() {
+            let mut tr_style = format!("height:{:.1}px", row.height);
+
+            // Band row: alternate row shading (odd data rows get subtle background)
+            if table.band_row {
+                // When first_row is set, banding starts from the second row (index 1)
+                let band_idx = if table.first_row {
+                    row_idx.wrapping_sub(1)
+                } else {
+                    row_idx
+                };
+                if row_idx != 0 || !table.first_row {
+                    if band_idx % 2 == 1 {
+                        tr_style.push_str("; background-color: rgba(0,0,0,0.04)");
+                    }
+                }
+            }
+
+            // First row emphasis
+            if table.first_row && row_idx == 0 {
+                tr_style.push_str(
+                    "; font-weight: bold; border-bottom: 2px solid rgba(0,0,0,0.2)",
+                );
+            }
+
+            // Last row emphasis
+            if table.last_row && row_idx == row_count - 1 {
+                tr_style
+                    .push_str("; font-weight: bold; border-top: 2px solid rgba(0,0,0,0.2)");
+            }
+
+            let _ = writeln!(html, "<tr style=\"{tr_style}\">");
+            let col_count = row.cells.len();
+            for (col_idx, cell) in row.cells.iter().enumerate() {
                 // Skip cells that are continuation of a vertical merge
                 if cell.v_merge {
                     continue;
                 }
 
                 let mut td_style = String::with_capacity(128);
+
+                // Band column: alternate column shading
+                if table.band_col {
+                    let band_col_idx = if table.first_col {
+                        col_idx.wrapping_sub(1)
+                    } else {
+                        col_idx
+                    };
+                    if col_idx != 0 || !table.first_col {
+                        if band_col_idx % 2 == 1 {
+                            td_style.push_str("background-color: rgba(0,0,0,0.04)");
+                        }
+                    }
+                }
+
+                // First column emphasis
+                if table.first_col && col_idx == 0 {
+                    if !td_style.is_empty() {
+                        td_style.push_str("; ");
+                    }
+                    td_style.push_str("font-weight: bold");
+                }
+
+                // Last column emphasis
+                if table.last_col && col_idx == col_count - 1 {
+                    if !td_style.is_empty() {
+                        td_style.push_str("; ");
+                    }
+                    td_style.push_str("font-weight: bold");
+                }
 
                 // Cell fill
                 Self::fill_to_css_buf(&cell.fill, ctx, &mut td_style);

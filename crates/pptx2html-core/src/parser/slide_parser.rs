@@ -214,6 +214,30 @@ pub fn parse_slide<R: Read + Seek>(
                         in_tbl = true;
                         table_builder = Some(TableBuilder::default());
                     }
+                    // Table properties (bandRow, bandCol, firstRow, etc.)
+                    "tblPr" if in_tbl => {
+                        if let Some(ref mut tb) = table_builder {
+                            let parse_bool = |val: &str| val == "1" || val == "true";
+                            if let Some(v) = xml_utils::attr_str(e, "bandRow") {
+                                tb.band_row = parse_bool(&v);
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "bandCol") {
+                                tb.band_col = parse_bool(&v);
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "firstRow") {
+                                tb.first_row = parse_bool(&v);
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "lastRow") {
+                                tb.last_row = parse_bool(&v);
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "firstCol") {
+                                tb.first_col = parse_bool(&v);
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "lastCol") {
+                                tb.last_col = parse_bool(&v);
+                            }
+                        }
+                    }
                     // Table column width (open-tag variant: <a:gridCol w="..."></a:gridCol>)
                     "gridCol" if in_tbl => {
                         if let Some(ref mut tb) = table_builder {
@@ -2778,6 +2802,12 @@ impl RunBuilder {
 struct TableBuilder {
     col_widths: Vec<f64>,
     rows: Vec<TableRow>,
+    band_row: bool,
+    band_col: bool,
+    first_row: bool,
+    last_row: bool,
+    first_col: bool,
+    last_col: bool,
 }
 
 impl TableBuilder {
@@ -2785,6 +2815,12 @@ impl TableBuilder {
         TableData {
             rows: self.rows,
             col_widths: self.col_widths,
+            band_row: self.band_row,
+            band_col: self.band_col,
+            first_row: self.first_row,
+            last_row: self.last_row,
+            first_col: self.first_col,
+            last_col: self.last_col,
         }
     }
 }

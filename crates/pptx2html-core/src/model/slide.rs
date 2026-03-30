@@ -150,6 +150,12 @@ pub struct ChartData {
 pub struct TableData {
     pub rows: Vec<TableRow>,
     pub col_widths: Vec<f64>,
+    pub band_row: bool,
+    pub band_col: bool,
+    pub first_row: bool,
+    pub last_row: bool,
+    pub first_col: bool,
+    pub last_col: bool,
 }
 
 #[derive(Debug, Clone, Default)]
