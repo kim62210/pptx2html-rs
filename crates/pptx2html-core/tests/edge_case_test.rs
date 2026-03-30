@@ -145,6 +145,90 @@ fn test_unicode_emoji_text() {
     assert!(html.contains("Hello World!"), "Text not found");
 }
 
+#[test]
+fn test_hyperlink_parsed_and_rendered() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="LinkBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:r>
+            <a:rPr>
+              <a:hlinkClick r:id="rIdHyper"/>
+            </a:rPr>
+            <a:t>Open Example</a:t>
+          </a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdHyper" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com" TargetMode="External"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(slide_rels)
+        .build();
+    let pres = parse_pptx(&pptx);
+    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    assert_eq!(run.hyperlink.as_deref(), Some("https://example.com"));
+
+    let html = render_html(&pptx);
+    assert!(html.contains("href=\"https://example.com\""));
+    assert!(html.contains("Open Example"));
+}
+
+#[test]
+fn test_hidden_slide_parsed_from_presentation_xml() {
+    let pres_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2" show="0"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_presentation_xml(pres_xml)
+        .build();
+    let pres = parse_pptx(&pptx);
+    assert!(pres.slides[0].hidden, "Slide hidden flag should be parsed");
+
+    let html = render_html(&pptx);
+    assert!(
+        !html.contains("data-slide=\"1\""),
+        "Hidden slide should be excluded by default: {html}"
+    );
+}
+
+#[test]
+fn test_presentation_title_parsed_from_core_properties() {
+    let core_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:dcterms="http://purl.org/dc/terms/"
+                   xmlns:dcmitype="http://purl.org/dc/dcmitype/"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Quarterly Review</dc:title>
+</cp:coreProperties>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_core_properties(core_xml)
+        .build();
+    let pres = parse_pptx(&pptx);
+    assert_eq!(pres.title.as_deref(), Some("Quarterly Review"));
+
+    let html = render_html(&pptx);
+    assert!(html.contains("<title>Quarterly Review</title>"));
+}
+
 // ── Unsupported content detection ──
 
 #[test]

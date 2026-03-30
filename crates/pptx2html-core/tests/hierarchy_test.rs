@@ -2,6 +2,7 @@
 
 mod fixtures;
 
+use pptx2html_core::{ProvenanceSource, ProvenanceSubject};
 use pptx2html_core::model::*;
 
 fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
@@ -64,7 +65,7 @@ fn test_title_placeholder_inherits_position() {
   <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
 </p:sldMaster>"#;
 
-    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let _layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
              xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -85,7 +86,7 @@ fn test_title_placeholder_inherits_position() {
 </p:sldLayout>"#;
 
     // Slide with title placeholder but no position (should inherit from layout)
-    let slide_body = r#"
+    let _slide_body = r#"
     <p:sp>
       <p:nvSpPr>
         <p:cNvPr id="2" name="Title 1"/>
@@ -99,9 +100,9 @@ fn test_title_placeholder_inherits_position() {
       </p:txBody>
     </p:sp>"#;
 
-    let pptx = fixtures::MinimalPptx::new(slide_body)
+    let pptx = fixtures::MinimalPptx::new(_slide_body)
         .with_full_master(master_xml)
-        .with_layout(layout_xml)
+        .with_layout(_layout_xml)
         .build();
     let pres = parse_pptx(&pptx);
 
@@ -1101,6 +1102,165 @@ fn test_title_inherits_font_size_from_tx_styles() {
         html.contains("color: #FF0000"),
         "Title should inherit red color: {html}"
     );
+}
+
+#[test]
+fn test_layout_lst_style_overrides_master_tx_styles() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr><a:defRPr sz="4400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:defRPr></a:lvl1pPr>
+    </p:titleStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle>
+          <a:lvl1pPr><a:defRPr sz="3000"><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:defRPr></a:lvl1pPr>
+        </a:lstStyle>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Layout List Style Wins</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(html.contains("Layout List Style Wins"));
+    assert!(
+        html.contains("font-size: 30.0pt"),
+        "Expected layout lstStyle font size to win over master txStyles: {html}"
+    );
+    assert!(
+        html.contains("color: #00AA00"),
+        "Expected layout lstStyle color to win over master txStyles: {html}"
+    );
+    assert!(
+        !html.contains("font-size: 44.0pt") && !html.contains("color: #FF0000"),
+        "Master txStyles should not win when layout lstStyle exists: {html}"
+    );
+}
+
+#[test]
+fn test_placeholder_inheritance_provenance_is_collected() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr><a:defRPr sz="4400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:defRPr></a:lvl1pPr>
+    </p:titleStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+        <a:solidFill><a:srgbClr val="00CCFF"/></a:solidFill>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle>
+          <a:lvl1pPr><a:defRPr sz="3000"><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:defRPr></a:lvl1pPr>
+        </a:lstStyle>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Provenance Check</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+
+    let shape_entry = result
+        .provenance_entries
+        .iter()
+        .find(|entry| entry.subject == ProvenanceSubject::Shape)
+        .expect("shape provenance entry");
+    assert_eq!(shape_entry.text_source, Some(ProvenanceSource::LayoutListStyle));
+
+    let bg_entry = result
+        .provenance_entries
+        .iter()
+        .find(|entry| entry.subject == ProvenanceSubject::SlideBackground)
+        .expect("background provenance entry");
+    assert_eq!(bg_entry.background_source, Some(ProvenanceSource::HardcodedDefault));
 }
 
 #[test]

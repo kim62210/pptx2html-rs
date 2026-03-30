@@ -13,6 +13,8 @@ pub struct MinimalPptx {
     has_layout_rel: bool,
     presentation_xml: Option<String>,
     custom_theme_xml: Option<String>,
+    slide_rels_xml: Option<String>,
+    core_properties_xml: Option<String>,
 }
 
 impl MinimalPptx {
@@ -36,6 +38,8 @@ impl MinimalPptx {
             has_layout_rel: false,
             presentation_xml: None,
             custom_theme_xml: None,
+            slide_rels_xml: None,
+            core_properties_xml: None,
         }
     }
 
@@ -130,6 +134,16 @@ impl MinimalPptx {
         self
     }
 
+    pub fn with_slide_rels(mut self, slide_rels_xml: &str) -> Self {
+        self.slide_rels_xml = Some(slide_rels_xml.to_string());
+        self
+    }
+
+    pub fn with_core_properties(mut self, core_xml: &str) -> Self {
+        self.core_properties_xml = Some(core_xml.to_string());
+        self
+    }
+
     pub fn build(&self) -> Vec<u8> {
         let buf = Vec::new();
         let cursor = Cursor::new(buf);
@@ -137,8 +151,12 @@ impl MinimalPptx {
         let opts = SimpleFileOptions::default();
 
         // [Content_Types].xml
-        let content_types = if self.layout_xml.is_some() {
+        let content_types = if self.layout_xml.is_some() && self.core_properties_xml.is_some() {
+            CONTENT_TYPES_WITH_LAYOUT_AND_CORE
+        } else if self.layout_xml.is_some() {
             CONTENT_TYPES_WITH_LAYOUT
+        } else if self.core_properties_xml.is_some() {
+            CONTENT_TYPES_WITH_CORE
         } else {
             CONTENT_TYPES
         };
@@ -164,7 +182,9 @@ impl MinimalPptx {
         zip.write_all(self.slide_xml.as_bytes()).unwrap();
 
         // ppt/slides/_rels/slide1.xml.rels
-        let slide_rels = if self.has_layout_rel {
+        let slide_rels = if let Some(ref slide_rels) = self.slide_rels_xml {
+            slide_rels.as_str()
+        } else if self.has_layout_rel {
             SLIDE_RELS_WITH_LAYOUT
         } else {
             SLIDE_RELS
@@ -211,6 +231,11 @@ impl MinimalPptx {
             zip.write_all(LAYOUT_RELS.as_bytes()).unwrap();
         }
 
+        if let Some(ref core_props) = self.core_properties_xml {
+            zip.start_file("docProps/core.xml", opts).unwrap();
+            zip.write_all(core_props.as_bytes()).unwrap();
+        }
+
         zip.finish().unwrap().into_inner()
     }
 }
@@ -224,6 +249,16 @@ const CONTENT_TYPES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
 
+const CONTENT_TYPES_WITH_CORE: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>"#;
+
 const CONTENT_TYPES_WITH_LAYOUT: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -233,6 +268,18 @@ const CONTENT_TYPES_WITH_LAYOUT: &str = r#"<?xml version="1.0" encoding="UTF-8" 
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+const CONTENT_TYPES_WITH_LAYOUT_AND_CORE: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 </Types>"#;
 
 const ROOT_RELS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

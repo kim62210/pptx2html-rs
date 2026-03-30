@@ -13,6 +13,114 @@ fn render_html(data: &[u8]) -> String {
     pptx2html_core::renderer::HtmlRenderer::render(&pres).expect("HTML rendering failed")
 }
 
+fn build_background_image_pptx() -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill>
+          <a:blip r:embed="rId2"/>
+          <a:stretch><a:fillRect/></a:stretch>
+        </a:blipFill>
+        <a:effectLst/>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+</Relationships>"#;
+
+    let png_data: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00,
+        0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08,
+        0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/media/image1.png", opts).unwrap();
+    zip.write_all(&png_data).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T">
+  <a:themeElements>
+    <a:clrScheme name="O">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme>
+  </a:themeElements>
+</a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
 // ── Basic parsing tests ──
 
 #[test]
@@ -1371,128 +1479,7 @@ fn test_background_gradient_with_scheme_colors() {
 
 #[test]
 fn test_background_image_fill() {
-    // Build a PPTX with a background image using blipFill
-    use std::io::{Cursor, Write};
-    use zip::ZipWriter;
-    use zip::write::SimpleFileOptions;
-
-    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:cSld>
-    <p:bg>
-      <p:bgPr>
-        <a:blipFill>
-          <a:blip r:embed="rId2"/>
-          <a:stretch><a:fillRect/></a:stretch>
-        </a:blipFill>
-        <a:effectLst/>
-      </p:bgPr>
-    </p:bg>
-    <p:spTree>
-      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-      <p:grpSpPr/>
-    </p:spTree>
-  </p:cSld>
-</p:sld>"#;
-
-    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
-</Relationships>"#;
-
-    // Create a minimal 1x1 PNG
-    let png_data: Vec<u8> = vec![
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, // 8-bit RGB
-        0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
-        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
-        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk
-        0xAE, 0x42, 0x60, 0x82,
-    ];
-
-    let buf = Vec::new();
-    let cursor = Cursor::new(buf);
-    let mut zip = ZipWriter::new(cursor);
-    let opts = SimpleFileOptions::default();
-
-    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Default Extension="png" ContentType="image/png"/>
-  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
-</Types>"#;
-
-    zip.start_file("[Content_Types].xml", opts).unwrap();
-    zip.write_all(content_types.as_bytes()).unwrap();
-
-    zip.start_file("_rels/.rels", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-</Relationships>"#).unwrap();
-
-    zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(
-        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
-  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
-  <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#,
-    )
-    .unwrap();
-
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
-        .unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
-</Relationships>"#).unwrap();
-
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
-    zip.write_all(slide_xml.as_bytes()).unwrap();
-
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
-        .unwrap();
-    zip.write_all(slide_rels.as_bytes()).unwrap();
-
-    zip.start_file("ppt/media/image1.png", opts).unwrap();
-    zip.write_all(&png_data).unwrap();
-
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T">
-  <a:themeElements>
-    <a:clrScheme name="O">
-      <a:dk1><a:srgbClr val="000000"/></a:dk1>
-      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
-      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
-      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
-      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
-      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
-      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
-      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
-      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
-      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
-      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
-      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
-    </a:clrScheme>
-    <a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme>
-  </a:themeElements>
-</a:theme>"#).unwrap();
-
-    let data = zip.finish().unwrap().into_inner();
+    let data = build_background_image_pptx();
 
     // Verify parsing produces Fill::Image
     let pres = parse_pptx(&data);
@@ -1515,6 +1502,29 @@ fn test_background_image_fill() {
         html.contains("data:image/png;base64,"),
         "Background image should be embedded as base64"
     );
+}
+
+#[test]
+fn test_external_assets_collected_when_embedding_disabled() {
+    let data = build_background_image_pptx();
+    let opts = pptx2html_core::ConversionOptions {
+        embed_images: false,
+        ..Default::default()
+    };
+
+    let result = pptx2html_core::convert_bytes_with_options_metadata(&data, &opts)
+        .expect("conversion should succeed");
+
+    assert!(
+        result.html.contains("images/slide-1/background-0.png"),
+        "Expected deterministic background asset path in HTML: {}",
+        result.html
+    );
+    assert_eq!(result.external_assets.len(), 1, "Expected one external asset");
+    let asset = &result.external_assets[0];
+    assert_eq!(asset.relative_path, "images/slide-1/background-0.png");
+    assert_eq!(asset.content_type, "image/png");
+    assert!(!asset.data.is_empty(), "External asset bytes should be preserved");
 }
 
 // ── Gradient fill with color modifiers (Start+End events) ──

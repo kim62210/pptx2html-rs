@@ -56,7 +56,7 @@ pptx2html input.pptx --slides 1,3,5-8
 # Per-slide output files
 pptx2html input.pptx --format multi -o output_dir/
 
-# External images (not embedded)
+# External images (not embedded; writes assets under images/slide-N/)
 pptx2html input.pptx --no-embed
 
 # Include hidden slides
@@ -175,7 +175,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 | Colors | RGB, theme, system, preset with 12 modifiers (tint, shade, lumMod, satMod, etc.) |
 | Fills | Solid, gradient, image, noFill; style references (fillRef/lnRef) |
 | Tables | Cell fill, borders, column/row spans, vertical merge |
-| Images | Base64 embedding, external refs, cropping, MIME auto-detection |
+| Images | Base64 embedding, deterministic external assets under `images/slide-N/`, cropping, MIME auto-detection |
 | Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles |
 | Bullets | Character and auto-numbered bullets with font, size, color |
 | Charts | Detection with preview image fallback |
@@ -267,7 +267,7 @@ Results are logged to `autoresearch/results.tsv`. See `autoresearch/program.md` 
 
 ## Evaluation
 
-SSIM-based fidelity scoring system that compares Rust-rendered HTML against LibreOffice reference renders.
+The project now treats PowerPoint-native references as the primary fidelity oracle and LibreOffice references as a secondary regression signal.
 
 ```bash
 cd evaluate
@@ -277,14 +277,19 @@ pip install -r requirements.txt && playwright install chromium
 # 1. Generate golden test set (50 PPTX files, 10 categories)
 python create_golden_set.py
 
-# 2. Render references via LibreOffice headless
+# 2. Render references via LibreOffice headless (secondary regression signal)
 python reference_render.py --input golden_set/ --output golden_references/
+
+# 2b. Render PowerPoint-native references when a Windows/PowerPoint environment is available
+pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden
 
 # 3. Compute composite fidelity score
 python evaluate_fidelity.py --project-root ..
 ```
 
 Composite score: `0.40*SSIM + 0.25*TextMatch + 0.25*TestPassRate + 0.10*Performance`
+
+Use the composite score for regression control, but require a PowerPoint-reference check before labeling a feature `exact`.
 
 See [`evaluate/README.md`](evaluate/README.md) for details.
 

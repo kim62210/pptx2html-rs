@@ -5,6 +5,7 @@
 //! from a higher level (master). This module resolves effective values.
 
 use super::style_ref;
+use crate::ProvenanceSource;
 use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
@@ -36,6 +37,31 @@ pub fn resolve_background(
     Fill::Solid(crate::model::SolidFill {
         color: Color::rgb("FFFFFF"),
     })
+}
+
+pub fn background_source(
+    slide: &Slide,
+    layout: Option<&SlideLayout>,
+    master: Option<&SlideMaster>,
+) -> ProvenanceSource {
+    if let Some(ref bg) = slide.background
+        && !matches!(bg, Fill::None)
+    {
+        return ProvenanceSource::Slide;
+    }
+    if let Some(l) = layout
+        && let Some(ref bg) = l.background
+        && !matches!(bg, Fill::None)
+    {
+        return ProvenanceSource::LayoutBackground;
+    }
+    if let Some(m) = master
+        && let Some(ref bg) = m.background
+        && !matches!(bg, Fill::None)
+    {
+        return ProvenanceSource::MasterBackground;
+    }
+    ProvenanceSource::HardcodedDefault
 }
 
 /// Resolve effective fill for a shape (slide shape -> layout match -> master match -> style_ref)
@@ -98,6 +124,31 @@ pub fn resolve_shape_fill_with_theme(
     }
 
     Fill::None
+}
+
+pub fn shape_fill_source(
+    shape: &Shape,
+    layout_match: Option<&Shape>,
+    master_match: Option<&Shape>,
+    has_style_ref_fill: bool,
+) -> Option<ProvenanceSource> {
+    if matches!(shape.fill, Fill::NoFill) || !matches!(shape.fill, Fill::None) {
+        return Some(ProvenanceSource::Slide);
+    }
+    if let Some(lm) = layout_match {
+        if matches!(lm.fill, Fill::NoFill) || !matches!(lm.fill, Fill::None) {
+            return Some(ProvenanceSource::LayoutPlaceholder);
+        }
+    }
+    if let Some(mm) = master_match {
+        if matches!(mm.fill, Fill::NoFill) || !matches!(mm.fill, Fill::None) {
+            return Some(ProvenanceSource::MasterPlaceholder);
+        }
+    }
+    if has_style_ref_fill {
+        return Some(ProvenanceSource::StyleRef);
+    }
+    None
 }
 
 /// Resolve effective border with style_ref fallback (theme-aware)
@@ -184,6 +235,31 @@ pub fn resolve_border_with_theme(
     }
 
     shape.border.clone()
+}
+
+pub fn border_source(
+    shape: &Shape,
+    layout_match: Option<&Shape>,
+    master_match: Option<&Shape>,
+    has_style_ref_line: bool,
+) -> Option<ProvenanceSource> {
+    if shape.border.no_fill || shape.border.width > 0.0 || has_border_properties(&shape.border) {
+        return Some(ProvenanceSource::Slide);
+    }
+    if let Some(lm) = layout_match {
+        if lm.border.no_fill || lm.border.width > 0.0 || has_border_properties(&lm.border) {
+            return Some(ProvenanceSource::LayoutPlaceholder);
+        }
+    }
+    if let Some(mm) = master_match {
+        if mm.border.no_fill || mm.border.width > 0.0 || has_border_properties(&mm.border) {
+            return Some(ProvenanceSource::MasterPlaceholder);
+        }
+    }
+    if has_style_ref_line {
+        return Some(ProvenanceSource::StyleRef);
+    }
+    None
 }
 
 /// Check if a border has meaningful properties beyond width (e.g., color, head/tail end)

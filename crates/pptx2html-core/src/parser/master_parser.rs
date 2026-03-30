@@ -37,6 +37,16 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut in_sp_tree = false;
     let mut current_shape: Option<MasterShapeBuilder> = None;
     let mut in_nv_pr = false;
+    let mut in_shape_tx_body = false;
+    let mut in_shape_lst_style = false;
+    let mut shape_current_lvl: Option<usize> = None;
+    let mut shape_para_defaults: Option<ParagraphDefaults> = None;
+    let mut shape_run_defaults: Option<RunDefaults> = None;
+    let mut in_shape_def_rpr = false;
+    let mut shape_current_color: Option<Color> = None;
+    let mut in_shape_ln_spc = false;
+    let mut in_shape_spc_bef = false;
+    let mut in_shape_spc_aft = false;
 
     // Background parsing state
     let mut in_bg_pr = false;
@@ -162,6 +172,44 @@ pub fn parse_slide_master<R: Read + Seek>(
                     "sp" if in_sp_tree && !in_tx_styles => {
                         current_shape = Some(MasterShapeBuilder::default());
                     }
+                    "txBody" if current_shape.is_some() && !in_tx_styles => {
+                        in_shape_tx_body = true;
+                    }
+                    "lstStyle" if in_shape_tx_body => {
+                        in_shape_lst_style = true;
+                    }
+                    s if in_shape_lst_style && is_lvl_ppr(s) => {
+                        let lvl = parse_lvl_index(s);
+                        shape_current_lvl = Some(lvl);
+                        let mut pd = ParagraphDefaults::default();
+                        parse_lvl_ppr_attrs(e, &mut pd);
+                        shape_para_defaults = Some(pd);
+                    }
+                    "defRPr" if in_shape_lst_style && shape_current_lvl.is_some() => {
+                        in_shape_def_rpr = true;
+                        let mut rd = RunDefaults::default();
+                        parse_def_rpr_attrs(e, &mut rd);
+                        shape_run_defaults = Some(rd);
+                    }
+                    "lnSpc" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_ln_spc = true;
+                    }
+                    "spcBef" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_spc_bef = true;
+                    }
+                    "spcAft" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_spc_aft = true;
+                    }
+                    "srgbClr" if in_shape_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            shape_current_color = Some(Color::rgb(val));
+                        }
+                    }
+                    "schemeClr" if in_shape_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            shape_current_color = Some(Color::theme(val));
+                        }
+                    }
                     "nvPr" if current_shape.is_some() => {
                         in_nv_pr = true;
                     }
@@ -230,6 +278,66 @@ pub fn parse_slide_master<R: Read + Seek>(
                     "ph" if in_nv_pr && current_shape.is_some() => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.placeholder = Some(parse_placeholder_attrs(e));
+                        }
+                    }
+                    "latin" if in_shape_def_rpr => {
+                        if let Some(rd) = shape_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_latin = Some(typeface);
+                        }
+                    }
+                    "ea" if in_shape_def_rpr => {
+                        if let Some(rd) = shape_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_ea = Some(typeface);
+                        }
+                    }
+                    "srgbClr" if in_shape_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(rd) = shape_run_defaults.as_mut()
+                        {
+                            rd.color = Some(Color::rgb(val));
+                        }
+                    }
+                    "schemeClr" if in_shape_def_rpr => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(rd) = shape_run_defaults.as_mut()
+                        {
+                            rd.color = Some(Color::theme(val));
+                        }
+                    }
+                    "spcPct" if in_shape_lst_style && shape_current_lvl.is_some() && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Percent(val / 100_000.0);
+                            if let Some(pd) = shape_para_defaults.as_mut() {
+                                if in_shape_ln_spc {
+                                    pd.line_spacing = Some(spacing);
+                                } else if in_shape_spc_bef {
+                                    pd.space_before = Some(spacing);
+                                } else if in_shape_spc_aft {
+                                    pd.space_after = Some(spacing);
+                                }
+                            }
+                        }
+                    }
+                    "spcPts" if in_shape_lst_style && shape_current_lvl.is_some() && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) => {
+                        if let Some(val_str) = xml_utils::attr_str(e, "val")
+                            && let Ok(val) = val_str.parse::<f64>()
+                        {
+                            let spacing = SpacingValue::Points(val / 100.0);
+                            if let Some(pd) = shape_para_defaults.as_mut() {
+                                if in_shape_ln_spc {
+                                    pd.line_spacing = Some(spacing);
+                                } else if in_shape_spc_bef {
+                                    pd.space_before = Some(spacing);
+                                } else if in_shape_spc_aft {
+                                    pd.space_after = Some(spacing);
+                                }
+                            }
                         }
                     }
                     // Font in defRPr
@@ -375,6 +483,8 @@ pub fn parse_slide_master<R: Read + Seek>(
                         in_tx_styles = false;
                         tx_style_kind = None;
                     }
+                    "txBody" => in_shape_tx_body = false,
+                    "lstStyle" => in_shape_lst_style = false,
                     "titleStyle" | "bodyStyle" | "otherStyle" => {
                         tx_style_kind = None;
                     }
@@ -391,11 +501,31 @@ pub fn parse_slide_master<R: Read + Seek>(
                             pd.def_run_props = current_run_defaults.take();
                         }
                     }
+                    "defRPr" if in_shape_def_rpr => {
+                        in_shape_def_rpr = false;
+                        if let (Some(color), Some(rd)) =
+                            (shape_current_color.take(), shape_run_defaults.as_mut())
+                            && rd.color.is_none()
+                        {
+                            rd.color = Some(color);
+                        }
+                        if let Some(pd) = shape_para_defaults.as_mut() {
+                            pd.def_run_props = shape_run_defaults.take();
+                        }
+                    }
                     s if is_lvl_ppr(s) && current_lvl.is_some() => {
                         if let (Some(pd), Some(lvl)) = (current_para_defaults.take(), current_lvl) {
                             store_level_defaults(&tx_style_kind, &mut master.tx_styles, lvl, pd);
                         }
                         current_lvl = None;
+                    }
+                    s if in_shape_lst_style && is_lvl_ppr(s) => {
+                        if let (Some(pd), Some(lvl)) =
+                            (shape_para_defaults.take(), shape_current_lvl)
+                        {
+                            store_shape_level_defaults(&mut current_shape, lvl, pd);
+                        }
+                        shape_current_lvl = None;
                     }
                     "srgbClr" | "schemeClr" if in_def_rpr => {
                         if let Some(color) = current_color.take()
@@ -405,9 +535,18 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     // End of spacing containers
-                    "lnSpc" => in_ln_spc = false,
-                    "spcBef" => in_spc_bef = false,
-                    "spcAft" => in_spc_aft = false,
+                    "lnSpc" => {
+                        in_ln_spc = false;
+                        in_shape_ln_spc = false;
+                    }
+                    "spcBef" => {
+                        in_spc_bef = false;
+                        in_shape_spc_bef = false;
+                    }
+                    "spcAft" => {
+                        in_spc_aft = false;
+                        in_shape_spc_aft = false;
+                    }
                     "spTree" => in_sp_tree = false,
                     "nvPr" => in_nv_pr = false,
                     "sp" if current_shape.is_some() => {
@@ -529,6 +668,7 @@ struct MasterShapeBuilder {
     position: Position,
     size: Size,
     placeholder: Option<PlaceholderInfo>,
+    list_style: Option<ListStyle>,
 }
 
 impl MasterShapeBuilder {
@@ -537,8 +677,26 @@ impl MasterShapeBuilder {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
+            text_body: self.list_style.map(|list_style| TextBody {
+                list_style: Some(list_style),
+                ..Default::default()
+            }),
             ..Default::default()
         }
+    }
+}
+
+fn store_shape_level_defaults(
+    shape: &mut Option<MasterShapeBuilder>,
+    lvl: usize,
+    pd: ParagraphDefaults,
+) {
+    if lvl >= 9 {
+        return;
+    }
+    if let Some(shape) = shape.as_mut() {
+        let list_style = shape.list_style.get_or_insert_with(ListStyle::default);
+        list_style.levels[lvl] = Some(pd);
     }
 }
 

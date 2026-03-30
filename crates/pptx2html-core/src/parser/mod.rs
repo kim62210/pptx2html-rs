@@ -20,6 +20,12 @@ use zip::ZipArchive;
 use crate::error::{PptxError, PptxResult};
 use crate::model::{Emu, ListStyle, Presentation, Size};
 
+#[derive(Debug, Clone)]
+struct SlideRef {
+    rel_id: String,
+    hidden: bool,
+}
+
 /// SAX-based streaming parser for PPTX (ZIP + OOXML) packages.
 pub struct PptxParser;
 
@@ -54,10 +60,14 @@ impl PptxParser {
         let pres_xml = Self::read_entry(&mut archive, "ppt/presentation.xml").map_err(|_| {
             PptxError::MissingFile("ppt/presentation.xml — not a valid PPTX".to_string())
         })?;
-        let (slide_size, slide_rel_ids, default_text_style) =
+        let (slide_size, slide_refs, default_text_style) =
             Self::parse_presentation_xml(&pres_xml)?;
         presentation.slide_size = slide_size;
         presentation.default_text_style = default_text_style;
+
+        if let Ok(core_xml) = Self::read_entry(&mut archive, "docProps/core.xml") {
+            presentation.title = Self::parse_core_title(&core_xml);
+        }
 
         // 2. Parse presentation.xml.rels (all relationships)
         let rels_xml = Self::read_entry(&mut archive, "ppt/_rels/presentation.xml.rels")?;
@@ -173,11 +183,11 @@ impl PptxParser {
         }
 
         // 6. Parse slides
-        let total_slides = slide_rel_ids.len();
+        let total_slides = slide_refs.len();
         info!("Parsing {total_slides} slide(s)");
-        for (slide_num, rel_id) in slide_rel_ids.iter().enumerate() {
+        for (slide_num, slide_ref) in slide_refs.iter().enumerate() {
             info!("Parsing slide {} of {total_slides}", slide_num + 1);
-            if let Some(slide_path) = pres_rels.get(rel_id) {
+            if let Some(slide_path) = pres_rels.get(&slide_ref.rel_id) {
                 let full_path = normalize_ppt_path(slide_path);
                 if let Ok(slide_xml) = Self::read_entry(&mut archive, &full_path) {
                     let slide_rels_path = Self::rels_path_for(&full_path);
@@ -190,6 +200,7 @@ impl PptxParser {
 
                     let mut slide =
                         slide_parser::parse_slide(&slide_xml, &slide_rels, &mut archive)?;
+                    slide.hidden = slide_ref.hidden;
 
                     // Find which layout this slide references
                     let layout_ref = find_target_by_type(&slide_rels, "slideLayout");
@@ -239,10 +250,10 @@ impl PptxParser {
     }
 
     /// Extract slide size, slide relationship IDs, and defaultTextStyle from presentation.xml
-    fn parse_presentation_xml(xml: &str) -> PptxResult<(Size, Vec<String>, Option<ListStyle>)> {
+    fn parse_presentation_xml(xml: &str) -> PptxResult<(Size, Vec<SlideRef>, Option<ListStyle>)> {
         let mut reader = Reader::from_str(xml);
         let mut slide_size = Size::default();
-        let mut slide_rel_ids = Vec::new();
+        let mut slide_refs = Vec::new();
 
         // defaultTextStyle parsing state
         let mut in_default_text_style = false;
@@ -327,12 +338,20 @@ impl PptxParser {
                             }
                         }
                         "sldId" => {
+                            let mut rel_id: Option<String> = None;
+                            let mut hidden = false;
                             for attr in e.attributes().flatten() {
                                 let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
                                 if key.ends_with("id") && key.contains(':') {
                                     let val = String::from_utf8_lossy(&attr.value);
-                                    slide_rel_ids.push(val.to_string());
+                                    rel_id = Some(val.to_string());
+                                } else if key == "show" {
+                                    let val = String::from_utf8_lossy(&attr.value);
+                                    hidden = val == "0" || val == "false";
                                 }
+                            }
+                            if let Some(rel_id) = rel_id {
+                                slide_refs.push(SlideRef { rel_id, hidden });
                             }
                         }
                         // Empty lvlNpPr inside defaultTextStyle
@@ -492,7 +511,40 @@ impl PptxParser {
             None
         };
 
-        Ok((slide_size, slide_rel_ids, dts))
+        Ok((slide_size, slide_refs, dts))
+    }
+
+    fn parse_core_title(xml: &str) -> Option<String> {
+        let mut reader = Reader::from_str(xml);
+        let mut in_title = false;
+
+        loop {
+            match reader.read_event() {
+                Ok(Event::Start(ref e)) => {
+                    if xml_utils::local_name(e.name().as_ref()) == "title" {
+                        in_title = true;
+                    }
+                }
+                Ok(Event::Text(ref e)) if in_title => {
+                    let text = match e.unescape() {
+                        Ok(text) => text.into_owned(),
+                        Err(_) => return None,
+                    };
+                    if text.is_empty() {
+                        return None;
+                    }
+                    return Some(text);
+                }
+                Ok(Event::End(ref e)) => {
+                    if xml_utils::local_name(e.name().as_ref()) == "title" {
+                        in_title = false;
+                    }
+                }
+                Ok(Event::Eof) => return None,
+                Err(_) => return None,
+                _ => {}
+            }
+        }
     }
 }
 

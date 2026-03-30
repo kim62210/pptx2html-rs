@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use log::info;
 
-use pptx2html_core::ConversionOptions;
+use pptx2html_core::{ConversionOptions, ExternalAsset};
 
 /// PPTX to HTML converter — preserves original layout
 #[derive(Parser)]
@@ -72,6 +72,23 @@ fn parse_slide_selection(s: &str) -> Result<Vec<usize>, String> {
     indices.sort_unstable();
     indices.dedup();
     Ok(indices)
+}
+
+fn write_external_assets(
+    base_dir: &std::path::Path,
+    assets: &[ExternalAsset],
+) -> Result<(), String> {
+    for asset in assets {
+        let path = base_dir.join(&asset.relative_path);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!("failed to create asset directory {}: {e}", parent.display())
+            })?;
+        }
+        std::fs::write(&path, &asset.data)
+            .map_err(|e| format!("failed to write asset {}: {e}", path.display()))?;
+    }
+    Ok(())
 }
 
 fn main() {
@@ -148,11 +165,15 @@ fn main() {
                 slide_range: None,
                 slide_indices: Some(vec![idx]),
             };
-            match pptx2html_core::convert_file_with_options(&cli.input, &per_slide_opts) {
-                Ok(html) => {
+            match pptx2html_core::convert_file_with_options_metadata(&cli.input, &per_slide_opts) {
+                Ok(result) => {
                     let path = output_dir.join(format!("slide-{idx}.html"));
-                    if let Err(e) = std::fs::write(&path, &html) {
+                    if let Err(e) = std::fs::write(&path, &result.html) {
                         eprintln!("Failed to write {}: {e}", path.display());
+                        std::process::exit(1);
+                    }
+                    if let Err(e) = write_external_assets(&output_dir, &result.external_assets) {
+                        eprintln!("Failed to write external assets: {e}");
                         std::process::exit(1);
                     }
                     info!("Written: {}", path.display());
@@ -174,14 +195,22 @@ fn main() {
             .output
             .unwrap_or_else(|| cli.input.with_extension("html"));
 
-        match pptx2html_core::convert_file_with_options(&cli.input, &opts) {
-            Ok(html) => {
-                if let Err(e) = std::fs::write(&output, &html) {
+        match pptx2html_core::convert_file_with_options_metadata(&cli.input, &opts) {
+            Ok(result) => {
+                if let Err(e) = std::fs::write(&output, &result.html) {
                     eprintln!("Failed to write output file: {e}");
                     std::process::exit(1);
                 }
+                let asset_base = output
+                    .parent()
+                    .map(std::path::Path::to_path_buf)
+                    .unwrap_or_else(|| PathBuf::from("."));
+                if let Err(e) = write_external_assets(&asset_base, &result.external_assets) {
+                    eprintln!("Failed to write external assets: {e}");
+                    std::process::exit(1);
+                }
                 println!(
-                    "Conversion complete: {} \u{2192} {}",
+                    "Conversion complete: {} -> {}",
                     cli.input.display(),
                     output.display()
                 );
@@ -197,6 +226,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pptx2html_core::ExternalAsset;
 
     #[test]
     fn test_parse_single_slides() {
@@ -229,5 +259,29 @@ mod tests {
     #[test]
     fn test_parse_invalid_number() {
         assert!(parse_slide_selection("abc").is_err());
+    }
+
+    #[test]
+    fn test_write_external_assets_creates_nested_files() {
+        let tmpdir = std::env::temp_dir().join(format!(
+            "pptx2html-cli-test-{}",
+            std::process::id()
+        ));
+        if tmpdir.exists() {
+            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
+        }
+        std::fs::create_dir_all(&tmpdir).expect("create tempdir");
+        let assets = vec![ExternalAsset {
+            relative_path: "images/slide-1/image-0.png".to_string(),
+            content_type: "image/png".to_string(),
+            data: vec![1, 2, 3, 4],
+        }];
+
+        write_external_assets(&tmpdir, &assets).expect("asset write should succeed");
+
+        let output = tmpdir.join("images/slide-1/image-0.png");
+        assert!(output.exists(), "Expected asset file to be created");
+        assert_eq!(std::fs::read(output).expect("read asset"), vec![1, 2, 3, 4]);
+        std::fs::remove_dir_all(&tmpdir).expect("remove tempdir");
     }
 }

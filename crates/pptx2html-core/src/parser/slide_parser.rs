@@ -564,6 +564,17 @@ pub fn parse_slide<R: Read + Seek>(
                         in_r_pr = true;
                         parse_run_props(e, &mut current_run);
                     }
+                    "hlinkClick" if in_r_pr => {
+                        if let Some(rel_id) = hyperlink_rel_id(e) {
+                            let target = rels.get(&rel_id).cloned();
+                            if let Some(rb) = current_run.as_mut() {
+                                rb.hyperlink = target.clone();
+                            }
+                            if let Some(rb) = cell_run.as_mut() {
+                                rb.hyperlink = target;
+                            }
+                        }
+                    }
                     // Text content (non-table)
                     "t" if current_run.is_some() && !in_tc => {
                         in_text = true;
@@ -1022,6 +1033,17 @@ pub fn parse_slide<R: Read + Seek>(
                     // Run properties (Empty variant, non-table)
                     "rPr" if current_run.is_some() && !in_tc => {
                         parse_run_props(e, &mut current_run);
+                    }
+                    "hlinkClick" if in_r_pr || in_cell_r_pr => {
+                        if let Some(rel_id) = hyperlink_rel_id(e) {
+                            let target = rels.get(&rel_id).cloned();
+                            if let Some(rb) = current_run.as_mut() {
+                                rb.hyperlink = target.clone();
+                            }
+                            if let Some(rb) = cell_run.as_mut() {
+                                rb.hyperlink = target;
+                            }
+                        }
                     }
                     // noFill -- explicit transparent
                     "noFill" => {
@@ -1774,6 +1796,7 @@ pub fn parse_slide<R: Read + Seek>(
                             if !cell_paragraphs.is_empty() {
                                 cell.text_body = Some(TextBody {
                                     paragraphs: std::mem::take(&mut cell_paragraphs),
+                                    list_style: None,
                                     ..Default::default()
                                 });
                             }
@@ -2535,6 +2558,16 @@ fn parse_run_props(e: &quick_xml::events::BytesStart<'_>, run: &mut Option<RunBu
     }
 }
 
+fn hyperlink_rel_id(e: &quick_xml::events::BytesStart<'_>) -> Option<String> {
+    for attr in e.attributes().flatten() {
+        let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
+        if key.ends_with("id") && key.contains(':') {
+            return Some(String::from_utf8_lossy(&attr.value).to_string());
+        }
+    }
+    None
+}
+
 // ── Builder pattern ──
 
 #[derive(Default)]
@@ -2630,11 +2663,12 @@ impl ShapeBuilder {
         };
 
         let text_body = if self.has_text_body {
-            Some(TextBody {
-                paragraphs: self.paragraphs,
-                vertical_align: self.text_vertical_align,
-                word_wrap: self.text_word_wrap,
-                auto_fit: self.text_auto_fit,
+                Some(TextBody {
+                    paragraphs: self.paragraphs,
+                    list_style: None,
+                    vertical_align: self.text_vertical_align,
+                    word_wrap: self.text_word_wrap,
+                    auto_fit: self.text_auto_fit,
                 margins: self.text_margins,
             })
         } else {
@@ -2765,6 +2799,7 @@ struct RunBuilder {
     letter_spacing: Option<f64>,
     highlight: Option<Color>,
     shadow: Option<TextShadow>,
+    hyperlink: Option<String>,
     is_break: bool,
 }
 
@@ -2790,6 +2825,7 @@ impl RunBuilder {
                 east_asian: self.font_ea,
                 ..Default::default()
             },
+            hyperlink: self.hyperlink,
             is_break: self.is_break,
             ..Default::default()
         }

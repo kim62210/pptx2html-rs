@@ -1,6 +1,17 @@
 # Supported PPTX Features
 
-Status legend: Supported / Partial / Placeholder / Not yet
+Status legend: `exact` / `approximate` / `fallback` / `unparsed`
+
+This file is the detailed ECMA-376 element inventory. The authoritative support contract now lives in `docs/architecture/CAPABILITY_MATRIX.md`.
+
+This inventory is in a staged migration from legacy labels to support tiers. Until every row is migrated, interpret legacy labels as follows:
+
+- `Supported` → `approximate`
+- `Partial` → `approximate`
+- `Placeholder` → `fallback`
+- `Not yet` → `unparsed`
+
+Capability stages such as `parsed` and `rendered` belong in `docs/architecture/CAPABILITY_MATRIX.md`, not in the `Status` column here.
 
 ## Shapes
 
@@ -54,7 +65,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Text highlight | `<a:highlight>` | Supported |
 | Text shadow | `<a:effectLst><a:outerShdw>` | Supported |
 | Line break | `<a:br>` | Supported |
-| Hyperlink | `<a:hlinkClick>` | Supported |
+| Hyperlink | `<a:hlinkClick>` | Approximate |
 | Text alignment | `<a:pPr algn="...">` | Supported |
 | Line spacing | `<a:lnSpc>` | Supported |
 | Space before/after | `<a:spcBef>` / `<a:spcAft>` | Supported |
@@ -63,9 +74,9 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Vertical text | `<a:bodyPr vert="...">` | Supported |
 | Vertical alignment | `<a:bodyPr anchor="...">` | Supported |
 | Text wrapping | `<a:bodyPr wrap="...">` | Supported |
-| Auto-fit / Shrink | `<a:normAutofit>` | Partial |
+| Auto-fit / Shrink | `<a:normAutofit>` | Approximate |
 | Text margins (insets) | `<a:bodyPr lIns="...">` | Supported |
-| RTL text | `<a:pPr rtl="1">` | Not yet |
+| RTL text | `<a:pPr rtl="1">` | Unparsed |
 
 ## Bullets and Numbering
 
@@ -77,7 +88,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Bullet size | `<a:buSzPct>` / `<a:buSzPts>` | Supported |
 | Bullet color | `<a:buClr>` | Supported |
 | No bullet | `<a:buNone>` | Supported |
-| Picture bullet | `<a:buBlip>` | Not yet |
+| Picture bullet | `<a:buBlip>` | Unparsed |
 
 ## Fills
 
@@ -87,7 +98,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Solid fill (theme) | `<a:solidFill><a:schemeClr>` | Supported |
 | Gradient fill | `<a:gradFill>` | Supported |
 | Image fill | `<a:blipFill>` | Supported |
-| Pattern fill | `<a:pattFill>` | Not yet |
+| Pattern fill | `<a:pattFill>` | Unparsed |
 | No fill | `<a:noFill>` | Supported |
 | Fill style reference | `<a:fillRef>` | Supported |
 
@@ -135,7 +146,7 @@ Status legend: Supported / Partial / Placeholder / Not yet
 | Row heights | `<a:tr h="...">` | Supported |
 | Column span | `gridSpan` | Supported |
 | Row span | `rowSpan` + `vMerge` | Supported |
-| Table styles | `<a:tblStyle>` | Not yet |
+| Table styles | `<a:tblStyle>` | Unparsed |
 
 ## Images
 
@@ -173,19 +184,19 @@ Status legend: Supported / Partial / Placeholder / Not yet
 
 | Feature | ECMA-376 Element | Status |
 |---------|-----------------|--------|
-| Chart detection | `<c:chart>` URI | Supported |
-| Chart preview image | embedded preview | Supported |
-| Chart placeholder | — | Supported |
-| SmartArt | `<dgm:*>` | Placeholder |
-| OLE objects | `<p:oleObj>` | Placeholder |
-| Math equations | `<m:*>` | Placeholder |
+| Chart detection | `<c:chart>` URI | Fallback |
+| Chart preview image | embedded preview | Fallback |
+| Chart placeholder | — | Fallback |
+| SmartArt | `<dgm:*>` | Fallback |
+| OLE objects | `<p:oleObj>` | Fallback |
+| Math equations | `<m:*>` | Fallback |
 
 ## Effects
 
 | Feature | ECMA-376 Element | Status |
 |---------|-----------------|--------|
-| Text shadow | `<a:outerShdw>` | Supported |
-| Shape shadow | `<a:effectLst>` | Not yet |
-| Reflection | `<a:reflection>` | Not yet |
-| Glow | `<a:glow>` | Not yet |
-| 3D effects | `<a:sp3d>` | Not yet |
+| Text shadow | `<a:outerShdw>` | Approximate |
+| Shape shadow | `<a:effectLst>` | Approximate |
+| Reflection | `<a:reflection>` | Unparsed |
+| Glow | `<a:glow>` | Approximate |
+| 3D effects | `<a:sp3d>` | Unparsed |

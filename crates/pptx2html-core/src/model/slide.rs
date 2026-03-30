@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::color::Color;
 use super::geometry::{CustomGeometry, Position, Size};
-use super::hierarchy::{ClrMapOverride, PlaceholderInfo, ShapeStyleRef, SpacingValue};
+use super::hierarchy::{ClrMapOverride, ListStyle, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{Alignment, Border, Fill, FontStyle, ShapeEffects, TextStyle};
 
 /// Slide
@@ -76,6 +76,7 @@ pub struct Shape {
 #[derive(Debug, Clone, Default)]
 pub struct TextBody {
     pub paragraphs: Vec<TextParagraph>,
+    pub list_style: Option<ListStyle>,
     pub vertical_align: VerticalAlign,
     pub word_wrap: bool,
     pub auto_fit: AutoFit,

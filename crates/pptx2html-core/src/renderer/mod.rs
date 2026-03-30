@@ -2,6 +2,7 @@
 //! Presentation model -> self-contained HTML string generation
 
 mod geometry;
+pub mod provenance;
 
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -10,22 +11,27 @@ use base64::Engine;
 
 use crate::ConversionOptions;
 use crate::ConversionResult;
+use crate::ExternalAsset;
 use crate::error::PptxResult;
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::*;
 use crate::resolver::inheritance;
 use crate::resolver::placeholder;
 use crate::resolver::style_ref;
+use provenance::{ProvenanceSource, ProvenanceSubject, RenderedProvenanceEntry};
 
 use std::cell::RefCell;
 
 /// Mutable state for collecting unresolved elements during rendering
 struct UnresolvedCollector {
     elements: Vec<UnresolvedElement>,
+    external_assets: Vec<ExternalAsset>,
+    provenance_entries: Vec<RenderedProvenanceEntry>,
     counter: usize,
     current_slide_index: usize,
     gradient_counter: usize,
     marker_counter: usize,
+    asset_counter: usize,
 }
 
 /// Rendering context -- propagates theme/ClrMap references and full presentation
@@ -60,6 +66,33 @@ impl<'a> RenderCtx<'a> {
         let id = coll.marker_counter;
         coll.marker_counter += 1;
         format!("marker-{suffix}-{id}")
+    }
+
+    fn register_external_asset(&self, prefix: &str, mime: &str, data: &[u8]) -> String {
+        let mut coll = self.collector.borrow_mut();
+        let slide_number = coll.current_slide_index + 1;
+        let asset_number = coll.asset_counter;
+        coll.asset_counter += 1;
+
+        let ext = match mime {
+            "image/jpeg" => "jpg",
+            "image/gif" => "gif",
+            "image/svg+xml" => "svg",
+            "image/webp" => "webp",
+            _ => "png",
+        };
+
+        let relative_path = format!("images/slide-{slide_number}/{prefix}-{asset_number}.{ext}");
+        coll.external_assets.push(ExternalAsset {
+            relative_path: relative_path.clone(),
+            content_type: mime.to_string(),
+            data: data.to_vec(),
+        });
+        relative_path
+    }
+
+    fn push_provenance(&self, entry: RenderedProvenanceEntry) {
+        self.collector.borrow_mut().provenance_entries.push(entry);
     }
 
     /// Create a slide-scoped context with resolved ClrMap and per-master theme
@@ -108,10 +141,13 @@ impl HtmlRenderer {
 
         let collector = RefCell::new(UnresolvedCollector {
             elements: Vec::new(),
+            external_assets: Vec::new(),
+            provenance_entries: Vec::new(),
             counter: 0,
             current_slide_index: 0,
             gradient_counter: 0,
             marker_counter: 0,
+            asset_counter: 0,
         });
 
         let ctx = RenderCtx {
@@ -160,6 +196,8 @@ impl HtmlRenderer {
         let coll = collector.into_inner();
         Ok(ConversionResult {
             html,
+            external_assets: coll.external_assets,
+            provenance_entries: coll.provenance_entries,
             unresolved_elements: coll.elements,
             slide_count,
         })
@@ -240,6 +278,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             html,
             "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">"
         );
+        slide_ctx.push_provenance(RenderedProvenanceEntry {
+            slide_index: num,
+            subject: ProvenanceSubject::SlideBackground,
+            shape_name: None,
+            fill_source: None,
+            border_source: None,
+            text_source: None,
+            background_source: Some(inheritance::background_source(slide, layout, master)),
+        });
 
         // Render master shapes if show_master_sp is true.
         // Only non-placeholder master shapes (decorative elements) are rendered
@@ -559,7 +606,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         let b64 = base64::engine::general_purpose::STANDARD.encode(img_data);
                         format!("data:{mime};base64,{b64}")
                     } else {
-                        format!("images/chart-{}.png", img_data.len() % 100000)
+                        ctx.register_external_asset("chart", mime, img_data)
                     };
                     let _ = writeln!(
                         html,
@@ -826,14 +873,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let b64 = base64::engine::general_purpose::STANDARD.encode(&pic.data);
                 format!("data:{mime};base64,{b64}")
             } else {
-                let ext = match mime {
-                    "image/jpeg" => "jpg",
-                    "image/gif" => "gif",
-                    "image/svg+xml" => "svg",
-                    "image/webp" => "webp",
-                    _ => "png",
-                };
-                format!("images/image-{}.{ext}", pic.data.len() % 100000)
+                ctx.register_external_asset("image", mime, &pic.data)
             };
             if let Some(ref crop) = pic.crop {
                 // OOXML srcRect: l/t/r/b are fractions (0..1) to crop from each
@@ -873,7 +913,27 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Resolve text style source for this shape's placeholder type
-        let text_style_ctx = Self::build_text_style_ctx(shape, ctx);
+        let text_style_ctx = Self::build_text_style_ctx(shape, layout_match, master_match, ctx);
+        let provenance_slide_index = ctx.collector.borrow().current_slide_index + 1;
+        ctx.push_provenance(RenderedProvenanceEntry {
+            slide_index: provenance_slide_index,
+            subject: ProvenanceSubject::Shape,
+            shape_name: (!shape.name.is_empty()).then(|| shape.name.clone()),
+            fill_source: inheritance::shape_fill_source(
+                shape,
+                layout_match,
+                master_match,
+                shape.style_ref.as_ref().and_then(|s| s.fill_ref.as_ref()).is_some(),
+            ),
+            border_source: inheritance::border_source(
+                shape,
+                layout_match,
+                master_match,
+                shape.style_ref.as_ref().and_then(|s| s.ln_ref.as_ref()).is_some(),
+            ),
+            text_source: text_style_ctx.primary_source(),
+            background_source: None,
+        });
 
         // Resolve fontRef from <p:style> for font-family and color fallback
         let (font_ref_font, font_ref_color) = Self::resolve_font_ref_font(shape, ctx)
@@ -970,7 +1030,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     }
 
     /// Build text style context from placeholder type and master txStyles / defaultTextStyle
-    fn build_text_style_ctx<'a>(shape: &Shape, ctx: &RenderCtx<'a>) -> TextStyleCtx<'a> {
+    fn build_text_style_ctx<'a>(
+        shape: &Shape,
+        layout_match: Option<&'a Shape>,
+        master_match: Option<&'a Shape>,
+        ctx: &RenderCtx<'a>,
+    ) -> TextStyleCtx<'a> {
         // Determine which txStyles list to use based on placeholder type
         let ph_type = shape
             .placeholder
@@ -978,12 +1043,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .and_then(|ph| ph.ph_type.as_ref());
         let source = placeholder::text_style_source(ph_type);
 
-        // Find the master's txStyles list for this source
-        let layout = shape.placeholder.as_ref().and({
-            // We don't have layout_idx on shape, get from slide context
-            None::<&SlideLayout>
-        });
-        let _ = layout; // Layout-level lstStyle is not yet tracked
+        let layout_list_style = layout_match
+            .and_then(|matched| matched.text_body.as_ref())
+            .and_then(|tb| tb.list_style.as_ref());
+
+        let master_placeholder_list_style = master_match
+            .and_then(|matched| matched.text_body.as_ref())
+            .and_then(|tb| tb.list_style.as_ref());
 
         // txStyles from first master
         let master_list_style = ctx.pres.masters.first().and_then(|m| match source {
@@ -996,6 +1062,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let default_list_style = ctx.pres.default_text_style.as_ref();
 
         TextStyleCtx {
+            layout_list_style,
+            master_placeholder_list_style,
             master_list_style,
             default_list_style,
         }
@@ -1745,19 +1813,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                              background-repeat: no-repeat"
                         );
                     } else {
-                        let ext = match mime {
-                            "image/jpeg" => "jpg",
-                            "image/gif" => "gif",
-                            "image/svg+xml" => "svg",
-                            "image/webp" => "webp",
-                            _ => "png",
-                        };
+                        let url = ctx.register_external_asset("background", mime, &img_fill.data);
                         let _ = write!(
                             buf,
-                            "background-image: url(images/bg-{}.{ext}); \
+                            "background-image: url({url}); \
                              background-size: cover; background-position: center; \
-                             background-repeat: no-repeat",
-                            img_fill.data.len() % 100000
+                             background-repeat: no-repeat"
                         );
                     }
                 }
@@ -1819,14 +1880,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         let b64 = base64::engine::general_purpose::STANDARD.encode(&img_fill.data);
                         format!("data:{mime};base64,{b64}")
                     } else {
-                        let ext = match mime {
-                            "image/jpeg" => "jpg",
-                            "image/gif" => "gif",
-                            "image/svg+xml" => "svg",
-                            "image/webp" => "webp",
-                            _ => "png",
-                        };
-                        format!("images/bg-{}.{ext}", img_fill.data.len() % 100000)
+                        ctx.register_external_asset("background", mime, &img_fill.data)
                     };
                     format!(
                         "background-image: url({url}); background-size: cover; background-position: center; background-repeat: no-repeat"
@@ -1927,20 +1981,45 @@ fn to_roman_uc(mut val: i32) -> String {
 /// Context for resolving inherited text styles from txStyles/defaultTextStyle
 #[derive(Default)]
 struct TextStyleCtx<'a> {
-    /// txStyles list matching placeholder type (titleStyle/bodyStyle/otherStyle)
+    layout_list_style: Option<&'a ListStyle>,
+    master_placeholder_list_style: Option<&'a ListStyle>,
     master_list_style: Option<&'a ListStyle>,
-    /// presentation defaultTextStyle
     default_list_style: Option<&'a ListStyle>,
 }
 
 impl<'a> TextStyleCtx<'a> {
+    fn primary_source(&self) -> Option<ProvenanceSource> {
+        if self.layout_list_style.is_some() {
+            return Some(ProvenanceSource::LayoutListStyle);
+        }
+        if self.master_placeholder_list_style.is_some() {
+            return Some(ProvenanceSource::MasterListStyle);
+        }
+        if self.master_list_style.is_some() {
+            return Some(ProvenanceSource::MasterTextStyles);
+        }
+        if self.default_list_style.is_some() {
+            return Some(ProvenanceSource::DefaultTextStyle);
+        }
+        None
+    }
+
     /// Get paragraph defaults for a given level (0-based).
     /// Priority: master txStyles > defaultTextStyle
     fn get_level_defaults(&self, level: usize) -> Option<&'a ParagraphDefaults> {
         if level >= 9 {
             return None;
         }
-        // txStyles takes priority
+        if let Some(ls) = self.layout_list_style
+            && let Some(ref pd) = ls.levels[level]
+        {
+            return Some(pd);
+        }
+        if let Some(ls) = self.master_placeholder_list_style
+            && let Some(ref pd) = ls.levels[level]
+        {
+            return Some(pd);
+        }
         if let Some(ls) = self.master_list_style
             && let Some(ref pd) = ls.levels[level]
         {

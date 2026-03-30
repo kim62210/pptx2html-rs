@@ -40,6 +40,7 @@ use error::PptxResult;
 use model::UnresolvedElement;
 use parser::PptxParser;
 use renderer::HtmlRenderer;
+pub use renderer::provenance::{ProvenanceSource, ProvenanceSubject, RenderedProvenanceEntry};
 
 /// Options controlling how PPTX content is converted to HTML.
 ///
@@ -102,10 +103,19 @@ impl ConversionOptions {
 pub struct ConversionResult {
     /// Generated HTML string.
     pub html: String,
+    pub external_assets: Vec<ExternalAsset>,
+    pub provenance_entries: Vec<RenderedProvenanceEntry>,
     /// Metadata about elements that were rendered as placeholders.
     pub unresolved_elements: Vec<UnresolvedElement>,
     /// Number of slides processed.
     pub slide_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExternalAsset {
+    pub relative_path: String,
+    pub content_type: String,
+    pub data: Vec<u8>,
 }
 
 /// Convert a PPTX file at `path` to a self-contained HTML string.

@@ -1,8 +1,13 @@
 # Evaluation Infrastructure
 
 Objective scoring pipeline for the pptx2html-rs autoresearch loop.
-Measures conversion fidelity across four metrics and produces a single
-composite score that determines keep/revert decisions.
+
+The evaluation strategy now has two tracks:
+
+1. **PowerPoint-first fidelity validation** for features that claim `exact` support.
+2. **LibreOffice-backed regression detection** for fast, broad visual comparison during iteration.
+
+The existing composite score remains useful for regression control, but it is no longer the only fidelity signal.
 
 ## Composite Score
 
@@ -37,6 +42,13 @@ playwright install chromium
 
 ## Usage
 
+### 0. Understand the two reference tracks
+
+- **Primary:** PowerPoint-native exports in `evaluate/powerpoint_golden/`
+- **Secondary:** LibreOffice-generated PNGs in `evaluate/golden_references/`
+
+Use PowerPoint references before promoting any feature to `exact` in the capability matrix.
+
 ### 1. Generate golden PPTX test set
 
 ```bash
@@ -55,6 +67,16 @@ python create_golden_set.py --categories basic_text shapes tables
 ```bash
 python reference_render.py --input golden_set/ --output golden_references/
 ```
+
+### 2b. Render reference PNGs with PowerPoint (primary oracle)
+
+On Windows with Microsoft PowerPoint installed:
+
+```powershell
+pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden
+```
+
+If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
 ### 3. Run fidelity evaluation
 
@@ -87,12 +109,15 @@ python candidate_render.py --html-dir output/ --output candidates/
 evaluate/
 ├── evaluate_fidelity.py       # Immutable scoring function (DO NOT MODIFY)
 ├── reference_render.py        # LibreOffice headless -> PNG
+├── reference_render_powerpoint.ps1 # PowerPoint COM export bootstrap
 ├── candidate_render.py        # Playwright HTML -> PNG
 ├── create_golden_set.py       # Generate golden PPTX test files
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file
 ├── golden_set/                # Golden PPTX files (generated)
 │   └── .gitkeep
+├── powerpoint_golden/         # PowerPoint-native reference renders
+│   └── README.md
 └── golden_references/         # LibreOffice reference PNGs (generated)
     └── .gitkeep
 ```
@@ -114,8 +139,7 @@ evaluate/
 
 ## Autoresearch Integration
 
-This evaluation infrastructure is the "immutable scoring function" in the
-autoresearch pattern. The LLM agent:
+This evaluation infrastructure is the regression loop in the autoresearch pattern. The LLM agent:
 
 1. Makes a code change to pptx2html-rs
 2. Runs `evaluate_fidelity.py` to get a score
@@ -124,3 +148,5 @@ autoresearch pattern. The LLM agent:
 
 The `evaluate_fidelity.py` file must never be modified by the LLM agent.
 Only humans may change the scoring weights or metric definitions.
+
+PowerPoint-reference capture is intentionally outside the autoresearch loop unless the environment is explicitly prepared for it.
