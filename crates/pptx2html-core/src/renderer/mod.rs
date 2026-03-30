@@ -25,6 +25,7 @@ struct UnresolvedCollector {
     counter: usize,
     current_slide_index: usize,
     gradient_counter: usize,
+    marker_counter: usize,
 }
 
 /// Rendering context -- propagates theme/ClrMap references and full presentation
@@ -54,11 +55,26 @@ impl<'a> RenderCtx<'a> {
         format!("grad{id}")
     }
 
-    /// Create a slide-scoped context with resolved ClrMap
-    fn for_slide(&self, slide_clr_map: Option<&'a ClrMap>) -> RenderCtx<'a> {
+    fn next_marker_id(&self, suffix: &str) -> String {
+        let mut coll = self.collector.borrow_mut();
+        let id = coll.marker_counter;
+        coll.marker_counter += 1;
+        format!("marker-{suffix}-{id}")
+    }
+
+    /// Create a slide-scoped context with resolved ClrMap and per-master theme
+    fn for_slide(
+        &self,
+        slide_clr_map: Option<&'a ClrMap>,
+        master_theme_idx: Option<usize>,
+    ) -> RenderCtx<'a> {
+        let scheme = master_theme_idx
+            .and_then(|idx| self.pres.themes.get(idx))
+            .map(|t| &t.color_scheme)
+            .or(self.scheme);
         RenderCtx {
             pres: self.pres,
-            scheme: self.scheme,
+            scheme,
             clr_map: slide_clr_map.or(self.clr_map),
             embed_images: self.embed_images,
             collector: self.collector,
@@ -95,6 +111,7 @@ impl HtmlRenderer {
             counter: 0,
             current_slide_index: 0,
             gradient_counter: 0,
+            marker_counter: 0,
         });
 
         let ctx = RenderCtx {
@@ -201,16 +218,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .map(|l| l.master_idx)
             .and_then(|idx| ctx.pres.masters.get(idx));
 
-        // Resolve ClrMap per slide (considering overrides)
+        // Resolve ClrMap per slide (considering overrides) and per-master theme
         let slide_ctx = if let Some(m) = master {
             let resolved_cm = inheritance::resolve_clr_map(slide, layout, m);
-            ctx.for_slide(if resolved_cm.is_empty() {
-                None
-            } else {
-                Some(resolved_cm)
-            })
+            ctx.for_slide(
+                if resolved_cm.is_empty() {
+                    None
+                } else {
+                    Some(resolved_cm)
+                },
+                Some(m.theme_idx),
+            )
         } else {
-            ctx.for_slide(None)
+            ctx.for_slide(None, None)
         };
 
         // Resolve background via inheritance
@@ -338,7 +358,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ctx.clr_map,
         );
 
-        // Only apply CSS border for non-SVG shapes; SVG shapes use stroke instead
+        // Only apply CSS outline for non-SVG shapes; SVG shapes use stroke instead.
+        // Use outline instead of border to avoid box-sizing: border-box shrinking
+        // the content area (text insets should not compete with border thickness).
         if resolved_border.width > 0.0 && !uses_svg {
             let border_color = ctx
                 .color_to_css(&resolved_border.color)
@@ -351,8 +373,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             };
             let _ = write!(
                 style_buf,
-                "; border: {:.1}pt {border_style} {border_color}",
-                resolved_border.width
+                "; outline: {:.1}pt {border_style} {border_color}; outline-offset: {:.1}pt",
+                resolved_border.width,
+                -(resolved_border.width / 2.0)
             );
         }
 
@@ -528,17 +551,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let mut defs_buf = String::new();
                 let gradient_fill_ref =
                     svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
-                // Emit marker defs for line endings (arrows)
+                // Emit marker defs for line endings (arrows) with unique IDs
                 let mut marker_start_attr = String::new();
                 let mut marker_end_attr = String::new();
                 if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
                     if let Some(ref he) = resolved_border.head_end {
-                        emit_marker_def(&mut defs_buf, "head", he, &stroke_color, stroke_width);
-                        marker_start_attr = " marker-start=\"url(#marker-head)\"".to_string();
+                        let mid = ctx.next_marker_id("head");
+                        emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width);
+                        marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
                     }
                     if let Some(ref te) = resolved_border.tail_end {
-                        emit_marker_def(&mut defs_buf, "tail", te, &stroke_color, stroke_width);
-                        marker_end_attr = " marker-end=\"url(#marker-tail)\"".to_string();
+                        let mid = ctx.next_marker_id("tail");
+                        emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width);
+                        marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
                     }
                 }
                 if !defs_buf.is_empty() {
@@ -593,6 +618,21 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let grad_id = ctx.next_gradient_id();
             let mut defs_buf = String::new();
             let gradient_fill_ref = svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
+            // Emit marker defs for custom geometry arrows
+            let mut marker_start_attr = String::new();
+            let mut marker_end_attr = String::new();
+            if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
+                if let Some(ref he) = resolved_border.head_end {
+                    let mid = ctx.next_marker_id("head");
+                    emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width);
+                    marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
+                }
+                if let Some(ref te) = resolved_border.tail_end {
+                    let mid = ctx.next_marker_id("tail");
+                    emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width);
+                    marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
+                }
+            }
             if !defs_buf.is_empty() {
                 html.push_str("<defs>");
                 html.push_str(&defs_buf);
@@ -611,7 +651,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 };
                 let _ = write!(
                     html,
-                    "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"{dash_attr}/>",
+                    "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
+                     {dash_attr}{marker_start_attr}{marker_end_attr}/>",
                     path_svg.d
                 );
             }
@@ -699,6 +740,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 text_body.margins.bottom,
                 text_body.margins.left,
             );
+            // Text wrapping control
+            if !text_body.word_wrap {
+                tb_style.push_str("; white-space: nowrap");
+            }
             // Vertical text rendering
             let mut has_vert270 = false;
             if let Some(ref vert) = shape.vertical_text {
@@ -1298,14 +1343,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Color -- explicit > para defRPr > inherited > theme-aware resolution
+        // Use or_else chaining so that a None at any level falls through to the next
         let color_css = if !run.style.color.is_none() {
             ctx.color_to_css(&run.style.color)
-        } else if let Some(pd) = para_def_rpr {
-            pd.color.as_ref().and_then(|c| ctx.color_to_css(c))
-        } else if let Some(rd) = run_defaults {
-            rd.color.as_ref().and_then(|c| ctx.color_to_css(c))
         } else {
-            None
+            para_def_rpr
+                .and_then(|pd| pd.color.as_ref())
+                .and_then(|c| ctx.color_to_css(c))
+                .or_else(|| {
+                    run_defaults
+                        .and_then(|rd| rd.color.as_ref())
+                        .and_then(|c| ctx.color_to_css(c))
+                })
         };
         if let Some(css_color) = color_css {
             push_sep(&mut run_style);
@@ -1707,7 +1756,7 @@ fn svg_gradient_def(
 /// Emit an SVG <marker> definition for a line ending (arrowhead)
 fn emit_marker_def(
     html: &mut String,
-    id_suffix: &str,
+    marker_id: &str,
     line_end: &LineEnd,
     color: &str,
     stroke_width: f64,
@@ -1762,7 +1811,7 @@ fn emit_marker_def(
 
     let _ = write!(
         html,
-        "<marker id=\"marker-{id_suffix}\" viewBox=\"0 0 {marker_h:.1} {marker_w:.1}\" \
+        "<marker id=\"{marker_id}\" viewBox=\"0 0 {marker_h:.1} {marker_w:.1}\" \
          refX=\"{marker_h:.1}\" refY=\"{half_w:.1}\" \
          markerWidth=\"{marker_h:.1}\" markerHeight=\"{marker_w:.1}\" \
          orient=\"auto-start-reverse\">\
