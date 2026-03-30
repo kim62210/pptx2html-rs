@@ -302,8 +302,44 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             "left: {x:.1}px; top: {y:.1}px; width: {w:.1}px; height: {h:.1}px"
         );
 
-        // Build transform: flip + rotation
-        if shape.rotation != 0.0 || shape.flip_h || shape.flip_v {
+        // Determine SVG preset name early so we know whether to skip CSS fill/border
+        let svg_preset_name = match &shape.shape_type {
+            ShapeType::Ellipse => Some("ellipse"),
+            ShapeType::RoundedRectangle => Some("roundRect"),
+            ShapeType::Triangle => Some("triangle"),
+            ShapeType::Custom(name) => Some(name.as_str()),
+            _ => None,
+        };
+
+        // For connector shapes with rotation, swap width/height in the CSS box
+        // and handle flip via SVG path transform instead of CSS transform.
+        // OOXML connectors use rotation to reorient the path (e.g., 270° to make
+        // a horizontal connector into a vertical one) — this is a layout hint,
+        // not a visual rotation.
+        let is_connector = svg_preset_name.is_some_and(|pn| matches!(pn,
+            "line" | "lineInv" | "straightConnector1"
+                | "bentConnector2" | "bentConnector3" | "bentConnector4" | "bentConnector5"
+                | "curvedConnector2" | "curvedConnector3" | "curvedConnector4" | "curvedConnector5"
+        ));
+        let connector_needs_swap = is_connector && (shape.rotation - 90.0).abs() < 1.0
+            || is_connector && (shape.rotation - 270.0).abs() < 1.0;
+
+        let (w, h) = if connector_needs_swap { (h, w) } else { (w, h) };
+        if connector_needs_swap {
+            // Rewrite CSS position with swapped dimensions, adjusting offset
+            // so the center of the bounding box stays in the same place
+            let dx = (size.width.to_px() - size.height.to_px()) / 2.0;
+            let dy = (size.height.to_px() - size.width.to_px()) / 2.0;
+            style_buf.clear();
+            let _ = write!(
+                style_buf,
+                "left: {:.1}px; top: {:.1}px; width: {w:.1}px; height: {h:.1}px",
+                x + dx, y + dy
+            );
+        }
+
+        // Build transform: flip + rotation (skip for connectors with swap)
+        if !connector_needs_swap && (shape.rotation != 0.0 || shape.flip_h || shape.flip_v) {
             let sx = if shape.flip_h { -1 } else { 1 };
             let sy = if shape.flip_v { -1 } else { 1 };
             if shape.flip_h || shape.flip_v {
@@ -320,15 +356,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
             }
         }
-
-        // Determine SVG preset name early so we know whether to skip CSS fill/border
-        let svg_preset_name = match &shape.shape_type {
-            ShapeType::Ellipse => Some("ellipse"),
-            ShapeType::RoundedRectangle => Some("roundRect"),
-            ShapeType::Triangle => Some("triangle"),
-            ShapeType::Custom(name) => Some(name.as_str()),
-            _ => None,
-        };
 
         // Line shapes with zero width or height need a minimum CSS dimension
         // so the shape div is visible (otherwise browser collapses it)
@@ -630,11 +657,21 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ""
                 };
+                // For connectors with swapped dimensions, apply flip via SVG transform
+                let svg_transform = if connector_needs_swap && (shape.flip_h || shape.flip_v) {
+                    let sx = if shape.flip_h { -1.0 } else { 1.0 };
+                    let sy = if shape.flip_v { -1.0 } else { 1.0 };
+                    let tx = if shape.flip_h { svg_w } else { 0.0 };
+                    let ty = if shape.flip_v { svg_h } else { 0.0 };
+                    format!(" transform=\"translate({tx:.1},{ty:.1}) scale({sx},{sy})\"")
+                } else {
+                    String::new()
+                };
                 let _ = writeln!(
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {dash_attr}{marker_start_attr}{marker_end_attr}/>\
+                     {dash_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
                      </svg>"
                 );
             }
