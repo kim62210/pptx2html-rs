@@ -11,9 +11,9 @@ mod style;
 pub use color::{Color, ColorKind, ColorModifier, ResolvedColor};
 pub use geometry::{CustomGeometry, Emu, GeometryPath, PathCommand, PathFill, Position, Size};
 pub use hierarchy::{
-    ClrMapOverride, FmtScheme, FontRef, ListStyle, ParagraphDefaults, PlaceholderInfo,
-    PlaceholderType, RunDefaults, ShapeStyleRef, SlideLayout, SlideMaster, SpacingValue, StyleRef,
-    TxStyles,
+    ClrMapOverride, EffectStyle, FmtScheme, FontRef, ListStyle, ParagraphDefaults,
+    PlaceholderInfo, PlaceholderType, RunDefaults, ShapeStyleRef, SlideLayout, SlideMaster,
+    SpacingValue, StyleRef, TxStyles,
 };
 pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{

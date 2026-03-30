@@ -5,7 +5,8 @@ use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::presentation::{ColorScheme, Theme};
 use crate::model::{
-    Border, BorderStyle, Color, DashStyle, Emu, Fill, FmtScheme, LineCap, LineJoin, SolidFill,
+    Border, BorderStyle, Color, DashStyle, EffectStyle, Emu, Fill, FmtScheme, GlowEffect, LineCap,
+    LineJoin, OuterShadow, SolidFill,
 };
 
 pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
@@ -26,6 +27,21 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     let mut current_ln_cap = LineCap::Flat;
     let mut current_ln_join = LineJoin::Miter;
     let mut current_ln_dash = DashStyle::Solid;
+
+    // effectStyleLst state
+    let mut in_effect_style = false;
+    let mut in_effect_lst = false;
+    let mut in_outer_shdw = false;
+    let mut in_effect_glow = false;
+    let mut effect_shdw_blur: f64 = 0.0;
+    let mut effect_shdw_dist: f64 = 0.0;
+    let mut effect_shdw_dir: f64 = 0.0;
+    let mut effect_shdw_color: Option<Color> = None;
+    let mut effect_shdw_alpha: f64 = 1.0;
+    let mut effect_glow_rad: f64 = 0.0;
+    let mut effect_glow_color: Option<Color> = None;
+    let mut effect_glow_alpha: f64 = 1.0;
+    let mut current_effect_style = EffectStyle::default();
 
     loop {
         match reader.read_event() {
@@ -55,8 +71,64 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     "lnStyleLst" if in_fmt_scheme => {
                         fmt_list_kind = Some(FmtKind::Ln);
                     }
+                    "effectStyleLst" if in_fmt_scheme => {
+                        fmt_list_kind = Some(FmtKind::Effect);
+                    }
                     "bgFillStyleLst" if in_fmt_scheme => {
                         fmt_list_kind = Some(FmtKind::BgFill);
+                    }
+                    // effectStyle entry inside effectStyleLst
+                    "effectStyle" if matches!(fmt_list_kind, Some(FmtKind::Effect)) => {
+                        in_effect_style = true;
+                        current_effect_style = EffectStyle::default();
+                    }
+                    // effectLst inside effectStyle
+                    "effectLst" if in_effect_style => {
+                        in_effect_lst = true;
+                    }
+                    // outerShdw inside effectLst
+                    "outerShdw" if in_effect_lst => {
+                        in_outer_shdw = true;
+                        effect_shdw_blur = xml_utils::attr_str(e, "blurRad")
+                            .map(|v| Emu::parse_emu(&v).to_pt())
+                            .unwrap_or(0.0);
+                        effect_shdw_dist = xml_utils::attr_str(e, "dist")
+                            .map(|v| Emu::parse_emu(&v).to_pt())
+                            .unwrap_or(0.0);
+                        effect_shdw_dir = xml_utils::attr_str(e, "dir")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| v / 60000.0)
+                            .unwrap_or(0.0);
+                        effect_shdw_color = None;
+                        effect_shdw_alpha = 1.0;
+                    }
+                    // glow inside effectLst
+                    "glow" if in_effect_lst => {
+                        in_effect_glow = true;
+                        effect_glow_rad = xml_utils::attr_str(e, "rad")
+                            .map(|v| Emu::parse_emu(&v).to_pt())
+                            .unwrap_or(0.0);
+                        effect_glow_color = None;
+                        effect_glow_alpha = 1.0;
+                    }
+                    // Color elements inside outerShdw or glow in effectLst
+                    "srgbClr" if in_outer_shdw || in_effect_glow => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            if in_outer_shdw {
+                                effect_shdw_color = Some(Color::rgb(val));
+                            } else {
+                                effect_glow_color = Some(Color::rgb(val));
+                            }
+                        }
+                    }
+                    "schemeClr" if in_outer_shdw || in_effect_glow => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            if in_outer_shdw {
+                                effect_shdw_color = Some(Color::theme(val));
+                            } else {
+                                effect_glow_color = Some(Color::theme(val));
+                            }
+                        }
                     }
                     // Line element inside lnStyleLst
                     "ln" if matches!(fmt_list_kind, Some(FmtKind::Ln)) => {
@@ -80,7 +152,7 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         current_fill_color = None;
                     }
                     // Color elements (Start variant, may have child modifiers)
-                    "srgbClr" if fmt_list_kind.is_some() => {
+                    "srgbClr" if fmt_list_kind.is_some() && !in_outer_shdw && !in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             if in_ln {
                                 current_ln_color = Some(Color::rgb(val));
@@ -89,7 +161,7 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             }
                         }
                     }
-                    "schemeClr" if fmt_list_kind.is_some() => {
+                    "schemeClr" if fmt_list_kind.is_some() && !in_outer_shdw && !in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             if in_ln {
                                 current_ln_color = Some(Color::theme(val));
@@ -148,6 +220,44 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         {
                             theme.font_scheme.minor_east_asian = Some(typeface);
                         }
+                    }
+                    // Empty color elements inside effect outerShdw/glow
+                    "srgbClr" if in_outer_shdw || in_effect_glow => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            if in_outer_shdw {
+                                effect_shdw_color = Some(Color::rgb(val));
+                            } else {
+                                effect_glow_color = Some(Color::rgb(val));
+                            }
+                        }
+                    }
+                    "schemeClr" if in_outer_shdw || in_effect_glow => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            if in_outer_shdw {
+                                effect_shdw_color = Some(Color::theme(val));
+                            } else {
+                                effect_glow_color = Some(Color::theme(val));
+                            }
+                        }
+                    }
+                    // Alpha modifier inside effect outerShdw/glow
+                    "alpha" if in_outer_shdw => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Ok(v) = val.parse::<f64>()
+                        {
+                            effect_shdw_alpha = v / 100_000.0;
+                        }
+                    }
+                    "alpha" if in_effect_glow => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Ok(v) = val.parse::<f64>()
+                        {
+                            effect_glow_alpha = v / 100_000.0;
+                        }
+                    }
+                    // Empty effectLst (no effects) inside effectStyle
+                    "effectLst" if in_effect_style => {
+                        // No effects in this style entry -- default EffectStyle is fine
                     }
                     // Empty color elements inside fmtScheme lists
                     "srgbClr" if fmt_list_kind.is_some() => {
@@ -220,8 +330,43 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         in_fmt_scheme = false;
                         fmt_list_kind = None;
                     }
-                    "fillStyleLst" | "lnStyleLst" | "bgFillStyleLst" => {
+                    "fillStyleLst" | "lnStyleLst" | "effectStyleLst" | "bgFillStyleLst" => {
                         fmt_list_kind = None;
+                    }
+                    // End of outerShdw inside effectLst
+                    "outerShdw" if in_outer_shdw => {
+                        in_outer_shdw = false;
+                        if let Some(color) = effect_shdw_color.take() {
+                            current_effect_style.outer_shadow = Some(OuterShadow {
+                                blur_radius: effect_shdw_blur,
+                                distance: effect_shdw_dist,
+                                direction: effect_shdw_dir,
+                                color,
+                                alpha: effect_shdw_alpha,
+                            });
+                        }
+                    }
+                    // End of glow inside effectLst
+                    "glow" if in_effect_glow => {
+                        in_effect_glow = false;
+                        if let Some(color) = effect_glow_color.take() {
+                            current_effect_style.glow = Some(GlowEffect {
+                                radius: effect_glow_rad,
+                                color,
+                                alpha: effect_glow_alpha,
+                            });
+                        }
+                    }
+                    // End of effectLst
+                    "effectLst" if in_effect_lst => {
+                        in_effect_lst = false;
+                    }
+                    // End of effectStyle -- push accumulated style
+                    "effectStyle" if in_effect_style => {
+                        in_effect_style = false;
+                        theme.fmt_scheme.effect_style_lst.push(
+                            std::mem::take(&mut current_effect_style),
+                        );
                     }
                     // End of solidFill in fill/bg lists
                     "solidFill" if fmt_list_kind.is_some() && !in_ln => {
@@ -274,6 +419,7 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
 enum FmtKind {
     Fill,
     Ln,
+    Effect,
     BgFill,
 }
 

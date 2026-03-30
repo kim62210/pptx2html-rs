@@ -1,6 +1,6 @@
 use super::color::Color;
 use super::slide::Shape;
-use super::style::{Alignment, Border, Fill};
+use super::style::{Alignment, Border, Fill, GlowEffect, OuterShadow};
 
 /// Slide master -- contains background, shapes, text styles, ClrMap
 #[derive(Debug, Clone, Default)]
@@ -161,11 +161,19 @@ pub struct FontRef {
     pub color: Color,
 }
 
-/// Theme format scheme (fillStyleLst, lnStyleLst, bgFillStyleLst)
+/// Effect style entry from <a:effectStyleLst>
+#[derive(Debug, Clone, Default)]
+pub struct EffectStyle {
+    pub outer_shadow: Option<OuterShadow>,
+    pub glow: Option<GlowEffect>,
+}
+
+/// Theme format scheme (fillStyleLst, lnStyleLst, effectStyleLst, bgFillStyleLst)
 #[derive(Debug, Clone, Default)]
 pub struct FmtScheme {
     pub fill_style_lst: Vec<Fill>,
     pub ln_style_lst: Vec<Border>,
+    pub effect_style_lst: Vec<EffectStyle>,
     pub bg_fill_style_lst: Vec<Fill>,
 }
 

@@ -6,7 +6,7 @@
 use crate::model::color::{ColorKind, ResolvedColor};
 use crate::model::hierarchy::{FmtScheme, FontRef, StyleRef};
 use crate::model::presentation::{ClrMap, ColorScheme, FontScheme};
-use crate::model::{Border, BorderStyle, Fill, SolidFill};
+use crate::model::{Border, BorderStyle, Fill, ShapeEffects, SolidFill};
 
 /// Resolve fillRef: lookup fmtScheme.fill_style_lst by idx, apply ref color.
 ///
@@ -99,6 +99,34 @@ pub fn resolve_ln_ref(
     })
 }
 
+/// Resolve effectRef: lookup fmtScheme.effect_style_lst by idx.
+///
+/// idx 1..=N -> effect_style_lst[idx-1]
+/// Returns ShapeEffects built from the theme's effect style entry.
+pub fn resolve_effect_ref(
+    effect_ref: &StyleRef,
+    fmt_scheme: &FmtScheme,
+    _scheme: &ColorScheme,
+    _clr_map: &ClrMap,
+) -> Option<ShapeEffects> {
+    if effect_ref.idx == 0 {
+        return None;
+    }
+
+    let list_idx = (effect_ref.idx - 1) as usize;
+    let effect_style = fmt_scheme.effect_style_lst.get(list_idx)?;
+
+    // Only return if there is at least one effect defined
+    if effect_style.outer_shadow.is_none() && effect_style.glow.is_none() {
+        return None;
+    }
+
+    Some(ShapeEffects {
+        outer_shadow: effect_style.outer_shadow.clone(),
+        glow: effect_style.glow.clone(),
+    })
+}
+
 /// Resolve fontRef: major/minor font + color.
 ///
 /// idx "major" -> font_scheme.major_latin
@@ -139,9 +167,9 @@ fn is_placeholder_color(kind: &ColorKind) -> bool {
 mod tests {
     use super::*;
     use crate::model::color::{Color, ColorKind};
-    use crate::model::hierarchy::{FmtScheme, FontRef, StyleRef};
+    use crate::model::hierarchy::{EffectStyle, FmtScheme, FontRef, StyleRef};
     use crate::model::presentation::{ClrMap, ColorScheme, FontScheme};
-    use crate::model::{Border, BorderStyle, Fill, SolidFill};
+    use crate::model::{Border, BorderStyle, Fill, GlowEffect, OuterShadow, SolidFill};
 
     fn test_scheme() -> ColorScheme {
         ColorScheme {
@@ -179,6 +207,7 @@ mod tests {
                     ..Default::default()
                 },
             ],
+            effect_style_lst: vec![],
             bg_fill_style_lst: vec![Fill::Solid(SolidFill {
                 color: Color::none(),
             })],
@@ -331,5 +360,122 @@ mod tests {
         };
         let fs = FontScheme::default();
         assert!(resolve_font_ref(&fr, &fs, &test_scheme(), &ClrMap::default()).is_none());
+    }
+
+    fn test_fmt_scheme_with_effects() -> FmtScheme {
+        let mut fmt = test_fmt_scheme();
+        fmt.effect_style_lst = vec![
+            EffectStyle::default(), // idx 1: no effects
+            EffectStyle {
+                // idx 2: outer shadow
+                outer_shadow: Some(OuterShadow {
+                    blur_radius: 3.15,
+                    distance: 1.81,
+                    direction: 90.0,
+                    color: Color::rgb("000000"),
+                    alpha: 0.35,
+                }),
+                glow: None,
+            },
+            EffectStyle {
+                // idx 3: shadow + glow
+                outer_shadow: Some(OuterShadow {
+                    blur_radius: 3.15,
+                    distance: 1.81,
+                    direction: 90.0,
+                    color: Color::rgb("000000"),
+                    alpha: 0.35,
+                }),
+                glow: Some(GlowEffect {
+                    radius: 4.0,
+                    color: Color::rgb("FFD700"),
+                    alpha: 0.5,
+                }),
+            },
+        ];
+        fmt
+    }
+
+    #[test]
+    fn effect_ref_idx_zero_returns_none() {
+        let sr = StyleRef {
+            idx: 0,
+            color: Color::theme("accent1"),
+        };
+        assert!(resolve_effect_ref(
+            &sr,
+            &test_fmt_scheme_with_effects(),
+            &test_scheme(),
+            &ClrMap::default()
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn effect_ref_idx_1_empty_returns_none() {
+        let sr = StyleRef {
+            idx: 1,
+            color: Color::theme("accent1"),
+        };
+        // idx 1 has no effects (empty effectLst)
+        assert!(resolve_effect_ref(
+            &sr,
+            &test_fmt_scheme_with_effects(),
+            &test_scheme(),
+            &ClrMap::default()
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn effect_ref_idx_2_returns_shadow() {
+        let sr = StyleRef {
+            idx: 2,
+            color: Color::theme("accent1"),
+        };
+        let effects = resolve_effect_ref(
+            &sr,
+            &test_fmt_scheme_with_effects(),
+            &test_scheme(),
+            &ClrMap::default(),
+        )
+        .unwrap();
+        assert!(effects.outer_shadow.is_some());
+        assert!(effects.glow.is_none());
+        let shadow = effects.outer_shadow.unwrap();
+        assert!((shadow.blur_radius - 3.15).abs() < 0.01);
+        assert!((shadow.direction - 90.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn effect_ref_idx_3_returns_shadow_and_glow() {
+        let sr = StyleRef {
+            idx: 3,
+            color: Color::theme("accent1"),
+        };
+        let effects = resolve_effect_ref(
+            &sr,
+            &test_fmt_scheme_with_effects(),
+            &test_scheme(),
+            &ClrMap::default(),
+        )
+        .unwrap();
+        assert!(effects.outer_shadow.is_some());
+        assert!(effects.glow.is_some());
+    }
+
+    #[test]
+    fn effect_ref_out_of_range_returns_none() {
+        let sr = StyleRef {
+            idx: 99,
+            color: Color::theme("accent1"),
+        };
+        assert!(resolve_effect_ref(
+            &sr,
+            &test_fmt_scheme_with_effects(),
+            &test_scheme(),
+            &ClrMap::default()
+        )
+        .is_none());
     }
 }

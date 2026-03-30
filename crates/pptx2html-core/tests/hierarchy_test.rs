@@ -952,6 +952,7 @@ fn test_fmt_scheme_get_fill_style() {
             }),
         ],
         ln_style_lst: vec![],
+        effect_style_lst: vec![],
         bg_fill_style_lst: vec![Fill::Solid(SolidFill {
             color: Color::rgb("CC0000"),
         })],
@@ -984,6 +985,7 @@ fn test_fmt_scheme_get_line_style() {
             style: BorderStyle::Solid,
             ..Default::default()
         }],
+        effect_style_lst: vec![],
         bg_fill_style_lst: vec![],
     };
 

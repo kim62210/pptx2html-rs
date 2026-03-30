@@ -437,11 +437,28 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Shape-level effects → CSS box-shadow
+        // Use explicit effects if present; otherwise fall back to effectRef from theme
         {
+            let resolved_effects = if shape.effects.outer_shadow.is_none()
+                && shape.effects.glow.is_none()
+            {
+                if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+                    (&shape.style_ref, fmt_scheme, ctx.scheme, ctx.clr_map)
+                    && let Some(effect_ref) = &sr.effect_ref
+                {
+                    style_ref::resolve_effect_ref(effect_ref, fmt, cs, cm)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            let effective_effects = resolved_effects.as_ref().unwrap_or(&shape.effects);
+
             let mut shadows: Vec<String> = Vec::new();
 
             // outerShdw → box-shadow with offset
-            if let Some(ref shadow) = shape.effects.outer_shadow {
+            if let Some(ref shadow) = effective_effects.outer_shadow {
                 let angle_rad = shadow.direction.to_radians();
                 let offset_x = shadow.distance * angle_rad.cos();
                 let offset_y = shadow.distance * angle_rad.sin();
@@ -455,7 +472,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
 
             // glow → box-shadow with spread, no offset
-            if let Some(ref glow) = shape.effects.glow {
+            if let Some(ref glow) = effective_effects.glow {
                 let spread = glow.radius;
                 let color = ctx
                     .color_to_css(&glow.color)
