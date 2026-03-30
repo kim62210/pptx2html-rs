@@ -9,7 +9,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - High-fidelity layout preservation using absolute positioning
 - Theme color resolution with 12 color modifiers (tint, shade, lumMod, etc.)
 - Slide master / layout inheritance chain with placeholder matching
-- 30 preset shape SVG rendering with adjust value support
+- 187 preset shape SVG rendering with adjust value support (full OOXML coverage)
 - SVG stroke dash styles (solid, dash, dot, dashDot, etc.)
 - Line ending markers (arrow, triangle, stealth, diamond, oval)
 - Table, group shape, and connector support
@@ -21,6 +21,9 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 ## Install
 
 ```bash
+# npm (WASM — browser)
+npm install pptx2html-wasm
+
 # Rust library
 cargo add pptx2html-core
 
@@ -30,7 +33,7 @@ cargo install --path crates/pptx2html-cli
 # Python (requires maturin)
 cd crates/pptx2html-py && maturin develop
 
-# WASM (requires wasm-pack)
+# WASM (build from source)
 cd crates/pptx2html-wasm && wasm-pack build --target web
 ```
 
@@ -128,18 +131,32 @@ for elem in result.unresolved_elements:
 
 ```html
 <script type="module">
-import init, { convert, get_info } from './pkg/pptx2html_wasm.js';
+import init, {
+  convert,
+  convert_with_options,
+  convert_with_metadata,
+  get_presentation_info,
+} from 'pptx2html-wasm';
 
 await init();
 
 const response = await fetch('presentation.pptx');
 const data = new Uint8Array(await response.arrayBuffer());
 
+// Simple conversion
 const html = convert(data);
 document.getElementById('output').srcdoc = html;
 
-const info = JSON.parse(get_info(data));
-console.log(`Slides: ${info.slide_count}`);
+// With options (embedImages, includeHidden, slideIndices)
+const html2 = convert_with_options(data, false, true, new Uint32Array([1, 3]));
+
+// Typed metadata
+const info = get_presentation_info(data);
+console.log(`Slides: ${info.slideCount}, Size: ${info.widthPx}x${info.heightPx}`);
+
+// Conversion with metadata sideband (SmartArt/OLE/Math)
+const result = convert_with_metadata(data);
+console.log(`HTML: ${result.html.length}, Unresolved: ${result.unresolvedElements}`);
 </script>
 ```
 
@@ -151,7 +168,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 
 | Category | Highlights |
 |----------|-----------|
-| Shapes | 30 preset shapes (rect, ellipse, arrows, stars, callouts, etc.) with SVG rendering |
+| Shapes | 187 preset shapes (full OOXML coverage) + custom geometry with SVG rendering |
 | Text | Bold, italic, underline, strikethrough, super/subscript, vertical text, shadows, highlights |
 | Colors | RGB, theme, system, preset with 12 modifiers (tint, shade, lumMod, satMod, etc.) |
 | Fills | Solid, gradient, image, noFill; style references (fillRef/lnRef) |
@@ -308,12 +325,7 @@ enhanced_html = await enhance(
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Ensure `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, and `cargo fmt --all -- --check` all pass
-4. Submit a pull request
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for guidance on adding support for new PPTX features.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and submission guidelines.
 
 ## License
 

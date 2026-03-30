@@ -1,0 +1,98 @@
+name: Publish npm
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: Build & Publish WASM to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM package
+        run: wasm-pack build crates/pptx2html-wasm --target web --release --scope pptx2html
+
+      - name: Enhance package.json
+        working-directory: crates/pptx2html-wasm/pkg
+        run: |
+          # Read version from Cargo.toml
+          VERSION=$(grep '^version' ../Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+
+          # Create enhanced package.json using node
+          node -e "
+          const pkg = require('./package.json');
+          pkg.name = 'pptx2html-wasm';
+          pkg.version = '${VERSION}';
+          pkg.description = 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies';
+          pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
+          pkg.author = 'Brian Kim <hyungjoo.drb@gmail.com>';
+          pkg.homepage = 'https://github.com/hyungjoo-drb/pptx2html-rs';
+          pkg.bugs = { url: 'https://github.com/hyungjoo-drb/pptx2html-rs/issues' };
+          pkg.engines = { node: '>=16' };
+          pkg.exports = {
+            '.': {
+              import: './pptx2html_wasm.js',
+              types: './pptx2html_wasm.d.ts'
+            }
+          };
+          require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Show package contents
+        working-directory: crates/pptx2html-wasm/pkg
+        run: |
+          echo "=== package.json ==="
+          cat package.json
+          echo ""
+          echo "=== Files ==="
+          ls -lh
+          echo ""
+          echo "=== WASM size ==="
+          du -h *.wasm
+
+      - name: Publish to npm (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        working-directory: crates/pptx2html-wasm/pkg
+        run: npm publish --dry-run --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: github.event.inputs.dry_run != 'true' || startsWith(github.ref, 'refs/tags/v')
+        working-directory: crates/pptx2html-wasm/pkg
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

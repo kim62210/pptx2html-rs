@@ -1,10 +1,13 @@
 [package]
 name = "pptx2html-wasm"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
-description = "WASM bindings for pptx2html"
+description = "WASM bindings for pptx2html — convert PPTX to HTML in the browser"
 license = "MIT"
 repository = "https://github.com/hyungjoo-drb/pptx2html-rs"
+homepage = "https://github.com/hyungjoo-drb/pptx2html-rs"
+keywords = ["pptx", "html", "wasm", "converter", "presentation"]
+categories = ["wasm", "parser-implementations"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]

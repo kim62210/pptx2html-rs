@@ -1,10 +1,12 @@
 [package]
 name = "pptx2html-py"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
-description = "PyO3 Python bindings for pptx2html"
+description = "PyO3 Python bindings for pptx2html — convert PPTX to HTML in Python"
 license = "MIT"
 repository = "https://github.com/hyungjoo-drb/pptx2html-rs"
+keywords = ["pptx", "html", "python", "converter", "presentation"]
+categories = ["parser-implementations"]
 
 [lib]
 name = "pptx2html"

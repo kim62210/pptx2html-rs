@@ -2,7 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.0] - 2026-03-29
+## [0.6.0] - 2026-03-30
+
+### npm / WASM
+- Publish WASM package to npm as `pptx2html-wasm`
+- Add `convert_with_options()` — full ConversionOptions support (embedImages, includeHidden, slideIndices)
+- Add `convert_with_metadata()` — returns typed ConversionResult with HTML + unresolved elements
+- Add `convert_with_options_metadata()` — combined options + metadata API
+- Add `get_presentation_info()` — typed PresentationInfo object (replaces JSON string `get_info()`)
+- Add GitHub Actions workflow for automated npm publishing on version tags
+- Add WASM build verification to CI pipeline
+
+### Open Source
+- Add CONTRIBUTING.md with development setup and code style guide
+- Add CODE_OF_CONDUCT.md (Contributor Covenant)
+- Add GitHub issue templates (bug report, feature request) and PR template
+- Add keywords and categories to all crate Cargo.toml metadata
 
 ### Performance
 - Eliminate intermediate String allocations in renderer (~28% faster rendering)

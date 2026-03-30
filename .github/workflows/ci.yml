@@ -32,3 +32,24 @@ jobs:
         run: cargo test --package pptx2html-core --package pptx2html-cli
       - name: Build release
         run: cargo build --package pptx2html-core --package pptx2html-cli --release
+
+  wasm:
+    name: WASM Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build WASM (web target)
+        run: wasm-pack build crates/pptx2html-wasm --target web --release
+      - name: Verify package artifacts
+        run: |
+          test -f crates/pptx2html-wasm/pkg/package.json
+          test -f crates/pptx2html-wasm/pkg/pptx2html_wasm.js
+          test -f crates/pptx2html-wasm/pkg/pptx2html_wasm.d.ts
+          test -f crates/pptx2html-wasm/pkg/pptx2html_wasm_bg.wasm
+          echo "All WASM artifacts present"
