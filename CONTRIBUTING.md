@@ -1,4 +1,4 @@
-# Contributing to pptx2html-rs
+# Contributing to pptx2html-turbo
 
 Thank you for your interest in contributing! This guide will help you get started.
 
@@ -6,8 +6,8 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 ```bash
 # Clone the repository
-git clone https://github.com/hyungjoo-drb/pptx2html-rs.git
-cd pptx2html-rs
+git clone https://github.com/hyungjoo-drb/pptx2html-turbo.git
+cd pptx2html-turbo
 
 # Build all crates
 cargo build --workspace
@@ -92,7 +92,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline diagram and module 
 
 ## Reporting Issues
 
-- Use the [issue tracker](https://github.com/hyungjoo-drb/pptx2html-rs/issues)
+- Use the [issue tracker](https://github.com/hyungjoo-drb/pptx2html-turbo/issues)
 - Include a minimal PPTX file that reproduces the issue if possible
 - Describe expected vs actual output
 

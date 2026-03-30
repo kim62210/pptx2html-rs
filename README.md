@@ -1,4 +1,4 @@
-# pptx2html-rs
+# pptx2html-turbo
 
 Convert PPTX slides to pixel-perfect HTML in pure Rust.
 
@@ -22,7 +22,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 
 ```bash
 # npm (WASM — browser)
-npm install pptx2html-wasm
+npm install pptx2html-turbo
 
 # Rust library
 cargo add pptx2html-core
@@ -136,7 +136,7 @@ import init, {
   convert_with_options,
   convert_with_metadata,
   get_presentation_info,
-} from 'pptx2html-wasm';
+} from 'pptx2html-turbo';
 
 await init();
 
@@ -185,7 +185,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 ### Pipeline
 
 ```
-PPTX → pptx2html-rs (Rust) → HTML + Metadata
+PPTX → pptx2html-turbo (Rust) → HTML + Metadata
                                     │
                                     ├─→ Direct HTML output (existing, zero dependencies)
                                     └─→ pptx2html-enhance (Python, LLM) → Enhanced HTML

@@ -54,13 +54,13 @@ jobs:
           # Create enhanced package.json using node
           node -e "
           const pkg = require('./package.json');
-          pkg.name = 'pptx2html-wasm';
+          pkg.name = 'pptx2html-turbo';
           pkg.version = '${VERSION}';
           pkg.description = 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies';
           pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
           pkg.author = 'Brian Kim <hyungjoo.drb@gmail.com>';
-          pkg.homepage = 'https://github.com/hyungjoo-drb/pptx2html-rs';
-          pkg.bugs = { url: 'https://github.com/hyungjoo-drb/pptx2html-rs/issues' };
+          pkg.homepage = 'https://github.com/hyungjoo-drb/pptx2html-turbo';
+          pkg.bugs = { url: 'https://github.com/hyungjoo-drb/pptx2html-turbo/issues' };
           pkg.engines = { node: '>=16' };
           pkg.exports = {
             '.': {

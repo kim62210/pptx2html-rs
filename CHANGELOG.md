@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - 2026-03-30
 
 ### npm / WASM
-- Publish WASM package to npm as `pptx2html-wasm`
+- Publish WASM package to npm as `pptx2html-turbo`
 - Add `convert_with_options()` — full ConversionOptions support (embedImages, includeHidden, slideIndices)
 - Add `convert_with_metadata()` — returns typed ConversionResult with HTML + unresolved elements
 - Add `convert_with_options_metadata()` — combined options + metadata API

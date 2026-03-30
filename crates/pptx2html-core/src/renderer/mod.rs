@@ -133,7 +133,7 @@ impl HtmlRenderer {
         html.push_str(
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
         );
-        html.push_str("<meta name=\"generator\" content=\"pptx2html-rs\">\n");
+        html.push_str("<meta name=\"generator\" content=\"pptx2html-turbo\">\n");
         if let Some(ref title) = pres.title {
             let _ = writeln!(html, "<title>{}</title>", escape_html(title));
         } else {
