@@ -13,3 +13,5 @@ __pycache__/
 evaluate/golden_set/*.pptx
 evaluate/golden_references/**/slide_*.png
 evaluate/.venv/
+.claude/
+.serena/
