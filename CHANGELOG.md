@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.0] - 2026-03-30
+## [1.0.0] - 2026-03-30
 
 ### npm / WASM
 - Publish WASM package to npm as `pptx2html-wasm`
