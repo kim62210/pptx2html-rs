@@ -1267,11 +1267,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         let _ = write!(html, "<p class=\"paragraph\" style=\"{para_style}\">");
 
+        // Skip bullet for empty paragraphs (no visible text content)
+        let has_visible_text = para
+            .runs
+            .iter()
+            .any(|r| !r.is_break && !r.text.trim().is_empty());
+
         // Bullet rendering (explicit > inherited)
-        let bullet = para
-            .bullet
-            .as_ref()
-            .or_else(|| inherited.and_then(|d| d.bullet.as_ref()));
+        let bullet = if has_visible_text {
+            para.bullet
+                .as_ref()
+                .or_else(|| inherited.and_then(|d| d.bullet.as_ref()))
+        } else {
+            None
+        };
         if let Some(bullet) = bullet {
             match bullet {
                 Bullet::Char(bc) => {

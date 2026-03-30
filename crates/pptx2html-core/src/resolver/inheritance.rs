@@ -116,7 +116,22 @@ pub fn resolve_border_with_theme(
     }
     // Check shape's own border first (width > 0, or has meaningful line-end markers/color)
     if shape.border.width > 0.0 || has_border_properties(&shape.border) {
-        return shape.border.clone();
+        let mut border = shape.border.clone();
+        // If shape has border properties (e.g., head/tail end) but no color,
+        // try to resolve color from lnRef style reference
+        if border.color.is_none() {
+            if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+                (&shape.style_ref, fmt_scheme, scheme, clr_map)
+                && let Some(ln_ref) = &sr.ln_ref
+                && let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
+            {
+                border.color = resolved.color;
+                if border.width == 0.0 {
+                    border.width = resolved.width;
+                }
+            }
+        }
+        return border;
     }
     // Check layout match
     if let Some(lm) = layout_match {
