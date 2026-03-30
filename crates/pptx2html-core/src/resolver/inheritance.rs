@@ -8,7 +8,7 @@ use super::style_ref;
 use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
-use crate::model::{Border, Color, Fill, Position, Size};
+use crate::model::{Border, Color, DashStyle, Fill, Position, Size};
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
 pub fn resolve_background(
@@ -114,8 +114,8 @@ pub fn resolve_border_with_theme(
     if shape.border.no_fill {
         return Border::default();
     }
-    // Check shape's own border first
-    if shape.border.width > 0.0 {
+    // Check shape's own border first (width > 0, or has meaningful line-end markers/color)
+    if shape.border.width > 0.0 || has_border_properties(&shape.border) {
         return shape.border.clone();
     }
     // Check layout match
@@ -123,7 +123,7 @@ pub fn resolve_border_with_theme(
         if lm.border.no_fill {
             return Border::default();
         }
-        if lm.border.width > 0.0 {
+        if lm.border.width > 0.0 || has_border_properties(&lm.border) {
             return lm.border.clone();
         }
     }
@@ -132,7 +132,7 @@ pub fn resolve_border_with_theme(
         if mm.border.no_fill {
             return Border::default();
         }
-        if mm.border.width > 0.0 {
+        if mm.border.width > 0.0 || has_border_properties(&mm.border) {
             return mm.border.clone();
         }
     }
@@ -141,12 +141,32 @@ pub fn resolve_border_with_theme(
     if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
         (&shape.style_ref, fmt_scheme, scheme, clr_map)
         && let Some(ln_ref) = &sr.ln_ref
-        && let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
+        && let Some(mut resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
     {
+        // Preserve shape's own head_end/tail_end/dash_style if lnRef doesn't provide them
+        if resolved.head_end.is_none() && shape.border.head_end.is_some() {
+            resolved.head_end = shape.border.head_end.clone();
+        }
+        if resolved.tail_end.is_none() && shape.border.tail_end.is_some() {
+            resolved.tail_end = shape.border.tail_end.clone();
+        }
+        if matches!(resolved.dash_style, DashStyle::Solid)
+            && !matches!(shape.border.dash_style, DashStyle::Solid)
+        {
+            resolved.dash_style = shape.border.dash_style.clone();
+        }
         return resolved;
     }
 
     shape.border.clone()
+}
+
+/// Check if a border has meaningful properties beyond width (e.g., color, head/tail end)
+fn has_border_properties(border: &Border) -> bool {
+    !border.color.is_none()
+        || border.head_end.is_some()
+        || border.tail_end.is_some()
+        || !matches!(border.dash_style, DashStyle::Solid)
 }
 
 /// Resolve effective position/size for a placeholder shape.

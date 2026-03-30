@@ -90,7 +90,10 @@ pub fn resolve_ln_ref(
         } else {
             BorderStyle::None
         },
-        ..Default::default()
+        dash_style: base_border.dash_style.clone(),
+        head_end: base_border.head_end.clone(),
+        tail_end: base_border.tail_end.clone(),
+        no_fill: base_border.no_fill,
     })
 }
 
