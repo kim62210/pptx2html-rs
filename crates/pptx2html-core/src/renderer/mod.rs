@@ -711,11 +711,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     String::new()
                 };
+                // non-scaling-stroke prevents stroke distortion when viewBox
+                // and CSS dimensions have different aspect ratios.
+                // Ensure minimum 1.5px for visibility at screen resolution.
+                let (non_scaling, stroke_width) = if is_line_shape {
+                    (" vector-effect=\"non-scaling-stroke\"", stroke_width.max(1.5))
+                } else {
+                    ("", stroke_width)
+                };
                 let _ = writeln!(
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {dash_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
+                     {non_scaling}{dash_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
                      </svg>"
                 );
             }
