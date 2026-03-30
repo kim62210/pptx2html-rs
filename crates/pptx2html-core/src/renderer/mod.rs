@@ -329,6 +329,36 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             ShapeType::Custom(name) => Some(name.as_str()),
             _ => None,
         };
+
+        // Line shapes with zero width or height need a minimum CSS dimension
+        // so the shape div is visible (otherwise browser collapses it)
+        if let Some(pn) = svg_preset_name {
+            let is_line = matches!(
+                pn,
+                "line" | "lineInv" | "straightConnector1"
+                    | "bentConnector2" | "bentConnector3" | "bentConnector4" | "bentConnector5"
+                    | "curvedConnector2" | "curvedConnector3" | "curvedConnector4" | "curvedConnector5"
+            );
+            if is_line {
+                if w < 0.5 {
+                    // Vertical line: give minimum width for stroke visibility
+                    style_buf.clear();
+                    let _ = write!(
+                        style_buf,
+                        "left: {:.1}px; top: {y:.1}px; width: 2px; height: {h:.1}px",
+                        x - 1.0
+                    );
+                } else if h < 0.5 {
+                    // Horizontal line: give minimum height for stroke visibility
+                    style_buf.clear();
+                    let _ = write!(
+                        style_buf,
+                        "left: {x:.1}px; top: {:.1}px; width: {w:.1}px; height: 2px",
+                        y - 1.0
+                    );
+                }
+            }
+        }
         let uses_svg =
             svg_preset_name.is_some() || matches!(shape.shape_type, ShapeType::CustomGeom(_));
 
@@ -509,22 +539,36 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         if let Some(preset_name) = svg_preset_name {
             let empty_adj: HashMap<String, f64> = HashMap::new();
             let adj_values = shape.adjust_values.as_ref().unwrap_or(&empty_adj);
-            if let Some(svg_path) = geometry::preset_shape_svg(preset_name, w, h, adj_values) {
-                // Connector/line shapes need a default visible stroke
-                let is_line_shape = matches!(
-                    preset_name,
-                    "line"
-                        | "lineInv"
-                        | "straightConnector1"
-                        | "bentConnector2"
-                        | "bentConnector3"
-                        | "bentConnector4"
-                        | "bentConnector5"
-                        | "curvedConnector2"
-                        | "curvedConnector3"
-                        | "curvedConnector4"
-                        | "curvedConnector5"
-                );
+            // Connector/line shapes need a default visible stroke
+            let is_line_shape = matches!(
+                preset_name,
+                "line"
+                    | "lineInv"
+                    | "straightConnector1"
+                    | "bentConnector2"
+                    | "bentConnector3"
+                    | "bentConnector4"
+                    | "bentConnector5"
+                    | "curvedConnector2"
+                    | "curvedConnector3"
+                    | "curvedConnector4"
+                    | "curvedConnector5"
+            );
+            // For line shapes with zero dimension, use a fixed viewBox and custom path
+            let svg_w = if is_line_shape && w < 0.5 { 2.0 } else { w };
+            let svg_h = if is_line_shape && h < 0.5 { 2.0 } else { h };
+            // Generate path: for zero-dim lines, create centered line path directly
+            let line_svg_override = if is_line_shape && (w < 0.5 || h < 0.5) {
+                if w < 0.5 {
+                    Some(format!("M1.0,0 L1.0,{svg_h:.1}"))
+                } else {
+                    Some(format!("M0,1.0 L{svg_w:.1},1.0"))
+                }
+            } else {
+                None
+            };
+            let svg_path_opt = line_svg_override.or_else(|| geometry::preset_shape_svg(preset_name, svg_w, svg_h, adj_values));
+            if let Some(svg_path) = svg_path_opt {
                 // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
@@ -544,7 +588,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let _ = write!(
                     html,
-                    "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+                    "<svg viewBox=\"0 0 {svg_w:.1} {svg_h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
                 );
                 // Build <defs> for gradient and/or marker definitions
                 let grad_id = ctx.next_gradient_id();
@@ -721,8 +765,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Resolve text style source for this shape's placeholder type
         let text_style_ctx = Self::build_text_style_ctx(shape, ctx);
 
-        // Resolve fontRef from <p:style> for font-family fallback
-        let font_ref_font = Self::resolve_font_ref_font(shape, ctx);
+        // Resolve fontRef from <p:style> for font-family and color fallback
+        let (font_ref_font, font_ref_color) = Self::resolve_font_ref_font(shape, ctx)
+            .map(|(f, c)| (Some(f), c))
+            .unwrap_or((None, None));
 
         // Text
         if let Some(ref text_body) = shape.text_body {
@@ -801,6 +847,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     &mut auto_num_counters,
                     &text_style_ctx,
                     font_ref_font.as_deref(),
+                    font_ref_color.as_ref(),
                     font_scale,
                     ln_spc_reduction,
                     html,
@@ -844,17 +891,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
     }
 
-    /// Resolve fontRef from shape's <p:style> to a font-family name
-    fn resolve_font_ref_font(shape: &Shape, ctx: &RenderCtx<'_>) -> Option<String> {
+    /// Resolve fontRef from shape's <p:style> to a font-family name and optional color
+    fn resolve_font_ref_font(
+        shape: &Shape,
+        ctx: &RenderCtx<'_>,
+    ) -> Option<(String, Option<ResolvedColor>)> {
         let sr = shape.style_ref.as_ref()?;
         let font_ref = sr.font_ref.as_ref()?;
         let theme = ctx.pres.primary_theme()?;
         let font_scheme = &theme.font_scheme;
         let scheme = ctx.scheme?;
         let clr_map = ctx.clr_map?;
-        let (font_name, _color) =
-            style_ref::resolve_font_ref(font_ref, font_scheme, scheme, clr_map)?;
-        Some(font_name)
+        style_ref::resolve_font_ref(font_ref, font_scheme, scheme, clr_map)
     }
 
     fn render_table(table: &TableData, ctx: &RenderCtx<'_>, html: &mut String) {
@@ -1031,6 +1079,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             None,
             None,
             None,
+            None,
             html,
         );
     }
@@ -1043,6 +1092,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         auto_num_counters: &mut [i32; 9],
         text_ctx: &TextStyleCtx<'_>,
         font_ref_font: Option<&str>,
+        font_ref_color: Option<&ResolvedColor>,
         font_scale: Option<f64>,
         ln_spc_reduction: Option<f64>,
         html: &mut String,
@@ -1225,6 +1275,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 para.def_rpr.as_ref(),
                 run_defaults,
                 font_ref_font,
+                font_ref_color,
                 font_scale,
                 html,
             );
@@ -1244,6 +1295,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         para_def_rpr: Option<&ParagraphDefRPr>,
         run_defaults: Option<&RunDefaults>,
         font_ref_font: Option<&str>,
+        font_ref_color: Option<&ResolvedColor>,
         font_scale: Option<f64>,
         html: &mut String,
     ) {
@@ -1342,7 +1394,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             run_style.push_str("text-decoration: line-through");
         }
 
-        // Color -- explicit > para defRPr > inherited > theme-aware resolution
+        // Color -- explicit > para defRPr > inherited > fontRef > none
         // Use or_else chaining so that a None at any level falls through to the next
         let color_css = if !run.style.color.is_none() {
             ctx.color_to_css(&run.style.color)
@@ -1355,6 +1407,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         .and_then(|rd| rd.color.as_ref())
                         .and_then(|c| ctx.color_to_css(c))
                 })
+                .or_else(|| font_ref_color.as_ref().map(|c| c.to_css()))
         };
         if let Some(css_color) = color_css {
             push_sep(&mut run_style);
@@ -1814,6 +1867,7 @@ fn emit_marker_def(
         "<marker id=\"{marker_id}\" viewBox=\"0 0 {marker_h:.1} {marker_w:.1}\" \
          refX=\"{marker_h:.1}\" refY=\"{half_w:.1}\" \
          markerWidth=\"{marker_h:.1}\" markerHeight=\"{marker_w:.1}\" \
+         markerUnits=\"userSpaceOnUse\" \
          orient=\"auto-start-reverse\">\
          <path d=\"{path}\" fill=\"{fill_attr}\" stroke=\"{color}\" stroke-width=\"0.5\"/>\
          </marker>"

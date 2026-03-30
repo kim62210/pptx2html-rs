@@ -336,10 +336,13 @@ pub fn parse_slide<R: Read + Seek>(
                     // Shape start
                     "sp" | "pic" | "cxnSp" => {
                         current_shape = Some(ShapeBuilder::default());
-                        if local == "pic"
-                            && let Some(sb) = &mut current_shape
-                        {
-                            sb.is_picture = true;
+                        if let Some(sb) = &mut current_shape {
+                            if local == "pic" {
+                                sb.is_picture = true;
+                            }
+                            if local == "cxnSp" {
+                                sb.is_connector = true;
+                            }
                         }
                     }
                     // Non-visual properties (contains placeholder)
@@ -2433,6 +2436,8 @@ struct ShapeBuilder {
     shape_glow: Option<GlowEffect>,
     // Custom geometry
     custom_geometry: Option<CustomGeometry>,
+    // Connection shape (cxnSp) — defaults to line if no preset geometry
+    is_connector: bool,
 }
 
 impl ShapeBuilder {
@@ -2467,6 +2472,9 @@ impl ShapeBuilder {
                 "triangle" | "rtTriangle" => ShapeType::Triangle,
                 other => ShapeType::Custom(other.to_string()),
             }
+        } else if self.is_connector {
+            // cxnSp without preset geometry defaults to a straight line
+            ShapeType::Custom("line".to_string())
         } else {
             ShapeType::TextBox
         };

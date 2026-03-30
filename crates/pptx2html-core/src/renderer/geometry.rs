@@ -82,7 +82,7 @@ pub fn preset_shape_svg(
         "leftRightUpArrow" => Some(left_right_up_arrow_path(w, h)),
         "quadArrow" => Some(quad_arrow_path(w, h)),
         "leftUpArrow" => Some(left_up_arrow_path(w, h)),
-        "homePlate" => Some(home_plate_path(w, h)),
+        "homePlate" => Some(home_plate_path(w, h, adjust_values)),
         // Callouts
         "wedgeRoundRectCallout" => Some(wedge_round_rect_callout_path(w, h)),
         "wedgeEllipseCallout" => Some(wedge_ellipse_callout_path(w, h)),
@@ -814,8 +814,10 @@ fn left_up_arrow_path(w: f64, h: f64) -> String {
         y3 = h / 2.0 + s
     )
 }
-fn home_plate_path(w: f64, h: f64) -> String {
-    let p = w * 0.25;
+fn home_plate_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    // ECMA-376 homePlate: adj default = 50000 (50% of width for arrow point)
+    let a = adj.get("adj").copied().unwrap_or(50000.0);
+    let p = w * a / 100_000.0;
     let cy = h / 2.0;
     format!(
         "M0,0 L{x:.1},0 L{w:.1},{cy:.1} L{x:.1},{h:.1} L0,{h:.1} Z",

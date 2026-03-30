@@ -209,12 +209,14 @@ pub enum LineEndSize {
 }
 
 impl LineEndSize {
-    /// Convert to a pixel multiplier relative to stroke width
+    /// Fixed pixel size for SVG markers (markerUnits="userSpaceOnUse").
+    /// These values produce visually proportional arrowheads regardless
+    /// of stroke width, matching typical OOXML rendering.
     pub fn multiplier(&self) -> f64 {
         match self {
-            Self::Small => 3.0,
-            Self::Medium => 5.0,
-            Self::Large => 7.0,
+            Self::Small => 4.0,
+            Self::Medium => 6.0,
+            Self::Large => 9.0,
         }
     }
 }
