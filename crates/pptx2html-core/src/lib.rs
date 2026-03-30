@@ -41,6 +41,7 @@ use model::UnresolvedElement;
 use parser::PptxParser;
 use renderer::HtmlRenderer;
 pub use renderer::provenance::{ProvenanceSource, ProvenanceSubject, RenderedProvenanceEntry};
+pub use renderer::text_metrics::{FontResolutionEntry, FontResolutionSource};
 
 /// Options controlling how PPTX content is converted to HTML.
 ///
@@ -104,6 +105,7 @@ pub struct ConversionResult {
     /// Generated HTML string.
     pub html: String,
     pub external_assets: Vec<ExternalAsset>,
+    pub font_resolution_entries: Vec<FontResolutionEntry>,
     pub provenance_entries: Vec<RenderedProvenanceEntry>,
     /// Metadata about elements that were rendered as placeholders.
     pub unresolved_elements: Vec<UnresolvedElement>,

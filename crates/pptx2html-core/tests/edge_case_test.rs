@@ -1308,3 +1308,163 @@ fn test_norm_autofit_no_font_scale_no_overflow() {
         "Font size should remain 18.0pt without fontScale"
     );
 }
+
+#[test]
+fn test_font_resolution_ledger_tracks_theme_font_fallback() {
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont><a:latin typeface="Noto Sans KR"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Pretendard"/></a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="+mn-lt"/></a:rPr><a:t>Theme font fallback</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_full_theme(theme_xml)
+        .build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "Theme font fallback")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("+mn-lt"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Pretendard"));
+    assert!(entry.fallback_used);
+}
+
+#[test]
+fn test_font_resolution_ledger_tracks_literal_font_without_fallback() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Literal font</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "Literal font")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("Calibri"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Calibri"));
+    assert!(!entry.fallback_used);
+}
+
+#[test]
+fn test_rtl_paragraph_is_parsed_and_rendered() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="RTL Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="4000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:pPr rtl="1"/>
+          <a:r><a:t>مرحبا بالعالم</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    assert!(pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].rtl);
+
+    let html = render_html(&pptx);
+    assert!(html.contains("direction: rtl"), "Expected RTL direction in HTML: {html}");
+    assert!(
+        html.contains("unicode-bidi: bidi-override"),
+        "Expected bidi override in HTML: {html}"
+    );
+}
+
+#[test]
+fn test_vertical_text_with_flip_keeps_combined_transform() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="VertFlip"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm flipH="1"><a:off x="100000" y="100000"/><a:ext cx="1000000" cy="3000000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr vert="vert270"/>
+        <a:p><a:r><a:t>Rotated</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 300.min(html.len() - tb_start)];
+    assert!(tb_chunk.contains("writing-mode: vertical-lr"));
+    assert!(tb_chunk.contains("scale(-1,1)"), "Expected flip transform: {tb_chunk}");
+    assert!(tb_chunk.contains("rotate(180deg)"), "Expected vert270 rotation: {tb_chunk}");
+}
+
+#[test]
+fn test_no_wrap_sets_inline_white_space_nowrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="NoWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr wrap="none"/>
+        <a:p><a:r><a:t>No wrap text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 250.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("white-space: nowrap"),
+        "Expected inline nowrap style on text-body: {tb_chunk}"
+    );
+}

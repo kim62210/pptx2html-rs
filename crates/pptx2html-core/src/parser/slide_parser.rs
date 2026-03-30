@@ -2518,6 +2518,9 @@ fn parse_para_props(e: &quick_xml::events::BytesStart<'_>, para: &mut Option<Par
         if let Some(algn) = xml_utils::attr_str(e, "algn") {
             pb.alignment = Alignment::from_ooxml(&algn);
         }
+        if let Some(rtl) = xml_utils::attr_str(e, "rtl") {
+            pb.rtl = rtl == "1" || rtl == "true";
+        }
         if let Some(lvl) = xml_utils::attr_str(e, "lvl") {
             pb.level = lvl.parse::<u32>().unwrap_or(0);
         }
@@ -2729,6 +2732,7 @@ impl ShapeBuilder {
 struct ParagraphBuilder {
     runs: Vec<TextRun>,
     alignment: Alignment,
+    rtl: bool,
     level: u32,
     indent: Option<f64>,
     margin_left: Option<f64>,
@@ -2772,6 +2776,7 @@ impl ParagraphBuilder {
         TextParagraph {
             runs: self.runs,
             alignment: self.alignment,
+            rtl: self.rtl,
             line_spacing: self.line_spacing,
             space_before: self.space_before,
             space_after: self.space_after,

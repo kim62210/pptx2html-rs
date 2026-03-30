@@ -88,6 +88,7 @@ pub struct TextBody {
 pub struct TextParagraph {
     pub runs: Vec<TextRun>,
     pub alignment: Alignment,
+    pub rtl: bool,
     pub line_spacing: Option<SpacingValue>,
     pub space_before: Option<SpacingValue>,
     pub space_after: Option<SpacingValue>,

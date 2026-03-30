@@ -153,7 +153,10 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
         ("Left aligned text", PP_ALIGN.LEFT),
         ("Center aligned text", PP_ALIGN.CENTER),
         ("Right aligned text", PP_ALIGN.RIGHT),
-        ("Justified text with enough words to show justification effect clearly", PP_ALIGN.JUSTIFY),
+        (
+            "Justified text with enough words to show justification effect clearly",
+            PP_ALIGN.JUSTIFY,
+        ),
     ]
     for text, align in alignments:
         p = tf.add_paragraph()
@@ -194,6 +197,85 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
     prs.save(str(path))
     files.append(path)
 
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(2))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "Theme fallback candidate"
+    run.font.size = Pt(24)
+    run.font.name = "Aptos"
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = "Explicit alternate font"
+    run2.font.size = Pt(24)
+    run2.font.name = "Calibri"
+
+    path = output_dir / "basic_text_06_font_fallback.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(1), Inches(0.8), Inches(1.2), Inches(5.5))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "Vertical text sample"
+    run.font.size = Pt(20)
+    body_pr = txBox.text_frame._txBody.bodyPr
+    body_pr.set("vert", "vert")
+
+    path = output_dir / "basic_text_07_vertical_text.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1), Inches(1.5), Inches(4.5))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = (
+        "A very narrow text box with a long sentence to stress line breaking, "
+        "wrapping, and auto-fit behavior in downstream renderers."
+    )
+    run.font.size = Pt(18)
+
+    path = output_dir / "basic_text_08_narrow_box_autofit.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.2), Inches(8.5), Inches(2.5))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "Latin "
+    run.font.name = "Calibri"
+    run.font.size = Pt(24)
+    run2 = p.add_run()
+    run2.text = "한글 "
+    run2.font.name = "Malgun Gothic"
+    run2.font.size = Pt(24)
+    run3 = p.add_run()
+    run3.text = "Mixed "
+    run3.font.name = "Arial"
+    run3.font.size = Pt(24)
+    run4 = p.add_run()
+    run4.text = "日本語"
+    run4.font.name = "Yu Gothic"
+    run4.font.size = Pt(24)
+
+    path = output_dir / "basic_text_09_mixed_font_paragraph.pptx"
+    prs.save(str(path))
+    files.append(path)
+
     return files
 
 
@@ -215,8 +297,10 @@ def _create_shapes(output_dir: Path) -> list[Path]:
     for i, color in enumerate(colors_list):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(1 + i * 3), Inches(2),
-            Inches(2), Inches(2),
+            Inches(1 + i * 3),
+            Inches(2),
+            Inches(2),
+            Inches(2),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = color
@@ -231,8 +315,10 @@ def _create_shapes(output_dir: Path) -> list[Path]:
     for i in range(4):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.OVAL,
-            Inches(0.5 + i * 2.5), Inches(2),
-            Inches(2), Inches(2 - i * 0.3),
+            Inches(0.5 + i * 2.5),
+            Inches(2),
+            Inches(2),
+            Inches(2 - i * 0.3),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(50 + i * 50, 100, 200 - i * 40)
@@ -257,9 +343,7 @@ def _create_shapes(output_dir: Path) -> list[Path]:
         (Inches(5), Inches(4)),
     ]
     for shape_type, (left, top) in zip(arrow_shapes, positions):
-        shape = slide.shapes.add_shape(
-            shape_type, left, top, Inches(3), Inches(2)
-        )
+        shape = slide.shapes.add_shape(shape_type, left, top, Inches(3), Inches(2))
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(0x33, 0x66, 0x99)
 
@@ -279,8 +363,10 @@ def _create_shapes(output_dir: Path) -> list[Path]:
     for i, star in enumerate(star_shapes):
         shape = slide.shapes.add_shape(
             star,
-            Inches(0.5 + i * 2.5), Inches(2),
-            Inches(2), Inches(2),
+            Inches(0.5 + i * 2.5),
+            Inches(2),
+            Inches(2),
+            Inches(2),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(0xFF, 0xCC, 0x00)
@@ -301,8 +387,10 @@ def _create_shapes(output_dir: Path) -> list[Path]:
     for i, (shape_type, label) in enumerate(shape_specs):
         shape = slide.shapes.add_shape(
             shape_type,
-            Inches(0.5 + i * 2.5), Inches(2),
-            Inches(2), Inches(2.5),
+            Inches(0.5 + i * 2.5),
+            Inches(2),
+            Inches(2),
+            Inches(2.5),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(0xE8, 0xE8, 0xE8)
@@ -350,8 +438,10 @@ def _create_theme_colors(output_dir: Path) -> list[Path]:
         col = i % 6
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(0.5 + col * 1.5), Inches(1 + row * 3),
-            Inches(1.2), Inches(2),
+            Inches(0.5 + col * 1.5),
+            Inches(1 + row * 3),
+            Inches(1.2),
+            Inches(2),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = color
@@ -379,8 +469,10 @@ def _create_theme_colors(output_dir: Path) -> list[Path]:
         b = int(base_b + (255 - base_b) * tint)
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(0.5 + i * 1.8), Inches(2),
-            Inches(1.5), Inches(3),
+            Inches(0.5 + i * 1.8),
+            Inches(2),
+            Inches(1.5),
+            Inches(3),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(r, g, b)
@@ -402,8 +494,10 @@ def _create_theme_colors(output_dir: Path) -> list[Path]:
         b = int(base_b * (1 - shade))
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(0.5 + i * 1.8), Inches(2),
-            Inches(1.5), Inches(3),
+            Inches(0.5 + i * 1.8),
+            Inches(2),
+            Inches(1.5),
+            Inches(3),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(r, g, b)
@@ -448,8 +542,10 @@ def _create_theme_colors(output_dir: Path) -> list[Path]:
     # Dark background shape
     bg_shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Emu(0), Emu(0),
-        SLIDE_WIDTH, SLIDE_HEIGHT,
+        Emu(0),
+        Emu(0),
+        SLIDE_WIDTH,
+        SLIDE_HEIGHT,
     )
     bg_shape.fill.solid()
     bg_shape.fill.fore_color.rgb = RGBColor(0x1E, 0x29, 0x3B)
@@ -464,8 +560,10 @@ def _create_theme_colors(output_dir: Path) -> list[Path]:
     ]
     for i, color in enumerate(light_colors):
         txBox = slide.shapes.add_textbox(
-            Inches(1), Inches(1 + i * 1.5),
-            Inches(8), Inches(1),
+            Inches(1),
+            Inches(1 + i * 1.5),
+            Inches(8),
+            Inches(1),
         )
         p = txBox.text_frame.paragraphs[0]
         run = p.add_run()
@@ -529,10 +627,26 @@ def _create_tables(output_dir: Path) -> list[Path]:
     table = table_shape.table
 
     cell_colors = [
-        [RGBColor(0x41, 0x72, 0xC4), RGBColor(0x5B, 0x9B, 0xD5), RGBColor(0x9D, 0xC3, 0xE6)],
-        [RGBColor(0xED, 0x7D, 0x31), RGBColor(0xF4, 0xB1, 0x83), RGBColor(0xFA, 0xD8, 0xC1)],
-        [RGBColor(0x70, 0xAD, 0x47), RGBColor(0xA9, 0xD1, 0x8E), RGBColor(0xD4, 0xE8, 0xC7)],
-        [RGBColor(0xFB, 0xC0, 0x2D), RGBColor(0xFD, 0xDB, 0x7D), RGBColor(0xFE, 0xED, 0xBE)],
+        [
+            RGBColor(0x41, 0x72, 0xC4),
+            RGBColor(0x5B, 0x9B, 0xD5),
+            RGBColor(0x9D, 0xC3, 0xE6),
+        ],
+        [
+            RGBColor(0xED, 0x7D, 0x31),
+            RGBColor(0xF4, 0xB1, 0x83),
+            RGBColor(0xFA, 0xD8, 0xC1),
+        ],
+        [
+            RGBColor(0x70, 0xAD, 0x47),
+            RGBColor(0xA9, 0xD1, 0x8E),
+            RGBColor(0xD4, 0xE8, 0xC7),
+        ],
+        [
+            RGBColor(0xFB, 0xC0, 0x2D),
+            RGBColor(0xFD, 0xDB, 0x7D),
+            RGBColor(0xFE, 0xED, 0xBE),
+        ],
     ]
     for i in range(4):
         for j in range(3):
@@ -652,9 +766,7 @@ def _create_images(output_dir: Path) -> list[Path]:
     slide = _add_blank_slide(prs)
     img_bytes = _create_test_image(400, 300, "blue")
     img_stream = io.BytesIO(img_bytes)
-    slide.shapes.add_picture(
-        img_stream, Inches(3), Inches(2), Inches(4), Inches(3)
-    )
+    slide.shapes.add_picture(img_stream, Inches(3), Inches(2), Inches(4), Inches(3))
 
     path = output_dir / "images_01_centered.pptx"
     prs.save(str(path))
@@ -671,8 +783,10 @@ def _create_images(output_dir: Path) -> list[Path]:
         col = i % 2
         slide.shapes.add_picture(
             img_stream,
-            Inches(1 + col * 4.5), Inches(1 + row * 3.5),
-            Inches(3.5), Inches(2.5),
+            Inches(1 + col * 4.5),
+            Inches(1 + row * 3.5),
+            Inches(3.5),
+            Inches(2.5),
         )
 
     path = output_dir / "images_02_tiled.pptx"
@@ -706,8 +820,10 @@ def _create_images(output_dir: Path) -> list[Path]:
     # Border shape
     border = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(2.5), Inches(1.5),
-        Inches(5.2), Inches(4.2),
+        Inches(2.5),
+        Inches(1.5),
+        Inches(5.2),
+        Inches(4.2),
     )
     border.fill.background()
     border.line.color.rgb = RGBColor(0x00, 0x00, 0x00)
@@ -715,9 +831,7 @@ def _create_images(output_dir: Path) -> list[Path]:
 
     img_bytes = _create_test_image(300, 225, "coral")
     img_stream = io.BytesIO(img_bytes)
-    slide.shapes.add_picture(
-        img_stream, Inches(2.6), Inches(1.6), Inches(5), Inches(4)
-    )
+    slide.shapes.add_picture(img_stream, Inches(2.6), Inches(1.6), Inches(5), Inches(4))
 
     path = output_dir / "images_04_bordered.pptx"
     prs.save(str(path))
@@ -732,8 +846,10 @@ def _create_images(output_dir: Path) -> list[Path]:
         img_stream = io.BytesIO(img_bytes)
         slide.shapes.add_picture(
             img_stream,
-            Inches(0.5 + i * 1.9), Inches(3),
-            Inches(1.5), Inches(1.5),
+            Inches(0.5 + i * 1.9),
+            Inches(3),
+            Inches(1.5),
+            Inches(1.5),
         )
 
     path = output_dir / "images_05_row.pptx"
@@ -755,7 +871,10 @@ def _create_gradients(output_dir: Path) -> list[Path]:
     slide = _add_blank_slide(prs)
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(1), Inches(1), Inches(8), Inches(5.5),
+        Inches(1),
+        Inches(1),
+        Inches(8),
+        Inches(5.5),
     )
     shape.fill.gradient()
     shape.fill.gradient_stops[0].color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -772,7 +891,10 @@ def _create_gradients(output_dir: Path) -> list[Path]:
     slide = _add_blank_slide(prs)
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(1), Inches(1), Inches(8), Inches(5.5),
+        Inches(1),
+        Inches(1),
+        Inches(8),
+        Inches(5.5),
     )
     shape.fill.gradient()
     stops = shape.fill.gradient_stops
@@ -800,8 +922,10 @@ def _create_gradients(output_dir: Path) -> list[Path]:
     for i, (c1, c2) in enumerate(gradient_pairs):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(0.5 + i * 3.2), Inches(2),
-            Inches(2.8), Inches(3),
+            Inches(0.5 + i * 3.2),
+            Inches(2),
+            Inches(2.8),
+            Inches(3),
         )
         shape.fill.gradient()
         shape.fill.gradient_stops[0].color.rgb = c1
@@ -818,7 +942,10 @@ def _create_gradients(output_dir: Path) -> list[Path]:
     slide = _add_blank_slide(prs)
     shape = slide.shapes.add_shape(
         MSO_SHAPE.OVAL,
-        Inches(2.5), Inches(1.5), Inches(5), Inches(4.5),
+        Inches(2.5),
+        Inches(1.5),
+        Inches(5),
+        Inches(4.5),
     )
     shape.fill.gradient()
     shape.fill.gradient_stops[0].color.rgb = RGBColor(0xFF, 0xD7, 0x00)
@@ -835,7 +962,10 @@ def _create_gradients(output_dir: Path) -> list[Path]:
     slide = _add_blank_slide(prs)
     bg = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT,
+        Emu(0),
+        Emu(0),
+        SLIDE_WIDTH,
+        SLIDE_HEIGHT,
     )
     bg.fill.gradient()
     bg.fill.gradient_stops[0].color.rgb = RGBColor(0x0D, 0x0D, 0x2B)
@@ -877,7 +1007,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
     # Background circle
     s1 = slide.shapes.add_shape(
         MSO_SHAPE.OVAL,
-        Inches(3), Inches(2), Inches(4), Inches(4),
+        Inches(3),
+        Inches(2),
+        Inches(4),
+        Inches(4),
     )
     s1.fill.solid()
     s1.fill.fore_color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -885,7 +1018,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
     # Foreground rectangle
     s2 = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(4), Inches(3), Inches(2), Inches(2),
+        Inches(4),
+        Inches(3),
+        Inches(2),
+        Inches(2),
     )
     s2.fill.solid()
     s2.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
@@ -893,7 +1029,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
     # Small accent circle
     s3 = slide.shapes.add_shape(
         MSO_SHAPE.OVAL,
-        Inches(4.5), Inches(3.5), Inches(1), Inches(1),
+        Inches(4.5),
+        Inches(3.5),
+        Inches(1),
+        Inches(1),
     )
     s3.fill.solid()
     s3.fill.fore_color.rgb = RGBColor(0xED, 0x7D, 0x31)
@@ -909,8 +1048,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
     for i, rot in enumerate(rotations):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(0.5 + i * 1.5), Inches(2.5),
-            Inches(1.2), Inches(2),
+            Inches(0.5 + i * 1.5),
+            Inches(2.5),
+            Inches(1.2),
+            Inches(2),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -941,7 +1082,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
         top = Inches((7.5 - h) / 2)
         shape = slide.shapes.add_shape(
             MSO_SHAPE.OVAL,
-            left, top, Inches(w), Inches(h),
+            left,
+            top,
+            Inches(w),
+            Inches(h),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = color
@@ -959,8 +1103,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
             shape_type = grid_shapes[row]
             shape = slide.shapes.add_shape(
                 shape_type,
-                Inches(0.8 + col * 1.8), Inches(1 + row * 2.2),
-                Inches(1.2), Inches(1.2),
+                Inches(0.8 + col * 1.8),
+                Inches(1 + row * 2.2),
+                Inches(1.2),
+                Inches(1.2),
             )
             shape.fill.solid()
             r = (row * 80 + col * 30) % 256
@@ -978,8 +1124,10 @@ def _create_groups(output_dir: Path) -> list[Path]:
     for i in range(5):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
-            Inches(1 + i * 0.8), Inches(1 + i * 0.8),
-            Inches(4), Inches(3),
+            Inches(1 + i * 0.8),
+            Inches(1 + i * 0.8),
+            Inches(4),
+            Inches(3),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(
@@ -1043,9 +1191,7 @@ def _create_layouts(output_dir: Path) -> list[Path]:
         # Fallback: use blank slide with manual two-column
         slide = _add_blank_slide(prs)
         for i, (x, text) in enumerate([(1, "Left column"), (5.5, "Right column")]):
-            txBox = slide.shapes.add_textbox(
-                Inches(x), Inches(2), Inches(4), Inches(4)
-            )
+            txBox = slide.shapes.add_textbox(Inches(x), Inches(2), Inches(4), Inches(4))
             txBox.text_frame.text = text
 
     path = output_dir / "layouts_03_two_content.pptx"
@@ -1085,7 +1231,10 @@ def _create_layouts(output_dir: Path) -> list[Path]:
     slide3 = _add_blank_slide(prs)
     shape = slide3.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(2), Inches(2), Inches(6), Inches(3.5),
+        Inches(2),
+        Inches(2),
+        Inches(6),
+        Inches(3.5),
     )
     shape.fill.solid()
     shape.fill.fore_color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -1265,8 +1414,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     for i, (label, value) in enumerate(metrics):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
-            Inches(0.5 + i * 3.2), Inches(1.5),
-            Inches(2.8), Inches(1.5),
+            Inches(0.5 + i * 3.2),
+            Inches(1.5),
+            Inches(2.8),
+            Inches(1.5),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -1321,9 +1472,7 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     # Image on left
     img_bytes = _create_test_image(300, 300, "steelblue")
     img_stream = io.BytesIO(img_bytes)
-    slide.shapes.add_picture(
-        img_stream, Inches(0.5), Inches(1.5), Inches(4), Inches(4)
-    )
+    slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(4), Inches(4))
 
     # Text on right
     txBox = slide.shapes.add_textbox(Inches(5), Inches(1.5), Inches(4.5), Inches(4))
@@ -1345,7 +1494,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     # Accent shape
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0.5), Inches(6), Inches(9), Inches(0.1),
+        Inches(0.5),
+        Inches(6),
+        Inches(9),
+        Inches(0.1),
     )
     shape.fill.solid()
     shape.fill.fore_color.rgb = RGBColor(0x41, 0x72, 0xC4)
@@ -1368,14 +1520,20 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     run.font.bold = True
 
     # Two columns with shapes
-    for col, (label, color) in enumerate([
-        ("Before", RGBColor(0xCC, 0x33, 0x33)),
-        ("After", RGBColor(0x33, 0x99, 0x33)),
-    ]):
+    for col, (label, color) in enumerate(
+        [
+            ("Before", RGBColor(0xCC, 0x33, 0x33)),
+            ("After", RGBColor(0x33, 0x99, 0x33)),
+        ]
+    ):
         x = Inches(0.5 + col * 5)
         # Header shape
         shape = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, x, Inches(1.5), Inches(4.5), Inches(1),
+            MSO_SHAPE.RECTANGLE,
+            x,
+            Inches(1.5),
+            Inches(4.5),
+            Inches(1),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = color
@@ -1391,7 +1549,7 @@ def _create_mixed(output_dir: Path) -> list[Path]:
         txBox = slide.shapes.add_textbox(x, Inches(3), Inches(4.5), Inches(3.5))
         tf = txBox.text_frame
         tf.word_wrap = True
-        items = [f"{label} item {i+1}" for i in range(4)]
+        items = [f"{label} item {i + 1}" for i in range(4)]
         for item in items:
             p = tf.add_paragraph()
             p.text = item
@@ -1423,8 +1581,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
         # Number circle
         circle = slide.shapes.add_shape(
             MSO_SHAPE.OVAL,
-            Inches(1), Inches(1.8 + i * 1.3),
-            Inches(0.8), Inches(0.8),
+            Inches(1),
+            Inches(1.8 + i * 1.3),
+            Inches(0.8),
+            Inches(0.8),
         )
         circle.fill.solid()
         circle.fill.fore_color.rgb = color
@@ -1438,8 +1598,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
 
         # Label
         txBox = slide.shapes.add_textbox(
-            Inches(2.2), Inches(1.9 + i * 1.3),
-            Inches(6), Inches(0.7),
+            Inches(2.2),
+            Inches(1.9 + i * 1.3),
+            Inches(6),
+            Inches(0.7),
         )
         p = txBox.text_frame.paragraphs[0]
         run = p.add_run()
@@ -1457,7 +1619,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     # Background gradient
     bg = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Emu(0), Emu(0), SLIDE_WIDTH, SLIDE_HEIGHT,
+        Emu(0),
+        Emu(0),
+        SLIDE_WIDTH,
+        SLIDE_HEIGHT,
     )
     bg.fill.gradient()
     bg.fill.gradient_stops[0].color.rgb = RGBColor(0xF5, 0xF5, 0xF5)
@@ -1469,7 +1634,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     # Title bar
     title_bar = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Emu(0), Emu(0), SLIDE_WIDTH, Inches(1.2),
+        Emu(0),
+        Emu(0),
+        SLIDE_WIDTH,
+        Inches(1.2),
     )
     title_bar.fill.solid()
     title_bar.fill.fore_color.rgb = RGBColor(0x2E, 0x3A, 0x4F)
@@ -1493,8 +1661,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     for i, (step, color) in enumerate(zip(steps, step_colors)):
         shape = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
-            Inches(0.5 + i * 2.4), Inches(2),
-            Inches(2), Inches(1.5),
+            Inches(0.5 + i * 2.4),
+            Inches(2),
+            Inches(2),
+            Inches(1.5),
         )
         shape.fill.solid()
         shape.fill.fore_color.rgb = color
@@ -1510,8 +1680,10 @@ def _create_mixed(output_dir: Path) -> list[Path]:
         if i < 3:
             arrow = slide.shapes.add_shape(
                 MSO_SHAPE.RIGHT_ARROW,
-                Inches(2.5 + i * 2.4), Inches(2.5),
-                Inches(0.4), Inches(0.5),
+                Inches(2.5 + i * 2.4),
+                Inches(2.5),
+                Inches(0.4),
+                Inches(0.5),
             )
             arrow.fill.solid()
             arrow.fill.fore_color.rgb = RGBColor(0x88, 0x88, 0x88)
@@ -1525,7 +1697,9 @@ def _create_mixed(output_dir: Path) -> list[Path]:
     run.text = "The pptx2html-rs pipeline processes PPTX files through four stages: "
     run.font.size = Pt(14)
     run2 = p.add_run()
-    run2.text = "SAX parsing, model construction, property resolution, and HTML rendering."
+    run2.text = (
+        "SAX parsing, model construction, property resolution, and HTML rendering."
+    )
     run2.font.size = Pt(14)
     run2.font.italic = True
 

@@ -3,6 +3,7 @@
 
 mod geometry;
 pub mod provenance;
+pub mod text_metrics;
 
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -19,6 +20,7 @@ use crate::resolver::inheritance;
 use crate::resolver::placeholder;
 use crate::resolver::style_ref;
 use provenance::{ProvenanceSource, ProvenanceSubject, RenderedProvenanceEntry};
+use text_metrics::{FontResolutionEntry, FontResolutionSource};
 
 use std::cell::RefCell;
 
@@ -26,6 +28,7 @@ use std::cell::RefCell;
 struct UnresolvedCollector {
     elements: Vec<UnresolvedElement>,
     external_assets: Vec<ExternalAsset>,
+    font_resolution_entries: Vec<FontResolutionEntry>,
     provenance_entries: Vec<RenderedProvenanceEntry>,
     counter: usize,
     current_slide_index: usize,
@@ -95,6 +98,10 @@ impl<'a> RenderCtx<'a> {
         self.collector.borrow_mut().provenance_entries.push(entry);
     }
 
+    fn push_font_resolution(&self, entry: FontResolutionEntry) {
+        self.collector.borrow_mut().font_resolution_entries.push(entry);
+    }
+
     /// Create a slide-scoped context with resolved ClrMap and per-master theme
     fn for_slide(
         &self,
@@ -142,6 +149,7 @@ impl HtmlRenderer {
         let collector = RefCell::new(UnresolvedCollector {
             elements: Vec::new(),
             external_assets: Vec::new(),
+            font_resolution_entries: Vec::new(),
             provenance_entries: Vec::new(),
             counter: 0,
             current_slide_index: 0,
@@ -197,6 +205,7 @@ impl HtmlRenderer {
         Ok(ConversionResult {
             html,
             external_assets: coll.external_assets,
+            font_resolution_entries: coll.font_resolution_entries,
             provenance_entries: coll.provenance_entries,
             unresolved_elements: coll.elements,
             slide_count,
@@ -1363,6 +1372,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let align = para.alignment.to_css();
         let mut para_style = String::with_capacity(128);
         let _ = write!(para_style, "text-align: {align}");
+        if para.rtl {
+            para_style.push_str("; direction: rtl; unicode-bidi: bidi-override");
+        }
 
         // Line spacing (explicit > inherited), with optional reduction from normAutofit
         let line_spacing = para
@@ -1594,25 +1606,56 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
         }
 
-        let resolved_font: Option<&str> = font
-            .and_then(|f| resolve_font_name(f, font_scheme))
+        let font_resolution = font
+            .map(|f| (Some(f), FontResolutionSource::ExplicitRun))
             .or_else(|| {
                 para_def_rpr.and_then(|pd| {
-                    let f = pd.font_ea.as_deref().or(pd.font_latin.as_deref())?;
-                    resolve_font_name(f, font_scheme)
+                    pd.font_ea
+                        .as_deref()
+                        .or(pd.font_latin.as_deref())
+                        .map(|f| (Some(f), FontResolutionSource::ParagraphDefaults))
                 })
             })
             .or_else(|| {
                 run_defaults.and_then(|rd| {
-                    let inherited = rd.font_ea.as_deref().or(rd.font_latin.as_deref())?;
-                    resolve_font_name(inherited, font_scheme)
+                    rd.font_ea
+                        .as_deref()
+                        .or(rd.font_latin.as_deref())
+                        .map(|f| (Some(f), FontResolutionSource::InheritedDefaults))
                 })
             })
-            .or_else(|| font_ref_font.and_then(|f| resolve_font_name(f, font_scheme)));
+            .or_else(|| font_ref_font.map(|f| (Some(f), FontResolutionSource::FontRef)));
 
-        if let Some(f) = resolved_font {
+        let (requested_font, font_source, resolved_font) = if let Some((requested, source)) = font_resolution
+        {
+            (
+                requested.map(|s| s.to_string()),
+                Some(source),
+                requested
+                    .and_then(|f| resolve_font_name(f, font_scheme))
+                    .map(|s| s.to_string()),
+            )
+        } else {
+            (None, None, None)
+        };
+
+        if let Some(ref f) = resolved_font {
             let _ = write!(run_style, "font-family: '{f}'");
         }
+
+        let font_slide_index = ctx.collector.borrow().current_slide_index + 1;
+        ctx.push_font_resolution(FontResolutionEntry {
+            slide_index: font_slide_index,
+            shape_name: None,
+            run_text: run.text.clone(),
+            requested_typeface: requested_font.clone(),
+            resolved_typeface: resolved_font.clone(),
+            source: font_source,
+            fallback_used: match (&requested_font, &resolved_font) {
+                (Some(requested), Some(resolved)) => requested != resolved,
+                _ => false,
+            },
+        });
 
         // Font size: explicit > para defRPr > inherited, scaled by fontScale from normAutofit
         let font_size = run
