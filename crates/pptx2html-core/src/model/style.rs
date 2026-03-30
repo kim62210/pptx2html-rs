@@ -148,6 +148,8 @@ pub struct Border {
     pub color: Color,
     pub style: BorderStyle,
     pub dash_style: DashStyle,
+    pub cap: LineCap,
+    pub join: LineJoin,
     pub head_end: Option<LineEnd>,
     pub tail_end: Option<LineEnd>,
     /// Explicit `<a:noFill/>` inside `<a:ln>` — suppress border, do NOT
@@ -177,6 +179,26 @@ pub enum DashStyle {
     LongDashDotDot,
     SystemDash,
     SystemDot,
+    SystemDashDot,
+    SystemDashDotDot,
+}
+
+/// Line cap style (ECMA-376 ST_LineCap)
+#[derive(Debug, Clone, Default)]
+pub enum LineCap {
+    #[default]
+    Flat,
+    Square,
+    Round,
+}
+
+/// Line join style (ECMA-376 ST_LineJoinType)
+#[derive(Debug, Clone, Default)]
+pub enum LineJoin {
+    #[default]
+    Miter,
+    Bevel,
+    Round,
 }
 
 /// Line ending (arrowhead) for connectors/lines

@@ -653,6 +653,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     ("none".to_string(), 0.0)
                 };
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
+                let cap_attr = line_cap_to_svg(&resolved_border.cap);
+                let join_attr = line_join_to_svg(&resolved_border.join);
                 let _ = write!(
                     html,
                     "<svg viewBox=\"0 0 {svg_w:.1} {svg_h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
@@ -723,7 +725,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {non_scaling}{dash_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
+                     {non_scaling}{dash_attr}{cap_attr}{join_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
                      </svg>"
                 );
             }
@@ -743,6 +745,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 ("none".to_string(), 0.0)
             };
             let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
+            let cap_attr = line_cap_to_svg(&resolved_border.cap);
+            let join_attr = line_join_to_svg(&resolved_border.join);
             let _ = write!(
                 html,
                 "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
@@ -785,7 +789,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let _ = write!(
                     html,
                     "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {dash_attr}{marker_start_attr}{marker_end_attr}/>",
+                     {dash_attr}{cap_attr}{join_attr}{marker_start_attr}{marker_end_attr}/>",
                     path_svg.d
                 );
             }
@@ -1030,8 +1034,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-left: {:.1}pt solid {}",
-                        cell.border_left.width, color
+                        "border-left: {:.1}pt {} {}",
+                        cell.border_left.width,
+                        dash_style_to_css(&cell.border_left.dash_style),
+                        color
                     );
                 }
                 if cell.border_right.width > 0.0 {
@@ -1041,8 +1047,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-right: {:.1}pt solid {}",
-                        cell.border_right.width, color
+                        "border-right: {:.1}pt {} {}",
+                        cell.border_right.width,
+                        dash_style_to_css(&cell.border_right.dash_style),
+                        color
                     );
                 }
                 if cell.border_top.width > 0.0 {
@@ -1052,8 +1060,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-top: {:.1}pt solid {}",
-                        cell.border_top.width, color
+                        "border-top: {:.1}pt {} {}",
+                        cell.border_top.width,
+                        dash_style_to_css(&cell.border_top.dash_style),
+                        color
                     );
                 }
                 if cell.border_bottom.width > 0.0 {
@@ -1063,13 +1073,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     push_sep(&mut td_style);
                     let _ = write!(
                         td_style,
-                        "border-bottom: {:.1}pt solid {}",
-                        cell.border_bottom.width, color
+                        "border-bottom: {:.1}pt {} {}",
+                        cell.border_bottom.width,
+                        dash_style_to_css(&cell.border_bottom.dash_style),
+                        color
                     );
                 }
 
+                // Cell margins and vertical alignment
+                let va = match cell.vertical_align {
+                    VerticalAlign::Top => "top",
+                    VerticalAlign::Middle => "middle",
+                    VerticalAlign::Bottom => "bottom",
+                };
                 push_sep(&mut td_style);
-                td_style.push_str("padding: 4px; vertical-align: top");
+                let _ = write!(
+                    td_style,
+                    "padding: {:.1}pt {:.1}pt {:.1}pt {:.1}pt; vertical-align: {}",
+                    cell.margin_top, cell.margin_right, cell.margin_bottom, cell.margin_left, va
+                );
 
                 let _ = write!(html, "<td");
                 if cell.col_span > 1 {
@@ -1859,6 +1881,56 @@ fn dash_style_to_svg(style: &DashStyle, stroke_width: f64) -> String {
         ),
         DashStyle::SystemDash => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 6.0 * sw, 3.0 * sw),
         DashStyle::SystemDot => format!(" stroke-dasharray=\"{:.1} {:.1}\"", 1.0 * sw, 2.0 * sw),
+        DashStyle::SystemDashDot => format!(
+            " stroke-dasharray=\"{:.1} {:.1} {:.1} {:.1}\"",
+            3.0 * sw,
+            1.0 * sw,
+            1.0 * sw,
+            1.0 * sw
+        ),
+        DashStyle::SystemDashDotDot => format!(
+            " stroke-dasharray=\"{:.1} {:.1} {:.1} {:.1} {:.1} {:.1}\"",
+            3.0 * sw,
+            1.0 * sw,
+            1.0 * sw,
+            1.0 * sw,
+            1.0 * sw,
+            1.0 * sw
+        ),
+    }
+}
+
+/// Convert DashStyle to CSS border-style keyword
+fn dash_style_to_css(style: &DashStyle) -> &'static str {
+    match style {
+        DashStyle::Solid => "solid",
+        DashStyle::Dash | DashStyle::LongDash | DashStyle::SystemDash => "dashed",
+        DashStyle::Dot | DashStyle::SystemDot => "dotted",
+        DashStyle::DashDot
+        | DashStyle::LongDashDot
+        | DashStyle::LongDashDotDot
+        | DashStyle::SystemDashDot
+        | DashStyle::SystemDashDotDot => "dashed",
+    }
+}
+
+/// Convert LineCap to SVG stroke-linecap attribute string (including leading space).
+/// Returns empty string for Flat (SVG default "butt").
+fn line_cap_to_svg(cap: &LineCap) -> &'static str {
+    match cap {
+        LineCap::Flat => "",
+        LineCap::Square => " stroke-linecap=\"square\"",
+        LineCap::Round => " stroke-linecap=\"round\"",
+    }
+}
+
+/// Convert LineJoin to SVG stroke-linejoin attribute string (including leading space).
+/// Returns empty string for Miter (SVG default).
+fn line_join_to_svg(join: &LineJoin) -> &'static str {
+    match join {
+        LineJoin::Miter => "",
+        LineJoin::Bevel => " stroke-linejoin=\"bevel\"",
+        LineJoin::Round => " stroke-linejoin=\"round\"",
     }
 }
 

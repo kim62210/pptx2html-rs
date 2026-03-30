@@ -8,7 +8,7 @@ use super::style_ref;
 use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
-use crate::model::{Border, Color, DashStyle, Fill, Position, Size};
+use crate::model::{Border, Color, DashStyle, Fill, LineCap, LineJoin, Position, Size};
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
 pub fn resolve_background(
@@ -158,7 +158,7 @@ pub fn resolve_border_with_theme(
         && let Some(ln_ref) = &sr.ln_ref
         && let Some(mut resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
     {
-        // Preserve shape's own head_end/tail_end/dash_style if lnRef doesn't provide them
+        // Preserve shape's own head_end/tail_end/dash_style/cap/join if lnRef doesn't provide them
         if resolved.head_end.is_none() && shape.border.head_end.is_some() {
             resolved.head_end = shape.border.head_end.clone();
         }
@@ -169,6 +169,16 @@ pub fn resolve_border_with_theme(
             && !matches!(shape.border.dash_style, DashStyle::Solid)
         {
             resolved.dash_style = shape.border.dash_style.clone();
+        }
+        if matches!(resolved.cap, LineCap::Flat)
+            && !matches!(shape.border.cap, LineCap::Flat)
+        {
+            resolved.cap = shape.border.cap.clone();
+        }
+        if matches!(resolved.join, LineJoin::Miter)
+            && !matches!(shape.border.join, LineJoin::Miter)
+        {
+            resolved.join = shape.border.join.clone();
         }
         return resolved;
     }
@@ -182,6 +192,8 @@ fn has_border_properties(border: &Border) -> bool {
         || border.head_end.is_some()
         || border.tail_end.is_some()
         || !matches!(border.dash_style, DashStyle::Solid)
+        || !matches!(border.cap, LineCap::Flat)
+        || !matches!(border.join, LineJoin::Miter)
 }
 
 /// Resolve effective position/size for a placeholder shape.

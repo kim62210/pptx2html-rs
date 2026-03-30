@@ -254,12 +254,36 @@ pub fn parse_slide<R: Read + Seek>(
                             col_span,
                             row_span,
                             v_merge,
+                            margin_left: 7.2,   // OOXML default 91440 EMU
+                            margin_right: 7.2,  // OOXML default 91440 EMU
+                            margin_top: 3.6,    // OOXML default 45720 EMU
+                            margin_bottom: 3.6, // OOXML default 45720 EMU
+                            vertical_align: VerticalAlign::Top,
                         });
                         cell_paragraphs.clear();
                     }
                     // Table cell properties
                     "tcPr" if in_tc => {
                         in_tc_pr = true;
+                        if let Some(ref mut cell) = current_cell {
+                            // Cell margins (marL, marR, marT, marB in EMU)
+                            if let Some(v) = xml_utils::attr_str(e, "marL") {
+                                cell.margin_left = Emu::parse_emu(&v).to_pt();
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "marR") {
+                                cell.margin_right = Emu::parse_emu(&v).to_pt();
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "marT") {
+                                cell.margin_top = Emu::parse_emu(&v).to_pt();
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "marB") {
+                                cell.margin_bottom = Emu::parse_emu(&v).to_pt();
+                            }
+                            // Vertical alignment (anchor attribute)
+                            if let Some(v) = xml_utils::attr_str(e, "anchor") {
+                                cell.vertical_align = VerticalAlign::from_ooxml(&v);
+                            }
+                        }
                     }
                     // Table cell border elements inside tcPr
                     "lnL" | "lnR" | "lnT" | "lnB" if in_tc_pr => {
@@ -274,6 +298,52 @@ pub fn parse_slide<R: Read + Seek>(
                                     "lnB" => cell.border_bottom.width = width,
                                     _ => {}
                                 }
+                            }
+                        }
+                    }
+                    // Dash style inside table cell border
+                    "prstDash" if in_tc_pr && tc_border_side.is_some() => {
+                        if let Some(ref mut cell) = current_cell
+                            && let Some(val) = xml_utils::attr_str(e, "val")
+                        {
+                            let border_style = match val.as_str() {
+                                "solid" => BorderStyle::Solid,
+                                "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" => {
+                                    BorderStyle::Dotted
+                                }
+                                _ => BorderStyle::Solid,
+                            };
+                            let dash = match val.as_str() {
+                                "solid" => DashStyle::Solid,
+                                "dash" => DashStyle::Dash,
+                                "dot" => DashStyle::Dot,
+                                "dashDot" => DashStyle::DashDot,
+                                "lgDash" => DashStyle::LongDash,
+                                "lgDashDot" => DashStyle::LongDashDot,
+                                "lgDashDotDot" => DashStyle::LongDashDotDot,
+                                "sysDash" => DashStyle::SystemDash,
+                                "sysDot" => DashStyle::SystemDot,
+                                _ => DashStyle::Solid,
+                            };
+                            match tc_border_side.as_deref() {
+                                Some("lnL") => {
+                                    cell.border_left.style = border_style;
+                                    cell.border_left.dash_style = dash;
+                                }
+                                Some("lnR") => {
+                                    cell.border_right.style = border_style;
+                                    cell.border_right.dash_style = dash;
+                                }
+                                Some("lnT") => {
+                                    cell.border_top.style = border_style;
+                                    cell.border_top.dash_style = dash;
+                                }
+                                Some("lnB") => {
+                                    cell.border_bottom.style = border_style;
+                                    cell.border_bottom.dash_style = dash;
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -377,6 +447,13 @@ pub fn parse_slide<R: Read + Seek>(
                             } else {
                                 // OOXML default: <a:ln> without w= means 12700 EMU = 1pt
                                 sb.border_width = 1.0;
+                            }
+                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
+                                sb.border_cap = match cap.as_str() {
+                                    "sq" => LineCap::Square,
+                                    "rnd" => LineCap::Round,
+                                    _ => LineCap::Flat,
+                                };
                             }
                         }
                     }
@@ -927,9 +1004,8 @@ pub fn parse_slide<R: Read + Seek>(
                             sb.border_style = match val.as_str() {
                                 "solid" => BorderStyle::Solid,
                                 "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" => {
-                                    BorderStyle::Dotted
-                                }
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot"
+                                | "sysDashDot" | "sysDashDotDot" => BorderStyle::Dotted,
                                 _ => BorderStyle::Solid,
                             };
                             sb.dash_style = match val.as_str() {
@@ -942,8 +1018,26 @@ pub fn parse_slide<R: Read + Seek>(
                                 "lgDashDotDot" => DashStyle::LongDashDotDot,
                                 "sysDash" => DashStyle::SystemDash,
                                 "sysDot" => DashStyle::SystemDot,
+                                "sysDashDot" => DashStyle::SystemDashDot,
+                                "sysDashDotDot" => DashStyle::SystemDashDotDot,
                                 _ => DashStyle::Solid,
                             };
+                        }
+                    }
+                    // Line join styles (inside <a:ln>)
+                    "round" if in_ln => {
+                        if let Some(sb) = &mut current_shape {
+                            sb.border_join = LineJoin::Round;
+                        }
+                    }
+                    "bevel" if in_ln => {
+                        if let Some(sb) = &mut current_shape {
+                            sb.border_join = LineJoin::Bevel;
+                        }
+                    }
+                    "miter" if in_ln => {
+                        if let Some(sb) = &mut current_shape {
+                            sb.border_join = LineJoin::Miter;
                         }
                     }
                     // Line ending: head arrow (<a:headEnd>)
@@ -2409,6 +2503,8 @@ struct ShapeBuilder {
     border_style: BorderStyle,
     border_no_fill: bool,
     dash_style: DashStyle,
+    border_cap: LineCap,
+    border_join: LineJoin,
     head_end: Option<LineEnd>,
     tail_end: Option<LineEnd>,
     // bodyPr
@@ -2503,6 +2599,8 @@ impl ShapeBuilder {
                 self.border_style
             },
             dash_style: self.dash_style,
+            cap: self.border_cap,
+            join: self.border_join,
             head_end: self.head_end,
             tail_end: self.tail_end,
             no_fill: self.border_no_fill,
@@ -2686,6 +2784,11 @@ struct TableCellBuilder {
     col_span: u32,
     row_span: u32,
     v_merge: bool,
+    margin_left: f64,
+    margin_right: f64,
+    margin_top: f64,
+    margin_bottom: f64,
+    vertical_align: VerticalAlign,
 }
 
 impl TableCellBuilder {
@@ -2700,6 +2803,11 @@ impl TableCellBuilder {
             col_span: self.col_span,
             row_span: self.row_span,
             v_merge: self.v_merge,
+            margin_left: self.margin_left,
+            margin_right: self.margin_right,
+            margin_top: self.margin_top,
+            margin_bottom: self.margin_bottom,
+            vertical_align: self.vertical_align,
         }
     }
 }

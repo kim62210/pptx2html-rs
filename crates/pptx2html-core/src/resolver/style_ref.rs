@@ -91,6 +91,8 @@ pub fn resolve_ln_ref(
             BorderStyle::None
         },
         dash_style: base_border.dash_style.clone(),
+        cap: base_border.cap.clone(),
+        join: base_border.join.clone(),
         head_end: base_border.head_end.clone(),
         tail_end: base_border.tail_end.clone(),
         no_fill: base_border.no_fill,

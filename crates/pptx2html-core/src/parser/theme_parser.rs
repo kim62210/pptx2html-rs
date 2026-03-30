@@ -4,7 +4,9 @@ use quick_xml::events::Event;
 use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::presentation::{ColorScheme, Theme};
-use crate::model::{Border, BorderStyle, Color, Emu, Fill, FmtScheme, SolidFill};
+use crate::model::{
+    Border, BorderStyle, Color, DashStyle, Emu, Fill, FmtScheme, LineCap, LineJoin, SolidFill,
+};
 
 pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     let mut reader = Reader::from_str(xml);
@@ -21,6 +23,9 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     let mut in_ln = false;
     let mut current_ln_width: f64 = 0.0;
     let mut current_ln_color: Option<Color> = None;
+    let mut current_ln_cap = LineCap::Flat;
+    let mut current_ln_join = LineJoin::Miter;
+    let mut current_ln_dash = DashStyle::Solid;
 
     loop {
         match reader.read_event() {
@@ -60,6 +65,15 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             .map(|w| Emu::parse_emu(&w).to_pt())
                             .unwrap_or(0.0);
                         current_ln_color = None;
+                        current_ln_cap = match xml_utils::attr_str(e, "cap")
+                            .as_deref()
+                        {
+                            Some("sq") => LineCap::Square,
+                            Some("rnd") => LineCap::Round,
+                            _ => LineCap::Flat,
+                        };
+                        current_ln_join = LineJoin::Miter;
+                        current_ln_dash = DashStyle::Solid;
                     }
                     // solidFill inside fill/bg lists
                     "solidFill" if fmt_list_kind.is_some() => {
@@ -158,6 +172,35 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     "noFill" if fmt_list_kind.is_some() && !in_ln => {
                         push_fill(&fmt_list_kind, &mut theme.fmt_scheme, Fill::None);
                     }
+                    // Dash style inside lnStyleLst line
+                    "prstDash" if in_ln => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            current_ln_dash = match val.as_str() {
+                                "solid" => DashStyle::Solid,
+                                "dash" => DashStyle::Dash,
+                                "dot" => DashStyle::Dot,
+                                "dashDot" => DashStyle::DashDot,
+                                "lgDash" => DashStyle::LongDash,
+                                "lgDashDot" => DashStyle::LongDashDot,
+                                "lgDashDotDot" => DashStyle::LongDashDotDot,
+                                "sysDash" => DashStyle::SystemDash,
+                                "sysDot" => DashStyle::SystemDot,
+                                "sysDashDot" => DashStyle::SystemDashDot,
+                                "sysDashDotDot" => DashStyle::SystemDashDotDot,
+                                _ => DashStyle::Solid,
+                            };
+                        }
+                    }
+                    // Line join styles inside lnStyleLst line
+                    "round" if in_ln => {
+                        current_ln_join = LineJoin::Round;
+                    }
+                    "bevel" if in_ln => {
+                        current_ln_join = LineJoin::Bevel;
+                    }
+                    "miter" if in_ln => {
+                        current_ln_join = LineJoin::Miter;
+                    }
                     _ => {}
                 }
             }
@@ -205,6 +248,9 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             } else {
                                 BorderStyle::None
                             },
+                            dash_style: std::mem::take(&mut current_ln_dash),
+                            cap: std::mem::take(&mut current_ln_cap),
+                            join: std::mem::take(&mut current_ln_join),
                             ..Default::default()
                         };
                         theme.fmt_scheme.ln_style_lst.push(border);
