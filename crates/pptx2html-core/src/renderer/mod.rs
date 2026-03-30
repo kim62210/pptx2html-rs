@@ -670,12 +670,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
                     if let Some(ref he) = resolved_border.head_end {
                         let mid = ctx.next_marker_id("head");
-                        emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width);
+                        emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width, true);
                         marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
                     }
                     if let Some(ref te) = resolved_border.tail_end {
                         let mid = ctx.next_marker_id("tail");
-                        emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width);
+                        emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, false);
                         marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
                     }
                 }
@@ -761,12 +761,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
                 if let Some(ref he) = resolved_border.head_end {
                     let mid = ctx.next_marker_id("head");
-                    emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width);
+                    emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width, true);
                     marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
                 }
                 if let Some(ref te) = resolved_border.tail_end {
                     let mid = ctx.next_marker_id("tail");
-                    emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width);
+                    emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, false);
                     marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
                 }
             }
@@ -1988,6 +1988,7 @@ fn emit_marker_def(
     line_end: &LineEnd,
     color: &str,
     stroke_width: f64,
+    is_start: bool,
 ) {
     let w_mult = line_end.width.multiplier();
     let l_mult = line_end.length.multiplier();
@@ -1997,17 +1998,17 @@ fn emit_marker_def(
 
     let (path, fill_attr) = match line_end.end_type {
         LineEndType::Arrow => (
-            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1}",),
+            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1}"),
             "none".to_string(),
         ),
         LineEndType::Triangle => (
-            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} Z",),
+            format!("M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} Z"),
             color.to_string(),
         ),
         LineEndType::Stealth => (
             format!(
                 "M0,0 L{marker_h:.1},{half_w:.1} L0,{marker_w:.1} L{back:.1},{half_w:.1} Z",
-                back = marker_h * 0.4,
+                back = marker_h * 0.35,
             ),
             color.to_string(),
         ),
@@ -2037,10 +2038,16 @@ fn emit_marker_def(
         LineEndType::None => return,
     };
 
+    // For marker-start the reference point is at the base (refX=0) so the
+    // marker sits at the start of the line.  For marker-end the reference
+    // point is at the tip (refX=marker_h).  orient="auto-start-reverse"
+    // handles directional flipping automatically.
+    let ref_x = if is_start { 0.0 } else { marker_h };
+
     let _ = write!(
         html,
         "<marker id=\"{marker_id}\" viewBox=\"0 0 {marker_h:.1} {marker_w:.1}\" \
-         refX=\"{marker_h:.1}\" refY=\"{half_w:.1}\" \
+         refX=\"{ref_x:.1}\" refY=\"{half_w:.1}\" \
          markerWidth=\"{marker_h:.1}\" markerHeight=\"{marker_w:.1}\" \
          markerUnits=\"userSpaceOnUse\" \
          orient=\"auto-start-reverse\">\

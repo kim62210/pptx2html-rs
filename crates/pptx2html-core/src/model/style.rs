@@ -334,14 +334,15 @@ pub enum LineEndSize {
 }
 
 impl LineEndSize {
-    /// Fixed pixel size for SVG markers (markerUnits="userSpaceOnUse").
-    /// These values produce visually proportional arrowheads regardless
-    /// of stroke width, matching typical OOXML rendering.
+    /// Multiplier relative to stroke width for SVG markers
+    /// (markerUnits="userSpaceOnUse"). OOXML w/len sm/med/lg map to
+    /// proportional multiples of the line width so that thin lines get
+    /// small markers and thick lines get proportionally larger ones.
     pub fn multiplier(&self) -> f64 {
         match self {
-            Self::Small => 4.0,
-            Self::Medium => 6.0,
-            Self::Large => 9.0,
+            Self::Small => 2.0,
+            Self::Medium => 3.0,
+            Self::Large => 4.5,
         }
     }
 }
