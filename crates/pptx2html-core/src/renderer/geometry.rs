@@ -54,11 +54,11 @@ pub fn preset_shape_svg(
         "round2DiagRect" => Some(round2_diag_rect_path(w, h, adjust_values)),
         "foldCorner" => Some(fold_corner_path(w, h, adjust_values)),
         // Rectangles & related
-        "diagStripe" => Some(diag_stripe_path(w, h)),
+        "diagStripe" => Some(diag_stripe_path(w, h, adjust_values)),
         "corner" => Some(corner_path(w, h, adjust_values)),
         "plaque" => Some(plaque_path(w, h, adjust_values)),
-        "bracePair" => Some(brace_pair_path(w, h)),
-        "bracketPair" => Some(bracket_pair_path(w, h)),
+        "bracePair" => Some(brace_pair_path(w, h, adjust_values)),
+        "bracketPair" => Some(bracket_pair_path(w, h, adjust_values)),
         "halfFrame" => Some(half_frame_path(w, h, adjust_values)),
         "line" => Some(line_path(w, h)),
         // Arrows
@@ -68,25 +68,25 @@ pub fn preset_shape_svg(
         "downArrow" => Some(down_arrow_path(w, h, adjust_values)),
         "leftRightArrow" => Some(left_right_arrow_path(w, h, adjust_values)),
         "upDownArrow" => Some(up_down_arrow_path(w, h, adjust_values)),
-        "bentArrow" => Some(bent_arrow_path(w, h)),
+        "bentArrow" => Some(bent_arrow_path(w, h, adjust_values)),
         "chevron" => Some(chevron_path(w, h, adjust_values)),
         "notchedRightArrow" => Some(notched_right_arrow_path(w, h, adjust_values)),
         "stripedRightArrow" => Some(striped_right_arrow_path(w, h, adjust_values)),
-        "curvedRightArrow" => Some(curved_right_arrow_path(w, h)),
-        "curvedLeftArrow" => Some(curved_left_arrow_path(w, h)),
-        "curvedUpArrow" => Some(curved_up_arrow_path(w, h)),
-        "curvedDownArrow" => Some(curved_down_arrow_path(w, h)),
-        "circularArrow" => Some(circular_arrow_path(w, h)),
-        "bentUpArrow" => Some(bent_up_arrow_path(w, h)),
-        "uturnArrow" => Some(uturn_arrow_path(w, h)),
-        "leftRightUpArrow" => Some(left_right_up_arrow_path(w, h)),
-        "quadArrow" => Some(quad_arrow_path(w, h)),
-        "leftUpArrow" => Some(left_up_arrow_path(w, h)),
+        "curvedRightArrow" => Some(curved_right_arrow_path(w, h, adjust_values)),
+        "curvedLeftArrow" => Some(curved_left_arrow_path(w, h, adjust_values)),
+        "curvedUpArrow" => Some(curved_up_arrow_path(w, h, adjust_values)),
+        "curvedDownArrow" => Some(curved_down_arrow_path(w, h, adjust_values)),
+        "circularArrow" => Some(circular_arrow_path(w, h, adjust_values)),
+        "bentUpArrow" => Some(bent_up_arrow_path(w, h, adjust_values)),
+        "uturnArrow" => Some(uturn_arrow_path(w, h, adjust_values)),
+        "leftRightUpArrow" => Some(left_right_up_arrow_path(w, h, adjust_values)),
+        "quadArrow" => Some(quad_arrow_path(w, h, adjust_values)),
+        "leftUpArrow" => Some(left_up_arrow_path(w, h, adjust_values)),
         "homePlate" => Some(home_plate_path(w, h, adjust_values)),
         // Callouts
-        "wedgeRoundRectCallout" => Some(wedge_round_rect_callout_path(w, h)),
-        "wedgeEllipseCallout" => Some(wedge_ellipse_callout_path(w, h)),
-        "cloudCallout" => Some(cloud_callout_path(w, h)),
+        "wedgeRoundRectCallout" => Some(wedge_round_rect_callout_path(w, h, adjust_values)),
+        "wedgeEllipseCallout" => Some(wedge_ellipse_callout_path(w, h, adjust_values)),
+        "cloudCallout" => Some(cloud_callout_path(w, h, adjust_values)),
         "callout1" => Some(callout1_path(w, h)),
         "callout2" => Some(callout2_path(w, h)),
         "callout3" => Some(callout3_path(w, h)),
@@ -99,19 +99,19 @@ pub fn preset_shape_svg(
         "accentBorderCallout1" => Some(accent_border_callout1_path(w, h)),
         "accentBorderCallout2" => Some(accent_border_callout2_path(w, h)),
         "accentBorderCallout3" => Some(accent_border_callout3_path(w, h)),
-        "wedgeRectCallout" => Some(wedge_rect_callout_path(w, h)),
+        "wedgeRectCallout" => Some(wedge_rect_callout_path(w, h, adjust_values)),
         // Flowchart
         "flowChartProcess" => Some(rect_path(w, h)),
         "flowChartDecision" => Some(diamond_path(w, h)),
         "flowChartTerminator" => Some(flowchart_terminator_path(w, h)),
-        "flowChartDocument" => Some(flowchart_document_path(w, h)),
+        "flowChartDocument" => Some(flowchart_document_path(w, h, adjust_values)),
         "flowChartPredefinedProcess" => Some(flowchart_predefined_process_path(w, h)),
-        "flowChartAlternateProcess" => Some(flowchart_alternate_process_path(w, h)),
-        "flowChartManualInput" => Some(flowchart_manual_input_path(w, h)),
+        "flowChartAlternateProcess" => Some(flowchart_alternate_process_path(w, h, adjust_values)),
+        "flowChartManualInput" => Some(flowchart_manual_input_path(w, h, adjust_values)),
         "flowChartConnector" => Some(ellipse_path(w, h)),
-        "flowChartInputOutput" => Some(flowchart_input_output_path(w, h)),
+        "flowChartInputOutput" => Some(flowchart_input_output_path(w, h, adjust_values)),
         "flowChartInternalStorage" => Some(flowchart_internal_storage_path(w, h)),
-        "flowChartMultidocument" => Some(flowchart_multidocument_path(w, h)),
+        "flowChartMultidocument" => Some(flowchart_multidocument_path(w, h, adjust_values)),
         "flowChartPreparation" => Some(flowchart_preparation_path(w, h)),
         "flowChartManualOperation" => Some(flowchart_manual_operation_path(w, h)),
         "flowChartOffpageConnector" => Some(flowchart_offpage_connector_path(w, h)),
@@ -143,101 +143,101 @@ pub fn preset_shape_svg(
         "actionButtonSound" => Some(action_button_icon_path(w, h, "sound")),
         "actionButtonMovie" => Some(action_button_icon_path(w, h, "movie")),
         // Stars & seals
-        "star4" => Some(star4_path(w, h)),
-        "star5" => Some(star5_path(w, h)),
-        "star6" => Some(star6_path(w, h)),
-        "star7" => Some(star_n_path(w, h, 7)),
-        "star8" => Some(star_n_path(w, h, 8)),
-        "star10" => Some(star_n_path(w, h, 10)),
-        "star12" => Some(star_n_path(w, h, 12)),
-        "star16" => Some(star_n_path(w, h, 16)),
-        "star24" => Some(star_n_path(w, h, 24)),
-        "star32" => Some(star_n_path(w, h, 32)),
+        "star4" => Some(star4_path(w, h, adjust_values)),
+        "star5" => Some(star5_path(w, h, adjust_values)),
+        "star6" => Some(star6_path(w, h, adjust_values)),
+        "star7" => Some(star_n_path(w, h, 7, adjust_values, 34601.0)),
+        "star8" => Some(star_n_path(w, h, 8, adjust_values, 34601.0)),
+        "star10" => Some(star_n_path(w, h, 10, adjust_values, 42533.0)),
+        "star12" => Some(star_n_path(w, h, 12, adjust_values, 37500.0)),
+        "star16" => Some(star_n_path(w, h, 16, adjust_values, 37500.0)),
+        "star24" => Some(star_n_path(w, h, 24, adjust_values, 37500.0)),
+        "star32" => Some(star_n_path(w, h, 32, adjust_values, 37500.0)),
         "irregularSeal1" => Some(irregular_seal1_path(w, h)),
         "irregularSeal2" => Some(irregular_seal2_path(w, h)),
         // Math
-        "mathEqual" => Some(math_equal_path(w, h)),
-        "mathNotEqual" => Some(math_not_equal_path(w, h)),
-        "mathMultiply" => Some(math_multiply_path(w, h)),
-        "mathDivide" => Some(math_divide_path(w, h)),
+        "mathEqual" => Some(math_equal_path(w, h, adjust_values)),
+        "mathNotEqual" => Some(math_not_equal_path(w, h, adjust_values)),
+        "mathMultiply" => Some(math_multiply_path(w, h, adjust_values)),
+        "mathDivide" => Some(math_divide_path(w, h, adjust_values)),
         // Other
         "heart" => Some(heart_path(w, h)),
         "plus" | "mathPlus" => Some(plus_path(w, h, adjust_values)),
-        "mathMinus" => Some(math_minus_path(w, h)),
+        "mathMinus" => Some(math_minus_path(w, h, adjust_values)),
         "lightningBolt" => Some(lightning_bolt_path(w, h)),
         "cloud" => Some(cloud_path(w, h)),
         "frame" => Some(frame_path(w, h, adjust_values)),
-        "ribbon" => Some(ribbon_path(w, h)),
-        "ribbon2" => Some(ribbon2_path(w, h)),
+        "ribbon" => Some(ribbon_path(w, h, adjust_values)),
+        "ribbon2" => Some(ribbon2_path(w, h, adjust_values)),
         "donut" => Some(donut_path(w, h, adjust_values)),
-        "noSmoking" => Some(no_smoking_path(w, h)),
-        "blockArc" => Some(block_arc_path(w, h)),
-        "smileyFace" => Some(smiley_face_path(w, h)),
-        "can" => Some(can_path(w, h)),
-        "cube" => Some(cube_path(w, h)),
-        "moon" => Some(moon_path(w, h)),
-        "sun" => Some(sun_path(w, h)),
-        "bevel" => Some(bevel_path(w, h)),
+        "noSmoking" => Some(no_smoking_path(w, h, adjust_values)),
+        "blockArc" => Some(block_arc_path(w, h, adjust_values)),
+        "smileyFace" => Some(smiley_face_path(w, h, adjust_values)),
+        "can" => Some(can_path(w, h, adjust_values)),
+        "cube" => Some(cube_path(w, h, adjust_values)),
+        "moon" => Some(moon_path(w, h, adjust_values)),
+        "sun" => Some(sun_path(w, h, adjust_values)),
+        "bevel" => Some(bevel_path(w, h, adjust_values)),
         "gear6" => Some(gear_path(w, h, 6)),
         "gear9" => Some(gear_path(w, h, 9)),
-        "pie" => Some(pie_path(w, h)),
+        "pie" => Some(pie_path(w, h, adjust_values)),
         "pieWedge" => Some(pie_wedge_path(w, h)),
-        "arc" => Some(arc_path(w, h)),
-        "wave" => Some(wave_path(w, h)),
-        "doubleWave" => Some(double_wave_path(w, h)),
+        "arc" => Some(arc_path(w, h, adjust_values)),
+        "wave" => Some(wave_path(w, h, adjust_values)),
+        "doubleWave" => Some(double_wave_path(w, h, adjust_values)),
         "decagon" => Some(regular_polygon_path(w, h, 10)),
         "dodecagon" => Some(regular_polygon_path(w, h, 12)),
         "funnel" => Some(funnel_path(w, h)),
-        "teardrop" => Some(teardrop_path(w, h)),
+        "teardrop" => Some(teardrop_path(w, h, adjust_values)),
         "heptagon" => Some(regular_polygon_path(w, h, 7)),
         // Arrow callouts
-        "downArrowCallout" => Some(down_arrow_callout_path(w, h)),
-        "leftArrowCallout" => Some(left_arrow_callout_path(w, h)),
-        "rightArrowCallout" => Some(right_arrow_callout_path(w, h)),
-        "upArrowCallout" => Some(up_arrow_callout_path(w, h)),
-        "quadArrowCallout" => Some(quad_arrow_callout_path(w, h)),
-        "leftRightArrowCallout" => Some(left_right_arrow_callout_path(w, h)),
-        "upDownArrowCallout" => Some(up_down_arrow_callout_path(w, h)),
+        "downArrowCallout" => Some(down_arrow_callout_path(w, h, adjust_values)),
+        "leftArrowCallout" => Some(left_arrow_callout_path(w, h, adjust_values)),
+        "rightArrowCallout" => Some(right_arrow_callout_path(w, h, adjust_values)),
+        "upArrowCallout" => Some(up_arrow_callout_path(w, h, adjust_values)),
+        "quadArrowCallout" => Some(quad_arrow_callout_path(w, h, adjust_values)),
+        "leftRightArrowCallout" => Some(left_right_arrow_callout_path(w, h, adjust_values)),
+        "upDownArrowCallout" => Some(up_down_arrow_callout_path(w, h, adjust_values)),
         // Brackets and braces
-        "leftBrace" => Some(left_brace_path(w, h)),
-        "rightBrace" => Some(right_brace_path(w, h)),
-        "leftBracket" => Some(left_bracket_path(w, h)),
-        "rightBracket" => Some(right_bracket_path(w, h)),
+        "leftBrace" => Some(left_brace_path(w, h, adjust_values)),
+        "rightBrace" => Some(right_brace_path(w, h, adjust_values)),
+        "leftBracket" => Some(left_bracket_path(w, h, adjust_values)),
+        "rightBracket" => Some(right_bracket_path(w, h, adjust_values)),
         // Chart shapes
         "chartPlus" => Some(chart_plus_path(w, h)),
         "chartStar" => Some(chart_star_path(w, h)),
         "chartX" => Some(chart_x_path(w, h)),
         // Scrolls
-        "horizontalScroll" => Some(horizontal_scroll_path(w, h)),
-        "verticalScroll" => Some(vertical_scroll_path(w, h)),
+        "horizontalScroll" => Some(horizontal_scroll_path(w, h, adjust_values)),
+        "verticalScroll" => Some(vertical_scroll_path(w, h, adjust_values)),
         // Tabs
         "cornerTabs" => Some(corner_tabs_path(w, h)),
         "plaqueTabs" => Some(plaque_tabs_path(w, h)),
         "squareTabs" => Some(square_tabs_path(w, h)),
         // Ribbons
-        "ellipseRibbon" => Some(ellipse_ribbon_path(w, h)),
-        "ellipseRibbon2" => Some(ellipse_ribbon2_path(w, h)),
+        "ellipseRibbon" => Some(ellipse_ribbon_path(w, h, adjust_values)),
+        "ellipseRibbon2" => Some(ellipse_ribbon2_path(w, h, adjust_values)),
         // Circular arrows
         "leftCircularArrow" => Some(left_circular_arrow_path(w, h)),
         "leftRightCircularArrow" => Some(left_right_circular_arrow_path(w, h)),
         // Misc
-        "chord" => Some(chord_path(w, h)),
+        "chord" => Some(chord_path(w, h, adjust_values)),
         "lineInv" => Some(line_inv_path(w, h)),
         "nonIsoscelesTrapezoid" => Some(non_isosceles_trapezoid_path(w, h, adjust_values)),
         "swooshArrow" => Some(swoosh_arrow_path(w, h)),
-        "leftRightRibbon" => Some(left_right_ribbon_path(w, h)),
+        "leftRightRibbon" => Some(left_right_ribbon_path(w, h, adjust_values)),
         // Additional ECMA-376 ST_ShapeType shapes
         "flowChartOfflineStorage" => Some(flowchart_offline_storage_path(w, h)),
         "cross" => Some(plus_path(w, h, adjust_values)),
         "straightConnector1" => Some(line_path(w, h)),
         "curvedConnector2" => Some(curved_connector2_path(w, h)),
-        "curvedConnector3" => Some(curved_connector3_path(w, h)),
-        "curvedConnector4" => Some(curved_connector4_path(w, h)),
-        "curvedConnector5" => Some(curved_connector5_path(w, h)),
+        "curvedConnector3" => Some(curved_connector3_path(w, h, adjust_values)),
+        "curvedConnector4" => Some(curved_connector4_path(w, h, adjust_values)),
+        "curvedConnector5" => Some(curved_connector5_path(w, h, adjust_values)),
         "bentConnector2" => Some(bent_connector2_path(w, h)),
         "bentConnector3" => Some(bent_connector3_path(w, h, adjust_values)),
-        "bentConnector4" => Some(bent_connector4_path(w, h)),
-        "bentConnector5" => Some(bent_connector5_path(w, h)),
+        "bentConnector4" => Some(bent_connector4_path(w, h, adjust_values)),
+        "bentConnector5" => Some(bent_connector5_path(w, h, adjust_values)),
         _ => None,
     }
 }
@@ -426,8 +426,9 @@ fn fold_corner_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
-fn diag_stripe_path(w: f64, h: f64) -> String {
-    format!("M0,0 L{:.1},0 L0,{:.1} Z", w / 2.0, h / 2.0)
+fn diag_stripe_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(50000.0) / 100_000.0;
+    format!("M0,0 L{:.1},0 L0,{:.1} Z", w * ratio, h * ratio)
 }
 fn corner_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let dx = w * adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
@@ -452,8 +453,8 @@ fn plaque_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
-fn brace_pair_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.08;
+fn brace_pair_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = w.min(h) * adj.get("adj").copied().unwrap_or(8333.0) / 100_000.0;
     let cy = h / 2.0;
     let i = r * 2.0;
     format!(
@@ -471,8 +472,8 @@ fn brace_pair_path(w: f64, h: f64) -> String {
         x2 = w + r * 0.5
     )
 }
-fn bracket_pair_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.1;
+fn bracket_pair_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = w.min(h) * adj.get("adj").copied().unwrap_or(16667.0) / 100_000.0;
     format!(
         "M{r:.1},0 L0,0 L0,{h:.1} L{r:.1},{h:.1} M{x:.1},0 L{w:.1},0 L{w:.1},{h:.1} L{x:.1},{h:.1}",
         r = r,
@@ -561,10 +562,14 @@ fn up_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         "M{cx:.1},0 L{w:.1},{hh:.1} L{xr:.1},{hh:.1} L{xr:.1},{yb:.1} L{w:.1},{yb:.1} L{cx:.1},{h:.1} L0,{yb:.1} L{xl:.1},{yb:.1} L{xl:.1},{hh:.1} L0,{hh:.1} Z"
     )
 }
-fn bent_arrow_path(w: f64, h: f64) -> String {
-    let s = h * 0.25;
-    let c = h * 0.35;
-    let xh = w - w * 0.4;
+fn bent_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
+    let s = h * a1;
+    let c = h * a2;
+    let xh = w * (1.0 - a3);
     let (yt, yb) = (c - s / 2.0, c + s / 2.0);
     format!(
         "M0,{h:.1} L0,{yb:.1} L{xh:.1},{yb:.1} L{xh:.1},0 L{w:.1},{c:.1} L{xh:.1},{hd:.1} L{xh:.1},{yt:.1} L{s:.1},{yt:.1} L{s:.1},{h:.1} Z",
@@ -608,9 +613,12 @@ fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
         "M0,{yt:.1} L{s1:.1},{yt:.1} L{s1:.1},{yb:.1} L0,{yb:.1} Z M{s2:.1},{yt:.1} L{s3:.1},{yt:.1} L{s3:.1},{yb:.1} L{s2:.1},{yb:.1} Z M{s4:.1},{yt:.1} L{xh:.1},{yt:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{yb:.1} L{s4:.1},{yb:.1} Z"
     )
 }
-fn curved_right_arrow_path(w: f64, h: f64) -> String {
+fn curved_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cy = h / 2.0;
-    let xh = w * 0.7;
+    let xh = w * (1.0 - a3);
     format!(
         "M0,{h:.1} C0,{y1:.1} {x1:.1},{y2:.1} {xh:.1},{y2:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{y3:.1} C{x2:.1},{y3:.1} {x3:.1},{y4:.1} {x3:.1},{h:.1} Z",
         h = h,
@@ -626,9 +634,12 @@ fn curved_right_arrow_path(w: f64, h: f64) -> String {
         y4 = h * 0.7
     )
 }
-fn curved_left_arrow_path(w: f64, h: f64) -> String {
+fn curved_left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cy = h / 2.0;
-    let hw = w * 0.3;
+    let hw = w * a3;
     format!(
         "M{w:.1},{h:.1} C{w:.1},{y1:.1} {x1:.1},{y2:.1} {hw:.1},{y2:.1} L{hw:.1},0 L0,{cy:.1} L{hw:.1},{h:.1} L{hw:.1},{y3:.1} C{x2:.1},{y3:.1} {x3:.1},{y4:.1} {x3:.1},{h:.1} Z",
         w = w,
@@ -644,9 +655,12 @@ fn curved_left_arrow_path(w: f64, h: f64) -> String {
         y4 = h * 0.7
     )
 }
-fn curved_up_arrow_path(w: f64, h: f64) -> String {
+fn curved_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cx = w / 2.0;
-    let hh = h * 0.3;
+    let hh = h * a3;
     format!(
         "M{w:.1},{h:.1} C{x1:.1},{h:.1} {x2:.1},{y1:.1} {x2:.1},{hh:.1} L0,{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{x3:.1},{hh:.1} C{x3:.1},{y2:.1} {x4:.1},{y3:.1} {w:.1},{y3:.1} Z",
         w = w,
@@ -662,9 +676,12 @@ fn curved_up_arrow_path(w: f64, h: f64) -> String {
         y3 = h * 0.8
     )
 }
-fn curved_down_arrow_path(w: f64, h: f64) -> String {
+fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cx = w / 2.0;
-    let hy = h * 0.7;
+    let hy = h * (1.0 - a3);
     format!(
         "M{w:.1},0 C{x1:.1},0 {x2:.1},{y1:.1} {x2:.1},{hy:.1} L0,{hy:.1} L{cx:.1},{h:.1} L{w:.1},{hy:.1} L{x3:.1},{hy:.1} C{x3:.1},{y2:.1} {x4:.1},{y3:.1} {w:.1},{y3:.1} Z",
         w = w,
@@ -680,7 +697,12 @@ fn curved_down_arrow_path(w: f64, h: f64) -> String {
         y3 = h * 0.2
     )
 }
-fn circular_arrow_path(w: f64, h: f64) -> String {
+fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(12500.0);
+    let _a2 = adj.get("adj2").copied().unwrap_or(1142319.0);
+    let _a3 = adj.get("adj3").copied().unwrap_or(20457681.0);
+    let _a4 = adj.get("adj4").copied().unwrap_or(10800000.0);
+    let _a5 = adj.get("adj5").copied().unwrap_or(12500.0);
     let rx = w / 2.0;
     let ry = h / 2.0;
     let cx = rx;
@@ -705,9 +727,13 @@ fn circular_arrow_path(w: f64, h: f64) -> String {
         t = t
     )
 }
-fn bent_up_arrow_path(w: f64, h: f64) -> String {
-    let s = w * 0.25;
-    let hh = h * 0.3;
+fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let s = w * a1;
+    let hh = h * a2;
+    let _ = a3;
     let xm = w - s;
     let cx = xm + s / 2.0;
     format!(
@@ -722,10 +748,15 @@ fn bent_up_arrow_path(w: f64, h: f64) -> String {
         s = s
     )
 }
-fn uturn_arrow_path(w: f64, h: f64) -> String {
-    let s = w * 0.15;
+fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
+    let _a5 = adj.get("adj5").copied().unwrap_or(75000.0) / 100_000.0;
+    let s = w * a1;
     let rx = w * 0.35;
-    let ry = h * 0.25;
+    let ry = h * a2;
     let c = ry;
     let (xl, xr) = (w * 0.15, w * 0.85);
     let hh = h * 0.15;
@@ -748,8 +779,11 @@ fn uturn_arrow_path(w: f64, h: f64) -> String {
         xl2 = xl + s
     )
 }
-fn left_right_up_arrow_path(w: f64, h: f64) -> String {
-    let s = w.min(h) * 0.12;
+fn left_right_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let s = w.min(h) * a1;
     let cx = w / 2.0;
     let cy = h / 2.0;
     let hd = w * 0.2;
@@ -771,10 +805,13 @@ fn left_right_up_arrow_path(w: f64, h: f64) -> String {
         y4 = cy + s / 2.0
     )
 }
-fn quad_arrow_path(w: f64, h: f64) -> String {
-    let s = w.min(h) * 0.1;
+fn quad_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(22500.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(22500.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(22500.0) / 100_000.0;
+    let s = w.min(h) * a1;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let (hw, hh) = (w * 0.2, h * 0.2);
+    let (hw, hh) = (w * a2, h * a3);
     format!(
         "M{cx:.1},0 L{x3:.1},{hh:.1} L{x2:.1},{hh:.1} L{x2:.1},{y1:.1} L{hw:.1},{y1:.1} L{hw:.1},{y2:.1} L0,{cy:.1} L{hw:.1},{y3:.1} L{hw:.1},{y4:.1} L{x2:.1},{y4:.1} L{x2:.1},{y5:.1} L{x3:.1},{y5:.1} L{cx:.1},{h:.1} L{x4:.1},{y5:.1} L{x5:.1},{y5:.1} L{x5:.1},{y4:.1} L{x6:.1},{y4:.1} L{x6:.1},{y3:.1} L{w:.1},{cy:.1} L{x6:.1},{y2:.1} L{x6:.1},{y1:.1} L{x5:.1},{y1:.1} L{x5:.1},{hh:.1} L{x4:.1},{hh:.1} Z",
         cx = cx,
@@ -795,9 +832,12 @@ fn quad_arrow_path(w: f64, h: f64) -> String {
         y5 = h - hh
     )
 }
-fn left_up_arrow_path(w: f64, h: f64) -> String {
-    let s = w.min(h) * 0.15;
-    let (hd, hh) = (w * 0.25, h * 0.25);
+fn left_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let s = w.min(h) * a1;
+    let (hd, hh) = (w * a2, h * a2);
     format!(
         "M0,{cy:.1} L{hd:.1},{y1:.1} L{hd:.1},{y2:.1} L{x1:.1},{y2:.1} L{x1:.1},{hh:.1} L{x2:.1},{hh:.1} L{x3:.1},0 L{w:.1},{hh:.1} L{x4:.1},{hh:.1} L{x4:.1},{h:.1} L{hd:.1},{h:.1} L{hd:.1},{y3:.1} Z",
         cy = h / 2.0,
@@ -827,8 +867,12 @@ fn home_plate_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
-fn wedge_round_rect_callout_path(w: f64, h: f64) -> String {
+fn wedge_round_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
     let r = w.min(h) * 0.06;
+    let tt = w * (0.5 + a1);
+    let ty = h * a2;
     format!(
         "M{r:.1},0 L{x:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y:.1} Q{w:.1},{h:.1} {x:.1},{h:.1} L{t2:.1},{h:.1} L{tt:.1},{ty:.1} L{t1:.1},{h:.1} L{r:.1},{h:.1} Q0,{h:.1} 0,{y:.1} L0,{r:.1} Q0,0 {r:.1},0 Z",
         r = r,
@@ -838,13 +882,17 @@ fn wedge_round_rect_callout_path(w: f64, h: f64) -> String {
         h = h,
         t1 = w * 0.1,
         t2 = w * 0.2,
-        tt = w * 0.05,
-        ty = h * 1.2
+        tt = tt,
+        ty = ty
     )
 }
-fn wedge_ellipse_callout_path(w: f64, h: f64) -> String {
+fn wedge_ellipse_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
     let rx = w / 2.0;
     let ry = h / 2.0;
+    let tt = w * (0.5 + a1);
+    let ty = h * a2;
     format!(
         "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 1,1 {cx:.1},0 Z M{t1:.1},{h1:.1} L{tt:.1},{ty:.1} L{t2:.1},{h2:.1}",
         cx = rx,
@@ -853,13 +901,15 @@ fn wedge_ellipse_callout_path(w: f64, h: f64) -> String {
         h = h,
         t1 = w * 0.35,
         h1 = h * 0.93,
-        tt = w * 0.05,
-        ty = h * 1.2,
+        tt = tt,
+        ty = ty,
         t2 = w * 0.45,
         h2 = h * 0.93
     )
 }
-fn cloud_callout_path(w: f64, h: f64) -> String {
+fn cloud_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
+    let _a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
     format!(
         "M{x1:.1},{y1:.1} C{x1:.1},{y0:.1} {x2:.1},{y0:.1} {x3:.1},{y0:.1} C{x4:.1},{y0:.1} {x5:.1},{y2:.1} {x5:.1},{y3:.1} C{x5:.1},{y4:.1} {x4:.1},{y5:.1} {x3:.1},{y5:.1} C{x2:.1},{y5:.1} {x1:.1},{y4:.1} {x1:.1},{y3:.1} C{x0:.1},{y3:.1} {x0:.1},{y1:.1} {x1:.1},{y1:.1} Z M{bx1:.1},{by1:.1} A{br:.1},{br:.1} 0 1,1 {bx2:.1},{by2:.1} A{br:.1},{br:.1} 0 1,1 {bx1:.1},{by1:.1} Z",
         x0 = w * 0.05,
@@ -971,15 +1021,19 @@ fn accent_border_callout2_path(w: f64, h: f64) -> String {
 fn accent_border_callout3_path(w: f64, h: f64) -> String {
     accent_callout3_path(w, h)
 }
-fn wedge_rect_callout_path(w: f64, h: f64) -> String {
+fn wedge_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
+    let tt = w * (0.5 + a1);
+    let ty = h * a2;
     format!(
         "M0,0 L{w:.1},0 L{w:.1},{h:.1} L{t2:.1},{h:.1} L{tt:.1},{ty:.1} L{t1:.1},{h:.1} L0,{h:.1} Z",
         w = w,
         h = h,
         t1 = w * 0.1,
         t2 = w * 0.2,
-        tt = w * 0.05,
-        ty = h * 1.2
+        tt = tt,
+        ty = ty
     )
 }
 fn flowchart_terminator_path(w: f64, h: f64) -> String {
@@ -991,8 +1045,8 @@ fn flowchart_terminator_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn flowchart_document_path(w: f64, h: f64) -> String {
-    let wh = h * 0.85;
+fn flowchart_document_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let wh = h * (1.0 - adj.get("adj").copied().unwrap_or(17500.0) / 100_000.0);
     format!(
         "M0,0 L{w:.1},0 L{w:.1},{wh:.1} C{c1:.1},{c2:.1} {c3:.1},{c4:.1} 0,{wh:.1} Z",
         w = w,
@@ -1013,8 +1067,8 @@ fn flowchart_predefined_process_path(w: f64, h: f64) -> String {
         x = w - i
     )
 }
-fn flowchart_alternate_process_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.1;
+fn flowchart_alternate_process_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = w.min(h) * adj.get("adj").copied().unwrap_or(16667.0) / 100_000.0;
     format!(
         "M{r:.1},0 L{x:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y:.1} Q{w:.1},{h:.1} {x:.1},{h:.1} L{r:.1},{h:.1} Q0,{h:.1} 0,{y:.1} L0,{r:.1} Q0,0 {r:.1},0 Z",
         r = r,
@@ -1024,16 +1078,17 @@ fn flowchart_alternate_process_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn flowchart_manual_input_path(w: f64, h: f64) -> String {
+fn flowchart_manual_input_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let s = h * adj.get("adj").copied().unwrap_or(20000.0) / 100_000.0;
     format!(
         "M0,{s:.1} L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z",
-        s = h * 0.2,
+        s = s,
         w = w,
         h = h
     )
 }
-fn flowchart_input_output_path(w: f64, h: f64) -> String {
-    let o = w * 0.2;
+fn flowchart_input_output_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let o = w * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     format!(
         "M{o:.1},0 L{w:.1},0 L{x:.1},{h:.1} L0,{h:.1} Z",
         o = o,
@@ -1051,8 +1106,9 @@ fn flowchart_internal_storage_path(w: f64, h: f64) -> String {
         i = i
     )
 }
-fn flowchart_multidocument_path(w: f64, h: f64) -> String {
-    let (ox, oy, wh) = (w * 0.06, h * 0.06, h * 0.85);
+fn flowchart_multidocument_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(18750.0) / 100_000.0;
+    let (ox, oy, wh) = (w * 0.06, h * 0.06, h * (1.0 - ratio));
     format!(
         "M{ox2:.1},0 L{w:.1},0 L{w:.1},{wh2:.1} C{c1:.1},{c2:.1} {c3:.1},{c4:.1} {ox2:.1},{wh2:.1} Z M{ox:.1},{oy:.1} L{x1:.1},{oy:.1} L{x1:.1},{wh1:.1} C{c5:.1},{c6:.1} {c7:.1},{c8:.1} {ox:.1},{wh1:.1} Z M0,{oy2:.1} L{x0:.1},{oy2:.1} L{x0:.1},{wh:.1} C{c9:.1},{c10:.1} {c11:.1},{c12:.1} 0,{wh:.1} Z",
         ox2 = ox * 2.0,
@@ -1408,8 +1464,10 @@ fn action_button_icon_path(w: f64, h: f64, icon: &str) -> String {
     };
     format!("{btn} {ip}")
 }
-fn star4_path(w: f64, h: f64) -> String {
-    let (cx, cy, ix, iy) = (w / 2.0, h / 2.0, w * 0.35, h * 0.35);
+fn star4_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
+    let (cx, cy) = (w / 2.0, h / 2.0);
+    let (ix, iy) = (cx * (1.0 - ratio), cy * (1.0 - ratio));
     format!(
         "M{cx:.1},0 L{ix2:.1},{iy:.1} L{w:.1},{cy:.1} L{ix2:.1},{iy2:.1} L{cx:.1},{h:.1} L{ix:.1},{iy2:.1} L0,{cy:.1} L{ix:.1},{iy:.1} Z",
         cx = cx,
@@ -1422,54 +1480,53 @@ fn star4_path(w: f64, h: f64) -> String {
         iy2 = h - iy
     )
 }
-fn star5_path(w: f64, h: f64) -> String {
-    let cx = w / 2.0;
-    let p = [
-        (cx, 0.0),
-        (w * 0.6173, h * 0.3455),
-        (w, h * 0.382),
-        (w * 0.6909, h * 0.5878),
-        (w * 0.7939, h),
-        (cx, h * 0.7265),
-        (w * 0.2061, h),
-        (w * 0.3090, h * 0.5878),
-        (0.0, h * 0.382),
-        (w * 0.3827, h * 0.3455),
-    ];
-    let mut s = format!("M{:.1},{:.1}", p[0].0, p[0].1);
-    for &(x, y) in &p[1..] {
+fn star5_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(10530.0) / 100_000.0;
+    let (cx, cy) = (w / 2.0, h / 2.0);
+    let (ro_x, ro_y) = (cx, cy);
+    let (ri_x, ri_y) = (cx * ratio * 2.0, cy * ratio * 2.0);
+    let n = 5;
+    let t = n * 2;
+    let st = -std::f64::consts::FRAC_PI_2;
+    let mut pts: Vec<(f64, f64)> = Vec::with_capacity(t as usize);
+    for i in 0..t {
+        let a = st + 2.0 * std::f64::consts::PI * (i as f64) / (t as f64);
+        let (rx, ry) = if i % 2 == 0 { (ro_x, ro_y) } else { (ri_x, ri_y) };
+        pts.push((cx + rx * a.cos(), cy + ry * a.sin()));
+    }
+    let mut s = format!("M{:.1},{:.1}", pts[0].0, pts[0].1);
+    for &(x, y) in &pts[1..] {
         s.push_str(&format!(" L{x:.1},{y:.1}"));
     }
     s.push_str(" Z");
     s
 }
-fn star6_path(w: f64, h: f64) -> String {
+fn star6_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(28868.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let p = [
-        (cx, 0.0),
-        (w * 0.625, h * 0.25),
-        (w, h * 0.25),
-        (w * 0.75, cy),
-        (w, h * 0.75),
-        (w * 0.625, h * 0.75),
-        (cx, h),
-        (w * 0.375, h * 0.75),
-        (0.0, h * 0.75),
-        (w * 0.25, cy),
-        (0.0, h * 0.25),
-        (w * 0.375, h * 0.25),
-    ];
-    let mut s = format!("M{:.1},{:.1}", p[0].0, p[0].1);
-    for &(x, y) in &p[1..] {
+    let (ro_x, ro_y) = (cx, cy);
+    let (ri_x, ri_y) = (cx * ratio * 2.0, cy * ratio * 2.0);
+    let n = 6;
+    let t = n * 2;
+    let st = -std::f64::consts::FRAC_PI_2;
+    let mut pts: Vec<(f64, f64)> = Vec::with_capacity(t as usize);
+    for i in 0..t {
+        let a = st + 2.0 * std::f64::consts::PI * (i as f64) / (t as f64);
+        let (rx, ry) = if i % 2 == 0 { (ro_x, ro_y) } else { (ri_x, ri_y) };
+        pts.push((cx + rx * a.cos(), cy + ry * a.sin()));
+    }
+    let mut s = format!("M{:.1},{:.1}", pts[0].0, pts[0].1);
+    for &(x, y) in &pts[1..] {
         s.push_str(&format!(" L{x:.1},{y:.1}"));
     }
     s.push_str(" Z");
     s
 }
-fn star_n_path(w: f64, h: f64, n: u32) -> String {
+fn star_n_path(w: f64, h: f64, n: u32, adj: &HashMap<String, f64>, default_adj: f64) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(default_adj) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let (ro, ri) = (cx, cx * 0.4);
-    let (ryo, ryi) = (cy, cy * 0.4);
+    let (ro, ri) = (cx, cx * ratio * 2.0);
+    let (ryo, ryi) = (cy, cy * ratio * 2.0);
     let t = n * 2;
     let st = -std::f64::consts::FRAC_PI_2;
     let mut pts: Vec<(f64, f64)> = Vec::with_capacity(t as usize);
@@ -1549,32 +1606,52 @@ fn irregular_seal2_path(w: f64, h: f64) -> String {
     s.push_str(" Z");
     s
 }
-fn math_equal_path(w: f64, h: f64) -> String {
+fn math_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(11760.0) / 100_000.0;
+    let bar_h = h * a2;
+    let gap = h * a1;
+    let cy = h / 2.0;
+    let y1 = cy - gap / 2.0 - bar_h;
+    let y2 = cy - gap / 2.0;
+    let y3 = cy + gap / 2.0;
+    let y4 = cy + gap / 2.0 + bar_h;
     format!(
         "M0,{y1:.1} L{w:.1},{y1:.1} L{w:.1},{y2:.1} L0,{y2:.1} Z M0,{y3:.1} L{w:.1},{y3:.1} L{w:.1},{y4:.1} L0,{y4:.1} Z",
-        y1 = h * 0.3,
-        y2 = h * 0.4,
-        y3 = h * 0.6,
-        y4 = h * 0.7,
+        y1 = y1,
+        y2 = y2,
+        y3 = y3,
+        y4 = y4,
         w = w
     )
 }
-fn math_not_equal_path(w: f64, h: f64) -> String {
+fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
+    let _a2_angle = adj.get("adj2").copied().unwrap_or(6600000.0);
+    let a3 = adj.get("adj3").copied().unwrap_or(11760.0) / 100_000.0;
+    let bar_h = h * a3;
+    let gap = h * a1;
+    let cy = h / 2.0;
+    let y1 = cy - gap / 2.0 - bar_h;
+    let y2 = cy - gap / 2.0;
+    let y3 = cy + gap / 2.0;
+    let y4 = cy + gap / 2.0 + bar_h;
     format!(
         "M0,{y1:.1} L{w:.1},{y1:.1} L{w:.1},{y2:.1} L0,{y2:.1} Z M0,{y3:.1} L{w:.1},{y3:.1} L{w:.1},{y4:.1} L0,{y4:.1} Z M{x1:.1},0 L{x2:.1},{h:.1}",
-        y1 = h * 0.3,
-        y2 = h * 0.4,
-        y3 = h * 0.6,
-        y4 = h * 0.7,
+        y1 = y1,
+        y2 = y2,
+        y3 = y3,
+        y4 = y4,
         w = w,
         x1 = w * 0.65,
         x2 = w * 0.35,
         h = h
     )
 }
-fn math_multiply_path(w: f64, h: f64) -> String {
+fn math_multiply_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let d = w.min(h) * 0.35;
+    let d = w.min(h) * a1;
     let t = w.min(h) * 0.06;
     format!(
         "M{x1:.1},{y1t:.1} L{x1t:.1},{y1:.1} L{cx:.1},{y3:.1} L{x2t:.1},{y1:.1} L{x2:.1},{y1t:.1} L{x4:.1},{cy:.1} L{x2:.1},{y2t:.1} L{x2t:.1},{y2:.1} L{cx:.1},{y4:.1} L{x1t:.1},{y2:.1} L{x1:.1},{y2t:.1} L{x3:.1},{cy:.1} Z",
@@ -1594,20 +1671,30 @@ fn math_multiply_path(w: f64, h: f64) -> String {
         y4 = cy + d - t * 0.5
     )
 }
-fn math_divide_path(w: f64, h: f64) -> String {
+fn math_divide_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(5765.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(11760.0) / 100_000.0;
     let cx = w / 2.0;
-    let dr = w.min(h) * 0.06;
+    let dr = w.min(h) * a2;
+    let bar_h = h * a3;
+    let gap = h * a1;
+    let cy = h / 2.0;
+    let y1 = cy - bar_h / 2.0;
+    let y2 = cy + bar_h / 2.0;
+    let dot_top = cy - gap / 2.0 - bar_h / 2.0;
+    let dot_bot = cy + gap / 2.0 + bar_h / 2.0;
     format!(
         "M0,{y1:.1} L{w:.1},{y1:.1} L{w:.1},{y2:.1} L0,{y2:.1} Z M{cx:.1},{d1:.1} A{dr:.1},{dr:.1} 0 1,1 {cx:.1},{d1b:.1} A{dr:.1},{dr:.1} 0 1,1 {cx:.1},{d1:.1} Z M{cx:.1},{d2:.1} A{dr:.1},{dr:.1} 0 1,1 {cx:.1},{d2b:.1} A{dr:.1},{dr:.1} 0 1,1 {cx:.1},{d2:.1} Z",
-        y1 = h * 0.45,
-        y2 = h * 0.55,
+        y1 = y1,
+        y2 = y2,
         w = w,
         cx = cx,
         dr = dr,
-        d1 = h * 0.2 - dr,
-        d1b = h * 0.2 + dr,
-        d2 = h * 0.8 - dr,
-        d2b = h * 0.8 + dr
+        d1 = dot_top - dr,
+        d1b = dot_top + dr,
+        d2 = dot_bot - dr,
+        d2b = dot_bot + dr
     )
 }
 fn heart_path(w: f64, h: f64) -> String {
@@ -1637,11 +1724,14 @@ fn plus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         "M{ax:.1},0 L{x1:.1},0 L{x1:.1},{ay:.1} L{w:.1},{ay:.1} L{w:.1},{y1:.1} L{x1:.1},{y1:.1} L{x1:.1},{h:.1} L{ax:.1},{h:.1} L{ax:.1},{y1:.1} L0,{y1:.1} L0,{ay:.1} L{ax:.1},{ay:.1} Z"
     )
 }
-fn math_minus_path(w: f64, h: f64) -> String {
+fn math_minus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(11760.0) / 100_000.0;
+    let bar_h = h * a1;
+    let cy = h / 2.0;
     format!(
         "M0,{y1:.1} L{w:.1},{y1:.1} L{w:.1},{y2:.1} L0,{y2:.1} Z",
-        y1 = h * 0.4,
-        y2 = h * 0.6,
+        y1 = cy - bar_h / 2.0,
+        y2 = cy + bar_h / 2.0,
         w = w
     )
 }
@@ -1709,9 +1799,10 @@ fn frame_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y = h - t
     )
 }
-fn ribbon_path(w: f64, h: f64) -> String {
-    let f = w * 0.1;
-    let (bt, bb) = (h * 0.15, h * 0.85);
+fn ribbon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let f = w * adj.get("adj1").copied().unwrap_or(16667.0) / 100_000.0;
+    let ratio2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let (bt, bb) = (h * (1.0 - ratio2), h * ratio2);
     format!(
         "M0,{bt:.1} L{f:.1},{bt:.1} L{f:.1},0 L{x:.1},0 L{x:.1},{bt:.1} L{w:.1},{bt:.1} L{x2:.1},{m:.1} L{w:.1},{bb:.1} L{x:.1},{bb:.1} L{x:.1},{h:.1} L{f:.1},{h:.1} L{f:.1},{bb:.1} L0,{bb:.1} L{f2:.1},{m:.1} Z",
         bt = bt,
@@ -1725,8 +1816,8 @@ fn ribbon_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn ribbon2_path(w: f64, h: f64) -> String {
-    ribbon_path(w, h)
+fn ribbon2_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    ribbon_path(w, h, adj)
 }
 fn donut_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let t = w.min(h) * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
@@ -1744,10 +1835,10 @@ fn donut_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y = h - t
     )
 }
-fn no_smoking_path(w: f64, h: f64) -> String {
+fn no_smoking_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let (rx, ry) = (w / 2.0, h / 2.0);
     let cx = rx;
-    let t = w.min(h) * 0.08;
+    let t = w.min(h) * adj.get("adj").copied().unwrap_or(18750.0) / 100_000.0;
     let a = std::f64::consts::FRAC_PI_4;
     let (ca, sa) = (a.cos(), a.sin());
     let (bx1, by1) = (cx - rx * ca, ry - ry * sa);
@@ -1769,9 +1860,12 @@ fn no_smoking_path(w: f64, h: f64) -> String {
         hh = by1 + dy
     )
 }
-fn block_arc_path(w: f64, h: f64) -> String {
+fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _adj1 = adj.get("adj1").copied().unwrap_or(10800000.0);
+    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let (ro, ryo) = (w / 2.0, h / 2.0);
-    let t = w.min(h) * 0.15;
+    let t = w.min(h) * a3;
     let (cx, cy) = (ro, ryo);
     format!(
         "M{cx:.1},0 A{ro:.1},{ryo:.1} 0 1,1 0,{cy:.1} L{t:.1},{cy:.1} A{ri:.1},{ryi:.1} 0 1,0 {cx:.1},{t:.1} Z",
@@ -1784,12 +1878,14 @@ fn block_arc_path(w: f64, h: f64) -> String {
         ryi = (ryo - t).max(0.1)
     )
 }
-fn smiley_face_path(w: f64, h: f64) -> String {
+fn smiley_face_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let smile_adj = adj.get("adj").copied().unwrap_or(4653.0) / 100_000.0;
     let (rx, ry) = (w / 2.0, h / 2.0);
     let cx = rx;
     let (erx, ery) = (w * 0.05, h * 0.06);
     let (lcx, rcx, ecy) = (w * 0.35, w * 0.65, h * 0.38);
-    let (sx1, sx2, sy, scy) = (w * 0.3, w * 0.7, h * 0.6, h * 0.8);
+    let (sx1, sx2, sy) = (w * 0.3, w * 0.7, h * 0.6);
+    let scy = sy + h * smile_adj;
     format!(
         "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 1,1 {cx:.1},0 Z M{lr:.1},{ecy:.1} A{erx:.1},{ery:.1} 0 1,1 {ll:.1},{ecy:.1} A{erx:.1},{ery:.1} 0 1,1 {lr:.1},{ecy:.1} Z M{rr:.1},{ecy:.1} A{erx:.1},{ery:.1} 0 1,1 {rl:.1},{ecy:.1} A{erx:.1},{ery:.1} 0 1,1 {rr:.1},{ecy:.1} Z M{sx1:.1},{sy:.1} Q{cx:.1},{scy:.1} {sx2:.1},{sy:.1}",
         cx = cx,
@@ -1809,8 +1905,8 @@ fn smiley_face_path(w: f64, h: f64) -> String {
         scy = scy
     )
 }
-fn can_path(w: f64, h: f64) -> String {
-    let ry = h * 0.1;
+fn can_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ry = h * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     let rx = w / 2.0;
     let (bt, bb) = (ry, h - ry);
     format!(
@@ -1822,8 +1918,8 @@ fn can_path(w: f64, h: f64) -> String {
         w = w
     )
 }
-fn cube_path(w: f64, h: f64) -> String {
-    let d = w.min(h) * 0.25;
+fn cube_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let d = w.min(h) * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     format!(
         "M0,{d:.1} L{d:.1},0 L{w:.1},0 L{w:.1},{y:.1} L{x:.1},{h:.1} L0,{h:.1} Z M0,{d:.1} L{d:.1},0 L{w:.1},0 L{x:.1},{d:.1} Z M{x:.1},{d:.1} L{w:.1},0 L{w:.1},{y:.1} L{x:.1},{h:.1} Z",
         d = d,
@@ -1833,21 +1929,23 @@ fn cube_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn moon_path(w: f64, h: f64) -> String {
+fn moon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(50000.0) / 100_000.0;
     let (rx, ry) = (w / 2.0, h / 2.0);
+    let x = w * (1.0 - ratio);
     format!(
         "M{x:.1},0 A{rx:.1},{ry:.1} 0 1,1 {x:.1},{h:.1} A{rx2:.1},{ry2:.1} 0 1,0 {x:.1},0 Z",
-        x = w * 0.6,
+        x = x,
         rx = rx,
         ry = ry,
         h = h,
-        rx2 = rx * 0.55,
+        rx2 = rx * ratio,
         ry2 = ry * 0.85
     )
 }
-fn sun_path(w: f64, h: f64) -> String {
+fn sun_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let rb = w.min(h) * 0.25;
+    let rb = w.min(h) * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     let mut p = format!(
         "M{x1:.1},{cy:.1} A{r:.1},{r:.1} 0 1,1 {x2:.1},{cy:.1} A{r:.1},{r:.1} 0 1,1 {x1:.1},{cy:.1} Z",
         x1 = cx - rb,
@@ -1875,8 +1973,8 @@ fn sun_path(w: f64, h: f64) -> String {
     }
     p
 }
-fn bevel_path(w: f64, h: f64) -> String {
-    let t = w.min(h) * 0.12;
+fn bevel_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let t = w.min(h) * adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
     format!(
         "M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M{t:.1},{t:.1} L{x:.1},{t:.1} L{x:.1},{y:.1} L{t:.1},{y:.1} Z M0,0 L{t:.1},{t:.1} M{w:.1},0 L{x:.1},{t:.1} M{w:.1},{h:.1} L{x:.1},{y:.1} M0,{h:.1} L{t:.1},{y:.1}",
         w = w,
@@ -1913,7 +2011,9 @@ fn gear_path(w: f64, h: f64, teeth: u32) -> String {
     ));
     p
 }
-fn pie_path(w: f64, h: f64) -> String {
+fn pie_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _adj1 = adj.get("adj1").copied().unwrap_or(0.0);
+    let _adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
     let (cx, cy) = (rx, ry);
     format!(
@@ -1932,7 +2032,9 @@ fn pie_wedge_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn arc_path(w: f64, h: f64) -> String {
+fn arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _adj1 = adj.get("adj1").copied().unwrap_or(16200000.0);
+    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
     format!(
         "M0,{ry:.1} A{rx:.1},{ry:.1} 0 0,1 {w:.1},{ry:.1}",
@@ -1941,8 +2043,9 @@ fn arc_path(w: f64, h: f64) -> String {
         w = w
     )
 }
-fn wave_path(w: f64, h: f64) -> String {
-    let a = h * 0.15;
+fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
+    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     format!(
         "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c2:.1},{h:.1} {c1:.1},{y2:.1} 0,{y1:.1} Z",
         a = a,
@@ -1955,8 +2058,9 @@ fn wave_path(w: f64, h: f64) -> String {
         y2 = h - a * 2.0
     )
 }
-fn double_wave_path(w: f64, h: f64) -> String {
-    let a = h * 0.1;
+fn double_wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a = h * adj.get("adj1").copied().unwrap_or(6250.0) / 100_000.0;
+    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     format!(
         "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {cx:.1},{a:.1} C{c3:.1},0 {c4:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c4:.1},{h:.1} {c3:.1},{y2:.1} {cx:.1},{y1:.1} C{c2:.1},{h:.1} {c1:.1},{y2:.1} 0,{y1:.1} Z",
         a = a,
@@ -2000,20 +2104,27 @@ fn funnel_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn teardrop_path(w: f64, h: f64) -> String {
+fn teardrop_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let ratio = adj.get("adj").copied().unwrap_or(100000.0) / 100_000.0;
     let (rx, ry) = (w / 2.0, h / 2.0);
+    let tip_x = rx + rx * ratio;
     format!(
-        "M{w:.1},0 L{w:.1},{ry:.1} A{rx:.1},{ry:.1} 0 1,1 {rx:.1},0 Z",
-        w = w,
+        "M{tip_x:.1},0 L{tip_x:.1},{ry:.1} A{rx:.1},{ry:.1} 0 1,1 {rx:.1},0 Z",
+        tip_x = tip_x.min(w),
         rx = rx,
         ry = ry
     )
 }
 
 // Arrow callout shapes
-fn down_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cx, s, ah) = (w / 2.0, w * 0.15, h * 0.25);
-    let bh = h * 0.6;
+fn down_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(64977.0) / 100_000.0;
+    let (cx, s, ah) = (w / 2.0, w * a1, h * a3);
+    let bh = h * a4;
+    let _ = a2;
     format!(
         "M0,0 L{w:.1},0 L{w:.1},{bh:.1} L{x2:.1},{bh:.1} L{x2:.1},{yh:.1} L{cx:.1},{h:.1} L{x1:.1},{yh:.1} L{x1:.1},{bh:.1} L0,{bh:.1} Z",
         w = w,
@@ -2025,9 +2136,14 @@ fn down_arrow_callout_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn left_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cy, s, aw) = (h / 2.0, h * 0.15, w * 0.25);
-    let bx = w * 0.4;
+fn left_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(64977.0) / 100_000.0;
+    let (cy, s, aw) = (h / 2.0, h * a1, w * a3);
+    let bx = w * (1.0 - a4);
+    let _ = a2;
     format!(
         "M{bx:.1},0 L{w:.1},0 L{w:.1},{h:.1} L{bx:.1},{h:.1} L{bx:.1},{y2:.1} L{aw:.1},{y2:.1} L0,{cy:.1} L{aw:.1},{y1:.1} L{bx:.1},{y1:.1} Z",
         bx = bx,
@@ -2039,9 +2155,14 @@ fn left_arrow_callout_path(w: f64, h: f64) -> String {
         cy = cy
     )
 }
-fn right_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cy, s, aw) = (h / 2.0, h * 0.15, w * 0.25);
-    let bx = w * 0.6;
+fn right_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(64977.0) / 100_000.0;
+    let (cy, s, aw) = (h / 2.0, h * a1, w * a3);
+    let bx = w * a4;
+    let _ = a2;
     format!(
         "M0,0 L{bx:.1},0 L{bx:.1},{y1:.1} L{xh:.1},{y1:.1} L{w:.1},{cy:.1} L{xh:.1},{y2:.1} L{bx:.1},{y2:.1} L{bx:.1},{h:.1} L0,{h:.1} Z",
         bx = bx,
@@ -2053,9 +2174,14 @@ fn right_arrow_callout_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn up_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cx, s, ah) = (w / 2.0, w * 0.15, h * 0.25);
-    let bh = h * 0.4;
+fn up_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(64977.0) / 100_000.0;
+    let (cx, s, ah) = (w / 2.0, w * a1, h * a3);
+    let bh = h * (1.0 - a4);
+    let _ = a2;
     format!(
         "M0,{bh:.1} L{x1:.1},{bh:.1} L{x1:.1},{ah:.1} L{cx:.1},0 L{x2:.1},{ah:.1} L{x2:.1},{bh:.1} L{w:.1},{bh:.1} L{w:.1},{h:.1} L0,{h:.1} Z",
         bh = bh,
@@ -2067,11 +2193,16 @@ fn up_arrow_callout_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn quad_arrow_callout_path(w: f64, h: f64) -> String {
+fn quad_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(18515.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(18515.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(18515.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(48123.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
-    let (sx, sy) = (w * 0.1, h * 0.1);
-    let (ax, ay) = (w * 0.18, h * 0.18);
-    let (bx, by) = (w * 0.22, h * 0.22);
+    let (sx, sy) = (w * a1, h * a1);
+    let (ax, ay) = (w * a2, h * a2);
+    let (bx, by) = (w * a4, h * a4);
+    let _ = a3;
     format!(
         "M{cx:.1},0 L{x4:.1},{ay:.1} L{x3:.1},{ay:.1} L{x3:.1},{by:.1} L{bx:.1},{by:.1} L{bx:.1},{y1:.1} L{ax:.1},{y1:.1} L0,{cy:.1} L{ax:.1},{y2:.1} L{bx:.1},{y2:.1} L{bx:.1},{y4:.1} L{x3:.1},{y4:.1} L{x3:.1},{y3:.1} L{x4:.1},{y3:.1} L{cx:.1},{h:.1} L{x5:.1},{y3:.1} L{x6:.1},{y3:.1} L{x6:.1},{y4:.1} L{x7:.1},{y4:.1} L{x7:.1},{y2:.1} L{x8:.1},{y2:.1} L{w:.1},{cy:.1} L{x8:.1},{y1:.1} L{x7:.1},{y1:.1} L{x7:.1},{by:.1} L{x6:.1},{by:.1} L{x6:.1},{ay:.1} L{x5:.1},{ay:.1} Z",
         cx = cx,
@@ -2094,9 +2225,14 @@ fn quad_arrow_callout_path(w: f64, h: f64) -> String {
         y4 = h - by
     )
 }
-fn left_right_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cy, s, aw) = (h / 2.0, h * 0.15, w * 0.2);
-    let (bx1, bx2) = (w * 0.3, w * 0.7);
+fn left_right_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(48123.0) / 100_000.0;
+    let (cy, s, aw) = (h / 2.0, h * a1, w * a3);
+    let (bx1, bx2) = (w * (1.0 - a4), w * a4);
+    let _ = a2;
     format!(
         "M{bx1:.1},0 L{bx2:.1},0 L{bx2:.1},{y1:.1} L{xh:.1},{y1:.1} L{w:.1},{cy:.1} L{xh:.1},{y2:.1} L{bx2:.1},{y2:.1} L{bx2:.1},{h:.1} L{bx1:.1},{h:.1} L{bx1:.1},{y2:.1} L{aw:.1},{y2:.1} L0,{cy:.1} L{aw:.1},{y1:.1} L{bx1:.1},{y1:.1} Z",
         bx1 = bx1,
@@ -2110,9 +2246,14 @@ fn left_right_arrow_callout_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn up_down_arrow_callout_path(w: f64, h: f64) -> String {
-    let (cx, s, ah) = (w / 2.0, w * 0.15, h * 0.2);
-    let (by1, by2) = (h * 0.3, h * 0.7);
+fn up_down_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(48123.0) / 100_000.0;
+    let (cx, s, ah) = (w / 2.0, w * a1, h * a3);
+    let (by1, by2) = (h * (1.0 - a4), h * a4);
+    let _ = a2;
     format!(
         "M0,{by1:.1} L{x1:.1},{by1:.1} L{x1:.1},{ah:.1} L{cx:.1},0 L{x2:.1},{ah:.1} L{x2:.1},{by1:.1} L{w:.1},{by1:.1} L{w:.1},{by2:.1} L{x2:.1},{by2:.1} L{x2:.1},{yh:.1} L{cx:.1},{h:.1} L{x1:.1},{yh:.1} L{x1:.1},{by2:.1} L0,{by2:.1} Z",
         by1 = by1,
@@ -2128,9 +2269,9 @@ fn up_down_arrow_callout_path(w: f64, h: f64) -> String {
 }
 
 // Brackets and braces
-fn left_brace_path(w: f64, h: f64) -> String {
-    let cy = h / 2.0;
-    let r = h * 0.08;
+fn left_brace_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = h * adj.get("adj1").copied().unwrap_or(8333.0) / 100_000.0;
+    let cy = h * adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let x = w * 0.7;
     format!(
         "M{x:.1},0 Q{xm:.1},0 {xm:.1},{r:.1} L{xm:.1},{y1:.1} Q{xm:.1},{cy:.1} 0,{cy:.1} Q{xm:.1},{cy:.1} {xm:.1},{y2:.1} L{xm:.1},{y3:.1} Q{xm:.1},{h:.1} {x:.1},{h:.1}",
@@ -2144,9 +2285,9 @@ fn left_brace_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn right_brace_path(w: f64, h: f64) -> String {
-    let cy = h / 2.0;
-    let r = h * 0.08;
+fn right_brace_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = h * adj.get("adj1").copied().unwrap_or(8333.0) / 100_000.0;
+    let cy = h * adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let x = w * 0.3;
     format!(
         "M{x:.1},0 Q{xm:.1},0 {xm:.1},{r:.1} L{xm:.1},{y1:.1} Q{xm:.1},{cy:.1} {w:.1},{cy:.1} Q{xm:.1},{cy:.1} {xm:.1},{y2:.1} L{xm:.1},{y3:.1} Q{xm:.1},{h:.1} {x:.1},{h:.1}",
@@ -2161,8 +2302,8 @@ fn right_brace_path(w: f64, h: f64) -> String {
         w = w
     )
 }
-fn left_bracket_path(w: f64, h: f64) -> String {
-    let r = h * 0.06;
+fn left_bracket_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = h * adj.get("adj").copied().unwrap_or(8333.0) / 100_000.0;
     let x = w * 0.7;
     format!(
         "M{x:.1},0 L{r:.1},0 Q0,0 0,{r:.1} L0,{y:.1} Q0,{h:.1} {r:.1},{h:.1} L{x:.1},{h:.1}",
@@ -2172,8 +2313,8 @@ fn left_bracket_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn right_bracket_path(w: f64, h: f64) -> String {
-    let r = h * 0.06;
+fn right_bracket_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = h * adj.get("adj").copied().unwrap_or(8333.0) / 100_000.0;
     let x = w * 0.3;
     format!(
         "M{x:.1},0 L{xr:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y:.1} Q{w:.1},{h:.1} {xr:.1},{h:.1} L{x:.1},{h:.1}",
@@ -2241,8 +2382,8 @@ fn chart_x_path(w: f64, h: f64) -> String {
 }
 
 // Scrolls
-fn horizontal_scroll_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.1;
+fn horizontal_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = w.min(h) * adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
     let r2 = r / 2.0;
     let (x, y1, y2) = (w - r, h - r, h - r2);
     format!(
@@ -2255,8 +2396,8 @@ fn horizontal_scroll_path(w: f64, h: f64) -> String {
         y2 = y2
     )
 }
-fn vertical_scroll_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.1;
+fn vertical_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let r = w.min(h) * adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
     let r2 = r / 2.0;
     let (y, yh, x1, x2) = (h - r, h - r2, w - r, w - r2);
     format!(
@@ -2307,8 +2448,12 @@ fn square_tabs_path(w: f64, h: f64) -> String {
 }
 
 // Ribbons
-fn ellipse_ribbon_path(w: f64, h: f64) -> String {
-    let (cy, bh) = (h * 0.6, h * 0.2);
+fn ellipse_ribbon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(12500.0) / 100_000.0;
+    let (cy, bh) = (h * (1.0 - a2 + a1), h * a3);
+    let _ = a2;
     format!(
         "M0,{cy:.1} Q{cx:.1},{h:.1} {w:.1},{cy:.1} L{w:.1},{bh:.1} Q{cx:.1},0 0,{bh:.1} Z",
         cx = w / 2.0,
@@ -2318,8 +2463,12 @@ fn ellipse_ribbon_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn ellipse_ribbon2_path(w: f64, h: f64) -> String {
-    let (cy, bh) = (h * 0.4, h * 0.8);
+fn ellipse_ribbon2_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(12500.0) / 100_000.0;
+    let (cy, bh) = (h * (a2 - a1), h * (1.0 - a3));
+    let _ = a2;
     format!(
         "M0,{cy:.1} Q{cx:.1},0 {w:.1},{cy:.1} L{w:.1},{bh:.1} Q{cx:.1},{h:.1} 0,{bh:.1} Z",
         cx = w / 2.0,
@@ -2387,7 +2536,9 @@ fn left_right_circular_arrow_path(w: f64, h: f64) -> String {
 }
 
 // Misc shapes
-fn chord_path(w: f64, h: f64) -> String {
+fn chord_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let _adj1 = adj.get("adj1").copied().unwrap_or(2700000.0);
+    let _adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
     let (cx, cy) = (rx, ry);
     let (x1, y1) = (cx - rx * 0.866, cy + ry * 0.5);
@@ -2433,8 +2584,12 @@ fn swoosh_arrow_path(w: f64, h: f64) -> String {
         c4y = h * 0.9
     )
 }
-fn left_right_ribbon_path(w: f64, h: f64) -> String {
-    let (f, bt, bb) = (w * 0.12, h * 0.2, h * 0.8);
+fn left_right_ribbon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(16667.0) / 100_000.0;
+    let (f, bt, bb) = (w * a3, h * (1.0 - a2), h * a2);
+    let _ = a1;
     let m = (bt + bb) / 2.0;
     format!(
         "M0,{bt:.1} L{f:.1},{bt:.1} L{f:.1},{m1:.1} L0,{m:.1} L{f:.1},{m2:.1} L{f:.1},{bb:.1} L0,{bb:.1} L{f:.1},{h:.1} L{x:.1},{h:.1} L{x:.1},{bb:.1} L{w:.1},{bb:.1} L{x2:.1},{m:.1} L{w:.1},{bt:.1} L{x:.1},{bt:.1} L{x:.1},0 L{f:.1},0 Z",
@@ -2471,46 +2626,56 @@ fn curved_connector2_path(w: f64, h: f64) -> String {
         h = h
     )
 }
-fn curved_connector3_path(w: f64, h: f64) -> String {
-    let cx = w / 2.0;
+fn curved_connector3_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let cx = w * adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
     format!(
         "M0,0 C{c1:.1},0 {cx:.1},0 {cx:.1},{cy:.1} C{cx:.1},{h:.1} {c2:.1},{h:.1} {w:.1},{h:.1}",
-        c1 = w * 0.25,
+        c1 = cx / 2.0,
         cx = cx,
         cy = h / 2.0,
-        c2 = w * 0.75,
+        c2 = cx + (w - cx) / 2.0,
         w = w,
         h = h
     )
 }
-fn curved_connector4_path(w: f64, h: f64) -> String {
+fn curved_connector4_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let x_mid = w * a1;
+    let y_mid = h * a2;
     format!(
         "M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {c3:.1},{y3:.1} C{c3:.1},{h:.1} {c4:.1},{h:.1} {w:.1},{h:.1}",
-        c1 = w * 0.15,
-        c2 = w * 0.33,
-        y1 = h * 0.25,
-        y2 = h * 0.5,
-        c3 = w * 0.67,
-        y3 = h * 0.75,
-        c4 = w * 0.85,
+        c1 = x_mid / 2.0,
+        c2 = x_mid,
+        y1 = y_mid / 2.0,
+        y2 = y_mid,
+        c3 = x_mid + (w - x_mid) / 2.0,
+        y3 = y_mid + (h - y_mid) / 2.0,
+        c4 = w - (w - x_mid) / 4.0,
         w = w,
         h = h
     )
 }
-fn curved_connector5_path(w: f64, h: f64) -> String {
+fn curved_connector5_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(50000.0) / 100_000.0;
+    let x1 = w * a1;
+    let y_mid = h * a2;
+    let x2 = w * a3;
     format!(
         "M0,0 C{c1:.1},0 {c2:.1},0 {c2:.1},{y1:.1} C{c2:.1},{y2:.1} {c3:.1},{y2:.1} {cx:.1},{cy:.1} C{c4:.1},{y2:.1} {c5:.1},{y3:.1} {c5:.1},{y3:.1} C{c5:.1},{h:.1} {c6:.1},{h:.1} {w:.1},{h:.1}",
-        c1 = w * 0.1,
-        c2 = w * 0.25,
-        y1 = h * 0.2,
-        y2 = h * 0.35,
-        c3 = w * 0.35,
-        cx = w * 0.5,
-        cy = h * 0.5,
-        c4 = w * 0.65,
-        c5 = w * 0.75,
-        y3 = h * 0.8,
-        c6 = w * 0.9,
+        c1 = x1 / 2.0,
+        c2 = x1,
+        y1 = y_mid * 0.4,
+        y2 = y_mid * 0.7,
+        c3 = x1 + (x2 - x1) * 0.3,
+        cx = (x1 + x2) / 2.0,
+        cy = y_mid,
+        c4 = x2 - (x2 - x1) * 0.3,
+        c5 = x2,
+        y3 = y_mid + (h - y_mid) * 0.6,
+        c6 = x2 + (w - x2) / 2.0,
         w = w,
         h = h
     )
@@ -2528,25 +2693,28 @@ fn bent_connector3_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
-fn bent_connector4_path(w: f64, h: f64) -> String {
-    let cy = h / 2.0;
+fn bent_connector4_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     format!(
         "M0,0 L{cx:.1},0 L{cx:.1},{cy:.1} L{w:.1},{cy:.1} L{w:.1},{h:.1}",
-        cx = w * 0.33,
-        cy = cy,
+        cx = w * a1,
+        cy = h * a2,
         w = w,
         h = h
     )
 }
-fn bent_connector5_path(w: f64, h: f64) -> String {
-    let cy = h / 2.0;
+fn bent_connector5_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    let a1 = adj.get("adj1").copied().unwrap_or(50000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(50000.0) / 100_000.0;
     format!(
         "M0,0 L{x1:.1},0 L{x1:.1},{y1:.1} L{x2:.1},{y1:.1} L{x2:.1},{cy:.1} L{x3:.1},{cy:.1} L{x3:.1},{h:.1} L{w:.1},{h:.1}",
-        x1 = w * 0.25,
-        y1 = h * 0.25,
+        x1 = w * a1,
+        y1 = h * a2,
         x2 = w * 0.5,
-        cy = cy,
-        x3 = w * 0.75,
+        cy = h * a2 + (h * a3 - h * a2) / 2.0,
+        x3 = w * a3,
         h = h,
         w = w
     )
