@@ -1,5 +1,108 @@
 use super::color::Color;
 
+/// Underline type (ECMA-376 ST_TextUnderlineType)
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum UnderlineType {
+    #[default]
+    None,
+    Single,
+    Double,
+    Heavy,
+    Dotted,
+    DottedHeavy,
+    Dashed,
+    DashHeavy,
+    DashLong,
+    DashLongHeavy,
+    DotDash,
+    DotDashHeavy,
+    DotDotDash,
+    DotDotDashHeavy,
+    Wavy,
+    WavyHeavy,
+    WavyDouble,
+}
+
+impl UnderlineType {
+    /// Parse OOXML `u` attribute value
+    pub fn from_ooxml(val: &str) -> Self {
+        match val {
+            "sng" => Self::Single,
+            "dbl" => Self::Double,
+            "heavy" => Self::Heavy,
+            "dotted" => Self::Dotted,
+            "dottedHeavy" => Self::DottedHeavy,
+            "dash" => Self::Dashed,
+            "dashHeavy" => Self::DashHeavy,
+            "dashLong" => Self::DashLong,
+            "dashLongHeavy" => Self::DashLongHeavy,
+            "dotDash" => Self::DotDash,
+            "dotDashHeavy" => Self::DotDashHeavy,
+            "dotDotDash" => Self::DotDotDash,
+            "dotDotDashHeavy" => Self::DotDotDashHeavy,
+            "wavy" => Self::Wavy,
+            "wavyHeavy" => Self::WavyHeavy,
+            "wavyDbl" => Self::WavyDouble,
+            _ => Self::None,
+        }
+    }
+
+    /// Generate CSS properties for this underline type
+    pub fn to_css(&self) -> Option<String> {
+        match self {
+            Self::None => Option::None,
+            Self::Single => Some("text-decoration: underline".to_string()),
+            Self::Double => {
+                Some("text-decoration: underline; text-decoration-style: double".to_string())
+            }
+            Self::Heavy => {
+                Some("text-decoration: underline; text-decoration-thickness: 2px".to_string())
+            }
+            Self::Dotted | Self::DottedHeavy => {
+                Some("text-decoration: underline; text-decoration-style: dotted".to_string())
+            }
+            Self::Dashed | Self::DashHeavy | Self::DashLong | Self::DashLongHeavy => {
+                Some("text-decoration: underline; text-decoration-style: dashed".to_string())
+            }
+            Self::Wavy | Self::WavyHeavy | Self::WavyDouble => {
+                Some("text-decoration: underline; text-decoration-style: wavy".to_string())
+            }
+            Self::DotDash | Self::DotDashHeavy | Self::DotDotDash | Self::DotDotDashHeavy => {
+                Some("text-decoration: underline; text-decoration-style: dashed".to_string())
+            }
+        }
+    }
+}
+
+/// Strikethrough type (ECMA-376 ST_TextStrikeType)
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum StrikethroughType {
+    #[default]
+    None,
+    Single,
+    Double,
+}
+
+impl StrikethroughType {
+    /// Parse OOXML `strike` attribute value
+    pub fn from_ooxml(val: &str) -> Self {
+        match val {
+            "sngStrike" => Self::Single,
+            "dblStrike" => Self::Double,
+            _ => Self::None,
+        }
+    }
+
+    /// Generate CSS properties for this strikethrough type
+    pub fn to_css(&self) -> Option<&'static str> {
+        match self {
+            Self::None => Option::None,
+            Self::Single => Some("text-decoration: line-through"),
+            Self::Double => Some("text-decoration: line-through; text-decoration-style: double"),
+        }
+    }
+}
+
 /// Text style
 #[derive(Debug, Clone, Default)]
 pub struct TextStyle {
@@ -7,8 +110,8 @@ pub struct TextStyle {
     pub font_size: Option<f64>, // in pt
     pub bold: bool,
     pub italic: bool,
-    pub underline: bool,
-    pub strikethrough: bool,
+    pub underline: UnderlineType,
+    pub strikethrough: StrikethroughType,
     pub color: Color,
     pub baseline: Option<i32>, // superscript(+)/subscript(-) offset (1/1000 %)
     pub letter_spacing: Option<f64>, // in pt

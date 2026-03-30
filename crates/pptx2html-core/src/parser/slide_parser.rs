@@ -2466,10 +2466,10 @@ fn parse_run_props(e: &quick_xml::events::BytesStart<'_>, run: &mut Option<RunBu
             rb.italic = i == "1" || i == "true";
         }
         if let Some(u) = xml_utils::attr_str(e, "u") {
-            rb.underline = u != "none";
+            rb.underline = UnderlineType::from_ooxml(&u);
         }
         if let Some(strike) = xml_utils::attr_str(e, "strike") {
-            rb.strikethrough = strike != "noStrike";
+            rb.strikethrough = StrikethroughType::from_ooxml(&strike);
         }
         if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
             rb.baseline = baseline.parse::<i32>().ok();
@@ -2702,8 +2702,8 @@ struct RunBuilder {
     font_size: Option<f64>,
     bold: bool,
     italic: bool,
-    underline: bool,
-    strikethrough: bool,
+    underline: UnderlineType,
+    strikethrough: StrikethroughType,
     color: Color,
     font_latin: Option<String>,
     font_ea: Option<String>,

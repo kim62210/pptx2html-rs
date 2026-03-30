@@ -24,5 +24,5 @@ pub use slide::{
 pub use style::{
     Alignment, Border, BorderStyle, DashStyle, Fill, FontStyle, GlowEffect, GradientFill,
     GradientStop, ImageFill, LineCap, LineEnd, LineEndSize, LineEndType, LineJoin, OuterShadow,
-    ShapeEffects, SolidFill, TextShadow, TextStyle,
+    ShapeEffects, SolidFill, StrikethroughType, TextShadow, TextStyle, UnderlineType,
 };

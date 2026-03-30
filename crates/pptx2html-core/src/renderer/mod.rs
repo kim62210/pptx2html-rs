@@ -1505,13 +1505,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             run_style.push_str("font-style: italic");
         }
 
-        if run.style.underline {
+        if let Some(ul_css) = run.style.underline.to_css() {
             push_sep(&mut run_style);
-            run_style.push_str("text-decoration: underline");
+            run_style.push_str(&ul_css);
         }
-        if run.style.strikethrough {
+        if let Some(st_css) = run.style.strikethrough.to_css() {
             push_sep(&mut run_style);
-            run_style.push_str("text-decoration: line-through");
+            run_style.push_str(st_css);
         }
 
         // Color -- explicit > para defRPr > inherited > fontRef > none
@@ -1534,14 +1534,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(run_style, "color: {css_color}");
         }
 
-        // Superscript/subscript
+        // Superscript/subscript -- use actual OOXML baseline percentage
+        // baseline is in thousandths of percent (e.g., 30000 = 30%)
         if let Some(baseline) = run.style.baseline {
-            if baseline > 0 {
+            if baseline != 0 {
+                let pct = baseline as f64 / 1000.0;
+                let abs_pct = pct.abs();
+                // Scale font size proportionally: larger offset = smaller font
+                let scale = (1.0 - abs_pct / 100.0).max(0.5);
                 push_sep(&mut run_style);
-                run_style.push_str("vertical-align: super; font-size: 0.6em");
-            } else if baseline < 0 {
-                push_sep(&mut run_style);
-                run_style.push_str("vertical-align: sub; font-size: 0.6em");
+                let _ = write!(
+                    run_style,
+                    "vertical-align: {pct:.1}%; font-size: {scale:.2}em"
+                );
             }
         }
 
