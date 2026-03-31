@@ -1220,6 +1220,106 @@ fn test_custgeom_rect_uses_guide_values() {
 }
 
 #[test]
+fn test_custgeom_parses_xy_and_polar_adjust_handles() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Handles"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="gx" fmla="val 5400"/>
+            <a:gd name="gy" fmla="val 10800"/>
+            <a:gd name="gr" fmla="val 7200"/>
+            <a:gd name="ga" fmla="val 5400000"/>
+          </a:gdLst>
+          <a:ahLst>
+            <a:ahXY gdRefX="gx" minX="0" maxX="21600" gdRefY="gy" minY="0" maxY="21600">
+              <a:pos x="gx" y="gy"/>
+            </a:ahXY>
+            <a:ahPolar gdRefR="gr" minR="0" maxR="21600" gdRefAng="ga" minAng="0" maxAng="21600000">
+              <a:pos x="10800" y="10800"/>
+            </a:ahPolar>
+          </a:ahLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.adjust_handles.len(), 2, "expected two custom geometry handles");
+            match &geom.adjust_handles[0] {
+                AdjustHandle::XY(handle) => {
+                    assert_eq!(handle.gd_ref_x.as_deref(), Some("gx"));
+                    assert_eq!(handle.gd_ref_y.as_deref(), Some("gy"));
+                    assert!((handle.pos_x - 5400.0).abs() < 0.01);
+                    assert!((handle.pos_y - 10800.0).abs() < 0.01);
+                }
+                other => panic!("Expected XY handle, got {:?}", other),
+            }
+            match &geom.adjust_handles[1] {
+                AdjustHandle::Polar(handle) => {
+                    assert_eq!(handle.gd_ref_r.as_deref(), Some("gr"));
+                    assert_eq!(handle.gd_ref_ang.as_deref(), Some("ga"));
+                    assert!((handle.pos_x - 10800.0).abs() < 0.01);
+                    assert!((handle.pos_y - 10800.0).abs() < 0.01);
+                }
+                other => panic!("Expected Polar handle, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_parses_connection_sites() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Connections"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:cxnLst>
+            <a:cxn ang="5400000"><a:pos x="21600" y="10800"/></a:cxn>
+            <a:cxn ang="10800000"><a:pos x="10800" y="21600"/></a:cxn>
+          </a:cxnLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            assert_eq!(geom.connection_sites.len(), 2, "expected two connection sites");
+            assert!((geom.connection_sites[0].x - 21600.0).abs() < 0.01);
+            assert!((geom.connection_sites[0].y - 10800.0).abs() < 0.01);
+            assert!((geom.connection_sites[0].angle - 5400000.0).abs() < 0.01);
+            assert!((geom.connection_sites[1].x - 10800.0).abs() < 0.01);
+            assert!((geom.connection_sites[1].y - 21600.0).abs() < 0.01);
+            assert!((geom.connection_sites[1].angle - 10800000.0).abs() < 0.01);
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
 fn test_custgeom_guide_plus_minus_formula_drives_point() {
     let slide = r#"
     <p:sp>

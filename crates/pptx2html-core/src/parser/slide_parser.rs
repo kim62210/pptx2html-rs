@@ -90,6 +90,11 @@ pub fn parse_slide<R: Read + Seek>(
     let mut in_cust_geom_cmd: Option<String> = None;
     let mut cust_geom_guides: HashMap<String, f64> = HashMap::new();
     let mut cust_geom_text_rect: Option<GeomRect> = None;
+    let mut cust_geom_handles: Vec<AdjustHandle> = Vec::new();
+    let mut cust_geom_connection_sites: Vec<ConnectionSite> = Vec::new();
+    let mut current_xy_handle: Option<XYAdjustHandle> = None;
+    let mut current_polar_handle: Option<PolarAdjustHandle> = None;
+    let mut current_connection_site: Option<ConnectionSite> = None;
 
     // Text shadow and highlight parsing state
     let mut in_effect_lst = false;
@@ -803,6 +808,8 @@ pub fn parse_slide<R: Read + Seek>(
                         cust_geom_paths.clear();
                         cust_geom_guides.clear();
                         cust_geom_text_rect = None;
+                        cust_geom_handles.clear();
+                        cust_geom_connection_sites.clear();
                     }
                     // Path inside custGeom pathLst
                     "path" if in_cust_geom => {
@@ -871,6 +878,56 @@ pub fn parse_slide<R: Read + Seek>(
                             top,
                             right,
                             bottom,
+                        });
+                    }
+                    "ahXY" if in_cust_geom => {
+                        current_xy_handle = Some(XYAdjustHandle {
+                            gd_ref_x: xml_utils::attr_str(e, "gdRefX"),
+                            gd_ref_y: xml_utils::attr_str(e, "gdRefY"),
+                            min_x: xml_utils::attr_str(e, "minX")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            max_x: xml_utils::attr_str(e, "maxX")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            min_y: xml_utils::attr_str(e, "minY")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            max_y: xml_utils::attr_str(e, "maxY")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            pos_x: 0.0,
+                            pos_y: 0.0,
+                        });
+                    }
+                    "ahPolar" if in_cust_geom => {
+                        current_polar_handle = Some(PolarAdjustHandle {
+                            gd_ref_r: xml_utils::attr_str(e, "gdRefR"),
+                            gd_ref_ang: xml_utils::attr_str(e, "gdRefAng"),
+                            min_r: xml_utils::attr_str(e, "minR")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            max_r: xml_utils::attr_str(e, "maxR")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            min_ang: xml_utils::attr_str(e, "minAng")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            max_ang: xml_utils::attr_str(e, "maxAng")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides)),
+                            pos_x: 0.0,
+                            pos_y: 0.0,
+                        });
+                    }
+                    "cxn" if in_cust_geom => {
+                        current_connection_site = Some(ConnectionSite {
+                            x: 0.0,
+                            y: 0.0,
+                            angle: xml_utils::attr_str(e, "ang")
+                                .as_deref()
+                                .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                                .unwrap_or(0.0),
                         });
                     }
                     // close as Start element
@@ -1708,6 +1765,26 @@ pub fn parse_slide<R: Read + Seek>(
                             bottom,
                         });
                     }
+                    "pos" if in_cust_geom => {
+                        let x = xml_utils::attr_str(e, "x")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let y = xml_utils::attr_str(e, "y")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        if let Some(handle) = current_xy_handle.as_mut() {
+                            handle.pos_x = x;
+                            handle.pos_y = y;
+                        } else if let Some(handle) = current_polar_handle.as_mut() {
+                            handle.pos_x = x;
+                            handle.pos_y = y;
+                        } else if let Some(cxn) = current_connection_site.as_mut() {
+                            cxn.x = x;
+                            cxn.y = y;
+                        }
+                    }
                     // ── Custom geometry: self-closing close ──
                     "close" if in_cust_geom_path => {
                         cust_geom_cmds.push(PathCommand::Close);
@@ -2018,12 +2095,29 @@ pub fn parse_slide<R: Read + Seek>(
                             fill: cust_geom_path_fill.clone(),
                         });
                     }
+                    "ahXY" if current_xy_handle.is_some() => {
+                        if let Some(handle) = current_xy_handle.take() {
+                            cust_geom_handles.push(AdjustHandle::XY(handle));
+                        }
+                    }
+                    "ahPolar" if current_polar_handle.is_some() => {
+                        if let Some(handle) = current_polar_handle.take() {
+                            cust_geom_handles.push(AdjustHandle::Polar(handle));
+                        }
+                    }
+                    "cxn" if current_connection_site.is_some() => {
+                        if let Some(cxn) = current_connection_site.take() {
+                            cust_geom_connection_sites.push(cxn);
+                        }
+                    }
                     "custGeom" if in_cust_geom => {
                         in_cust_geom = false;
                         if let Some(sb) = current_shape.as_mut() {
                             sb.custom_geometry = Some(CustomGeometry {
                                 paths: std::mem::take(&mut cust_geom_paths),
                                 text_rect: cust_geom_text_rect.take(),
+                                adjust_handles: std::mem::take(&mut cust_geom_handles),
+                                connection_sites: std::mem::take(&mut cust_geom_connection_sites),
                             });
                         }
                         cust_geom_guides.clear();

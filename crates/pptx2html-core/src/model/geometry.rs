@@ -42,6 +42,8 @@ pub struct Size {
 pub struct CustomGeometry {
     pub paths: Vec<GeometryPath>,
     pub text_rect: Option<GeomRect>,
+    pub adjust_handles: Vec<AdjustHandle>,
+    pub connection_sites: Vec<ConnectionSite>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +52,43 @@ pub struct GeomRect {
     pub top: f64,
     pub right: f64,
     pub bottom: f64,
+}
+
+#[derive(Debug, Clone)]
+pub enum AdjustHandle {
+    XY(XYAdjustHandle),
+    Polar(PolarAdjustHandle),
+}
+
+#[derive(Debug, Clone)]
+pub struct XYAdjustHandle {
+    pub gd_ref_x: Option<String>,
+    pub gd_ref_y: Option<String>,
+    pub min_x: Option<f64>,
+    pub max_x: Option<f64>,
+    pub min_y: Option<f64>,
+    pub max_y: Option<f64>,
+    pub pos_x: f64,
+    pub pos_y: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct PolarAdjustHandle {
+    pub gd_ref_r: Option<String>,
+    pub gd_ref_ang: Option<String>,
+    pub min_r: Option<f64>,
+    pub max_r: Option<f64>,
+    pub min_ang: Option<f64>,
+    pub max_ang: Option<f64>,
+    pub pos_x: f64,
+    pub pos_y: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionSite {
+    pub x: f64,
+    pub y: f64,
+    pub angle: f64,
 }
 
 /// A single path inside `<a:pathLst>`
