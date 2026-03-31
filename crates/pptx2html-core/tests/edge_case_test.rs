@@ -2504,3 +2504,26 @@ fn test_wrapped_text_body_emits_overflow_wrap_anywhere() {
         "Expected wrapped text body to opt into emergency line breaking: {tb_chunk}"
     );
 }
+
+#[test]
+fn test_run_without_any_size_uses_hardcoded_default_font_size() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="DefaultSize"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Default size text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("font-size: 18.0pt"),
+        "Expected renderer hardcoded default font size of 18pt when no size is specified: {html}"
+    );
+}

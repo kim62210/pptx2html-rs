@@ -55,6 +55,8 @@ struct RunRenderDefaults<'a> {
     font_scale: Option<f64>,
 }
 
+const DEFAULT_FONT_SIZE_PT: f64 = 18.0;
+
 impl<'a> RenderCtx<'a> {
     fn resolve_color(&self, color: &Color) -> Option<ResolvedColor> {
         color.resolve(self.scheme, self.clr_map)
@@ -1929,7 +1931,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .style
             .font_size
             .or_else(|| defaults.para_def_rpr.and_then(|pd| pd.font_size))
-            .or_else(|| defaults.run_defaults.and_then(|rd| rd.font_size));
+            .or_else(|| defaults.run_defaults.and_then(|rd| rd.font_size))
+            .or(Some(DEFAULT_FONT_SIZE_PT));
         if let Some(sz) = font_size {
             let effective_sz = sz * defaults.font_scale.unwrap_or(1.0);
             push_sep(&mut run_style);
