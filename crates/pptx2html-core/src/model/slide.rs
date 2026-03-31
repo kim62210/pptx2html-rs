@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use super::color::Color;
 use super::geometry::{CustomGeometry, Position, Size};
 use super::hierarchy::{ClrMapOverride, ListStyle, PlaceholderInfo, ShapeStyleRef, SpacingValue};
-use super::style::{Alignment, Border, Fill, FontStyle, ShapeEffects, TextStyle};
+use super::style::{
+    Alignment, Border, Fill, FontStyle, ShapeEffects, StrikethroughType, TextStyle,
+    UnderlineType,
+};
 
 /// Slide
 #[derive(Debug, Clone)]
@@ -140,6 +143,8 @@ pub struct ParagraphDefRPr {
     pub font_size: Option<f64>,
     pub letter_spacing: Option<f64>,
     pub baseline: Option<i32>,
+    pub underline: Option<UnderlineType>,
+    pub strikethrough: Option<StrikethroughType>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub color: Option<Color>,

@@ -1971,11 +1971,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             run_style.push_str("font-style: italic");
         }
 
-        if let Some(ul_css) = run.style.underline.to_css() {
+        let underline: UnderlineType = if !matches!(run.style.underline, UnderlineType::None) {
+            run.style.underline.clone()
+        } else if let Some(u) = defaults.para_def_rpr.and_then(|pd| pd.underline.clone()) {
+            u.clone()
+        } else {
+            defaults
+                .run_defaults
+                .and_then(|rd| rd.underline.clone())
+                .unwrap_or_default()
+        };
+        if let Some(ul_css) = underline.to_css() {
             push_sep(&mut run_style);
             run_style.push_str(&ul_css);
         }
-        if let Some(st_css) = run.style.strikethrough.to_css() {
+        let strikethrough: StrikethroughType = if !matches!(run.style.strikethrough, StrikethroughType::None) {
+            run.style.strikethrough.clone()
+        } else if let Some(s) = defaults
+            .para_def_rpr
+            .and_then(|pd| pd.strikethrough.clone())
+        {
+            s.clone()
+        } else {
+            defaults
+                .run_defaults
+                .and_then(|rd| rd.strikethrough.clone())
+                .unwrap_or_default()
+        };
+        if let Some(st_css) = strikethrough.to_css() {
             push_sep(&mut run_style);
             run_style.push_str(st_css);
         }

@@ -429,6 +429,13 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
+                            if let Some(u) = xml_utils::attr_str(e, "u") {
+                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
+                            }
+                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
+                                pb.def_rpr_strikethrough =
+                                    Some(StrikethroughType::from_ooxml(&strike));
+                            }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
                             }
@@ -617,6 +624,13 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
+                            if let Some(u) = xml_utils::attr_str(e, "u") {
+                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
+                            }
+                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
+                                pb.def_rpr_strikethrough =
+                                    Some(StrikethroughType::from_ooxml(&strike));
                             }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
@@ -1080,6 +1094,13 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
+                            if let Some(u) = xml_utils::attr_str(e, "u") {
+                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
+                            }
+                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
+                                pb.def_rpr_strikethrough =
+                                    Some(StrikethroughType::from_ooxml(&strike));
+                            }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
                             }
@@ -1234,6 +1255,13 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
+                            if let Some(u) = xml_utils::attr_str(e, "u") {
+                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
+                            }
+                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
+                                pb.def_rpr_strikethrough =
+                                    Some(StrikethroughType::from_ooxml(&strike));
                             }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
@@ -3346,6 +3374,8 @@ struct ParagraphBuilder {
     def_rpr_font_size: Option<f64>,
     def_rpr_letter_spacing: Option<f64>,
     def_rpr_baseline: Option<i32>,
+    def_rpr_underline: Option<UnderlineType>,
+    def_rpr_strikethrough: Option<StrikethroughType>,
     def_rpr_bold: Option<bool>,
     def_rpr_italic: Option<bool>,
     def_rpr_color: Option<Color>,
@@ -3358,6 +3388,8 @@ impl ParagraphBuilder {
         let def_rpr = if self.def_rpr_font_size.is_some()
             || self.def_rpr_letter_spacing.is_some()
             || self.def_rpr_baseline.is_some()
+            || self.def_rpr_underline.is_some()
+            || self.def_rpr_strikethrough.is_some()
             || self.def_rpr_bold.is_some()
             || self.def_rpr_italic.is_some()
             || self.def_rpr_color.is_some()
@@ -3368,6 +3400,8 @@ impl ParagraphBuilder {
                 font_size: self.def_rpr_font_size,
                 letter_spacing: self.def_rpr_letter_spacing,
                 baseline: self.def_rpr_baseline,
+                underline: self.def_rpr_underline,
+                strikethrough: self.def_rpr_strikethrough,
                 bold: self.def_rpr_bold,
                 italic: self.def_rpr_italic,
                 color: self.def_rpr_color,

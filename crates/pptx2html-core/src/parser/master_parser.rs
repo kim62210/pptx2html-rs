@@ -867,6 +867,12 @@ pub fn parse_def_rpr_attrs(e: &quick_xml::events::BytesStart<'_>, rd: &mut RunDe
     if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
         rd.baseline = baseline.parse::<i32>().ok();
     }
+    if let Some(u) = xml_utils::attr_str(e, "u") {
+        rd.underline = Some(UnderlineType::from_ooxml(&u));
+    }
+    if let Some(strike) = xml_utils::attr_str(e, "strike") {
+        rd.strikethrough = Some(StrikethroughType::from_ooxml(&strike));
+    }
     if let Some(b) = xml_utils::attr_str(e, "b") {
         rd.bold = Some(b == "1" || b == "true");
     }
