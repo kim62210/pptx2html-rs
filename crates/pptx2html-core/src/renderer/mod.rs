@@ -674,11 +674,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let svg_h = if is_line_shape && h < 0.5 { 2.0 } else { h };
             // Generate path: for zero-dim lines, create centered line path directly
             let line_svg_override = if let Some((ax1, ay1, ax2, ay2)) = anchored_connector {
-                Some(format!(
-                    "M0,0 L{:.1},{:.1}",
-                    (ax2 - ax1).abs().max(0.0),
-                    (ay2 - ay1).abs().max(0.0)
-                ))
+                let aw = (ax2 - ax1).abs().max(0.0);
+                let ah = (ay2 - ay1).abs().max(0.0);
+                match preset_name {
+                    "bentConnector2" => Some(format!("M0,0 L0,{ah:.1} L{aw:.1},{ah:.1}")),
+                    "bentConnector3" => {
+                        let adj1 = adj_values.get("adj1").copied().unwrap_or(50000.0);
+                        let mid = ah * adj1 / 100_000.0;
+                        Some(format!("M0,0 L0,{mid:.1} L{aw:.1},{mid:.1} L{aw:.1},{ah:.1}"))
+                    }
+                    _ => Some(format!("M0,0 L{aw:.1},{ah:.1}")),
+                }
             } else if is_line_shape && (w < 0.5 || h < 0.5) {
                 if w < 0.5 {
                     Some(format!("M1.0,0 L1.0,{svg_h:.1}"))
