@@ -8,7 +8,7 @@ use zip::ZipArchive;
 use super::master_parser::{
     is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs, parse_placeholder_attrs,
 };
-use super::slide_parser::parse_line_end;
+use super::slide_parser::{parse_autofit_ratio, parse_line_end};
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::*;
@@ -164,12 +164,8 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     }
                     "normAutofit" if current_shape.is_some() && in_tx_body => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = xml_utils::attr_str(e, "fontScale")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
-                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
+                            let font_scale = parse_autofit_ratio(e, "fontScale");
+                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
                             sb.text_auto_fit = AutoFit::Normal {
                                 font_scale,
                                 line_spacing_reduction,
@@ -316,12 +312,8 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     }
                     "normAutofit" if current_shape.is_some() && in_tx_body => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = xml_utils::attr_str(e, "fontScale")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
-                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
+                            let font_scale = parse_autofit_ratio(e, "fontScale");
+                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
                             sb.text_auto_fit = AutoFit::Normal {
                                 font_scale,
                                 line_spacing_reduction,

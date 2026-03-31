@@ -2239,6 +2239,59 @@ fn test_norm_autofit_line_spacing_reduction() {
 }
 
 #[test]
+fn test_norm_autofit_font_scale_is_clamped_to_one() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="150000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Clamp scale</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("font-size: 18.0pt") && !html.contains("font-size: 27.0pt"),
+        "Expected fontScale >100% to clamp to 1.0 instead of enlarging text: {html}"
+    );
+}
+
+#[test]
+fn test_norm_autofit_line_spacing_reduction_is_clamped_to_one() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit lnSpcReduction="150000"/>
+        </a:bodyPr>
+        <a:p>
+          <a:pPr><a:lnSpc><a:spcPct val="150000"/></a:lnSpc></a:pPr>
+          <a:r><a:rPr sz="1800"/><a:t>Clamp spacing</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("line-height: 0.00"),
+        "Expected lnSpcReduction >100% to clamp at 1.0 before rendering: {html}"
+    );
+}
+
+#[test]
 fn test_norm_autofit_no_font_scale_no_overflow() {
     let slide = r#"
     <p:sp>

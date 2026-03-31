@@ -580,12 +580,8 @@ pub fn parse_slide<R: Read + Seek>(
                     // normAutofit — shrink text to fit (child of bodyPr)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = xml_utils::attr_str(e, "fontScale")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
-                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
+                            let font_scale = parse_autofit_ratio(e, "fontScale");
+                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
                             sb.text_auto_fit = AutoFit::Normal {
                                 font_scale,
                                 line_spacing_reduction,
@@ -1216,12 +1212,8 @@ pub fn parse_slide<R: Read + Seek>(
                     // normAutofit (Empty variant — self-closing tag)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = xml_utils::attr_str(e, "fontScale")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
-                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
-                                .and_then(|s| s.parse::<f64>().ok())
-                                .map(|v| v / 100000.0);
+                            let font_scale = parse_autofit_ratio(e, "fontScale");
+                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
                             sb.text_auto_fit = AutoFit::Normal {
                                 font_scale,
                                 line_spacing_reduction,
@@ -3064,6 +3056,15 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
             sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
         }
     }
+}
+
+pub(crate) fn parse_autofit_ratio(
+    e: &quick_xml::events::BytesStart<'_>,
+    attr: &str,
+) -> Option<f64> {
+    xml_utils::attr_str(e, attr)
+        .and_then(|s| s.parse::<f64>().ok())
+        .map(|v| (v / 100000.0).clamp(0.0, 1.0))
 }
 
 fn parse_shape_identity(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<ShapeBuilder>) {
