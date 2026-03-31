@@ -2590,8 +2590,59 @@ fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
                 0.0
             }
         }
+        "sin" => {
+            if tokens.len() >= 3 {
+                let scale = resolve(tokens[1]);
+                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
+                scale * angle.sin()
+            } else {
+                0.0
+            }
+        }
+        "cos" => {
+            if tokens.len() >= 3 {
+                let scale = resolve(tokens[1]);
+                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
+                scale * angle.cos()
+            } else {
+                0.0
+            }
+        }
+        "cat2" => {
+            if tokens.len() >= 4 {
+                let scale = resolve(tokens[1]);
+                let y = resolve(tokens[2]);
+                let z = resolve(tokens[3]);
+                scale * z.atan2(y).cos()
+            } else {
+                0.0
+            }
+        }
+        "sat2" => {
+            if tokens.len() >= 4 {
+                let scale = resolve(tokens[1]);
+                let y = resolve(tokens[2]);
+                let z = resolve(tokens[3]);
+                scale * z.atan2(y).sin()
+            } else {
+                0.0
+            }
+        }
+        "at2" => {
+            if tokens.len() >= 3 {
+                let x = resolve(tokens[1]);
+                let y = resolve(tokens[2]);
+                y.atan2(x).to_degrees() * 60_000.0
+            } else {
+                0.0
+            }
+        }
         _ => 0.0,
     }
+}
+
+fn ooxml_angle_to_radians(angle: f64) -> f64 {
+    (angle / 60_000.0).to_radians()
 }
 
 fn resolve_custom_geom_value(raw: &str, guides: &HashMap<String, f64>) -> f64 {

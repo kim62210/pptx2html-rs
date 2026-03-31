@@ -1549,6 +1549,144 @@ fn test_custgeom_abs_formula_normalizes_negative_value() {
     }
 }
 
+#[test]
+fn test_custgeom_sin_formula_scales_by_angle() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideSin"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="s1" fmla="sin 100000 5400000"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="s1" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!((x - 100000.0).abs() < 0.1, "expected sin result 100000, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_cos_formula_scales_by_angle() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideCos"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="c1" fmla="cos 100000 5400000"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="c1" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!(x.abs() < 0.1, "expected cos result near 0, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_cat2_and_sat2_formulas_drive_point() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideCatSat"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="x1" fmla="cat2 100 3 4"/>
+            <a:gd name="y1" fmla="sat2 100 3 4"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="x1" y="y1"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, y } => {
+                assert!((x - 60.0).abs() < 0.1, "expected cat2 result 60, got {x}");
+                assert!((y - 80.0).abs() < 0.1, "expected sat2 result 80, got {y}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_at2_formula_drives_arc_angle() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideAt2"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="ang1" fmla="at2 3 4"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="10800"/></a:moveTo>
+              <a:arcTo wR="5400" hR="5400" stAng="0" swAng="ang1"/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    let shape = &pres.slides[0].shapes[0];
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
+            PathCommand::ArcTo { swing_angle, .. } => {
+                assert!((swing_angle - 3_187_806.14).abs() < 1.0, "expected at2 result near 3187806.14, got {swing_angle}");
+            }
+            other => panic!("Expected ArcTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
 // ── Auto-fit (normAutofit / spAutoFit) ──
 
 #[test]
