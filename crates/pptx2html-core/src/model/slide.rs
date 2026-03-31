@@ -68,8 +68,16 @@ pub struct Shape {
     pub placeholder: Option<PlaceholderInfo>,
     pub style_ref: Option<ShapeStyleRef>,
     pub adjust_values: Option<HashMap<String, f64>>,
+    pub start_connection: Option<ConnectionRef>,
+    pub end_connection: Option<ConnectionRef>,
     pub vertical_text: Option<String>, // "vert", "vert270", "wordArtVert", etc.
     pub effects: ShapeEffects,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionRef {
+    pub shape_id: u32,
+    pub site_idx: usize,
 }
 
 /// Text body

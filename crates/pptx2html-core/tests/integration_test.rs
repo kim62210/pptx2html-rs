@@ -1290,6 +1290,105 @@ fn test_custgeom_rect_insets_text_body_padding() {
 }
 
 #[test]
+fn test_straight_connector_anchors_to_custom_geometry_connection_sites() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Source"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="0" y="0"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:cxnLst>
+            <a:cxn ang="0"><a:pos x="21600" y="10800"/></a:cxn>
+          </a:cxnLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="3" name="Target"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="2540000" y="0"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:cxnLst>
+            <a:cxn ang="18000000"><a:pos x="0" y="10800"/></a:cxn>
+          </a:cxnLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>
+    <p:cxnSp>
+      <p:nvCxnSpPr>
+        <p:cNvPr id="4" name="Connector"/>
+        <p:cNvCxnSpPr>
+          <a:stCxn id="2" idx="0"/>
+          <a:endCxn id="3" idx="0"/>
+        </p:cNvCxnSpPr>
+        <p:nvPr/>
+      </p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm>
+        <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+        <a:ln w="9525"><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("left: 133.3px; top: 65.7px; width: 133.3px; height: 2px"),
+        "anchored connector should span between connection sites: {html}"
+    );
+}
+
+#[test]
+fn test_connector_parses_shape_ids_and_connection_refs() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Source"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1270000" cy="1270000"/></a:xfrm><a:custGeom><a:cxnLst><a:cxn ang="0"><a:pos x="21600" y="10800"/></a:cxn></a:cxnLst><a:pathLst><a:path w="21600" h="21600"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="21600" y="21600"/></a:lnTo></a:path></a:pathLst></a:custGeom></p:spPr>
+    </p:sp>
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="3" name="Target"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr><a:xfrm><a:off x="2540000" y="0"/><a:ext cx="1270000" cy="1270000"/></a:xfrm><a:custGeom><a:cxnLst><a:cxn ang="18000000"><a:pos x="0" y="10800"/></a:cxn></a:cxnLst><a:pathLst><a:path w="21600" h="21600"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="21600" y="21600"/></a:lnTo></a:path></a:pathLst></a:custGeom></p:spPr>
+    </p:sp>
+    <p:cxnSp>
+      <p:nvCxnSpPr>
+        <p:cNvPr id="4" name="Connector"/>
+        <p:cNvCxnSpPr><a:stCxn id="2" idx="0"/><a:endCxn id="3" idx="0"/></p:cNvCxnSpPr>
+        <p:nvPr/>
+      </p:nvCxnSpPr>
+      <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm><a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom></p:spPr>
+    </p:cxnSp>"#;
+
+    let pres = parse_pptx(&fixtures::MinimalPptx::new(slide).build());
+    assert_eq!(pres.slides[0].shapes[0].id, 2);
+    assert_eq!(pres.slides[0].shapes[1].id, 3);
+    let connector = &pres.slides[0].shapes[2];
+    assert_eq!(connector.id, 4);
+    assert_eq!(connector.start_connection.as_ref().map(|c| c.shape_id), Some(2));
+    assert_eq!(connector.start_connection.as_ref().map(|c| c.site_idx), Some(0));
+    assert_eq!(connector.end_connection.as_ref().map(|c| c.shape_id), Some(3));
+    assert_eq!(connector.end_connection.as_ref().map(|c| c.site_idx), Some(0));
+}
+
+#[test]
 fn test_connector_border_color_srgb() {
     // Connector with inline srgbClr in <a:ln> — must parse border color
     let slide = r#"

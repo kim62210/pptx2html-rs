@@ -40,6 +40,7 @@ struct UnresolvedCollector {
 /// Rendering context -- propagates theme/ClrMap references and full presentation
 struct RenderCtx<'a> {
     pres: &'a Presentation,
+    slide: Option<&'a Slide>,
     scheme: Option<&'a ColorScheme>,
     clr_map: Option<&'a ClrMap>,
     embed_images: bool,
@@ -114,6 +115,7 @@ impl<'a> RenderCtx<'a> {
             .or(self.scheme);
         RenderCtx {
             pres: self.pres,
+            slide: self.slide,
             scheme,
             clr_map: slide_clr_map.or(self.clr_map),
             embed_images: self.embed_images,
@@ -160,6 +162,7 @@ impl HtmlRenderer {
 
         let ctx = RenderCtx {
             pres,
+            slide: None,
             scheme: pres.primary_theme().map(|t| &t.color_scheme),
             clr_map: if pres.clr_map.is_empty() {
                 None
@@ -279,6 +282,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         } else {
             ctx.for_slide(None, None)
         };
+        let slide_ctx = RenderCtx {
+            slide: Some(slide),
+            ..slide_ctx
+        };
 
         // Resolve background via inheritance
         let bg = inheritance::resolve_background(slide, layout, master);
@@ -347,10 +354,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     ) {
         // Resolve position/size via inheritance
         let (pos, size) = inheritance::resolve_position(shape, layout_match, master_match);
-        let x = pos.x.to_px();
-        let y = pos.y.to_px();
-        let w = size.width.to_px();
-        let h = size.height.to_px();
+        let mut x = pos.x.to_px();
+        let mut y = pos.y.to_px();
+        let mut w = size.width.to_px();
+        let mut h = size.height.to_px();
+
+        let anchored_connector = connector_anchor_geometry(shape, ctx);
+        if let Some((ax1, ay1, ax2, ay2)) = anchored_connector {
+            x = ax1.min(ax2);
+            y = ay1.min(ay2);
+            w = (ax2 - ax1).abs();
+            h = (ay2 - ay1).abs();
+        }
 
         let mut style_buf = String::with_capacity(256);
         let _ = write!(
@@ -658,7 +673,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let svg_w = if is_line_shape && w < 0.5 { 2.0 } else { w };
             let svg_h = if is_line_shape && h < 0.5 { 2.0 } else { h };
             // Generate path: for zero-dim lines, create centered line path directly
-            let line_svg_override = if is_line_shape && (w < 0.5 || h < 0.5) {
+            let line_svg_override = if let Some((ax1, ay1, ax2, ay2)) = anchored_connector {
+                Some(format!(
+                    "M0,0 L{:.1},{:.1}",
+                    (ax2 - ax1).abs().max(0.0),
+                    (ay2 - ay1).abs().max(0.0)
+                ))
+            } else if is_line_shape && (w < 0.5 || h < 0.5) {
                 if w < 0.5 {
                     Some(format!("M1.0,0 L1.0,{svg_h:.1}"))
                 } else {
@@ -1937,6 +1958,49 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
         }
     }
+}
+
+fn connector_anchor_geometry(shape: &Shape, ctx: &RenderCtx<'_>) -> Option<(f64, f64, f64, f64)> {
+    let slide = ctx.slide?;
+    let start = shape.start_connection.as_ref()?;
+    let end = shape.end_connection.as_ref()?;
+    let start_shape = slide.shapes.iter().find(|s| s.id == start.shape_id)?;
+    let end_shape = slide.shapes.iter().find(|s| s.id == end.shape_id)?;
+    let (sx, sy) = shape_connection_point(start_shape, start.site_idx)?;
+    let (ex, ey) = shape_connection_point(end_shape, end.site_idx)?;
+    Some((sx, sy, ex, ey))
+}
+
+fn shape_connection_point(shape: &Shape, site_idx: usize) -> Option<(f64, f64)> {
+    let ShapeType::CustomGeom(ref geom) = shape.shape_type else {
+        return None;
+    };
+    let site = geom.connection_sites.get(site_idx)?;
+    let path = geom.paths.iter().find(|p| p.width > 0.0 && p.height > 0.0)?;
+
+    let width_px = shape.size.width.to_px();
+    let height_px = shape.size.height.to_px();
+    let mut local_x = width_px * (site.x / path.width);
+    let mut local_y = height_px * (site.y / path.height);
+
+    if shape.flip_h {
+        local_x = width_px - local_x;
+    }
+    if shape.flip_v {
+        local_y = height_px - local_y;
+    }
+
+    if shape.rotation != 0.0 {
+        let cx = width_px / 2.0;
+        let cy = height_px / 2.0;
+        let rad = shape.rotation.to_radians();
+        let dx = local_x - cx;
+        let dy = local_y - cy;
+        local_x = cx + dx * rad.cos() - dy * rad.sin();
+        local_y = cy + dx * rad.sin() + dy * rad.cos();
+    }
+
+    Some((shape.position.x.to_px() + local_x, shape.position.y.to_px() + local_y))
 }
 
 fn custom_geom_text_rect_insets(shape: &Shape, width_px: f64, height_px: f64) -> (f64, f64, f64, f64) {

@@ -140,6 +140,19 @@ pub fn parse_slide<R: Read + Seek>(
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
                 depth.push(local.clone());
 
+                if local == "cNvPr" && current_shape.is_some() {
+                    parse_shape_identity(e, &mut current_shape);
+                    continue;
+                }
+                if local == "stCxn" && current_shape.as_ref().is_some_and(|s| s.is_connector) {
+                    parse_connector_ref(e, &mut current_shape, true);
+                    continue;
+                }
+                if local == "endCxn" && current_shape.as_ref().is_some_and(|s| s.is_connector) {
+                    parse_connector_ref(e, &mut current_shape, false);
+                    continue;
+                }
+
                 // Capture raw XML inside graphicData for unresolved content
                 if capturing_raw_xml && local != "graphicData" {
                     raw_xml_buf.push('<');
@@ -448,6 +461,7 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
+                    "cNvPr" if current_shape.is_some() => parse_shape_identity(e, &mut current_shape),
                     // Non-visual properties (contains placeholder)
                     "nvPr" if current_shape.is_some() => {
                         in_nv_pr = true;
@@ -856,6 +870,12 @@ pub fn parse_slide<R: Read + Seek>(
                             swing_angle: sw_ang,
                         });
                     }
+                    "stCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
+                        parse_connector_ref(e, &mut current_shape, true)
+                    }
+                    "endCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
+                        parse_connector_ref(e, &mut current_shape, false)
+                    }
                     "rect" if in_cust_geom => {
                         let left = xml_utils::attr_str(e, "l")
                             .as_deref()
@@ -879,6 +899,13 @@ pub fn parse_slide<R: Read + Seek>(
                             right,
                             bottom,
                         });
+                    }
+                    "cNvPr" if current_shape.is_some() => parse_shape_identity(e, &mut current_shape),
+                    "stCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
+                        parse_connector_ref(e, &mut current_shape, true)
+                    }
+                    "endCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
+                        parse_connector_ref(e, &mut current_shape, false)
                     }
                     "ahXY" if in_cust_geom => {
                         current_xy_handle = Some(XYAdjustHandle {
@@ -939,6 +966,19 @@ pub fn parse_slide<R: Read + Seek>(
             }
             Ok(Event::Empty(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
+
+                if local == "cNvPr" && current_shape.is_some() {
+                    parse_shape_identity(e, &mut current_shape);
+                    continue;
+                }
+                if local == "stCxn" && current_shape.as_ref().is_some_and(|s| s.is_connector) {
+                    parse_connector_ref(e, &mut current_shape, true);
+                    continue;
+                }
+                if local == "endCxn" && current_shape.as_ref().is_some_and(|s| s.is_connector) {
+                    parse_connector_ref(e, &mut current_shape, false);
+                    continue;
+                }
 
                 // Capture self-closing elements inside graphicData
                 if capturing_raw_xml {
@@ -2853,6 +2893,37 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
     }
 }
 
+fn parse_shape_identity(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<ShapeBuilder>) {
+    if let Some(sb) = shape.as_mut() {
+        sb.id = xml_utils::attr_str(e, "id")
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(0);
+        sb.name = xml_utils::attr_str(e, "name").unwrap_or_default();
+    }
+}
+
+fn parse_connector_ref(
+    e: &quick_xml::events::BytesStart<'_>,
+    shape: &mut Option<ShapeBuilder>,
+    is_start: bool,
+) {
+    if let Some(sb) = shape.as_mut() {
+        let connection = ConnectionRef {
+            shape_id: xml_utils::attr_str(e, "id")
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(0),
+            site_idx: xml_utils::attr_str(e, "idx")
+                .and_then(|v| v.parse::<usize>().ok())
+                .unwrap_or(0),
+        };
+        if is_start {
+            sb.start_connection = Some(connection);
+        } else {
+            sb.end_connection = Some(connection);
+        }
+    }
+}
+
 /// Parse pPr (paragraph properties)
 fn parse_para_props(e: &quick_xml::events::BytesStart<'_>, para: &mut Option<ParagraphBuilder>) {
     if let Some(pb) = para.as_mut() {
@@ -2916,6 +2987,8 @@ fn hyperlink_rel_id(e: &quick_xml::events::BytesStart<'_>) -> Option<String> {
 
 #[derive(Default)]
 struct ShapeBuilder {
+    id: u32,
+    name: String,
     position: Position,
     size: Size,
     rotation: f64,
@@ -2968,6 +3041,8 @@ struct ShapeBuilder {
     custom_geometry: Option<CustomGeometry>,
     // Connection shape (cxnSp) — defaults to line if no preset geometry
     is_connector: bool,
+    start_connection: Option<ConnectionRef>,
+    end_connection: Option<ConnectionRef>,
 }
 
 impl ShapeBuilder {
@@ -3056,6 +3131,8 @@ impl ShapeBuilder {
         };
 
         Shape {
+            id: self.id,
+            name: self.name,
             position: self.position,
             size: self.size,
             rotation: self.rotation,
@@ -3068,6 +3145,8 @@ impl ShapeBuilder {
             placeholder: self.placeholder,
             style_ref: self.style_ref,
             adjust_values,
+            start_connection: self.start_connection,
+            end_connection: self.end_connection,
             vertical_text: self.vertical_text,
             effects,
             ..Default::default()
