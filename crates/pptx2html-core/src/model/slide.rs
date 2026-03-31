@@ -4,8 +4,8 @@ use super::color::Color;
 use super::geometry::{CustomGeometry, Position, Size};
 use super::hierarchy::{ClrMapOverride, ListStyle, PlaceholderInfo, ShapeStyleRef, SpacingValue};
 use super::style::{
-    Alignment, Border, Fill, FontStyle, ShapeEffects, StrikethroughType, TextStyle,
-    UnderlineType,
+    Alignment, Border, Fill, FontStyle, ShapeEffects, StrikethroughType, TextCapitalization,
+    TextStyle, UnderlineType,
 };
 
 /// Slide
@@ -147,6 +147,7 @@ pub struct ParagraphDefRPr {
     pub font_size: Option<f64>,
     pub letter_spacing: Option<f64>,
     pub baseline: Option<i32>,
+    pub capitalization: Option<TextCapitalization>,
     pub underline: Option<UnderlineType>,
     pub strikethrough: Option<StrikethroughType>,
     pub bold: Option<bool>,

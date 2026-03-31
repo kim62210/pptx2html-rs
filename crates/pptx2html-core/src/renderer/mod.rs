@@ -2061,7 +2061,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             push_sep(&mut run_style);
             run_style.push_str(st_css);
         }
-        if let Some(cap_css) = run.style.capitalization.to_css() {
+        let capitalization = if !matches!(run.style.capitalization, TextCapitalization::None) {
+            run.style.capitalization.clone()
+        } else if let Some(cap) = defaults
+            .para_def_rpr
+            .and_then(|pd| pd.capitalization.clone())
+        {
+            cap
+        } else {
+            defaults
+                .run_defaults
+                .and_then(|rd| rd.capitalization.clone())
+                .unwrap_or_default()
+        };
+        if let Some(cap_css) = capitalization.to_css() {
             push_sep(&mut run_style);
             run_style.push_str(cap_css);
         }

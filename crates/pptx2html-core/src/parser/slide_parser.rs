@@ -429,6 +429,9 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
+                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
+                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                            }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
                             }
@@ -620,6 +623,9 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
+                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
+                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
@@ -1090,6 +1096,9 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
+                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
+                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                            }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
                             }
@@ -1247,6 +1256,9 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                             if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
+                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
+                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
@@ -3385,6 +3397,7 @@ struct ParagraphBuilder {
     def_rpr_font_size: Option<f64>,
     def_rpr_letter_spacing: Option<f64>,
     def_rpr_baseline: Option<i32>,
+    def_rpr_capitalization: Option<TextCapitalization>,
     def_rpr_underline: Option<UnderlineType>,
     def_rpr_strikethrough: Option<StrikethroughType>,
     def_rpr_bold: Option<bool>,
@@ -3399,6 +3412,7 @@ impl ParagraphBuilder {
         let def_rpr = if self.def_rpr_font_size.is_some()
             || self.def_rpr_letter_spacing.is_some()
             || self.def_rpr_baseline.is_some()
+            || self.def_rpr_capitalization.is_some()
             || self.def_rpr_underline.is_some()
             || self.def_rpr_strikethrough.is_some()
             || self.def_rpr_bold.is_some()
@@ -3411,6 +3425,7 @@ impl ParagraphBuilder {
                 font_size: self.def_rpr_font_size,
                 letter_spacing: self.def_rpr_letter_spacing,
                 baseline: self.def_rpr_baseline,
+                capitalization: self.def_rpr_capitalization,
                 underline: self.def_rpr_underline,
                 strikethrough: self.def_rpr_strikethrough,
                 bold: self.def_rpr_bold,

@@ -1,7 +1,8 @@
 use super::color::Color;
 use super::slide::Shape;
 use super::style::{
-    Alignment, Border, Fill, GlowEffect, OuterShadow, StrikethroughType, UnderlineType,
+    Alignment, Border, Fill, GlowEffect, OuterShadow, StrikethroughType, TextCapitalization,
+    UnderlineType,
 };
 
 /// Slide master -- contains background, shapes, text styles, ClrMap
@@ -71,6 +72,7 @@ pub struct RunDefaults {
     pub font_size: Option<f64>,
     pub letter_spacing: Option<f64>,
     pub baseline: Option<i32>,
+    pub capitalization: Option<TextCapitalization>,
     pub underline: Option<UnderlineType>,
     pub strikethrough: Option<StrikethroughType>,
     pub bold: Option<bool>,
