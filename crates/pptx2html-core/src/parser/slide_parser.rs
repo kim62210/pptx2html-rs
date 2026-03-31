@@ -2977,15 +2977,19 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
         // Inner margins (EMU → pt)
         if let Some(v) = xml_utils::attr_str(e, "lIns") {
             sb.text_margins.left = Emu::parse_emu(&v).to_pt();
+            sb.text_margin_left_explicit = true;
         }
         if let Some(v) = xml_utils::attr_str(e, "tIns") {
             sb.text_margins.top = Emu::parse_emu(&v).to_pt();
+            sb.text_margin_top_explicit = true;
         }
         if let Some(v) = xml_utils::attr_str(e, "rIns") {
             sb.text_margins.right = Emu::parse_emu(&v).to_pt();
+            sb.text_margin_right_explicit = true;
         }
         if let Some(v) = xml_utils::attr_str(e, "bIns") {
             sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
+            sb.text_margin_bottom_explicit = true;
         }
         // Word wrap
         if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
@@ -3126,6 +3130,10 @@ struct ShapeBuilder {
     text_vertical_align: VerticalAlign,
     text_vertical_align_explicit: bool,
     text_margins: TextMargins,
+    text_margin_top_explicit: bool,
+    text_margin_bottom_explicit: bool,
+    text_margin_left_explicit: bool,
+    text_margin_right_explicit: bool,
     text_word_wrap: bool,
     text_word_wrap_explicit: bool,
     text_auto_fit: AutoFit,
@@ -3206,6 +3214,10 @@ impl ShapeBuilder {
                 list_style: self.text_list_style,
                 vertical_align: self.text_vertical_align,
                 vertical_align_explicit: self.text_vertical_align_explicit,
+                margin_top_explicit: self.text_margin_top_explicit,
+                margin_bottom_explicit: self.text_margin_bottom_explicit,
+                margin_left_explicit: self.text_margin_left_explicit,
+                margin_right_explicit: self.text_margin_right_explicit,
                 word_wrap,
                 word_wrap_explicit: self.text_word_wrap_explicit,
                 auto_fit: self.text_auto_fit,

@@ -183,6 +183,22 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
                             }
+                            if let Some(v) = xml_utils::attr_str(e, "lIns") {
+                                sb.text_margins.left = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_left_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "tIns") {
+                                sb.text_margins.top = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_top_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "rIns") {
+                                sb.text_margins.right = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_right_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "bIns") {
+                                sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_bottom_explicit = true;
+                            }
                             if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
                                 sb.text_word_wrap = wrap != "none";
                                 sb.text_word_wrap_explicit = true;
@@ -319,6 +335,22 @@ pub fn parse_slide_master<R: Read + Seek>(
                             if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "lIns") {
+                                sb.text_margins.left = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_left_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "tIns") {
+                                sb.text_margins.top = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_top_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "rIns") {
+                                sb.text_margins.right = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_right_explicit = true;
+                            }
+                            if let Some(v) = xml_utils::attr_str(e, "bIns") {
+                                sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
+                                sb.text_margin_bottom_explicit = true;
                             }
                             if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
                                 sb.text_word_wrap = wrap != "none";
@@ -878,6 +910,11 @@ struct MasterShapeBuilder {
     list_style: Option<ListStyle>,
     text_vertical_align: VerticalAlign,
     text_vertical_align_explicit: bool,
+    text_margins: TextMargins,
+    text_margin_top_explicit: bool,
+    text_margin_bottom_explicit: bool,
+    text_margin_left_explicit: bool,
+    text_margin_right_explicit: bool,
     text_word_wrap: bool,
     text_word_wrap_explicit: bool,
     text_auto_fit: AutoFit,
@@ -898,6 +935,10 @@ impl MasterShapeBuilder {
             border: self.border,
             text_body: if self.list_style.is_some()
                 || self.text_vertical_align_explicit
+                || self.text_margin_top_explicit
+                || self.text_margin_bottom_explicit
+                || self.text_margin_left_explicit
+                || self.text_margin_right_explicit
                 || self.text_word_wrap_explicit
                 || !matches!(self.text_auto_fit, AutoFit::None)
             {
@@ -905,9 +946,14 @@ impl MasterShapeBuilder {
                     list_style: self.list_style,
                     vertical_align: self.text_vertical_align,
                     vertical_align_explicit: self.text_vertical_align_explicit,
+                    margin_top_explicit: self.text_margin_top_explicit,
+                    margin_bottom_explicit: self.text_margin_bottom_explicit,
+                    margin_left_explicit: self.text_margin_left_explicit,
+                    margin_right_explicit: self.text_margin_right_explicit,
                     word_wrap,
                     word_wrap_explicit: self.text_word_wrap_explicit,
                     auto_fit: self.text_auto_fit,
+                    margins: self.text_margins,
                     ..Default::default()
                 })
             } else {

@@ -1041,6 +1041,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let effective_vertical_align =
                 Self::resolve_text_vertical_align(text_body, layout_match, master_match);
             let effective_word_wrap = Self::resolve_text_word_wrap(text_body, layout_match, master_match);
+            let effective_margins = Self::resolve_text_margins(text_body, layout_match, master_match);
             let v_class = match effective_vertical_align {
                 VerticalAlign::Top => "v-top",
                 VerticalAlign::Middle => "v-middle",
@@ -1051,10 +1052,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(
                 tb_style,
                 "padding: {:.1}pt {:.1}pt {:.1}pt {:.1}pt",
-                text_body.margins.top + rect_insets.0,
-                text_body.margins.right + rect_insets.1,
-                text_body.margins.bottom + rect_insets.2,
-                text_body.margins.left + rect_insets.3,
+                effective_margins.top + rect_insets.0,
+                effective_margins.right + rect_insets.1,
+                effective_margins.bottom + rect_insets.2,
+                effective_margins.left + rect_insets.3,
             );
             // Text wrapping control
             if !effective_word_wrap {
@@ -1245,6 +1246,75 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             return word_wrap;
         }
         text_body.word_wrap
+    }
+
+    fn resolve_text_margins(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> TextMargins {
+        fn side(
+            own_explicit: bool,
+            own: f64,
+            layout_match: Option<&Shape>,
+            master_match: Option<&Shape>,
+            layout_explicit: fn(&TextBody) -> bool,
+            layout_value: fn(&TextBody) -> f64,
+        ) -> f64 {
+            if own_explicit {
+                return own;
+            }
+            if let Some(value) = layout_match
+                .and_then(|shape| shape.text_body.as_ref())
+                .filter(|tb| layout_explicit(tb))
+                .map(layout_value)
+            {
+                return value;
+            }
+            if let Some(value) = master_match
+                .and_then(|shape| shape.text_body.as_ref())
+                .filter(|tb| layout_explicit(tb))
+                .map(layout_value)
+            {
+                return value;
+            }
+            own
+        }
+
+        TextMargins {
+            top: side(
+                text_body.margin_top_explicit,
+                text_body.margins.top,
+                layout_match,
+                master_match,
+                |tb| tb.margin_top_explicit,
+                |tb| tb.margins.top,
+            ),
+            bottom: side(
+                text_body.margin_bottom_explicit,
+                text_body.margins.bottom,
+                layout_match,
+                master_match,
+                |tb| tb.margin_bottom_explicit,
+                |tb| tb.margins.bottom,
+            ),
+            left: side(
+                text_body.margin_left_explicit,
+                text_body.margins.left,
+                layout_match,
+                master_match,
+                |tb| tb.margin_left_explicit,
+                |tb| tb.margins.left,
+            ),
+            right: side(
+                text_body.margin_right_explicit,
+                text_body.margins.right,
+                layout_match,
+                master_match,
+                |tb| tb.margin_right_explicit,
+                |tb| tb.margins.right,
+            ),
+        }
     }
 
     /// Resolve fontRef from shape's <p:style> to a font-family name and optional color
