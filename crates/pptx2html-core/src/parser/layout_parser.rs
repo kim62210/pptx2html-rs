@@ -9,6 +9,7 @@ use super::master_parser::{
     is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs,
     parse_placeholder_attrs,
 };
+use super::slide_parser::parse_line_end;
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::*;
@@ -36,6 +37,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
     let mut in_ln_spc = false;
     let mut in_spc_bef = false;
     let mut in_spc_aft = false;
+    let mut in_ln = false;
 
     // Background parsing state
     let mut in_bg_pr = false;
@@ -167,6 +169,35 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     "nvPr" if current_shape.is_some() => {
                         in_nv_pr = true;
                     }
+                    "ln" if current_shape.is_some() && depth.iter().any(|d| d == "spPr") => {
+                        in_ln = true;
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.width = xml_utils::attr_str(e, "w")
+                                .map(|w| Emu::parse_emu(&w).to_pt())
+                                .unwrap_or(0.0);
+                            sb.border.cap = match xml_utils::attr_str(e, "cap").as_deref() {
+                                Some("rnd") => LineCap::Round,
+                                Some("flat") => LineCap::Flat,
+                                _ => LineCap::Square,
+                            };
+                            sb.border.compound =
+                                match xml_utils::attr_str(e, "cmpd").as_deref() {
+                                    Some("dbl") => CompoundLine::Double,
+                                    Some("thickThin") => CompoundLine::ThickThin,
+                                    Some("thinThick") => CompoundLine::ThinThick,
+                                    Some("tri") => CompoundLine::Triple,
+                                    _ => CompoundLine::Single,
+                                };
+                            sb.border.alignment =
+                                match xml_utils::attr_str(e, "algn").as_deref() {
+                                    Some("in") => LineAlignment::Inset,
+                                    _ => LineAlignment::Center,
+                                };
+                            sb.border.join = LineJoin::Miter;
+                            sb.border.miter_limit = None;
+                            sb.border.no_fill = false;
+                        }
+                    }
                     "clrMapOvr" => {
                         // Will check child elements
                     }
@@ -222,6 +253,20 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             } else {
                                 bg_solid_color = Some(color);
                             }
+                        }
+                    }
+                    "srgbClr" if in_ln => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(sb) = current_shape.as_mut()
+                        {
+                            sb.border.color = Color::rgb(val);
+                        }
+                    }
+                    "schemeClr" if in_ln => {
+                        if let Some(val) = xml_utils::attr_str(e, "val")
+                            && let Some(sb) = current_shape.as_mut()
+                        {
+                            sb.border.color = Color::theme(val);
                         }
                     }
                     // Placeholder in shape
@@ -321,6 +366,68 @@ pub fn parse_slide_layout<R: Read + Seek>(
                         }
                         layout.clr_map_ovr = Some(ClrMapOverride::Override(clr_map));
                     }
+                    "noFill" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.style = BorderStyle::None;
+                            sb.border.width = 0.0;
+                            sb.border.no_fill = true;
+                        }
+                    }
+                    "prstDash" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut()
+                            && let Some(val) = xml_utils::attr_str(e, "val")
+                        {
+                            sb.border.style = match val.as_str() {
+                                "solid" => BorderStyle::Solid,
+                                "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot"
+                                | "sysDashDot" | "sysDashDotDot" => BorderStyle::Dotted,
+                                _ => BorderStyle::Solid,
+                            };
+                            sb.border.dash_style = match val.as_str() {
+                                "solid" => DashStyle::Solid,
+                                "dash" => DashStyle::Dash,
+                                "dot" => DashStyle::Dot,
+                                "dashDot" => DashStyle::DashDot,
+                                "lgDash" => DashStyle::LongDash,
+                                "lgDashDot" => DashStyle::LongDashDot,
+                                "lgDashDotDot" => DashStyle::LongDashDotDot,
+                                "sysDash" => DashStyle::SystemDash,
+                                "sysDot" => DashStyle::SystemDot,
+                                "sysDashDot" => DashStyle::SystemDashDot,
+                                "sysDashDotDot" => DashStyle::SystemDashDotDot,
+                                _ => DashStyle::Solid,
+                            };
+                        }
+                    }
+                    "round" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.join = LineJoin::Round;
+                        }
+                    }
+                    "bevel" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.join = LineJoin::Bevel;
+                        }
+                    }
+                    "miter" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.join = LineJoin::Miter;
+                            sb.border.miter_limit = xml_utils::attr_str(e, "lim")
+                                .and_then(|v| v.parse::<f64>().ok())
+                                .map(|v| v / 100_000.0);
+                        }
+                    }
+                    "headEnd" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.head_end = parse_line_end(e);
+                        }
+                    }
+                    "tailEnd" if in_ln => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.border.tail_end = parse_line_end(e);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -363,6 +470,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     }
                     "spTree" => in_sp_tree = false,
                     "nvPr" => in_nv_pr = false,
+<<<<<<< HEAD
                     "txBody" => in_tx_body = false,
                     "lstStyle" => in_lst_style = false,
                     "defRPr" if in_def_rpr => {
@@ -385,6 +493,17 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             }
                         }
                         current_lvl = None;
+=======
+                    "ln" if in_ln => {
+                        in_ln = false;
+                        if let Some(sb) = current_shape.as_mut()
+                            && !sb.border.no_fill
+                            && sb.border.width > 0.0
+                            && matches!(sb.border.style, BorderStyle::None)
+                        {
+                            sb.border.style = BorderStyle::Solid;
+                        }
+>>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
                     }
                     "sp" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.take() {
@@ -408,7 +527,11 @@ struct LayoutShapeBuilder {
     position: Position,
     size: Size,
     placeholder: Option<PlaceholderInfo>,
+<<<<<<< HEAD
     list_style: Option<ListStyle>,
+=======
+    border: Border,
+>>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
 }
 
 impl LayoutShapeBuilder {
@@ -417,10 +540,14 @@ impl LayoutShapeBuilder {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
+<<<<<<< HEAD
             text_body: self.list_style.map(|list_style| TextBody {
                 list_style: Some(list_style),
                 ..Default::default()
             }),
+=======
+            border: self.border,
+>>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
             ..Default::default()
         }
     }

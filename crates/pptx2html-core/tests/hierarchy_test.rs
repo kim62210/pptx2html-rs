@@ -124,6 +124,138 @@ fn test_title_placeholder_inherits_position() {
     );
 }
 
+#[test]
+fn test_layout_placeholder_inherits_border_properties() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:ln w="19050">
+          <a:solidFill><a:srgbClr val="00AAFF"/></a:solidFill>
+          <a:prstDash val="dash"/>
+        </a:ln>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title 1"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="2400"/><a:t>Inherited Layout Border</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("outline: 1.5pt dashed #00AAFF"),
+        "Layout border should be inherited by placeholder shape: {html}"
+    );
+}
+
+#[test]
+fn test_master_placeholder_inherits_border_when_layout_missing_it() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+        <a:ln w="12700">
+          <a:solidFill><a:srgbClr val="AA5500"/></a:solidFill>
+          <a:prstDash val="dot"/>
+        </a:ln>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title 1"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="2400"/><a:t>Inherited Master Border</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("outline: 1.0pt dotted #AA5500"),
+        "Master border should be inherited when layout has no matching placeholder: {html}"
+    );
+}
+
 // ── Paragraph spacing tests ──
 
 #[test]
