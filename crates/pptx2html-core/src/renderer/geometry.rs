@@ -698,33 +698,50 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
     )
 }
 fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(12500.0);
-    let _a2 = adj.get("adj2").copied().unwrap_or(1142319.0);
-    let _a3 = adj.get("adj3").copied().unwrap_or(20457681.0);
-    let _a4 = adj.get("adj4").copied().unwrap_or(10800000.0);
-    let _a5 = adj.get("adj5").copied().unwrap_or(12500.0);
+    let a1 = adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
+    let a5 = adj.get("adj5").copied().unwrap_or(12500.0) / 100_000.0;
     let rx = w / 2.0;
     let ry = h / 2.0;
     let cx = rx;
-    let t = w.min(h) * 0.1;
-    let ax = cx + rx * 0.866;
-    let ay = ry - ry * 0.5;
+    let cy = ry;
+    let sweep = (std::f64::consts::PI * (1.25 + a1)).clamp(
+        std::f64::consts::FRAC_PI_2,
+        std::f64::consts::TAU - 0.2,
+    );
+    let start_angle = -std::f64::consts::FRAC_PI_2;
+    let end_angle = start_angle + sweep;
+    let t = (w.min(h) * (0.08 + a5 * 0.2)).min(w.min(h) * 0.35);
+    let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
+    let (ax, ay) = ellipse_point(cx, cy, rx, ry, end_angle);
+    let (isx, isy) = ellipse_point(cx, cy, (rx - t).max(0.1), (ry - t).max(0.1), start_angle);
+    let (iax, iay) = ellipse_point(cx, cy, (rx - t).max(0.1), (ry - t).max(0.1), end_angle);
+    let tx = -end_angle.sin();
+    let ty = end_angle.cos();
+    let head_len = t * 1.6;
+    let head_half = t * 0.8;
+    let tip_x = ax + end_angle.cos() * head_len;
+    let tip_y = ay + end_angle.sin() * head_len;
     format!(
-        "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {ax:.1},{ay:.1} L{tx1:.1},{ty1:.1} L{tx2:.1},{ty2:.1} L{tx3:.1},{ty3:.1} A{rxi:.1},{ryi:.1} 0 1,0 {cx:.1},{t:.1} Z",
-        cx = cx,
+        "M{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 {large_arc},1 {ax:.1},{ay:.1} L{b1x:.1},{b1y:.1} L{tip_x:.1},{tip_y:.1} L{b2x:.1},{b2y:.1} L{iax:.1},{iay:.1} A{rxi:.1},{ryi:.1} 0 {large_arc},0 {isx:.1},{isy:.1} Z",
+        sx = sx,
+        sy = sy,
         rx = rx,
         ry = ry,
+        large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 },
         ax = ax,
         ay = ay,
-        tx1 = ax + t,
-        ty1 = ay - t,
-        tx2 = ax + t * 1.5,
-        ty2 = ay + t * 0.5,
-        tx3 = ax,
-        ty3 = ay,
+        b1x = ax + tx * head_half,
+        b1y = ay + ty * head_half,
+        tip_x = tip_x,
+        tip_y = tip_y,
+        b2x = ax - tx * head_half,
+        b2y = ay - ty * head_half,
+        iax = iax,
+        iay = iay,
         rxi = (rx - t).max(0.1),
         ryi = (ry - t).max(0.1),
-        t = t
+        isx = isx,
+        isy = isy
     )
 }
 fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -1861,21 +1878,35 @@ fn no_smoking_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _adj1 = adj.get("adj1").copied().unwrap_or(10800000.0);
-    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let adj1 = adj.get("adj1").copied().unwrap_or(10800000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let (ro, ryo) = (w / 2.0, h / 2.0);
     let t = w.min(h) * a3;
     let (cx, cy) = (ro, ryo);
+    let start_angle = -std::f64::consts::FRAC_PI_2 + adj2 / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle = std::f64::consts::PI
+        + (adj1 - 10_800_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let (sx, sy) = ellipse_point(cx, cy, ro, ryo, start_angle);
+    let (ex, ey) = ellipse_point(cx, cy, ro, ryo, end_angle);
+    let ri = (ro - t).max(0.1);
+    let ryi = (ryo - t).max(0.1);
+    let (isx, isy) = ellipse_point(cx, cy, ri, ryi, start_angle);
+    let (iex, iey) = ellipse_point(cx, cy, ri, ryi, end_angle);
     format!(
-        "M{cx:.1},0 A{ro:.1},{ryo:.1} 0 1,1 0,{cy:.1} L{t:.1},{cy:.1} A{ri:.1},{ryi:.1} 0 1,0 {cx:.1},{t:.1} Z",
-        cx = cx,
-        cy = cy,
+        "M{sx:.1},{sy:.1} A{ro:.1},{ryo:.1} 0 1,1 {ex:.1},{ey:.1} L{iex:.1},{iey:.1} A{ri:.1},{ryi:.1} 0 1,0 {isx:.1},{isy:.1} Z",
+        sx = sx,
+        sy = sy,
         ro = ro,
         ryo = ryo,
-        t = t,
-        ri = (ro - t).max(0.1),
-        ryi = (ryo - t).max(0.1)
+        ex = ex,
+        ey = ey,
+        iex = iex,
+        iey = iey,
+        ri = ri,
+        ryi = ryi,
+        isx = isx,
+        isy = isy
     )
 }
 fn smiley_face_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -2012,17 +2043,24 @@ fn gear_path(w: f64, h: f64, teeth: u32) -> String {
     p
 }
 fn pie_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _adj1 = adj.get("adj1").copied().unwrap_or(0.0);
-    let _adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
+    let adj1 = adj.get("adj1").copied().unwrap_or(0.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
     let (cx, cy) = (rx, ry);
+    let start_angle = -std::f64::consts::FRAC_PI_2 + adj1 / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle = (adj2 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
+    let (ex, ey) = ellipse_point(cx, cy, rx, ry, end_angle);
     format!(
-        "M{cx:.1},{cy:.1} L{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {w:.1},{cy:.1} Z",
+        "M{cx:.1},{cy:.1} L{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 1,1 {ex:.1},{ey:.1} Z",
         cx = cx,
         cy = cy,
+        sx = sx,
+        sy = sy,
         rx = rx,
         ry = ry,
-        w = w
+        ex = ex,
+        ey = ey
     )
 }
 fn pie_wedge_path(w: f64, h: f64) -> String {
@@ -2033,15 +2071,27 @@ fn pie_wedge_path(w: f64, h: f64) -> String {
     )
 }
 fn arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _adj1 = adj.get("adj1").copied().unwrap_or(16200000.0);
-    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let adj1 = adj.get("adj1").copied().unwrap_or(16200000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
+    let (cx, cy) = (rx, ry);
+    let start_angle = std::f64::consts::PI + adj2 / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle = (adj1 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
+    let (ex, ey) = ellipse_point(cx, cy, rx, ry, end_angle);
     format!(
-        "M0,{ry:.1} A{rx:.1},{ry:.1} 0 0,1 {w:.1},{ry:.1}",
-        ry = ry,
+        "M{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 0,1 {ex:.1},{ey:.1}",
+        sx = sx,
+        sy = sy,
         rx = rx,
-        w = w
+        ry = ry,
+        ex = ex,
+        ey = ey
     )
+}
+
+fn ellipse_point(cx: f64, cy: f64, rx: f64, ry: f64, angle: f64) -> (f64, f64) {
+    (cx + rx * angle.cos(), cy + ry * angle.sin())
 }
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
@@ -3030,6 +3080,65 @@ mod tests {
                 "Missing: {name}"
             );
         }
+    }
+
+    #[test]
+    fn test_pie_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 5400000.0);
+        custom_adj.insert("adj2".to_string(), 10800000.0);
+
+        let default_path = preset_shape_svg("pie", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("pie", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "pie adj values should change the path");
+    }
+
+    #[test]
+    fn test_arc_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 5400000.0);
+        custom_adj.insert("adj2".to_string(), 10800000.0);
+
+        let default_path = preset_shape_svg("arc", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("arc", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "arc adj values should change the path");
+    }
+
+    #[test]
+    fn test_block_arc_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 5400000.0);
+        custom_adj.insert("adj2".to_string(), 16200000.0);
+        custom_adj.insert("adj3".to_string(), 40000.0);
+
+        let default_path = preset_shape_svg("blockArc", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("blockArc", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "blockArc adj values should change the path"
+        );
+    }
+
+    #[test]
+    fn test_circular_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 20000.0);
+        custom_adj.insert("adj5".to_string(), 25000.0);
+
+        let default_path = preset_shape_svg("circularArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("circularArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "circularArrow adj values should change the path"
+        );
     }
 }
 
