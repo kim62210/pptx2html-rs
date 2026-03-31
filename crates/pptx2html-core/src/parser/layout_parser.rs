@@ -470,7 +470,6 @@ pub fn parse_slide_layout<R: Read + Seek>(
                     }
                     "spTree" => in_sp_tree = false,
                     "nvPr" => in_nv_pr = false,
-<<<<<<< HEAD
                     "txBody" => in_tx_body = false,
                     "lstStyle" => in_lst_style = false,
                     "defRPr" if in_def_rpr => {
@@ -493,7 +492,7 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             }
                         }
                         current_lvl = None;
-=======
+                    }
                     "ln" if in_ln => {
                         in_ln = false;
                         if let Some(sb) = current_shape.as_mut()
@@ -503,7 +502,6 @@ pub fn parse_slide_layout<R: Read + Seek>(
                         {
                             sb.border.style = BorderStyle::Solid;
                         }
->>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
                     }
                     "sp" if current_shape.is_some() => {
                         if let Some(sb) = current_shape.take() {
@@ -527,11 +525,8 @@ struct LayoutShapeBuilder {
     position: Position,
     size: Size,
     placeholder: Option<PlaceholderInfo>,
-<<<<<<< HEAD
     list_style: Option<ListStyle>,
-=======
     border: Border,
->>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
 }
 
 impl LayoutShapeBuilder {
@@ -540,14 +535,11 @@ impl LayoutShapeBuilder {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
-<<<<<<< HEAD
+            border: self.border,
             text_body: self.list_style.map(|list_style| TextBody {
                 list_style: Some(list_style),
                 ..Default::default()
             }),
-=======
-            border: self.border,
->>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
             ..Default::default()
         }
     }

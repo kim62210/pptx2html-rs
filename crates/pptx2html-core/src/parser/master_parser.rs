@@ -785,11 +785,8 @@ struct MasterShapeBuilder {
     position: Position,
     size: Size,
     placeholder: Option<PlaceholderInfo>,
-<<<<<<< HEAD
     list_style: Option<ListStyle>,
-=======
     border: Border,
->>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
 }
 
 impl MasterShapeBuilder {
@@ -798,14 +795,11 @@ impl MasterShapeBuilder {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
-<<<<<<< HEAD
+            border: self.border,
             text_body: self.list_style.map(|list_style| TextBody {
                 list_style: Some(list_style),
                 ..Default::default()
             }),
-=======
-            border: self.border,
->>>>>>> 1800e17 (fix: inherit placeholder line styles from layouts and masters)
             ..Default::default()
         }
     }
