@@ -1316,6 +1316,301 @@ fn test_layout_lst_style_overrides_master_tx_styles() {
 }
 
 #[test]
+fn test_slide_lst_style_overrides_layout_master_and_default_text_style() {
+    let pres_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:defaultTextStyle>
+    <a:lvl1pPr>
+      <a:defRPr sz="1800"><a:solidFill><a:srgbClr val="222222"/></a:solidFill></a:defRPr>
+    </a:lvl1pPr>
+  </p:defaultTextStyle>
+</p:presentation>"#;
+
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr><a:defRPr sz="4400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:defRPr></a:lvl1pPr>
+    </p:titleStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle>
+          <a:lvl1pPr><a:defRPr sz="3000"><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:defRPr></a:lvl1pPr>
+        </a:lstStyle>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle>
+          <a:lvl1pPr><a:defRPr sz="2600"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:defRPr></a:lvl1pPr>
+        </a:lstStyle>
+        <a:p><a:r><a:t>Slide List Style Wins</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .with_presentation_xml(pres_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(html.contains("Slide List Style Wins"));
+    assert!(
+        html.contains("font-size: 26.0pt"),
+        "Expected slide lstStyle font size to win over layout/master/default text style: {html}"
+    );
+    assert!(
+        html.contains("color: #112233"),
+        "Expected slide lstStyle color to win over layout/master/default text style: {html}"
+    );
+    assert!(
+        !html.contains("font-size: 30.0pt")
+            && !html.contains("font-size: 44.0pt")
+            && !html.contains("font-size: 18.0pt")
+            && !html.contains("color: #00AA00")
+            && !html.contains("color: #FF0000")
+            && !html.contains("color: #222222"),
+        "Slide lstStyle should have highest priority among inherited text styles: {html}"
+    );
+}
+
+#[test]
+fn test_layout_body_pr_norm_autofit_is_inherited_by_slide_placeholder() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="50000"/>
+        </a:bodyPr>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="2000"/><a:t>Inherited autofit</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(html.contains("Inherited autofit"));
+    assert!(
+        html.contains("font-size: 10.0pt"),
+        "Expected layout bodyPr normAutofit to scale slide placeholder text to 10pt: {html}"
+    );
+}
+
+#[test]
+fn test_layout_body_pr_vertical_align_is_inherited_by_slide_placeholder() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr anchor="ctr"/>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="2000"/><a:t>Inherited vertical align</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(html.contains("Inherited vertical align"));
+    assert!(
+        html.contains("text-body v-middle"),
+        "Expected layout bodyPr anchor='ctr' to yield v-middle on slide placeholder: {html}"
+    );
+}
+
+#[test]
+fn test_layout_body_pr_wrap_none_is_inherited_by_slide_placeholder() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr wrap="none"/>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Inherited no wrap</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(html.contains("Inherited no wrap"));
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 250.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("white-space: nowrap"),
+        "Expected layout bodyPr wrap='none' to set nowrap on slide placeholder: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_placeholder_inheritance_provenance_is_collected() {
     let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"

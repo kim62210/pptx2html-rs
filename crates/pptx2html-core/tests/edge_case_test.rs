@@ -2103,6 +2103,34 @@ fn test_sp_auto_fit_parsed_as_shrink() {
 }
 
 #[test]
+fn test_no_autofit_is_distinct_from_unspecified_autofit() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Box"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr><a:noAutofit/></a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>No autofit</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let tb = pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .expect("text_body");
+
+    assert!(
+        !matches!(tb.auto_fit, AutoFit::None),
+        "Expected explicit <a:noAutofit/> to be distinct from unspecified AutoFit::None"
+    );
+}
+
+#[test]
 fn test_norm_autofit_renders_scaled_font_size() {
     let slide = r#"
     <p:sp>
@@ -2391,5 +2419,30 @@ fn test_no_wrap_sets_inline_white_space_nowrap() {
     assert!(
         tb_chunk.contains("white-space: nowrap"),
         "Expected inline nowrap style on text-body: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_default_body_pr_does_not_force_nowrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="DefaultWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Default wrap text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 250.min(html.len() - tb_start)];
+    assert!(
+        !tb_chunk.contains("white-space: nowrap"),
+        "Default bodyPr wrap should remain square/wrapped unless wrap='none' is explicit: {tb_chunk}"
     );
 }

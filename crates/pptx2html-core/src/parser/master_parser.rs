@@ -177,6 +177,42 @@ pub fn parse_slide_master<R: Read + Seek>(
                     "txBody" if current_shape.is_some() && !in_tx_styles => {
                         in_shape_tx_body = true;
                     }
+                    "bodyPr" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
+                                sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
+                                sb.text_vertical_align_explicit = true;
+                            }
+                            if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
+                                sb.text_word_wrap = wrap != "none";
+                                sb.text_word_wrap_explicit = true;
+                            }
+                        }
+                    }
+                    "normAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            let font_scale = xml_utils::attr_str(e, "fontScale")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            sb.text_auto_fit = AutoFit::Normal {
+                                font_scale,
+                                line_spacing_reduction,
+                            };
+                        }
+                    }
+                    "noAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::NoAutoFit;
+                        }
+                    }
+                    "spAutoFit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::Shrink;
+                        }
+                    }
                     "lstStyle" if in_shape_tx_body => {
                         in_shape_lst_style = true;
                     }
@@ -277,6 +313,42 @@ pub fn parse_slide_master<R: Read + Seek>(
                             bg_grad_angle = ang.parse::<f64>().unwrap_or(0.0) / 60_000.0;
                         }
                         bg_grad_type = GradientType::Linear;
+                    }
+                    "bodyPr" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
+                                sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
+                                sb.text_vertical_align_explicit = true;
+                            }
+                            if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
+                                sb.text_word_wrap = wrap != "none";
+                                sb.text_word_wrap_explicit = true;
+                            }
+                        }
+                    }
+                    "normAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            let font_scale = xml_utils::attr_str(e, "fontScale")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            let line_spacing_reduction = xml_utils::attr_str(e, "lnSpcReduction")
+                                .and_then(|s| s.parse::<f64>().ok())
+                                .map(|v| v / 100000.0);
+                            sb.text_auto_fit = AutoFit::Normal {
+                                font_scale,
+                                line_spacing_reduction,
+                            };
+                        }
+                    }
+                    "noAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::NoAutoFit;
+                        }
+                    }
+                    "spAutoFit" if current_shape.is_some() && in_shape_tx_body => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::Shrink;
+                        }
                     }
                     // Background gradient path type (Empty variant)
                     "path" if in_bg_grad_fill => {
@@ -804,20 +876,43 @@ struct MasterShapeBuilder {
     size: Size,
     placeholder: Option<PlaceholderInfo>,
     list_style: Option<ListStyle>,
+    text_vertical_align: VerticalAlign,
+    text_vertical_align_explicit: bool,
+    text_word_wrap: bool,
+    text_word_wrap_explicit: bool,
+    text_auto_fit: AutoFit,
     border: Border,
 }
 
 impl MasterShapeBuilder {
     fn build(self) -> Shape {
+        let word_wrap = if self.text_word_wrap_explicit {
+            self.text_word_wrap
+        } else {
+            true
+        };
         Shape {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
             border: self.border,
-            text_body: self.list_style.map(|list_style| TextBody {
-                list_style: Some(list_style),
-                ..Default::default()
-            }),
+            text_body: if self.list_style.is_some()
+                || self.text_vertical_align_explicit
+                || self.text_word_wrap_explicit
+                || !matches!(self.text_auto_fit, AutoFit::None)
+            {
+                Some(TextBody {
+                    list_style: self.list_style,
+                    vertical_align: self.text_vertical_align,
+                    vertical_align_explicit: self.text_vertical_align_explicit,
+                    word_wrap,
+                    word_wrap_explicit: self.text_word_wrap_explicit,
+                    auto_fit: self.text_auto_fit,
+                    ..Default::default()
+                })
+            } else {
+                None
+            },
             ..Default::default()
         }
     }

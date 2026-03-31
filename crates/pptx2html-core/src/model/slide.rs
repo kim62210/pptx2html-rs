@@ -81,14 +81,31 @@ pub struct ConnectionRef {
 }
 
 /// Text body
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TextBody {
     pub paragraphs: Vec<TextParagraph>,
     pub list_style: Option<ListStyle>,
     pub vertical_align: VerticalAlign,
+    pub vertical_align_explicit: bool,
     pub word_wrap: bool,
+    pub word_wrap_explicit: bool,
     pub auto_fit: AutoFit,
     pub margins: TextMargins,
+}
+
+impl Default for TextBody {
+    fn default() -> Self {
+        Self {
+            paragraphs: Vec::new(),
+            list_style: None,
+            vertical_align: VerticalAlign::Top,
+            vertical_align_explicit: false,
+            word_wrap: true,
+            word_wrap_explicit: false,
+            auto_fit: AutoFit::None,
+            margins: TextMargins::default(),
+        }
+    }
 }
 
 /// Text paragraph
@@ -244,6 +261,7 @@ impl VerticalAlign {
 pub enum AutoFit {
     #[default]
     None,
+    NoAutoFit,
     Normal {
         font_scale: Option<f64>,             // 0.0-1.0 (e.g., 0.625 for 62.5%)
         line_spacing_reduction: Option<f64>, // 0.0-1.0 (e.g., 0.2 for 20%)

@@ -6,6 +6,7 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 use zip::ZipArchive;
 
+use super::master_parser::{is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs};
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::*;
@@ -44,6 +45,15 @@ pub fn parse_slide<R: Read + Seek>(
 
     // Paragraph-level defRPr nesting state
     let mut in_para_def_rpr = false;
+
+    let mut in_shape_lst_style = false;
+    let mut in_shape_def_rpr = false;
+    let mut in_shape_ln_spc = false;
+    let mut in_shape_spc_bef = false;
+    let mut in_shape_spc_aft = false;
+    let mut current_shape_lvl: Option<usize> = None;
+    let mut current_shape_para_defaults: Option<ParagraphDefaults> = None;
+    let mut current_shape_run_defaults: Option<RunDefaults> = None;
 
     // Bullet color nesting state
     let mut in_bu_clr = false;
@@ -528,6 +538,31 @@ pub fn parse_slide<R: Read + Seek>(
                     "bodyPr" if current_shape.is_some() && !in_tc => {
                         parse_body_pr(e, &mut current_shape);
                     }
+                    "lstStyle" if current_shape.is_some() && !in_tc => {
+                        in_shape_lst_style = true;
+                    }
+                    s if in_shape_lst_style && is_lvl_ppr(s) => {
+                        let lvl = parse_lvl_index(s);
+                        current_shape_lvl = Some(lvl);
+                        let mut pd = ParagraphDefaults::default();
+                        parse_lvl_ppr_attrs(e, &mut pd);
+                        current_shape_para_defaults = Some(pd);
+                    }
+                    "defRPr" if in_shape_lst_style && current_shape_lvl.is_some() => {
+                        in_shape_def_rpr = true;
+                        let mut rd = RunDefaults::default();
+                        parse_def_rpr_attrs(e, &mut rd);
+                        current_shape_run_defaults = Some(rd);
+                    }
+                    "lnSpc" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_ln_spc = true;
+                    }
+                    "spcBef" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_spc_bef = true;
+                    }
+                    "spcAft" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                        in_shape_spc_aft = true;
+                    }
                     // normAutofit — shrink text to fit (child of bodyPr)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
@@ -541,6 +576,11 @@ pub fn parse_slide<R: Read + Seek>(
                                 font_scale,
                                 line_spacing_reduction,
                             };
+                        }
+                    }
+                    "noAutofit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::NoAutoFit;
                         }
                     }
                     // spAutoFit — resize shape to fit text (child of bodyPr)
@@ -1146,6 +1186,11 @@ pub fn parse_slide<R: Read + Seek>(
                             };
                         }
                     }
+                    "noAutofit" if current_shape.is_some() && !in_tc => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            sb.text_auto_fit = AutoFit::NoAutoFit;
+                        }
+                    }
                     // spAutoFit (Empty variant)
                     "spAutoFit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
@@ -1307,6 +1352,10 @@ pub fn parse_slide<R: Read + Seek>(
                             } else if in_cell_bu_clr {
                                 if let Some(pb) = cell_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
+                                }
+                            } else if in_shape_def_rpr {
+                                if let Some(rd) = current_shape_run_defaults.as_mut() {
+                                    rd.color = Some(color);
                                 }
                             } else if in_tc_pr {
                                 assign_tc_color(color, &tc_border_side, &mut current_cell);
@@ -1559,6 +1608,12 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_latin = Some(typeface);
                             }
+                        } else if in_shape_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                                && let Some(rd) = current_shape_run_defaults.as_mut()
+                            {
+                                rd.font_latin = Some(typeface);
+                            }
                         } else if in_para_def_rpr {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 let target = if in_tc {
@@ -1580,6 +1635,12 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(rb) = cell_run.as_mut() {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
                                 rb.font_ea = Some(typeface);
+                            }
+                        } else if in_shape_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                                && let Some(rd) = current_shape_run_defaults.as_mut()
+                            {
+                                rd.font_ea = Some(typeface);
                             }
                         } else if in_para_def_rpr {
                             if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
@@ -1604,18 +1665,30 @@ pub fn parse_slide<R: Read + Seek>(
                             && let Ok(val) = val_str.parse::<f64>()
                         {
                             let spacing = SpacingValue::Percent(val / 100_000.0);
-                            let target = if in_tc {
-                                &mut cell_paragraph
+                            if in_shape_lst_style {
+                                if let Some(pd) = current_shape_para_defaults.as_mut() {
+                                    if in_shape_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_shape_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_shape_spc_aft {
+                                        pd.space_after = Some(spacing);
+                                    }
+                                }
                             } else {
-                                &mut current_paragraph
-                            };
-                            if let Some(pb) = target.as_mut() {
-                                if in_ln_spc {
-                                    pb.line_spacing = Some(spacing);
-                                } else if in_spc_bef {
-                                    pb.space_before = Some(spacing);
-                                } else if in_spc_aft {
-                                    pb.space_after = Some(spacing);
+                                let target = if in_tc {
+                                    &mut cell_paragraph
+                                } else {
+                                    &mut current_paragraph
+                                };
+                                if let Some(pb) = target.as_mut() {
+                                    if in_ln_spc {
+                                        pb.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pb.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pb.space_after = Some(spacing);
+                                    }
                                 }
                             }
                         }
@@ -1626,18 +1699,30 @@ pub fn parse_slide<R: Read + Seek>(
                             && let Ok(val) = val_str.parse::<f64>()
                         {
                             let spacing = SpacingValue::Points(val / 100.0);
-                            let target = if in_tc {
-                                &mut cell_paragraph
+                            if in_shape_lst_style {
+                                if let Some(pd) = current_shape_para_defaults.as_mut() {
+                                    if in_shape_ln_spc {
+                                        pd.line_spacing = Some(spacing);
+                                    } else if in_shape_spc_bef {
+                                        pd.space_before = Some(spacing);
+                                    } else if in_shape_spc_aft {
+                                        pd.space_after = Some(spacing);
+                                    }
+                                }
                             } else {
-                                &mut current_paragraph
-                            };
-                            if let Some(pb) = target.as_mut() {
-                                if in_ln_spc {
-                                    pb.line_spacing = Some(spacing);
-                                } else if in_spc_bef {
-                                    pb.space_before = Some(spacing);
-                                } else if in_spc_aft {
-                                    pb.space_after = Some(spacing);
+                                let target = if in_tc {
+                                    &mut cell_paragraph
+                                } else {
+                                    &mut current_paragraph
+                                };
+                                if let Some(pb) = target.as_mut() {
+                                    if in_ln_spc {
+                                        pb.line_spacing = Some(spacing);
+                                    } else if in_spc_bef {
+                                        pb.space_before = Some(spacing);
+                                    } else if in_spc_aft {
+                                        pb.space_after = Some(spacing);
+                                    }
                                 }
                             }
                         }
@@ -2292,10 +2377,28 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                         in_para_def_rpr = false;
                     }
+                    "defRPr" if in_shape_def_rpr => {
+                        if let Some(pd) = current_shape_para_defaults.as_mut() {
+                            pd.def_run_props = current_shape_run_defaults.take();
+                        }
+                        in_shape_def_rpr = false;
+                    }
                     // End of paragraph spacing containers
+                    "lnSpc" if in_shape_ln_spc => in_shape_ln_spc = false,
                     "lnSpc" => in_ln_spc = false,
+                    "spcBef" if in_shape_spc_bef => in_shape_spc_bef = false,
                     "spcBef" => in_spc_bef = false,
+                    "spcAft" if in_shape_spc_aft => in_shape_spc_aft = false,
                     "spcAft" => in_spc_aft = false,
+                    "lstStyle" if in_shape_lst_style => in_shape_lst_style = false,
+                    s if in_shape_lst_style && is_lvl_ppr(s) => {
+                        if let (Some(pd), Some(lvl)) =
+                            (current_shape_para_defaults.take(), current_shape_lvl)
+                        {
+                            store_shape_level_defaults(&mut current_shape, lvl, pd);
+                        }
+                        current_shape_lvl = None;
+                    }
                     "buClr" => in_bu_clr = false,
                     "r" => {
                         if let (Some(pb), Some(rb)) = (&mut current_paragraph, current_run.take()) {
@@ -2869,6 +2972,7 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
         // Vertical alignment
         if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
             sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
+            sb.text_vertical_align_explicit = true;
         }
         // Inner margins (EMU → pt)
         if let Some(v) = xml_utils::attr_str(e, "lIns") {
@@ -2886,6 +2990,7 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
         // Word wrap
         if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
             sb.text_word_wrap = wrap != "none";
+            sb.text_word_wrap_explicit = true;
         }
         // Vertical text direction
         if let Some(vert) = xml_utils::attr_str(e, "vert")
@@ -3019,9 +3124,12 @@ struct ShapeBuilder {
     tail_end: Option<LineEnd>,
     // bodyPr
     text_vertical_align: VerticalAlign,
+    text_vertical_align_explicit: bool,
     text_margins: TextMargins,
     text_word_wrap: bool,
+    text_word_wrap_explicit: bool,
     text_auto_fit: AutoFit,
+    text_list_style: Option<ListStyle>,
     vertical_text: Option<String>,
     // Image cropping
     crop: Option<CropRect>,
@@ -3088,11 +3196,18 @@ impl ShapeBuilder {
         };
 
         let text_body = if self.has_text_body {
+            let word_wrap = if self.text_word_wrap_explicit {
+                self.text_word_wrap
+            } else {
+                true
+            };
             Some(TextBody {
                 paragraphs: self.paragraphs,
-                list_style: None,
+                list_style: self.text_list_style,
                 vertical_align: self.text_vertical_align,
-                word_wrap: self.text_word_wrap,
+                vertical_align_explicit: self.text_vertical_align_explicit,
+                word_wrap,
+                word_wrap_explicit: self.text_word_wrap_explicit,
                 auto_fit: self.text_auto_fit,
                 margins: self.text_margins,
             })
@@ -3154,6 +3269,16 @@ impl ShapeBuilder {
             effects,
             ..Default::default()
         }
+    }
+}
+
+fn store_shape_level_defaults(shape: &mut Option<ShapeBuilder>, lvl: usize, pd: ParagraphDefaults) {
+    if lvl >= 9 {
+        return;
+    }
+    if let Some(shape) = shape.as_mut() {
+        let list_style = shape.text_list_style.get_or_insert_with(ListStyle::default);
+        list_style.levels[lvl] = Some(pd);
     }
 }
 

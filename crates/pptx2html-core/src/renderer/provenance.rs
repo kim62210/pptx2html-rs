@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProvenanceSource {
     Slide,
+    SlideListStyle,
     LayoutPlaceholder,
     MasterPlaceholder,
     LayoutBackground,

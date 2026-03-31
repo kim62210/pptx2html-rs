@@ -1037,7 +1037,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Text
         if let Some(ref text_body) = shape.text_body {
-            let v_class = match text_body.vertical_align {
+            let effective_auto_fit = Self::resolve_text_auto_fit(text_body, layout_match, master_match);
+            let effective_vertical_align =
+                Self::resolve_text_vertical_align(text_body, layout_match, master_match);
+            let effective_word_wrap = Self::resolve_text_word_wrap(text_body, layout_match, master_match);
+            let v_class = match effective_vertical_align {
                 VerticalAlign::Top => "v-top",
                 VerticalAlign::Middle => "v-middle",
                 VerticalAlign::Bottom => "v-bottom",
@@ -1053,7 +1057,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 text_body.margins.left + rect_insets.3,
             );
             // Text wrapping control
-            if !text_body.word_wrap {
+            if !effective_word_wrap {
                 tb_style.push_str("; white-space: nowrap");
             }
             // Vertical text rendering
@@ -1074,7 +1078,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
             }
             // Extract auto-fit scaling factors
-            let (font_scale, ln_spc_reduction) = match &text_body.auto_fit {
+            let (font_scale, ln_spc_reduction) = match effective_auto_fit {
                 AutoFit::Normal {
                     font_scale,
                     line_spacing_reduction,
@@ -1127,7 +1131,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
     /// Build text style context from placeholder type and master txStyles / defaultTextStyle
     fn build_text_style_ctx<'a>(
-        shape: &Shape,
+        shape: &'a Shape,
         layout_match: Option<&'a Shape>,
         master_match: Option<&'a Shape>,
         ctx: &RenderCtx<'a>,
@@ -1138,6 +1142,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .as_ref()
             .and_then(|ph| ph.ph_type.as_ref());
         let source = placeholder::text_style_source(ph_type);
+
+        let slide_list_style = shape.text_body.as_ref().and_then(|tb| tb.list_style.as_ref());
 
         let layout_list_style = layout_match
             .and_then(|matched| matched.text_body.as_ref())
@@ -1158,11 +1164,87 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let default_list_style = ctx.pres.default_text_style.as_ref();
 
         TextStyleCtx {
+            slide_list_style,
             layout_list_style,
             master_placeholder_list_style,
             master_list_style,
             default_list_style,
         }
+    }
+
+    fn resolve_text_auto_fit<'a>(
+        text_body: &'a TextBody,
+        layout_match: Option<&'a Shape>,
+        master_match: Option<&'a Shape>,
+    ) -> &'a AutoFit {
+        if !matches!(text_body.auto_fit, AutoFit::None) {
+            return &text_body.auto_fit;
+        }
+        if let Some(auto_fit) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| &tb.auto_fit)
+            && !matches!(auto_fit, AutoFit::None)
+        {
+            return auto_fit;
+        }
+        if let Some(auto_fit) = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| &tb.auto_fit)
+            && !matches!(auto_fit, AutoFit::None)
+        {
+            return auto_fit;
+        }
+        &text_body.auto_fit
+    }
+
+    fn resolve_text_vertical_align(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> VerticalAlign {
+        if text_body.vertical_align_explicit {
+            return text_body.vertical_align.clone();
+        }
+        if let Some(vertical_align) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .filter(|tb| tb.vertical_align_explicit)
+            .map(|tb| tb.vertical_align.clone())
+        {
+            return vertical_align;
+        }
+        if let Some(vertical_align) = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .filter(|tb| tb.vertical_align_explicit)
+            .map(|tb| tb.vertical_align.clone())
+        {
+            return vertical_align;
+        }
+        text_body.vertical_align.clone()
+    }
+
+    fn resolve_text_word_wrap(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> bool {
+        if text_body.word_wrap_explicit {
+            return text_body.word_wrap;
+        }
+        if let Some(word_wrap) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .filter(|tb| tb.word_wrap_explicit)
+            .map(|tb| tb.word_wrap)
+        {
+            return word_wrap;
+        }
+        if let Some(word_wrap) = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .filter(|tb| tb.word_wrap_explicit)
+            .map(|tb| tb.word_wrap)
+        {
+            return word_wrap;
+        }
+        text_body.word_wrap
     }
 
     /// Resolve fontRef from shape's <p:style> to a font-family name and optional color
@@ -2187,6 +2269,7 @@ fn to_roman_uc(mut val: i32) -> String {
 /// Context for resolving inherited text styles from txStyles/defaultTextStyle
 #[derive(Default)]
 struct TextStyleCtx<'a> {
+    slide_list_style: Option<&'a ListStyle>,
     layout_list_style: Option<&'a ListStyle>,
     master_placeholder_list_style: Option<&'a ListStyle>,
     master_list_style: Option<&'a ListStyle>,
@@ -2195,6 +2278,9 @@ struct TextStyleCtx<'a> {
 
 impl<'a> TextStyleCtx<'a> {
     fn primary_source(&self) -> Option<ProvenanceSource> {
+        if self.slide_list_style.is_some() {
+            return Some(ProvenanceSource::SlideListStyle);
+        }
         if self.layout_list_style.is_some() {
             return Some(ProvenanceSource::LayoutListStyle);
         }
@@ -2211,10 +2297,15 @@ impl<'a> TextStyleCtx<'a> {
     }
 
     /// Get paragraph defaults for a given level (0-based).
-    /// Priority: master txStyles > defaultTextStyle
+    /// Priority: slide lstStyle > layout/master/template styles > defaultTextStyle
     fn get_level_defaults(&self, level: usize) -> Option<&'a ParagraphDefaults> {
         if level >= 9 {
             return None;
+        }
+        if let Some(ls) = self.slide_list_style
+            && let Some(ref pd) = ls.levels[level]
+        {
+            return Some(pd);
         }
         if let Some(ls) = self.layout_list_style
             && let Some(ref pd) = ls.levels[level]
