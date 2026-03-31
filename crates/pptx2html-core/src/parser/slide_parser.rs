@@ -2555,6 +2555,17 @@ fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
                 0.0
             }
         }
+        "?:" => {
+            if tokens.len() >= 4 {
+                if resolve(tokens[1]).abs() >= f64::EPSILON {
+                    resolve(tokens[2])
+                } else {
+                    resolve(tokens[3])
+                }
+            } else {
+                0.0
+            }
+        }
         _ => 0.0,
     }
 }
