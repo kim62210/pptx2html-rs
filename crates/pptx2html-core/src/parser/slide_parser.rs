@@ -2531,6 +2531,19 @@ fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
                 0.0
             }
         }
+        "+/" => {
+            if tokens.len() >= 4 {
+                let numerator = resolve(tokens[1]) + resolve(tokens[2]);
+                let denominator = resolve(tokens[3]);
+                if denominator.abs() < f64::EPSILON {
+                    0.0
+                } else {
+                    numerator / denominator
+                }
+            } else {
+                0.0
+            }
+        }
         "pin" => {
             if tokens.len() >= 4 {
                 let low = resolve(tokens[1]);
@@ -2633,6 +2646,15 @@ fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
                 let x = resolve(tokens[1]);
                 let y = resolve(tokens[2]);
                 y.atan2(x).to_degrees() * 60_000.0
+            } else {
+                0.0
+            }
+        }
+        "tan" => {
+            if tokens.len() >= 3 {
+                let scale = resolve(tokens[1]);
+                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
+                scale * angle.tan()
             } else {
                 0.0
             }
