@@ -1174,6 +1174,52 @@ fn test_custgeom_gd_val_drives_arc_attributes() {
 }
 
 #[test]
+fn test_custgeom_rect_uses_guide_values() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuidedRect"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="l1" fmla="val 5400"/>
+            <a:gd name="t1" fmla="val 2160"/>
+          </a:gdLst>
+          <a:rect l="l1" t="t1" r="16200" b="19440"/>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Rect text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            let rect = geom.text_rect.as_ref().expect("expected custom geometry text rect");
+            assert!((rect.left - 5400.0).abs() < 0.01, "expected left 5400, got {}", rect.left);
+            assert!((rect.top - 2160.0).abs() < 0.01, "expected top 2160, got {}", rect.top);
+            assert!((rect.right - 16200.0).abs() < 0.01, "expected right 16200, got {}", rect.right);
+            assert!((rect.bottom - 19440.0).abs() < 0.01, "expected bottom 19440, got {}", rect.bottom);
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
 fn test_custgeom_guide_plus_minus_formula_drives_point() {
     let slide = r#"
     <p:sp>

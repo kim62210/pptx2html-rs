@@ -89,6 +89,7 @@ pub fn parse_slide<R: Read + Seek>(
     let mut cust_geom_pts: Vec<(f64, f64)> = Vec::new();
     let mut in_cust_geom_cmd: Option<String> = None;
     let mut cust_geom_guides: HashMap<String, f64> = HashMap::new();
+    let mut cust_geom_text_rect: Option<GeomRect> = None;
 
     // Text shadow and highlight parsing state
     let mut in_effect_lst = false;
@@ -801,6 +802,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_cust_geom = true;
                         cust_geom_paths.clear();
                         cust_geom_guides.clear();
+                        cust_geom_text_rect = None;
                     }
                     // Path inside custGeom pathLst
                     "path" if in_cust_geom => {
@@ -845,6 +847,30 @@ pub fn parse_slide<R: Read + Seek>(
                             hr,
                             start_angle: st_ang,
                             swing_angle: sw_ang,
+                        });
+                    }
+                    "rect" if in_cust_geom => {
+                        let left = xml_utils::attr_str(e, "l")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let top = xml_utils::attr_str(e, "t")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let right = xml_utils::attr_str(e, "r")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let bottom = xml_utils::attr_str(e, "b")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        cust_geom_text_rect = Some(GeomRect {
+                            left,
+                            top,
+                            right,
+                            bottom,
                         });
                     }
                     // close as Start element
@@ -1658,6 +1684,30 @@ pub fn parse_slide<R: Read + Seek>(
                             swing_angle: sw_ang,
                         });
                     }
+                    "rect" if in_cust_geom => {
+                        let left = xml_utils::attr_str(e, "l")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let top = xml_utils::attr_str(e, "t")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let right = xml_utils::attr_str(e, "r")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        let bottom = xml_utils::attr_str(e, "b")
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
+                            .unwrap_or(0.0);
+                        cust_geom_text_rect = Some(GeomRect {
+                            left,
+                            top,
+                            right,
+                            bottom,
+                        });
+                    }
                     // ── Custom geometry: self-closing close ──
                     "close" if in_cust_geom_path => {
                         cust_geom_cmds.push(PathCommand::Close);
@@ -1973,9 +2023,11 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(sb) = current_shape.as_mut() {
                             sb.custom_geometry = Some(CustomGeometry {
                                 paths: std::mem::take(&mut cust_geom_paths),
+                                text_rect: cust_geom_text_rect.take(),
                             });
                         }
                         cust_geom_guides.clear();
+                        cust_geom_text_rect = None;
                     }
 
                     // ── New state end events ──

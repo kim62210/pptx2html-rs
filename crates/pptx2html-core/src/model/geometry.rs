@@ -41,6 +41,15 @@ pub struct Size {
 #[derive(Debug, Clone)]
 pub struct CustomGeometry {
     pub paths: Vec<GeometryPath>,
+    pub text_rect: Option<GeomRect>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GeomRect {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
 }
 
 /// A single path inside `<a:pathLst>`

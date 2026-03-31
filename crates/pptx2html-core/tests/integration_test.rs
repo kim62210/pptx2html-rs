@@ -1255,6 +1255,41 @@ fn test_default_square_cap_and_miter_limit_render_to_svg() {
 }
 
 #[test]
+fn test_custgeom_rect_insets_text_body_padding() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="RectInsetText"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1270000" cy="1270000"/></a:xfrm>
+        <a:custGeom>
+          <a:rect l="5400" t="2160" r="16200" b="19440"/>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="0"/></a:lnTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+              <a:lnTo><a:pt x="0" y="21600"/></a:lnTo>
+              <a:close/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Inset text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("padding: 10.0pt 25.0pt 10.0pt 25.0pt"),
+        "custom geometry rect should inset text body padding: {html}"
+    );
+}
+
+#[test]
 fn test_connector_border_color_srgb() {
     // Connector with inline srgbClr in <a:ln> — must parse border color
     let slide = r#"

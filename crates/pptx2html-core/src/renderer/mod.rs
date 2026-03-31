@@ -958,14 +958,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 VerticalAlign::Middle => "v-middle",
                 VerticalAlign::Bottom => "v-bottom",
             };
+            let rect_insets = custom_geom_text_rect_insets(shape, w, h);
             let mut tb_style = String::with_capacity(128);
             let _ = write!(
                 tb_style,
                 "padding: {:.1}pt {:.1}pt {:.1}pt {:.1}pt",
-                text_body.margins.top,
-                text_body.margins.right,
-                text_body.margins.bottom,
-                text_body.margins.left,
+                text_body.margins.top + rect_insets.0,
+                text_body.margins.right + rect_insets.1,
+                text_body.margins.bottom + rect_insets.2,
+                text_body.margins.left + rect_insets.3,
             );
             // Text wrapping control
             if !text_body.word_wrap {
@@ -1936,6 +1937,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
         }
     }
+}
+
+fn custom_geom_text_rect_insets(shape: &Shape, width_px: f64, height_px: f64) -> (f64, f64, f64, f64) {
+    let ShapeType::CustomGeom(ref geom) = shape.shape_type else {
+        return (0.0, 0.0, 0.0, 0.0);
+    };
+    let Some(ref rect) = geom.text_rect else {
+        return (0.0, 0.0, 0.0, 0.0);
+    };
+    let Some(path) = geom.paths.iter().find(|p| p.width > 0.0 && p.height > 0.0) else {
+        return (0.0, 0.0, 0.0, 0.0);
+    };
+
+    let left_px = width_px * (rect.left / path.width);
+    let top_px = height_px * (rect.top / path.height);
+    let right_px = width_px * ((path.width - rect.right) / path.width);
+    let bottom_px = height_px * ((path.height - rect.bottom) / path.height);
+
+    (
+        px_to_pt(top_px.max(0.0)),
+        px_to_pt(right_px.max(0.0)),
+        px_to_pt(bottom_px.max(0.0)),
+        px_to_pt(left_px.max(0.0)),
+    )
+}
+
+fn px_to_pt(px: f64) -> f64 {
+    px * 3.0 / 4.0
 }
 
 /// Append a "; " separator to the style buffer if it's non-empty

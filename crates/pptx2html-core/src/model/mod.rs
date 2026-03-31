@@ -10,8 +10,13 @@ pub mod slide;
 mod style;
 
 pub use color::{Color, ColorKind, ColorModifier, ResolvedColor};
-pub use capabilities::{CapabilityMatrix, CapabilityStage, FeatureCapability, FeatureFamily, SupportTier};
-pub use geometry::{CustomGeometry, Emu, GeometryPath, PathCommand, PathFill, Position, Size};
+pub use capabilities::{
+    CapabilityMatrix, CapabilityStage, FeatureCapability, FeatureFamily, SupportTier,
+};
+pub use geometry::{
+    AdjustHandle, ConnectionSite, CustomGeometry, Emu, GeomRect, GeometryPath, PathCommand,
+    PathFill, PolarAdjustHandle, Position, Size, XYAdjustHandle,
+};
 pub use hierarchy::{
     ClrMapOverride, EffectStyle, FmtScheme, FontRef, ListStyle, ParagraphDefaults,
     PlaceholderInfo, PlaceholderType, RunDefaults, ShapeStyleRef, SlideLayout, SlideMaster,
@@ -20,8 +25,9 @@ pub use hierarchy::{
 pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
     AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, CropRect, GroupData, ParagraphDefRPr,
-    PictureData, Shape, ShapeType, Slide, TableCell, TableData, TableRow, TextBody, TextMargins,
-    TextParagraph, TextRun, UnresolvedElement, UnresolvedType, UnsupportedData, VerticalAlign,
+    ConnectionRef, PictureData, Shape, ShapeType, Slide, TableCell, TableData, TableRow,
+    TextBody, TextMargins, TextParagraph, TextRun, UnresolvedElement, UnresolvedType,
+    UnsupportedData, VerticalAlign,
 };
 pub use style::{
     Alignment, Border, BorderStyle, CompoundLine, DashStyle, Fill, FontStyle, GlowEffect,
