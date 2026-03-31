@@ -1173,6 +1173,121 @@ fn test_custgeom_gd_val_drives_arc_attributes() {
     }
 }
 
+#[test]
+fn test_custgeom_guide_plus_minus_formula_drives_point() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuidePlusMinus"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="base" fmla="val 4000"/>
+            <a:gd name="sum1" fmla="+- base 5000 1000"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="sum1" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!((x - 8000.0).abs() < 0.01, "expected 8000 from +- formula, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_guide_mul_div_formula_drives_arc_radius() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideMulDiv"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="r1" fmla="*/ 10800 2 3"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="10800"/></a:moveTo>
+              <a:arcTo wR="r1" hR="r1" stAng="0" swAng="5400000"/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
+            PathCommand::ArcTo { wr, hr, .. } => {
+                assert!((wr - 7200.0).abs() < 0.01, "expected 7200 from */ formula, got {wr}");
+                assert!((hr - 7200.0).abs() < 0.01, "expected 7200 from */ formula, got {hr}");
+            }
+            other => panic!("Expected ArcTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_guide_pin_min_max_formulas_drive_point() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideClamp"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="a" fmla="val 3000"/>
+            <a:gd name="b" fmla="val 9000"/>
+            <a:gd name="m1" fmla="min a b"/>
+            <a:gd name="m2" fmla="max a b"/>
+            <a:gd name="clamped" fmla="pin 4000 m1 m2"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="clamped" y="m2"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, y } => {
+                assert!((x - 4000.0).abs() < 0.01, "expected pin result 4000, got {x}");
+                assert!((y - 9000.0).abs() < 0.01, "expected max result 9000, got {y}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
 // ── Auto-fit (normAutofit / spAutoFit) ──
 
 #[test]

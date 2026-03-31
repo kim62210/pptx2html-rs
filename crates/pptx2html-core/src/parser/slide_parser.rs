@@ -1613,7 +1613,7 @@ pub fn parse_slide<R: Read + Seek>(
                             xml_utils::attr_str(e, "name"),
                             xml_utils::attr_str(e, "fmla"),
                         ) {
-                            let val = parse_guide_formula_value(&fmla);
+                            let val = parse_guide_formula_value(&fmla, &cust_geom_guides);
                             if in_cust_geom {
                                 cust_geom_guides.insert(name, val);
                             } else if let Some(sb) = current_shape.as_mut() {
@@ -2501,10 +2501,62 @@ pub(crate) fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<Li
     })
 }
 
-fn parse_guide_formula_value(fmla: &str) -> f64 {
-    fmla.strip_prefix("val ")
-        .and_then(|v| v.parse::<f64>().ok())
-        .unwrap_or(0.0)
+fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
+    let tokens: Vec<&str> = fmla.split_whitespace().collect();
+    if tokens.is_empty() {
+        return 0.0;
+    }
+
+    let resolve = |token: &str| resolve_custom_geom_value(token, guides);
+
+    match tokens[0] {
+        "val" => tokens.get(1).map(|v| resolve(v)).unwrap_or(0.0),
+        "+-" => {
+            if tokens.len() >= 4 {
+                resolve(tokens[1]) + resolve(tokens[2]) - resolve(tokens[3])
+            } else {
+                0.0
+            }
+        }
+        "*/" => {
+            if tokens.len() >= 4 {
+                let numerator = resolve(tokens[1]) * resolve(tokens[2]);
+                let denominator = resolve(tokens[3]);
+                if denominator.abs() < f64::EPSILON {
+                    0.0
+                } else {
+                    numerator / denominator
+                }
+            } else {
+                0.0
+            }
+        }
+        "pin" => {
+            if tokens.len() >= 4 {
+                let low = resolve(tokens[1]);
+                let value = resolve(tokens[2]);
+                let high = resolve(tokens[3]);
+                value.max(low).min(high)
+            } else {
+                0.0
+            }
+        }
+        "min" => {
+            if tokens.len() >= 3 {
+                resolve(tokens[1]).min(resolve(tokens[2]))
+            } else {
+                0.0
+            }
+        }
+        "max" => {
+            if tokens.len() >= 3 {
+                resolve(tokens[1]).max(resolve(tokens[2]))
+            } else {
+                0.0
+            }
+        }
+        _ => 0.0,
+    }
 }
 
 fn resolve_custom_geom_value(raw: &str, guides: &HashMap<String, f64>) -> f64 {
