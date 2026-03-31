@@ -1058,6 +1058,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 effective_margins.bottom + rect_insets.2,
                 effective_margins.left + rect_insets.3,
             );
+            if matches!(effective_auto_fit, AutoFit::Shrink) {
+                tb_style.push_str("; height: auto; min-height: 100%");
+            }
             // Text wrapping control
             if !effective_word_wrap {
                 tb_style.push_str("; white-space: nowrap");

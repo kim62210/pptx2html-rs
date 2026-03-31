@@ -2103,6 +2103,31 @@ fn test_sp_auto_fit_parsed_as_shrink() {
 }
 
 #[test]
+fn test_sp_auto_fit_allows_text_body_to_grow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Grow"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr><a:spAutoFit/></a:bodyPr>
+        <a:p><a:r><a:t>Grow to fit text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 300.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("height: auto") && tb_chunk.contains("min-height: 100%"),
+        "Expected spAutoFit text-body to opt into growth-oriented sizing: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_no_autofit_is_distinct_from_unspecified_autofit() {
     let slide = r#"
     <p:sp>
