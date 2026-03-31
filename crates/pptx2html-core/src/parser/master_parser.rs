@@ -183,6 +183,12 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
                             }
+                            if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
+                                sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
+                            }
+                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
+                                sb.text_rotation_deg = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+                            }
                             if let Some(vert) = xml_utils::attr_str(e, "vert") {
                                 sb.vertical_text_explicit = true;
                                 sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
@@ -335,6 +341,12 @@ pub fn parse_slide_master<R: Read + Seek>(
                             if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
+                            }
+                            if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
+                                sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
+                            }
+                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
+                                sb.text_rotation_deg = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
                             }
                             if let Some(vert) = xml_utils::attr_str(e, "vert") {
                                 sb.vertical_text_explicit = true;
@@ -922,6 +934,8 @@ struct MasterShapeBuilder {
     list_style: Option<ListStyle>,
     text_vertical_align: VerticalAlign,
     text_vertical_align_explicit: bool,
+    text_anchor_center: bool,
+    text_rotation_deg: f64,
     text_margins: TextMargins,
     text_margin_top_explicit: bool,
     text_margin_bottom_explicit: bool,
@@ -951,6 +965,8 @@ impl MasterShapeBuilder {
             border: self.border,
             text_body: if self.list_style.is_some()
                 || self.text_vertical_align_explicit
+                || self.text_anchor_center
+                || self.text_rotation_deg != 0.0
                 || self.text_margin_top_explicit
                 || self.text_margin_bottom_explicit
                 || self.text_margin_left_explicit
@@ -962,6 +978,8 @@ impl MasterShapeBuilder {
                     list_style: self.list_style,
                     vertical_align: self.text_vertical_align,
                     vertical_align_explicit: self.text_vertical_align_explicit,
+                    anchor_center: self.text_anchor_center,
+                    text_rotation_deg: self.text_rotation_deg,
                     margin_top_explicit: self.text_margin_top_explicit,
                     margin_bottom_explicit: self.text_margin_bottom_explicit,
                     margin_left_explicit: self.text_margin_left_explicit,

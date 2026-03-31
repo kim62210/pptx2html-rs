@@ -1046,6 +1046,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 Self::resolve_text_vertical_align(text_body, layout_match, master_match);
             let effective_word_wrap = Self::resolve_text_word_wrap(text_body, layout_match, master_match);
             let effective_margins = Self::resolve_text_margins(text_body, layout_match, master_match);
+            let effective_anchor_center =
+                Self::resolve_text_anchor_center(text_body, layout_match, master_match);
+            let effective_text_rotation =
+                Self::resolve_text_rotation(text_body, layout_match, master_match);
             let effective_vertical_text = Self::resolve_vertical_text(shape, layout_match, master_match);
             let v_class = match effective_vertical_align {
                 VerticalAlign::Top => "v-top",
@@ -1088,8 +1092,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     _ => {}
                 }
             }
-            if text_body.text_rotation_deg != 0.0 {
-                let _ = write!(tb_style, "; transform: rotate({:.1}deg)", text_body.text_rotation_deg);
+            if effective_text_rotation != 0.0 {
+                let _ = write!(tb_style, "; transform: rotate({effective_text_rotation:.1}deg)");
             }
             // Extract auto-fit scaling factors
             let (font_scale, ln_spc_reduction) = match effective_auto_fit {
@@ -1122,7 +1126,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 html,
                 "<div class=\"text-body {v_class}{}{}\" style=\"{tb_style}\">",
                 if effective_word_wrap { "" } else { " nowrap" },
-                if text_body.anchor_center { " h-center" } else { "" }
+                if effective_anchor_center { " h-center" } else { "" }
             );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
@@ -1261,6 +1265,56 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             return word_wrap;
         }
         text_body.word_wrap
+    }
+
+    fn resolve_text_anchor_center(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> bool {
+        if text_body.anchor_center {
+            return true;
+        }
+        if let Some(anchor_center) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.anchor_center)
+            && anchor_center
+        {
+            return true;
+        }
+        if let Some(anchor_center) = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.anchor_center)
+            && anchor_center
+        {
+            return true;
+        }
+        false
+    }
+
+    fn resolve_text_rotation(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> f64 {
+        if text_body.text_rotation_deg != 0.0 {
+            return text_body.text_rotation_deg;
+        }
+        if let Some(rot) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.text_rotation_deg)
+            && rot != 0.0
+        {
+            return rot;
+        }
+        if let Some(rot) = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.text_rotation_deg)
+            && rot != 0.0
+        {
+            return rot;
+        }
+        0.0
     }
 
     fn resolve_vertical_text<'a>(

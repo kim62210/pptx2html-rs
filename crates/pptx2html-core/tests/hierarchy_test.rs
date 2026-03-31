@@ -1807,6 +1807,130 @@ fn test_slide_body_pr_horz_overrides_inherited_vertical_text() {
 }
 
 #[test]
+fn test_layout_body_pr_anchor_ctr_is_inherited_by_slide_placeholder() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr anchorCtr="1"/>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Inherited anchorCtr</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("class=\"text-body v-top h-center\""),
+        "Expected layout bodyPr anchorCtr to be inherited by slide placeholder: {html}"
+    );
+}
+
+#[test]
+fn test_layout_body_pr_rotation_is_inherited_by_slide_placeholder() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="457200" y="274638"/><a:ext cx="8229600" cy="1143000"/></a:xfrm>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr rot="5400000"/>
+      </p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Title 1"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Inherited rotation</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("transform: rotate(90.0deg)"),
+        "Expected layout bodyPr rotation to be inherited by slide placeholder: {html}"
+    );
+}
+
+#[test]
 fn test_placeholder_inheritance_provenance_is_collected() {
     let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
