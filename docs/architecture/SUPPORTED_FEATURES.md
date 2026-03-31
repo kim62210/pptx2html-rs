@@ -212,8 +212,8 @@
 | Italic (i) | planned | font-style |
 | Underline (u) | planned | text-decoration |
 | Strikethrough (strike) | planned | text-decoration |
-| Character spacing (spc) | planned | letter-spacing |
-| Baseline offset (super/sub) | planned | vertical-align + font-size |
+| Character spacing (spc) | implemented | letter-spacing (explicit + inherited defRPr defaults) |
+| Baseline offset (super/sub) | implemented | vertical-align + font-size (explicit + inherited defRPr defaults) |
 | Capitalization (cap) | planned | text-transform |
 | Kerning | deferred | font-kerning |
 | Text color (solidFill) | planned | color |
@@ -230,14 +230,14 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Text direction (vert) | planned | writing-mode |
-| Word wrap (wrap) | planned | word-wrap |
-| Text insets (lIns, tIns, rIns, bIns) | planned | padding |
-| Vertical anchor (anchor) | planned | flexbox align-items |
+| Text direction (vert) | implemented | writing-mode + placeholder inheritance, including explicit `horz` override |
+| Word wrap (wrap) | implemented | nowrap + wrapped fallback rules with placeholder inheritance |
+| Text insets (lIns, tIns, rIns, bIns) | implemented | padding with placeholder inheritance |
+| Vertical anchor (anchor) | implemented | flexbox alignment with placeholder inheritance |
 | Horizontal centering (anchorCtr) | planned | |
-| No autofit | planned | overflow: hidden |
-| Normal autofit (shrink text) | planned | Font scale algorithm |
-| Shape autofit (resize shape) | planned | |
+| No autofit | implemented | explicit state preserved for inheritance and downstream rendering |
+| Normal autofit (shrink text) | implemented | fontScale + lnSpcReduction |
+| Shape autofit (resize shape) | implemented | growth-oriented HTML sizing contract |
 | Text rotation | planned | CSS transform |
 | Multiple columns | deferred | CSS column-count |
 
@@ -252,10 +252,10 @@
 | Transform inheritance | planned | Position/size cascade |
 | Fill inheritance | planned | |
 | Line inheritance | planned | |
-| Text style inheritance (title) | planned | titleStyle cascade |
-| Text style inheritance (body) | planned | bodyStyle cascade |
-| Text style inheritance (other) | planned | otherStyle cascade |
-| Per-property independence | planned | Each prop cascades separately |
+| Text style inheritance (title) | implemented | titleStyle cascade |
+| Text style inheritance (body) | implemented | bodyStyle cascade |
+| Text style inheritance (other) | implemented | otherStyle cascade |
+| Per-property independence | implemented | Each property cascades independently, including bodyPr text properties |
 | Metadata placeholders (dt, ftr, sldNum) | planned | |
 
 ---

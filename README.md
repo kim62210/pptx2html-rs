@@ -16,7 +16,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Line ending markers (arrow, triangle, stealth, diamond, oval)
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
-- Text styling: bold, italic, underline, bullets, vertical text, shadows
+- Text styling: bold, italic, underline, strikethrough, super/subscript, bullets, vertical text, shadows, highlights, letter spacing
 - Graceful placeholders for unsupported content (SmartArt, OLE, Math)
 - Self-contained HTML output (single file, no external dependencies)
 
@@ -166,17 +166,17 @@ A drag-and-drop demo page is included at `crates/pptx2html-wasm/demo/index.html`
 
 ## Supported Features
 
-See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element mapping.
+See [docs/architecture/SUPPORTED_FEATURES.md](docs/architecture/SUPPORTED_FEATURES.md) for the full ECMA-376 element mapping.
 
 | Category | Highlights |
 |----------|-----------|
 | Shapes | 187 preset shapes with broad adjust value coverage + custom geometry SVG rendering, guide formulas, and text rectangles |
-| Text | Bold, italic, underline, strikethrough, super/subscript, vertical text, shadows, highlights |
+| Text | Bold, italic, underline, strikethrough, super/subscript, vertical text, highlights, shadows, letter spacing, default 18pt fallback |
 | Colors | RGB, theme, system, preset with 12 modifiers (tint, shade, lumMod, satMod, etc.) |
 | Fills | Solid, gradient, image, noFill; style references (fillRef/lnRef) |
 | Tables | Cell fill, borders, column/row spans, vertical merge |
 | Images | Base64 embedding, deterministic external assets under `images/slide-N/`, cropping, MIME auto-detection |
-| Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles |
+| Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles, and bodyPr property carry-over (wrap, margins, vertical anchor, vertical text, autofit) |
 | Bullets | Character and auto-numbered bullets with font, size, color |
 | Charts | Detection with preview image fallback |
 | Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
@@ -230,7 +230,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline diagram and module 
 ## Testing
 
 ```bash
-# Rust tests (261 tests)
+# Rust tests (296 tests)
 cargo test --workspace
 
 # Python tests (32 tests)
@@ -240,8 +240,8 @@ cd pptx2html-enhance && .venv/bin/python -m pytest tests/ -v
 cargo bench --package pptx2html-core
 ```
 
-293 tests total, all passing:
-- **Rust (261):** 105 unit tests (color, HSL, modifiers, placeholders, style refs, SVG geometry) + 148 integration tests (PPTX generation/parsing/rendering + edge cases + custom geometry guide formulas + metadata sideband) + 6 CLI tests + 2 doc-tests
+328 tests total, all passing:
+- **Rust (296):** 109 unit tests + 178 integration tests + 7 CLI tests + 2 doc-tests
 - **Python (32):** Enhancer pipeline, SmartArt/Math/Effects handlers, HTML patching (mock LLM provider)
 
 ## Autoresearch

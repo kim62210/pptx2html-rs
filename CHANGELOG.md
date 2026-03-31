@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Rendering — Text Fidelity
+- Preserve slide `lstStyle` precedence over layout, master, and default text styles
+- Inherit placeholder `bodyPr` properties across slide/layout/master chains
+  - auto-fit (`normAutofit`, `noAutofit`, `spAutoFit`)
+  - vertical anchor (`anchor`)
+  - wrap (`wrap`) with explicit no-wrap preservation
+  - text insets (`lIns`, `tIns`, `rIns`, `bIns`)
+  - vertical text direction (`vert`) including explicit `horz` override
+- Add wrapped text emergency line breaking via `overflow-wrap: anywhere`
+- Ensure explicit `wrap="none"` survives child run styling
+- Apply hardcoded 18pt default font size when no run size is specified
+- Inherit character spacing (`spc`) and baseline offset (`baseline`) from text defaults
+
+### Tests
+- Add hierarchy regressions for placeholder `bodyPr` inheritance (autofit, wrap, margins, vertical anchor, vertical text, baseline, letter spacing)
+- Add edge-case coverage for wrapped text line breaking, explicit nowrap preservation, `spAutoFit`, and hardcoded default font size
+
 ## [1.0.0] - 2026-03-30
 
 ### npm / WASM
