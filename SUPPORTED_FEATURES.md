@@ -43,8 +43,8 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Cross | `<a:prstGeom prst="plus">` | Supported |
 | Heart | `<a:prstGeom prst="heart">` | Supported |
 | Lightning Bolt | `<a:prstGeom prst="lightningBolt">` | Supported |
-| Custom Geometry | `<a:custGeom>` | Supported |
-| Adjust Values | `<a:avLst><a:gd>` | Supported |
+| Custom Geometry | `<a:custGeom>` | Partial |
+| Adjust Values | `<a:avLst><a:gd>` | Partial |
 
 ## Text
 
@@ -106,7 +106,7 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 
 | Feature | ECMA-376 Element | Status |
 |---------|-----------------|--------|
-| Shape outline | `<a:ln>` | Supported |
+| Shape outline | `<a:ln>` | Partial |
 | Line width | `<a:ln w="...">` | Supported |
 | Line color (RGB/theme) | `<a:ln><a:solidFill>` | Supported |
 | Dash style (solid/dash/dot/dashDot) | `<a:prstDash>` | Supported |
