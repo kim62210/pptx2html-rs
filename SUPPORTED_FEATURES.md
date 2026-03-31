@@ -169,7 +169,8 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Shape position / size | `<a:xfrm>` | Supported |
 | Shape rotation | `<a:xfrm rot="...">` | Supported |
 | Group shapes | `<p:grpSp>` | Supported |
-| Connectors | `<p:cxnSp>` | Supported |
+| Connectors | `<p:cxnSp>` | Partial |
+| Connector anchoring to custom geometry sites | `<a:stCxn>` / `<a:endCxn>` + `<a:cxnLst>` | Partial |
 | Placeholder matching | `<p:ph type="..." idx="...">` | Supported |
 | Slide → Layout inheritance | slide.rels → slideLayout | Supported |
 | Layout → Master inheritance | layout.rels → slideMaster | Supported |
