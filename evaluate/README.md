@@ -53,7 +53,7 @@ Use PowerPoint references before promoting any feature to `exact` in the capabil
 
 ```bash
 python create_golden_set.py
-# -> evaluate/golden_set/*.pptx  (50 files, 10 categories x 5)
+# -> evaluate/golden_set/*.pptx  (generated fixture set; category counts vary by coverage depth)
 ```
 
 Filter by category:
@@ -126,7 +126,7 @@ evaluate/
 
 | Category     | Count | Tests                                    |
 |--------------|-------|------------------------------------------|
-| basic_text   | 5     | Bold, italic, sizes, colors, alignment   |
+| basic_text   | 10    | Bold, italic, sizes, colors, alignment, font fallback, vertical text, narrow autofit, mixed fonts, bodyPr fidelity |
 | shapes       | 5     | Rectangles, ellipses, arrows, stars      |
 | theme_colors | 5     | 12 theme colors, tint, shade, dark bg    |
 | tables       | 5     | Headers, merge, colors, alignment, large |

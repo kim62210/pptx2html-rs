@@ -5,8 +5,8 @@ Generate golden PPTX test files for the fidelity evaluation pipeline.
 Creates 50 PPTX files across 10 categories (5 each) using python-pptx.
 Each file exercises specific PPTX features that pptx2html-rs must handle.
 
-Categories:
-    basic_text  - Text formatting: bold, italic, size, color, underline
+    Categories:
+        basic_text  - Text formatting: bold, italic, size, color, underline, bodyPr fidelity
     shapes      - Preset shapes: rectangle, ellipse, arrows, stars
     theme_colors - Theme color palette with tint/shade/lumMod modifiers
     tables      - Cell merge, borders, background colors, alignment
@@ -273,6 +273,39 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
     run4.font.size = Pt(24)
 
     path = output_dir / "basic_text_09_mixed_font_paragraph.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(1.0), Inches(1.0), Inches(2.0), Inches(4.8))
+    tf = txBox.text_frame
+    tf.word_wrap = False
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    body_pr = txBox.text_frame._txBody.bodyPr
+    body_pr.set("anchorCtr", "1")
+    body_pr.set("rot", "5400000")
+    body_pr.set("vert", "vert270")
+    body_pr.set("lIns", "0")
+    body_pr.set("rIns", "0")
+    body_pr.set("tIns", "0")
+    body_pr.set("bIns", "0")
+
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = "BodyPr fidelity"
+    run.font.size = Pt(18)
+    run.font.bold = True
+    run.font.underline = True
+    run.font.color.rgb = RGBColor(0x41, 0x72, 0xC4)
+
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = "NoWrapVerticalCenterRotate"
+    run2.font.size = Pt(16)
+
+    path = output_dir / "basic_text_10_bodypr_fidelity.pptx"
     prs.save(str(path))
     files.append(path)
 
