@@ -861,6 +861,9 @@ pub fn parse_def_rpr_attrs(e: &quick_xml::events::BytesStart<'_>, rd: &mut RunDe
     if let Some(sz) = xml_utils::attr_str(e, "sz") {
         rd.font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
     }
+    if let Some(spc) = xml_utils::attr_str(e, "spc") {
+        rd.letter_spacing = spc.parse::<f64>().ok().map(|v| v / 100.0);
+    }
     if let Some(b) = xml_utils::attr_str(e, "b") {
         rd.bold = Some(b == "1" || b == "true");
     }

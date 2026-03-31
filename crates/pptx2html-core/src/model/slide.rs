@@ -138,6 +138,7 @@ pub struct TextParagraph {
 #[derive(Debug, Clone, Default)]
 pub struct ParagraphDefRPr {
     pub font_size: Option<f64>,
+    pub letter_spacing: Option<f64>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub color: Option<Color>,

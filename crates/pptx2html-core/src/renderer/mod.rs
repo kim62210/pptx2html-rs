@@ -2019,7 +2019,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Letter spacing
-        if let Some(spacing) = run.style.letter_spacing {
+        let letter_spacing = run
+            .style
+            .letter_spacing
+            .or_else(|| defaults.para_def_rpr.and_then(|pd| pd.letter_spacing))
+            .or_else(|| defaults.run_defaults.and_then(|rd| rd.letter_spacing));
+        if let Some(spacing) = letter_spacing {
             push_sep(&mut run_style);
             let _ = write!(run_style, "letter-spacing: {spacing:.2}pt");
         }

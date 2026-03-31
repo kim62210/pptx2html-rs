@@ -67,6 +67,7 @@ pub struct ParagraphDefaults {
 #[derive(Debug, Clone, Default)]
 pub struct RunDefaults {
     pub font_size: Option<f64>,
+    pub letter_spacing: Option<f64>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub color: Option<Color>,
