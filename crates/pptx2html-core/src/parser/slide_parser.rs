@@ -426,6 +426,9 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_letter_spacing =
                                     spc.parse::<f64>().ok().map(|v| v / 100.0);
                             }
+                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
+                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
                             }
@@ -611,6 +614,9 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(spc) = xml_utils::attr_str(e, "spc") {
                                 pb.def_rpr_letter_spacing =
                                     spc.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
+                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
@@ -1071,6 +1077,9 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_letter_spacing =
                                     spc.parse::<f64>().ok().map(|v| v / 100.0);
                             }
+                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
+                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+                            }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
                             }
@@ -1222,6 +1231,9 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(spc) = xml_utils::attr_str(e, "spc") {
                                 pb.def_rpr_letter_spacing =
                                     spc.parse::<f64>().ok().map(|v| v / 100.0);
+                            }
+                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
+                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(b) = xml_utils::attr_str(e, "b") {
                                 pb.def_rpr_bold = Some(b == "1" || b == "true");
@@ -3330,6 +3342,7 @@ struct ParagraphBuilder {
     // Paragraph-level defRPr properties
     def_rpr_font_size: Option<f64>,
     def_rpr_letter_spacing: Option<f64>,
+    def_rpr_baseline: Option<i32>,
     def_rpr_bold: Option<bool>,
     def_rpr_italic: Option<bool>,
     def_rpr_color: Option<Color>,
@@ -3341,6 +3354,7 @@ impl ParagraphBuilder {
     fn build(self) -> TextParagraph {
         let def_rpr = if self.def_rpr_font_size.is_some()
             || self.def_rpr_letter_spacing.is_some()
+            || self.def_rpr_baseline.is_some()
             || self.def_rpr_bold.is_some()
             || self.def_rpr_italic.is_some()
             || self.def_rpr_color.is_some()
@@ -3350,6 +3364,7 @@ impl ParagraphBuilder {
             Some(ParagraphDefRPr {
                 font_size: self.def_rpr_font_size,
                 letter_spacing: self.def_rpr_letter_spacing,
+                baseline: self.def_rpr_baseline,
                 bold: self.def_rpr_bold,
                 italic: self.def_rpr_italic,
                 color: self.def_rpr_color,

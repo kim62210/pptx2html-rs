@@ -2004,7 +2004,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Superscript/subscript -- use actual OOXML baseline percentage
         // baseline is in thousandths of percent (e.g., 30000 = 30%)
-        if let Some(baseline) = run.style.baseline
+        let baseline = run
+            .style
+            .baseline
+            .or_else(|| defaults.para_def_rpr.and_then(|pd| pd.baseline))
+            .or_else(|| defaults.run_defaults.and_then(|rd| rd.baseline));
+        if let Some(baseline) = baseline
             && baseline != 0
         {
             let pct = baseline as f64 / 1000.0;
