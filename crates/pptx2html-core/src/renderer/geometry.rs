@@ -825,7 +825,7 @@ fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         cx = cx,
         xm = xm,
         xr2 = xr2,
-        rx2 = rx - s,
+        rx2 = (rx - s).max(0.1),
         ry2 = (ry - s).max(0.1),
         xl2 = xl2
     )
@@ -3395,6 +3395,24 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "mathNotEqual adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_uturn_arrow_extreme_adj_keeps_arc_radii_non_negative() {
+        let mut extreme_adj = HashMap::new();
+        extreme_adj.insert("adj1".to_string(), 90000.0);
+        extreme_adj.insert("adj2".to_string(), 90000.0);
+
+        let path = preset_shape_svg("uturnArrow", 120.0, 100.0, &extreme_adj).unwrap();
+
+        assert!(
+            !path.contains("A-"),
+            "uturnArrow should not emit negative arc radii under extreme adj values: {path}"
+        );
+        assert!(
+            !path.contains("NaN") && !path.contains("inf"),
+            "uturnArrow should keep SVG path numeric under extreme adj values: {path}"
         );
     }
 }
