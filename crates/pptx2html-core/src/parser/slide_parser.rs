@@ -471,16 +471,25 @@ pub fn parse_slide<R: Read + Seek>(
                             if let Some(w) = xml_utils::attr_str(e, "w") {
                                 sb.border_width = Emu::parse_emu(&w).to_pt();
                             } else {
-                                // OOXML default: <a:ln> without w= means 12700 EMU = 1pt
-                                sb.border_width = 1.0;
+                                sb.border_width = 0.0;
                             }
-                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                sb.border_cap = match cap.as_str() {
-                                    "sq" => LineCap::Square,
-                                    "rnd" => LineCap::Round,
-                                    _ => LineCap::Flat,
+                            sb.border_cap = match xml_utils::attr_str(e, "cap").as_deref() {
+                                Some("rnd") => LineCap::Round,
+                                Some("flat") => LineCap::Flat,
+                                _ => LineCap::Square,
+                            };
+                            sb.border_compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
+                                Some("dbl") => CompoundLine::Double,
+                                Some("thickThin") => CompoundLine::ThickThin,
+                                Some("thinThick") => CompoundLine::ThinThick,
+                                Some("tri") => CompoundLine::Triple,
+                                _ => CompoundLine::Single,
+                            };
+                            sb.border_alignment =
+                                match xml_utils::attr_str(e, "algn").as_deref() {
+                                    Some("in") => LineAlignment::Inset,
+                                    _ => LineAlignment::Center,
                                 };
-                            }
                         }
                     }
                     // Line/border inside table cell border
@@ -1099,6 +1108,9 @@ pub fn parse_slide<R: Read + Seek>(
                     "miter" if in_ln => {
                         if let Some(sb) = &mut current_shape {
                             sb.border_join = LineJoin::Miter;
+                            sb.miter_limit = xml_utils::attr_str(e, "lim")
+                                .and_then(|v| v.parse::<f64>().ok())
+                                .map(|v| v / 100_000.0);
                         }
                     }
                     // Line ending: head arrow (<a:headEnd>)
@@ -2452,7 +2464,7 @@ fn assign_style_ref_no_color(ref_kind: &str, idx_str: &str, builder: &mut Option
 }
 
 /// Parse <a:headEnd> or <a:tailEnd> attributes into a LineEnd
-fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<LineEnd> {
+pub(crate) fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<LineEnd> {
     let end_type = match xml_utils::attr_str(e, "type").as_deref() {
         Some("arrow") => LineEndType::Arrow,
         Some("triangle") => LineEndType::Triangle,
@@ -2594,7 +2606,10 @@ struct ShapeBuilder {
     border_no_fill: bool,
     dash_style: DashStyle,
     border_cap: LineCap,
+    border_compound: CompoundLine,
+    border_alignment: LineAlignment,
     border_join: LineJoin,
+    miter_limit: Option<f64>,
     head_end: Option<LineEnd>,
     tail_end: Option<LineEnd>,
     // bodyPr
@@ -2691,7 +2706,10 @@ impl ShapeBuilder {
             },
             dash_style: self.dash_style,
             cap: self.border_cap,
+            compound: self.border_compound,
+            alignment: self.border_alignment,
             join: self.border_join,
+            miter_limit: self.miter_limit,
             head_end: self.head_end,
             tail_end: self.tail_end,
             no_fill: self.border_no_fill,

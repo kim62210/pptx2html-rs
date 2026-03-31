@@ -9,7 +9,10 @@ use crate::ProvenanceSource;
 use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaster};
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
-use crate::model::{Border, Color, DashStyle, Fill, LineCap, LineJoin, Position, Size};
+use crate::model::{
+    Border, Color, CompoundLine, DashStyle, Fill, LineAlignment, LineCap, LineJoin, Position,
+    Size,
+};
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
 pub fn resolve_background(
@@ -226,10 +229,23 @@ pub fn resolve_border_with_theme(
         {
             resolved.cap = shape.border.cap.clone();
         }
+        if matches!(resolved.compound, CompoundLine::Single)
+            && !matches!(shape.border.compound, CompoundLine::Single)
+        {
+            resolved.compound = shape.border.compound.clone();
+        }
+        if matches!(resolved.alignment, LineAlignment::Center)
+            && !matches!(shape.border.alignment, LineAlignment::Center)
+        {
+            resolved.alignment = shape.border.alignment.clone();
+        }
         if matches!(resolved.join, LineJoin::Miter)
             && !matches!(shape.border.join, LineJoin::Miter)
         {
             resolved.join = shape.border.join.clone();
+        }
+        if resolved.miter_limit.is_none() && shape.border.miter_limit.is_some() {
+            resolved.miter_limit = shape.border.miter_limit;
         }
         return resolved;
     }
@@ -269,7 +285,10 @@ fn has_border_properties(border: &Border) -> bool {
         || border.tail_end.is_some()
         || !matches!(border.dash_style, DashStyle::Solid)
         || !matches!(border.cap, LineCap::Flat)
+        || !matches!(border.compound, CompoundLine::Single)
+        || !matches!(border.alignment, LineAlignment::Center)
         || !matches!(border.join, LineJoin::Miter)
+        || border.miter_limit.is_some()
 }
 
 /// Resolve effective position/size for a placeholder shape.

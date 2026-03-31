@@ -275,7 +275,10 @@ pub struct Border {
     pub style: BorderStyle,
     pub dash_style: DashStyle,
     pub cap: LineCap,
+    pub compound: CompoundLine,
+    pub alignment: LineAlignment,
     pub join: LineJoin,
+    pub miter_limit: Option<f64>,
     pub head_end: Option<LineEnd>,
     pub tail_end: Option<LineEnd>,
     /// Explicit `<a:noFill/>` inside `<a:ln>` — suppress border, do NOT
@@ -316,6 +319,23 @@ pub enum LineCap {
     Flat,
     Square,
     Round,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum CompoundLine {
+    #[default]
+    Single,
+    Double,
+    ThickThin,
+    ThinThick,
+    Triple,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum LineAlignment {
+    #[default]
+    Center,
+    Inset,
 }
 
 /// Line join style (ECMA-376 ST_LineJoinType)

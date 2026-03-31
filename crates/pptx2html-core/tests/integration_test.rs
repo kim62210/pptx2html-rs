@@ -1201,6 +1201,60 @@ fn test_global_css_contains_svg_styles() {
 // ── Connector line color tests ──
 
 #[test]
+fn test_ln_defaults_and_extended_line_properties_are_parsed() {
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Connector"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="0"/></a:xfrm>
+        <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+        <a:ln cmpd="dbl" algn="in">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+          <a:miter lim="400000"/>
+        </a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    assert_eq!(shape.border.width, 0.0, "Default ln width should remain zero");
+    assert!(matches!(shape.border.cap, LineCap::Square));
+    assert!(matches!(shape.border.compound, CompoundLine::Double));
+    assert!(matches!(shape.border.alignment, LineAlignment::Inset));
+    assert_eq!(shape.border.miter_limit, Some(4.0));
+}
+
+#[test]
+fn test_default_square_cap_and_miter_limit_render_to_svg() {
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Connector"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="0"/></a:xfrm>
+        <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+        <a:ln w="9525">
+          <a:solidFill><a:srgbClr val="C00000"/></a:solidFill>
+          <a:miter lim="400000"/>
+        </a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("stroke-linecap=\"square\""),
+        "Default square line cap should render to SVG: {html}"
+    );
+    assert!(
+        html.contains("stroke-miterlimit=\"4.0\""),
+        "Miter limit should render to SVG: {html}"
+    );
+}
+
+#[test]
 fn test_connector_border_color_srgb() {
     // Connector with inline srgbClr in <a:ln> — must parse border color
     let slide = r#"

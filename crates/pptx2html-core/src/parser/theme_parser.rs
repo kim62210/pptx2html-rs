@@ -5,8 +5,8 @@ use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::presentation::{ColorScheme, Theme};
 use crate::model::{
-    Border, BorderStyle, Color, DashStyle, EffectStyle, Emu, Fill, FmtScheme, GlowEffect, LineCap,
-    LineJoin, OuterShadow, SolidFill,
+    Border, BorderStyle, Color, CompoundLine, DashStyle, EffectStyle, Emu, Fill, FmtScheme,
+    GlowEffect, LineAlignment, LineCap, LineJoin, OuterShadow, SolidFill,
 };
 
 pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
@@ -24,8 +24,11 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
     let mut in_ln = false;
     let mut current_ln_width: f64 = 0.0;
     let mut current_ln_color: Option<Color> = None;
-    let mut current_ln_cap = LineCap::Flat;
+    let mut current_ln_cap = LineCap::Square;
+    let mut current_ln_compound = CompoundLine::Single;
+    let mut current_ln_alignment = LineAlignment::Center;
     let mut current_ln_join = LineJoin::Miter;
+    let mut current_ln_miter_limit: Option<f64> = None;
     let mut current_ln_dash = DashStyle::Solid;
 
     // effectStyleLst state
@@ -137,14 +140,25 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             .map(|w| Emu::parse_emu(&w).to_pt())
                             .unwrap_or(0.0);
                         current_ln_color = None;
-                        current_ln_cap = match xml_utils::attr_str(e, "cap")
-                            .as_deref()
-                        {
-                            Some("sq") => LineCap::Square,
+                        current_ln_cap = match xml_utils::attr_str(e, "cap").as_deref() {
                             Some("rnd") => LineCap::Round,
-                            _ => LineCap::Flat,
+                            Some("flat") => LineCap::Flat,
+                            _ => LineCap::Square,
                         };
+                        current_ln_compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
+                            Some("dbl") => CompoundLine::Double,
+                            Some("thickThin") => CompoundLine::ThickThin,
+                            Some("thinThick") => CompoundLine::ThinThick,
+                            Some("tri") => CompoundLine::Triple,
+                            _ => CompoundLine::Single,
+                        };
+                        current_ln_alignment =
+                            match xml_utils::attr_str(e, "algn").as_deref() {
+                                Some("in") => LineAlignment::Inset,
+                                _ => LineAlignment::Center,
+                            };
                         current_ln_join = LineJoin::Miter;
+                        current_ln_miter_limit = None;
                         current_ln_dash = DashStyle::Solid;
                     }
                     // solidFill inside fill/bg lists
@@ -310,6 +324,9 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     }
                     "miter" if in_ln => {
                         current_ln_join = LineJoin::Miter;
+                        current_ln_miter_limit = xml_utils::attr_str(e, "lim")
+                            .and_then(|v| v.parse::<f64>().ok())
+                            .map(|v| v / 100_000.0);
                     }
                     _ => {}
                 }
@@ -395,7 +412,10 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             },
                             dash_style: std::mem::take(&mut current_ln_dash),
                             cap: std::mem::take(&mut current_ln_cap),
+                            compound: std::mem::take(&mut current_ln_compound),
+                            alignment: std::mem::take(&mut current_ln_alignment),
                             join: std::mem::take(&mut current_ln_join),
+                            miter_limit: current_ln_miter_limit.take(),
                             ..Default::default()
                         };
                         theme.fmt_scheme.ln_style_lst.push(border);

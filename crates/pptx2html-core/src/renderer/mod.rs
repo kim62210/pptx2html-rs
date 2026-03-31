@@ -728,6 +728,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let cap_attr = line_cap_to_svg(&resolved_border.cap);
                 let join_attr = line_join_to_svg(&resolved_border.join);
+                let miter_limit_attr = line_miter_limit_to_svg(&resolved_border);
                 let _ = write!(
                     html,
                     "<svg viewBox=\"0 0 {svg_w:.1} {svg_h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
@@ -798,7 +799,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {non_scaling}{dash_attr}{cap_attr}{join_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
+                     {non_scaling}{dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
                      </svg>"
                 );
             }
@@ -820,6 +821,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
             let cap_attr = line_cap_to_svg(&resolved_border.cap);
             let join_attr = line_join_to_svg(&resolved_border.join);
+            let miter_limit_attr = line_miter_limit_to_svg(&resolved_border);
             let _ = write!(
                 html,
                 "<svg viewBox=\"0 0 {w:.1} {h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
@@ -862,7 +864,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let _ = write!(
                     html,
                     "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {dash_attr}{cap_attr}{join_attr}{marker_start_attr}{marker_end_attr}/>",
+                     {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}/>",
                     path_svg.d
                 );
             }
@@ -2173,6 +2175,15 @@ fn line_join_to_svg(join: &LineJoin) -> &'static str {
         LineJoin::Bevel => " stroke-linejoin=\"bevel\"",
         LineJoin::Round => " stroke-linejoin=\"round\"",
     }
+}
+
+fn line_miter_limit_to_svg(border: &Border) -> String {
+    if matches!(border.join, LineJoin::Miter) {
+        if let Some(limit) = border.miter_limit {
+            return format!(" stroke-miterlimit=\"{limit:.1}\"");
+        }
+    }
+    String::new()
 }
 
 /// Emit an SVG gradient definition (`<linearGradient>` or `<radialGradient>`)
