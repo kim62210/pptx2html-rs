@@ -2445,6 +2445,14 @@ fn test_no_wrap_sets_inline_white_space_nowrap() {
         tb_chunk.contains("white-space: nowrap"),
         "Expected inline nowrap style on text-body: {tb_chunk}"
     );
+    assert!(
+        html.contains(".text-body.nowrap .run { white-space: inherit; word-break: normal; overflow-wrap: normal; }"),
+        "Expected a nowrap-specific run override rule in global CSS: {html}"
+    );
+    assert!(
+        tb_chunk.contains("class=\"text-body") && tb_chunk.contains("nowrap"),
+        "Expected nowrap text bodies to carry a dedicated class for child run overrides: {tb_chunk}"
+    );
 }
 
 #[test]

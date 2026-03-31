@@ -256,6 +256,7 @@ body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif
 .text-body.v-bottom {{ justify-content: flex-end; }}
 .paragraph {{ margin: 0; }}
 .run {{ white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }}
+.text-body.nowrap .run {{ white-space: inherit; word-break: normal; overflow-wrap: normal; }}
 img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
 .shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
 .shape-svg + .text-body {{ position: relative; z-index: 1; }}
@@ -1113,7 +1114,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
             let _ = writeln!(
                 html,
-                "<div class=\"text-body {v_class}\" style=\"{tb_style}\">"
+                "<div class=\"text-body {v_class}{}\" style=\"{tb_style}\">",
+                if effective_word_wrap { "" } else { " nowrap" }
             );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
