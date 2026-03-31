@@ -88,6 +88,7 @@ pub fn parse_slide<R: Read + Seek>(
     let mut cust_geom_path_fill = PathFill::Norm;
     let mut cust_geom_pts: Vec<(f64, f64)> = Vec::new();
     let mut in_cust_geom_cmd: Option<String> = None;
+    let mut cust_geom_guides: HashMap<String, f64> = HashMap::new();
 
     // Text shadow and highlight parsing state
     let mut in_effect_lst = false;
@@ -696,6 +697,9 @@ pub fn parse_slide<R: Read + Seek>(
                     "avLst" if in_sp_pr && current_shape.is_some() => {
                         in_av_lst = true;
                     }
+                    "gdLst" if in_cust_geom => {
+                        in_av_lst = true;
+                    }
                     // ── Text highlight (<a:highlight>) ──
                     "highlight" if in_r_pr || in_cell_r_pr => {
                         in_highlight = true;
@@ -796,6 +800,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "custGeom" if in_sp_pr && current_shape.is_some() => {
                         in_cust_geom = true;
                         cust_geom_paths.clear();
+                        cust_geom_guides.clear();
                     }
                     // Path inside custGeom pathLst
                     "path" if in_cust_geom => {
@@ -1604,43 +1609,47 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // ── Adjust value guide (<a:gd>) inside avLst ──
                     "gd" if in_av_lst => {
-                        if let Some(sb) = current_shape.as_mut()
-                            && let (Some(name), Some(fmla)) = (
-                                xml_utils::attr_str(e, "name"),
-                                xml_utils::attr_str(e, "fmla"),
-                            )
-                        {
-                            // fmla is typically "val NNNNN"
-                            let val = fmla
-                                .strip_prefix("val ")
-                                .and_then(|v| v.parse::<f64>().ok())
-                                .unwrap_or(0.0);
-                            sb.adjust_values.insert(name, val);
+                        if let (Some(name), Some(fmla)) = (
+                            xml_utils::attr_str(e, "name"),
+                            xml_utils::attr_str(e, "fmla"),
+                        ) {
+                            let val = parse_guide_formula_value(&fmla);
+                            if in_cust_geom {
+                                cust_geom_guides.insert(name, val);
+                            } else if let Some(sb) = current_shape.as_mut() {
+                                sb.adjust_values.insert(name, val);
+                            }
                         }
                     }
                     // ── Custom geometry: point element (<a:pt/>) ──
                     "pt" if in_cust_geom_cmd.is_some() => {
                         let x = xml_utils::attr_str(e, "x")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         let y = xml_utils::attr_str(e, "y")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         cust_geom_pts.push((x, y));
                     }
                     // ── Custom geometry: self-closing arcTo ──
                     "arcTo" if in_cust_geom_path => {
                         let wr = xml_utils::attr_str(e, "wR")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         let hr = xml_utils::attr_str(e, "hR")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         let st_ang = xml_utils::attr_str(e, "stAng")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         let sw_ang = xml_utils::attr_str(e, "swAng")
-                            .and_then(|v| v.parse::<f64>().ok())
+                            .as_deref()
+                            .map(|v| resolve_custom_geom_value(v, &cust_geom_guides))
                             .unwrap_or(0.0);
                         cust_geom_cmds.push(PathCommand::ArcTo {
                             wr,
@@ -1966,10 +1975,11 @@ pub fn parse_slide<R: Read + Seek>(
                                 paths: std::mem::take(&mut cust_geom_paths),
                             });
                         }
+                        cust_geom_guides.clear();
                     }
 
                     // ── New state end events ──
-                    "avLst" => in_av_lst = false,
+                    "avLst" | "gdLst" => in_av_lst = false,
                     "blipFill" if in_bg_blip_fill => {
                         in_bg_blip_fill = false;
                     }
@@ -2489,6 +2499,19 @@ pub(crate) fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<Li
         width,
         length,
     })
+}
+
+fn parse_guide_formula_value(fmla: &str) -> f64 {
+    fmla.strip_prefix("val ")
+        .and_then(|v| v.parse::<f64>().ok())
+        .unwrap_or(0.0)
+}
+
+fn resolve_custom_geom_value(raw: &str, guides: &HashMap<String, f64>) -> f64 {
+    raw.parse::<f64>()
+        .ok()
+        .or_else(|| guides.get(raw).copied())
+        .unwrap_or(0.0)
 }
 
 /// Parse bodyPr attributes

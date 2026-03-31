@@ -1086,6 +1086,93 @@ fn test_custgeom_empty_pathlist() {
     let _html = render_html(&pptx);
 }
 
+#[test]
+fn test_custgeom_gd_val_drives_point_coordinates() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuidedCust"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="dx1" fmla="val 7200"/>
+            <a:gd name="dy1" fmla="val 10800"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="dx1" y="dy1"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            match &geom.paths[0].commands[0] {
+                PathCommand::MoveTo { x, y } => {
+                    assert!((x - 7200.0).abs() < 0.01, "guide x should resolve to 7200, got {x}");
+                    assert!((y - 10800.0).abs() < 0.01, "guide y should resolve to 10800, got {y}");
+                }
+                other => panic!("Expected MoveTo, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_gd_val_drives_arc_attributes() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuidedArc"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="rx1" fmla="val 5400"/>
+            <a:gd name="ang1" fmla="val 5400000"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="0" y="10800"/></a:moveTo>
+              <a:arcTo wR="rx1" hR="rx1" stAng="0" swAng="ang1"/>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => {
+            match &geom.paths[0].commands[1] {
+                PathCommand::ArcTo {
+                    wr,
+                    hr,
+                    start_angle,
+                    swing_angle,
+                } => {
+                    assert!((wr - 5400.0).abs() < 0.01, "guide wR should resolve to 5400, got {wr}");
+                    assert!((hr - 5400.0).abs() < 0.01, "guide hR should resolve to 5400, got {hr}");
+                    assert!((*start_angle).abs() < 0.01);
+                    assert!((swing_angle - 5400000.0).abs() < 0.01, "guide swAng should resolve to 5400000, got {swing_angle}");
+                }
+                other => panic!("Expected ArcTo, got {:?}", other),
+            }
+        }
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
 // ── Auto-fit (normAutofit / spAutoFit) ──
 
 #[test]
