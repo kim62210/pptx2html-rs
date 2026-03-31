@@ -121,9 +121,7 @@ impl FeatureCapability {
                 Err("unparsed capabilities must not declare a completed stage")
             }
             (SupportTier::Exact, Some(CapabilityStage::FidelityTested)) => Ok(()),
-            (SupportTier::Exact, _) => {
-                Err("exact capabilities must be fidelity-tested")
-            }
+            (SupportTier::Exact, _) => Err("exact capabilities must be fidelity-tested"),
             (SupportTier::Approximate | SupportTier::Fallback, Some(_)) => Ok(()),
             (SupportTier::Approximate | SupportTier::Fallback, None) => {
                 Err("approximate and fallback capabilities must declare a completed stage")
@@ -160,7 +158,10 @@ mod tests {
         assert_eq!(CapabilityStage::Parsed.to_string(), "parsed");
         assert_eq!(CapabilityStage::Resolved.to_string(), "resolved");
         assert_eq!(CapabilityStage::Rendered.to_string(), "rendered");
-        assert_eq!(CapabilityStage::FidelityTested.to_string(), "fidelity-tested");
+        assert_eq!(
+            CapabilityStage::FidelityTested.to_string(),
+            "fidelity-tested"
+        );
     }
 
     #[test]
@@ -174,7 +175,10 @@ mod tests {
         .expect("capability should be valid");
         capability.notes = Some("Needs PowerPoint-reference verification".to_string());
 
-        assert_eq!(capability.highest_completed_stage(), Some(CapabilityStage::Resolved));
+        assert_eq!(
+            capability.highest_completed_stage(),
+            Some(CapabilityStage::Resolved)
+        );
     }
 
     #[test]

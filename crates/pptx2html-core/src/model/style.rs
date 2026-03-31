@@ -211,7 +211,7 @@ pub struct SolidFill {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum GradientType {
     #[default]
-    Linear,      // <a:lin ang="...">
+    Linear, // <a:lin ang="...">
     Radial,      // <a:path path="circle">
     Rectangular, // <a:path path="rect">
     Shape,       // <a:path path="shape">

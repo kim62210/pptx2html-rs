@@ -60,8 +60,7 @@ impl PptxParser {
         let pres_xml = Self::read_entry(&mut archive, "ppt/presentation.xml").map_err(|_| {
             PptxError::MissingFile("ppt/presentation.xml — not a valid PPTX".to_string())
         })?;
-        let (slide_size, slide_refs, default_text_style) =
-            Self::parse_presentation_xml(&pres_xml)?;
+        let (slide_size, slide_refs, default_text_style) = Self::parse_presentation_xml(&pres_xml)?;
         presentation.slide_size = slide_size;
         presentation.default_text_style = default_text_style;
 

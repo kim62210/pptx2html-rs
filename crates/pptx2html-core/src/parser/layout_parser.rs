@@ -6,8 +6,7 @@ use quick_xml::events::Event;
 use zip::ZipArchive;
 
 use super::master_parser::{
-    is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs,
-    parse_placeholder_attrs,
+    is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs, parse_placeholder_attrs,
 };
 use super::slide_parser::parse_line_end;
 use super::xml_utils;
@@ -180,19 +179,17 @@ pub fn parse_slide_layout<R: Read + Seek>(
                                 Some("flat") => LineCap::Flat,
                                 _ => LineCap::Square,
                             };
-                            sb.border.compound =
-                                match xml_utils::attr_str(e, "cmpd").as_deref() {
-                                    Some("dbl") => CompoundLine::Double,
-                                    Some("thickThin") => CompoundLine::ThickThin,
-                                    Some("thinThick") => CompoundLine::ThinThick,
-                                    Some("tri") => CompoundLine::Triple,
-                                    _ => CompoundLine::Single,
-                                };
-                            sb.border.alignment =
-                                match xml_utils::attr_str(e, "algn").as_deref() {
-                                    Some("in") => LineAlignment::Inset,
-                                    _ => LineAlignment::Center,
-                                };
+                            sb.border.compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
+                                Some("dbl") => CompoundLine::Double,
+                                Some("thickThin") => CompoundLine::ThickThin,
+                                Some("thinThick") => CompoundLine::ThinThick,
+                                Some("tri") => CompoundLine::Triple,
+                                _ => CompoundLine::Single,
+                            };
+                            sb.border.alignment = match xml_utils::attr_str(e, "algn").as_deref() {
+                                Some("in") => LineAlignment::Inset,
+                                _ => LineAlignment::Center,
+                            };
                             sb.border.join = LineJoin::Miter;
                             sb.border.miter_limit = None;
                             sb.border.no_fill = false;
@@ -303,7 +300,11 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             rd.color = Some(Color::theme(val));
                         }
                     }
-                    "spcPct" if in_lst_style && current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
+                    "spcPct"
+                        if in_lst_style
+                            && current_lvl.is_some()
+                            && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                    {
                         if let Some(val_str) = xml_utils::attr_str(e, "val")
                             && let Ok(val) = val_str.parse::<f64>()
                         {
@@ -319,7 +320,11 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             }
                         }
                     }
-                    "spcPts" if in_lst_style && current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) => {
+                    "spcPts"
+                        if in_lst_style
+                            && current_lvl.is_some()
+                            && (in_ln_spc || in_spc_bef || in_spc_aft) =>
+                    {
                         if let Some(val_str) = xml_utils::attr_str(e, "val")
                             && let Ok(val) = val_str.parse::<f64>()
                         {
@@ -380,8 +385,8 @@ pub fn parse_slide_layout<R: Read + Seek>(
                             sb.border.style = match val.as_str() {
                                 "solid" => BorderStyle::Solid,
                                 "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot"
-                                | "sysDashDot" | "sysDashDotDot" => BorderStyle::Dotted,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" | "sysDashDot"
+                                | "sysDashDotDot" => BorderStyle::Dotted,
                                 _ => BorderStyle::Solid,
                             };
                             sb.border.dash_style = match val.as_str() {

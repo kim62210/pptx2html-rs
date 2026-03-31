@@ -45,11 +45,11 @@ fn build_background_image_pptx() -> Vec<u8> {
 </Relationships>"#;
 
     let png_data: Vec<u8> = vec![
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00,
-        0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08,
-        0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
-        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
+        0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x63, 0xF8,
+        0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33, 0x00, 0x00, 0x00,
+        0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ];
 
     let buf = Vec::new();
@@ -75,15 +75,19 @@ fn build_background_image_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -92,7 +96,8 @@ fn build_background_image_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/media/image1.png", opts).unwrap();
     zip.write_all(&png_data).unwrap();
@@ -1219,7 +1224,10 @@ fn test_ln_defaults_and_extended_line_properties_are_parsed() {
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
 
-    assert_eq!(shape.border.width, 0.0, "Default ln width should remain zero");
+    assert_eq!(
+        shape.border.width, 0.0,
+        "Default ln width should remain zero"
+    );
     assert!(matches!(shape.border.cap, LineCap::Square));
     assert!(matches!(shape.border.compound, CompoundLine::Double));
     assert!(matches!(shape.border.alignment, LineAlignment::Inset));
@@ -1382,10 +1390,22 @@ fn test_connector_parses_shape_ids_and_connection_refs() {
     assert_eq!(pres.slides[0].shapes[1].id, 3);
     let connector = &pres.slides[0].shapes[2];
     assert_eq!(connector.id, 4);
-    assert_eq!(connector.start_connection.as_ref().map(|c| c.shape_id), Some(2));
-    assert_eq!(connector.start_connection.as_ref().map(|c| c.site_idx), Some(0));
-    assert_eq!(connector.end_connection.as_ref().map(|c| c.shape_id), Some(3));
-    assert_eq!(connector.end_connection.as_ref().map(|c| c.site_idx), Some(0));
+    assert_eq!(
+        connector.start_connection.as_ref().map(|c| c.shape_id),
+        Some(2)
+    );
+    assert_eq!(
+        connector.start_connection.as_ref().map(|c| c.site_idx),
+        Some(0)
+    );
+    assert_eq!(
+        connector.end_connection.as_ref().map(|c| c.shape_id),
+        Some(3)
+    );
+    assert_eq!(
+        connector.end_connection.as_ref().map(|c| c.site_idx),
+        Some(0)
+    );
 }
 
 #[test]
@@ -1757,11 +1777,18 @@ fn test_external_assets_collected_when_embedding_disabled() {
         "Expected deterministic background asset path in HTML: {}",
         result.html
     );
-    assert_eq!(result.external_assets.len(), 1, "Expected one external asset");
+    assert_eq!(
+        result.external_assets.len(),
+        1,
+        "Expected one external asset"
+    );
     let asset = &result.external_assets[0];
     assert_eq!(asset.relative_path, "images/slide-1/background-0.png");
     assert_eq!(asset.content_type, "image/png");
-    assert!(!asset.data.is_empty(), "External asset bytes should be preserved");
+    assert!(
+        !asset.data.is_empty(),
+        "External asset bytes should be preserved"
+    );
 }
 
 // ── Gradient fill with color modifiers (Start+End events) ──

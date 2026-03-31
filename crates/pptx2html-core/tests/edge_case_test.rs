@@ -176,7 +176,12 @@ fn test_hyperlink_parsed_and_rendered() {
         .with_slide_rels(slide_rels)
         .build();
     let pres = parse_pptx(&pptx);
-    let run = &pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].runs[0];
+    let run = &pres.slides[0].shapes[0]
+        .text_body
+        .as_ref()
+        .unwrap()
+        .paragraphs[0]
+        .runs[0];
     assert_eq!(run.hyperlink.as_deref(), Some("https://example.com"));
 
     let html = render_html(&pptx);
@@ -1113,15 +1118,19 @@ fn test_custgeom_gd_val_drives_point_coordinates() {
     let shape = &pres.slides[0].shapes[0];
 
     match &shape.shape_type {
-        ShapeType::CustomGeom(geom) => {
-            match &geom.paths[0].commands[0] {
-                PathCommand::MoveTo { x, y } => {
-                    assert!((x - 7200.0).abs() < 0.01, "guide x should resolve to 7200, got {x}");
-                    assert!((y - 10800.0).abs() < 0.01, "guide y should resolve to 10800, got {y}");
-                }
-                other => panic!("Expected MoveTo, got {:?}", other),
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, y } => {
+                assert!(
+                    (x - 7200.0).abs() < 0.01,
+                    "guide x should resolve to 7200, got {x}"
+                );
+                assert!(
+                    (y - 10800.0).abs() < 0.01,
+                    "guide y should resolve to 10800, got {y}"
+                );
             }
-        }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
         other => panic!("Expected CustomGeom, got {:?}", other),
     }
 }
@@ -1153,22 +1162,29 @@ fn test_custgeom_gd_val_drives_arc_attributes() {
     let shape = &pres.slides[0].shapes[0];
 
     match &shape.shape_type {
-        ShapeType::CustomGeom(geom) => {
-            match &geom.paths[0].commands[1] {
-                PathCommand::ArcTo {
-                    wr,
-                    hr,
-                    start_angle,
-                    swing_angle,
-                } => {
-                    assert!((wr - 5400.0).abs() < 0.01, "guide wR should resolve to 5400, got {wr}");
-                    assert!((hr - 5400.0).abs() < 0.01, "guide hR should resolve to 5400, got {hr}");
-                    assert!((*start_angle).abs() < 0.01);
-                    assert!((swing_angle - 5400000.0).abs() < 0.01, "guide swAng should resolve to 5400000, got {swing_angle}");
-                }
-                other => panic!("Expected ArcTo, got {:?}", other),
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
+            PathCommand::ArcTo {
+                wr,
+                hr,
+                start_angle,
+                swing_angle,
+            } => {
+                assert!(
+                    (wr - 5400.0).abs() < 0.01,
+                    "guide wR should resolve to 5400, got {wr}"
+                );
+                assert!(
+                    (hr - 5400.0).abs() < 0.01,
+                    "guide hR should resolve to 5400, got {hr}"
+                );
+                assert!((*start_angle).abs() < 0.01);
+                assert!(
+                    (swing_angle - 5400000.0).abs() < 0.01,
+                    "guide swAng should resolve to 5400000, got {swing_angle}"
+                );
             }
-        }
+            other => panic!("Expected ArcTo, got {:?}", other),
+        },
         other => panic!("Expected CustomGeom, got {:?}", other),
     }
 }
@@ -1209,11 +1225,30 @@ fn test_custgeom_rect_uses_guide_values() {
 
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => {
-            let rect = geom.text_rect.as_ref().expect("expected custom geometry text rect");
-            assert!((rect.left - 5400.0).abs() < 0.01, "expected left 5400, got {}", rect.left);
-            assert!((rect.top - 2160.0).abs() < 0.01, "expected top 2160, got {}", rect.top);
-            assert!((rect.right - 16200.0).abs() < 0.01, "expected right 16200, got {}", rect.right);
-            assert!((rect.bottom - 19440.0).abs() < 0.01, "expected bottom 19440, got {}", rect.bottom);
+            let rect = geom
+                .text_rect
+                .as_ref()
+                .expect("expected custom geometry text rect");
+            assert!(
+                (rect.left - 5400.0).abs() < 0.01,
+                "expected left 5400, got {}",
+                rect.left
+            );
+            assert!(
+                (rect.top - 2160.0).abs() < 0.01,
+                "expected top 2160, got {}",
+                rect.top
+            );
+            assert!(
+                (rect.right - 16200.0).abs() < 0.01,
+                "expected right 16200, got {}",
+                rect.right
+            );
+            assert!(
+                (rect.bottom - 19440.0).abs() < 0.01,
+                "expected bottom 19440, got {}",
+                rect.bottom
+            );
         }
         other => panic!("Expected CustomGeom, got {:?}", other),
     }
@@ -1256,7 +1291,11 @@ fn test_custgeom_parses_xy_and_polar_adjust_handles() {
 
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => {
-            assert_eq!(geom.adjust_handles.len(), 2, "expected two custom geometry handles");
+            assert_eq!(
+                geom.adjust_handles.len(),
+                2,
+                "expected two custom geometry handles"
+            );
             match &geom.adjust_handles[0] {
                 AdjustHandle::XY(handle) => {
                     assert_eq!(handle.gd_ref_x.as_deref(), Some("gx"));
@@ -1307,7 +1346,11 @@ fn test_custgeom_parses_connection_sites() {
 
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => {
-            assert_eq!(geom.connection_sites.len(), 2, "expected two connection sites");
+            assert_eq!(
+                geom.connection_sites.len(),
+                2,
+                "expected two connection sites"
+            );
             assert!((geom.connection_sites[0].x - 21600.0).abs() < 0.01);
             assert!((geom.connection_sites[0].y - 10800.0).abs() < 0.01);
             assert!((geom.connection_sites[0].angle - 5400000.0).abs() < 0.01);
@@ -1348,7 +1391,10 @@ fn test_custgeom_guide_plus_minus_formula_drives_point() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 8000.0).abs() < 0.01, "expected 8000 from +- formula, got {x}");
+                assert!(
+                    (x - 8000.0).abs() < 0.01,
+                    "expected 8000 from +- formula, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1384,8 +1430,14 @@ fn test_custgeom_guide_mul_div_formula_drives_arc_radius() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
             PathCommand::ArcTo { wr, hr, .. } => {
-                assert!((wr - 7200.0).abs() < 0.01, "expected 7200 from */ formula, got {wr}");
-                assert!((hr - 7200.0).abs() < 0.01, "expected 7200 from */ formula, got {hr}");
+                assert!(
+                    (wr - 7200.0).abs() < 0.01,
+                    "expected 7200 from */ formula, got {wr}"
+                );
+                assert!(
+                    (hr - 7200.0).abs() < 0.01,
+                    "expected 7200 from */ formula, got {hr}"
+                );
             }
             other => panic!("Expected ArcTo, got {:?}", other),
         },
@@ -1425,8 +1477,14 @@ fn test_custgeom_guide_pin_min_max_formulas_drive_point() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, y } => {
-                assert!((x - 4000.0).abs() < 0.01, "expected pin result 4000, got {x}");
-                assert!((y - 9000.0).abs() < 0.01, "expected max result 9000, got {y}");
+                assert!(
+                    (x - 4000.0).abs() < 0.01,
+                    "expected pin result 4000, got {x}"
+                );
+                assert!(
+                    (y - 9000.0).abs() < 0.01,
+                    "expected max result 9000, got {y}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1464,7 +1522,10 @@ fn test_custgeom_guide_dependency_chain_resolves_in_order() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 9000.0).abs() < 0.01, "expected chained guide result 9000, got {x}");
+                assert!(
+                    (x - 9000.0).abs() < 0.01,
+                    "expected chained guide result 9000, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1501,8 +1562,14 @@ fn test_custgeom_mul_div_zero_denominator_returns_zero() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
             PathCommand::ArcTo { wr, hr, .. } => {
-                assert!(wr.abs() < 0.01, "expected 0 radius for divide-by-zero policy, got {wr}");
-                assert!(hr.abs() < 0.01, "expected 0 radius for divide-by-zero policy, got {hr}");
+                assert!(
+                    wr.abs() < 0.01,
+                    "expected 0 radius for divide-by-zero policy, got {wr}"
+                );
+                assert!(
+                    hr.abs() < 0.01,
+                    "expected 0 radius for divide-by-zero policy, got {hr}"
+                );
             }
             other => panic!("Expected ArcTo, got {:?}", other),
         },
@@ -1539,7 +1606,10 @@ fn test_custgeom_ifelse_formula_drives_point_coordinate() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 7000.0).abs() < 0.01, "expected ifelse true branch 7000, got {x}");
+                assert!(
+                    (x - 7000.0).abs() < 0.01,
+                    "expected ifelse true branch 7000, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1576,8 +1646,14 @@ fn test_custgeom_ifelse_formula_uses_false_branch_for_zero() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
             PathCommand::ArcTo { wr, hr, .. } => {
-                assert!((wr - 3000.0).abs() < 0.01, "expected ifelse false branch 3000, got {wr}");
-                assert!((hr - 3000.0).abs() < 0.01, "expected ifelse false branch 3000, got {hr}");
+                assert!(
+                    (wr - 3000.0).abs() < 0.01,
+                    "expected ifelse false branch 3000, got {wr}"
+                );
+                assert!(
+                    (hr - 3000.0).abs() < 0.01,
+                    "expected ifelse false branch 3000, got {hr}"
+                );
             }
             other => panic!("Expected ArcTo, got {:?}", other),
         },
@@ -1650,7 +1726,10 @@ fn test_custgeom_mod_formula_uses_vector_length_semantics() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 13.0).abs() < 0.01, "expected vector-length mod result 13, got {x}");
+                assert!(
+                    (x - 13.0).abs() < 0.01,
+                    "expected vector-length mod result 13, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1687,7 +1766,10 @@ fn test_custgeom_abs_formula_normalizes_negative_value() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 4500.0).abs() < 0.01, "expected abs result 4500, got {x}");
+                assert!(
+                    (x - 4500.0).abs() < 0.01,
+                    "expected abs result 4500, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1721,7 +1803,10 @@ fn test_custgeom_sin_formula_scales_by_angle() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 100000.0).abs() < 0.1, "expected sin result 100000, got {x}");
+                assert!(
+                    (x - 100000.0).abs() < 0.1,
+                    "expected sin result 100000, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1825,7 +1910,10 @@ fn test_custgeom_at2_formula_drives_arc_angle() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[1] {
             PathCommand::ArcTo { swing_angle, .. } => {
-                assert!((swing_angle - 3_187_806.14).abs() < 1.0, "expected at2 result near 3187806.14, got {swing_angle}");
+                assert!(
+                    (swing_angle - 3_187_806.14).abs() < 1.0,
+                    "expected at2 result near 3187806.14, got {swing_angle}"
+                );
             }
             other => panic!("Expected ArcTo, got {:?}", other),
         },
@@ -1859,7 +1947,10 @@ fn test_custgeom_adddiv_formula_drives_point_coordinate() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 6000.0).abs() < 0.01, "expected adddiv result 6000, got {x}");
+                assert!(
+                    (x - 6000.0).abs() < 0.01,
+                    "expected adddiv result 6000, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -1893,7 +1984,10 @@ fn test_custgeom_tan_formula_drives_point_coordinate() {
     match &shape.shape_type {
         ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
             PathCommand::MoveTo { x, .. } => {
-                assert!((x - 100000.0).abs() < 0.5, "expected tan result near 100000, got {x}");
+                assert!(
+                    (x - 100000.0).abs() < 0.5,
+                    "expected tan result near 100000, got {x}"
+                );
             }
             other => panic!("Expected MoveTo, got {:?}", other),
         },
@@ -2226,10 +2320,20 @@ fn test_rtl_paragraph_is_parsed_and_rendered() {
 
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let pres = parse_pptx(&pptx);
-    assert!(pres.slides[0].shapes[0].text_body.as_ref().unwrap().paragraphs[0].rtl);
+    assert!(
+        pres.slides[0].shapes[0]
+            .text_body
+            .as_ref()
+            .unwrap()
+            .paragraphs[0]
+            .rtl
+    );
 
     let html = render_html(&pptx);
-    assert!(html.contains("direction: rtl"), "Expected RTL direction in HTML: {html}");
+    assert!(
+        html.contains("direction: rtl"),
+        "Expected RTL direction in HTML: {html}"
+    );
     assert!(
         html.contains("unicode-bidi: bidi-override"),
         "Expected bidi override in HTML: {html}"
@@ -2255,8 +2359,14 @@ fn test_vertical_text_with_flip_keeps_combined_transform() {
     let tb_start = html.find("class=\"text-body").expect("text-body div");
     let tb_chunk = &html[tb_start..tb_start + 300.min(html.len() - tb_start)];
     assert!(tb_chunk.contains("writing-mode: vertical-lr"));
-    assert!(tb_chunk.contains("scale(-1,1)"), "Expected flip transform: {tb_chunk}");
-    assert!(tb_chunk.contains("rotate(180deg)"), "Expected vert270 rotation: {tb_chunk}");
+    assert!(
+        tb_chunk.contains("scale(-1,1)"),
+        "Expected flip transform: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("rotate(180deg)"),
+        "Expected vert270 rotation: {tb_chunk}"
+    );
 }
 
 #[test]

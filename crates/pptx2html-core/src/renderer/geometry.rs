@@ -733,10 +733,8 @@ fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let ry = h / 2.0;
     let cx = rx;
     let cy = ry;
-    let sweep = (std::f64::consts::PI * (1.25 + a1)).clamp(
-        std::f64::consts::FRAC_PI_2,
-        std::f64::consts::TAU - 0.2,
-    );
+    let sweep = (std::f64::consts::PI * (1.25 + a1))
+        .clamp(std::f64::consts::FRAC_PI_2, std::f64::consts::TAU - 0.2);
     let start_angle = -std::f64::consts::FRAC_PI_2;
     let end_angle = start_angle + sweep;
     let t = (w.min(h) * (0.08 + a5 * 0.2)).min(w.min(h) * 0.35);
@@ -1547,7 +1545,11 @@ fn star5_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let mut pts: Vec<(f64, f64)> = Vec::with_capacity(t as usize);
     for i in 0..t {
         let a = st + 2.0 * std::f64::consts::PI * (i as f64) / (t as f64);
-        let (rx, ry) = if i % 2 == 0 { (ro_x, ro_y) } else { (ri_x, ri_y) };
+        let (rx, ry) = if i % 2 == 0 {
+            (ro_x, ro_y)
+        } else {
+            (ri_x, ri_y)
+        };
         pts.push((cx + rx * a.cos(), cy + ry * a.sin()));
     }
     let mut s = format!("M{:.1},{:.1}", pts[0].0, pts[0].1);
@@ -1568,7 +1570,11 @@ fn star6_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let mut pts: Vec<(f64, f64)> = Vec::with_capacity(t as usize);
     for i in 0..t {
         let a = st + 2.0 * std::f64::consts::PI * (i as f64) / (t as f64);
-        let (rx, ry) = if i % 2 == 0 { (ro_x, ro_y) } else { (ri_x, ri_y) };
+        let (rx, ry) = if i % 2 == 0 {
+            (ro_x, ro_y)
+        } else {
+            (ri_x, ri_y)
+        };
         pts.push((cx + rx * a.cos(), cy + ry * a.sin()));
     }
     let mut s = format!("M{:.1},{:.1}", pts[0].0, pts[0].1);
@@ -1927,8 +1933,8 @@ fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let t = w.min(h) * a3;
     let (cx, cy) = (ro, ryo);
     let start_angle = -std::f64::consts::FRAC_PI_2 + adj2 / 21_600_000.0 * std::f64::consts::TAU;
-    let end_angle = std::f64::consts::PI
-        + (adj1 - 10_800_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle =
+        std::f64::consts::PI + (adj1 - 10_800_000.0) / 21_600_000.0 * std::f64::consts::TAU;
     let (sx, sy) = ellipse_point(cx, cy, ro, ryo, start_angle);
     let (ex, ey) = ellipse_point(cx, cy, ro, ryo, end_angle);
     let ri = (ro - t).max(0.1);
@@ -2643,8 +2649,8 @@ fn chord_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let (cx, cy) = (rx, ry);
     let start_angle = std::f64::consts::PI * 5.0 / 6.0
         - (adj1 - 2_700_000.0) / 21_600_000.0 * std::f64::consts::TAU;
-    let end_angle = std::f64::consts::PI / 6.0
-        + (adj2 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle =
+        std::f64::consts::PI / 6.0 + (adj2 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
     let (x1, y1) = ellipse_point(cx, cy, rx, ry, start_angle);
     let (x2, y2) = ellipse_point(cx, cy, rx, ry, end_angle);
     format!(
@@ -3146,7 +3152,10 @@ mod tests {
         let default_path = preset_shape_svg("pie", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("pie", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "pie adj values should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "pie adj values should change the path"
+        );
     }
 
     #[test]
@@ -3159,7 +3168,10 @@ mod tests {
         let default_path = preset_shape_svg("arc", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("arc", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "arc adj values should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "arc adj values should change the path"
+        );
     }
 
     #[test]
@@ -3202,7 +3214,8 @@ mod tests {
         custom_adj.insert("adj1".to_string(), 10000.0);
         custom_adj.insert("adj2".to_string(), 80000.0);
 
-        let default_path = preset_shape_svg("curvedRightArrow", 120.0, 100.0, &default_adj).unwrap();
+        let default_path =
+            preset_shape_svg("curvedRightArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("curvedRightArrow", 120.0, 100.0, &custom_adj).unwrap();
 
         assert_ne!(
@@ -3268,7 +3281,10 @@ mod tests {
         let default_path = preset_shape_svg("wave", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("wave", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "wave adj2 should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "wave adj2 should change the path"
+        );
     }
 
     #[test]
@@ -3296,7 +3312,10 @@ mod tests {
         let default_path = preset_shape_svg("chord", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("chord", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "chord adj values should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "chord adj values should change the path"
+        );
     }
 
     #[test]
@@ -3308,7 +3327,10 @@ mod tests {
         let default_path = preset_shape_svg("bentArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("bentArrow", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "bentArrow adj4 should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "bentArrow adj4 should change the path"
+        );
     }
 
     #[test]
@@ -3320,7 +3342,10 @@ mod tests {
         let default_path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "bentUpArrow adj3 should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "bentUpArrow adj3 should change the path"
+        );
     }
 
     #[test]
@@ -3332,8 +3357,7 @@ mod tests {
 
         let default_path =
             preset_shape_svg("leftRightUpArrow", 120.0, 100.0, &default_adj).unwrap();
-        let custom_path =
-            preset_shape_svg("leftRightUpArrow", 120.0, 100.0, &custom_adj).unwrap();
+        let custom_path = preset_shape_svg("leftRightUpArrow", 120.0, 100.0, &custom_adj).unwrap();
 
         assert_ne!(
             default_path, custom_path,
@@ -3350,7 +3374,10 @@ mod tests {
         let default_path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "leftUpArrow adj3 should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "leftUpArrow adj3 should change the path"
+        );
     }
 
     #[test]
@@ -3364,7 +3391,10 @@ mod tests {
         let default_path = preset_shape_svg("uturnArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("uturnArrow", 120.0, 100.0, &custom_adj).unwrap();
 
-        assert_ne!(default_path, custom_path, "uturnArrow adj3/adj4/adj5 should change the path");
+        assert_ne!(
+            default_path, custom_path,
+            "uturnArrow adj3/adj4/adj5 should change the path"
+        );
     }
 
     #[test]

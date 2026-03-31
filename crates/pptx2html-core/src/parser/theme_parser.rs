@@ -152,11 +152,10 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             Some("tri") => CompoundLine::Triple,
                             _ => CompoundLine::Single,
                         };
-                        current_ln_alignment =
-                            match xml_utils::attr_str(e, "algn").as_deref() {
-                                Some("in") => LineAlignment::Inset,
-                                _ => LineAlignment::Center,
-                            };
+                        current_ln_alignment = match xml_utils::attr_str(e, "algn").as_deref() {
+                            Some("in") => LineAlignment::Inset,
+                            _ => LineAlignment::Center,
+                        };
                         current_ln_join = LineJoin::Miter;
                         current_ln_miter_limit = None;
                         current_ln_dash = DashStyle::Solid;
@@ -381,9 +380,10 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // End of effectStyle -- push accumulated style
                     "effectStyle" if in_effect_style => {
                         in_effect_style = false;
-                        theme.fmt_scheme.effect_style_lst.push(
-                            std::mem::take(&mut current_effect_style),
-                        );
+                        theme
+                            .fmt_scheme
+                            .effect_style_lst
+                            .push(std::mem::take(&mut current_effect_style));
                     }
                     // End of solidFill in fill/bg lists
                     "solidFill" if fmt_list_kind.is_some() && !in_ln => {

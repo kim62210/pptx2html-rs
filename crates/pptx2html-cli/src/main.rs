@@ -263,10 +263,8 @@ mod tests {
 
     #[test]
     fn test_write_external_assets_creates_nested_files() {
-        let tmpdir = std::env::temp_dir().join(format!(
-            "pptx2html-cli-test-{}",
-            std::process::id()
-        ));
+        let tmpdir =
+            std::env::temp_dir().join(format!("pptx2html-cli-test-{}", std::process::id()));
         if tmpdir.exists() {
             std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
         }

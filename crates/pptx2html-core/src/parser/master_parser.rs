@@ -193,13 +193,25 @@ pub fn parse_slide_master<R: Read + Seek>(
                         parse_def_rpr_attrs(e, &mut rd);
                         shape_run_defaults = Some(rd);
                     }
-                    "lnSpc" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                    "lnSpc"
+                        if in_shape_lst_style
+                            && shape_current_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_ln_spc = true;
                     }
-                    "spcBef" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                    "spcBef"
+                        if in_shape_lst_style
+                            && shape_current_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_spc_bef = true;
                     }
-                    "spcAft" if in_shape_lst_style && shape_current_lvl.is_some() && !in_shape_def_rpr => {
+                    "spcAft"
+                        if in_shape_lst_style
+                            && shape_current_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_spc_aft = true;
                     }
                     "srgbClr" if in_shape_def_rpr => {
@@ -226,19 +238,17 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 Some("flat") => LineCap::Flat,
                                 _ => LineCap::Square,
                             };
-                            sb.border.compound =
-                                match xml_utils::attr_str(e, "cmpd").as_deref() {
-                                    Some("dbl") => CompoundLine::Double,
-                                    Some("thickThin") => CompoundLine::ThickThin,
-                                    Some("thinThick") => CompoundLine::ThinThick,
-                                    Some("tri") => CompoundLine::Triple,
-                                    _ => CompoundLine::Single,
-                                };
-                            sb.border.alignment =
-                                match xml_utils::attr_str(e, "algn").as_deref() {
-                                    Some("in") => LineAlignment::Inset,
-                                    _ => LineAlignment::Center,
-                                };
+                            sb.border.compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
+                                Some("dbl") => CompoundLine::Double,
+                                Some("thickThin") => CompoundLine::ThickThin,
+                                Some("thinThick") => CompoundLine::ThinThick,
+                                Some("tri") => CompoundLine::Triple,
+                                _ => CompoundLine::Single,
+                            };
+                            sb.border.alignment = match xml_utils::attr_str(e, "algn").as_deref() {
+                                Some("in") => LineAlignment::Inset,
+                                _ => LineAlignment::Center,
+                            };
                             sb.border.join = LineJoin::Miter;
                             sb.border.miter_limit = None;
                             sb.border.no_fill = false;
@@ -339,7 +349,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                             rd.color = Some(Color::theme(val));
                         }
                     }
-                    "spcPct" if in_shape_lst_style && shape_current_lvl.is_some() && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) => {
+                    "spcPct"
+                        if in_shape_lst_style
+                            && shape_current_lvl.is_some()
+                            && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) =>
+                    {
                         if let Some(val_str) = xml_utils::attr_str(e, "val")
                             && let Ok(val) = val_str.parse::<f64>()
                         {
@@ -355,7 +369,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                             }
                         }
                     }
-                    "spcPts" if in_shape_lst_style && shape_current_lvl.is_some() && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) => {
+                    "spcPts"
+                        if in_shape_lst_style
+                            && shape_current_lvl.is_some()
+                            && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) =>
+                    {
                         if let Some(val_str) = xml_utils::attr_str(e, "val")
                             && let Ok(val) = val_str.parse::<f64>()
                         {
@@ -498,8 +516,8 @@ pub fn parse_slide_master<R: Read + Seek>(
                             sb.border.style = match val.as_str() {
                                 "solid" => BorderStyle::Solid,
                                 "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot"
-                                | "sysDashDot" | "sysDashDotDot" => BorderStyle::Dotted,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" | "sysDashDot"
+                                | "sysDashDotDot" => BorderStyle::Dotted,
                                 _ => BorderStyle::Solid,
                             };
                             sb.border.dash_style = match val.as_str() {

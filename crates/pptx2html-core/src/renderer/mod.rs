@@ -47,6 +47,14 @@ struct RenderCtx<'a> {
     collector: &'a RefCell<UnresolvedCollector>,
 }
 
+struct RunRenderDefaults<'a> {
+    para_def_rpr: Option<&'a ParagraphDefRPr>,
+    run_defaults: Option<&'a RunDefaults>,
+    font_ref_font: Option<&'a str>,
+    font_ref_color: Option<&'a ResolvedColor>,
+    font_scale: Option<f64>,
+}
+
 impl<'a> RenderCtx<'a> {
     fn resolve_color(&self, color: &Color) -> Option<ResolvedColor> {
         color.resolve(self.scheme, self.clr_map)
@@ -100,7 +108,10 @@ impl<'a> RenderCtx<'a> {
     }
 
     fn push_font_resolution(&self, entry: FontResolutionEntry) {
-        self.collector.borrow_mut().font_resolution_entries.push(entry);
+        self.collector
+            .borrow_mut()
+            .font_resolution_entries
+            .push(entry);
     }
 
     /// Create a slide-scoped context with resolved ClrMap and per-master theme
@@ -387,13 +398,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // OOXML connectors use rotation to reorient the path (e.g., 270° to make
         // a horizontal connector into a vertical one) — this is a layout hint,
         // not a visual rotation.
-        let is_connector = svg_preset_name.is_some_and(|pn| matches!(pn,
-            "line" | "lineInv" | "straightConnector1"
-                | "bentConnector2" | "bentConnector3" | "bentConnector4" | "bentConnector5"
-                | "curvedConnector2" | "curvedConnector3" | "curvedConnector4" | "curvedConnector5"
-        ));
-        let connector_needs_swap = is_connector && (shape.rotation - 90.0).abs() < 1.0
-            || is_connector && (shape.rotation - 270.0).abs() < 1.0;
+        let is_connector = svg_preset_name.is_some_and(|pn| {
+            matches!(
+                pn,
+                "line"
+                    | "lineInv"
+                    | "straightConnector1"
+                    | "bentConnector2"
+                    | "bentConnector3"
+                    | "bentConnector4"
+                    | "bentConnector5"
+                    | "curvedConnector2"
+                    | "curvedConnector3"
+                    | "curvedConnector4"
+                    | "curvedConnector5"
+            )
+        });
+        let connector_needs_swap = is_connector
+            && ((shape.rotation - 90.0).abs() < 1.0 || (shape.rotation - 270.0).abs() < 1.0);
 
         let (w, h) = if connector_needs_swap { (h, w) } else { (w, h) };
         if connector_needs_swap {
@@ -405,7 +427,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let _ = write!(
                 style_buf,
                 "left: {:.1}px; top: {:.1}px; width: {w:.1}px; height: {h:.1}px",
-                x + dx, y + dy
+                x + dx,
+                y + dy
             );
         }
 
@@ -433,9 +456,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         if let Some(pn) = svg_preset_name {
             let is_line = matches!(
                 pn,
-                "line" | "lineInv" | "straightConnector1"
-                    | "bentConnector2" | "bentConnector3" | "bentConnector4" | "bentConnector5"
-                    | "curvedConnector2" | "curvedConnector3" | "curvedConnector4" | "curvedConnector5"
+                "line"
+                    | "lineInv"
+                    | "straightConnector1"
+                    | "bentConnector2"
+                    | "bentConnector3"
+                    | "bentConnector4"
+                    | "bentConnector5"
+                    | "curvedConnector2"
+                    | "curvedConnector3"
+                    | "curvedConnector4"
+                    | "curvedConnector5"
             );
             if is_line {
                 if w < 0.5 {
@@ -510,20 +541,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Shape-level effects → CSS box-shadow
         // Use explicit effects if present; otherwise fall back to effectRef from theme
         {
-            let resolved_effects = if shape.effects.outer_shadow.is_none()
-                && shape.effects.glow.is_none()
-            {
-                if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
-                    (&shape.style_ref, fmt_scheme, ctx.scheme, ctx.clr_map)
-                    && let Some(effect_ref) = &sr.effect_ref
-                {
-                    style_ref::resolve_effect_ref(effect_ref, fmt, cs, cm)
+            let resolved_effects =
+                if shape.effects.outer_shadow.is_none() && shape.effects.glow.is_none() {
+                    if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+                        (&shape.style_ref, fmt_scheme, ctx.scheme, ctx.clr_map)
+                        && let Some(effect_ref) = &sr.effect_ref
+                    {
+                        style_ref::resolve_effect_ref(effect_ref, fmt, cs, cm)
+                    } else {
+                        None
+                    }
                 } else {
                     None
-                }
-            } else {
-                None
-            };
+                };
             let effective_effects = resolved_effects.as_ref().unwrap_or(&shape.effects);
 
             let mut shadows: Vec<String> = Vec::new();
@@ -681,7 +711,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     "bentConnector3" => {
                         let adj1 = adj_values.get("adj1").copied().unwrap_or(50000.0);
                         let mid = ah * adj1 / 100_000.0;
-                        Some(format!("M0,0 L0,{mid:.1} L{aw:.1},{mid:.1} L{aw:.1},{ah:.1}"))
+                        Some(format!(
+                            "M0,0 L0,{mid:.1} L{aw:.1},{mid:.1} L{aw:.1},{ah:.1}"
+                        ))
                     }
                     _ => Some(format!("M0,0 L{aw:.1},{ah:.1}")),
                 }
@@ -720,11 +752,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         let adj1 = adj_values.get("adj1").copied().unwrap_or(50000.0);
                         let mid = svg_h * adj1 / 100_000.0;
                         let path = if flip_h {
-                            format!("M0,0 L0,{mid:.1} L{w:.1},{mid:.1} L{w:.1},{h:.1}",
-                                w = svg_w, mid = mid, h = svg_h)
+                            format!(
+                                "M0,0 L0,{mid:.1} L{w:.1},{mid:.1} L{w:.1},{h:.1}",
+                                w = svg_w,
+                                mid = mid,
+                                h = svg_h
+                            )
                         } else {
-                            format!("M{w:.1},0 L{w:.1},{mid:.1} L0,{mid:.1} L0,{h:.1}",
-                                w = svg_w, mid = mid, h = svg_h)
+                            format!(
+                                "M{w:.1},0 L{w:.1},{mid:.1} L0,{mid:.1} L0,{h:.1}",
+                                w = svg_w,
+                                mid = mid,
+                                h = svg_h
+                            )
                         };
                         Some(path)
                     }
@@ -734,7 +774,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 None
             };
             let has_override = line_svg_override.is_some();
-            let svg_path_opt = line_svg_override.or_else(|| geometry::preset_shape_svg(preset_name, svg_w, svg_h, adj_values));
+            let svg_path_opt = line_svg_override
+                .or_else(|| geometry::preset_shape_svg(preset_name, svg_w, svg_h, adj_values));
             if let Some(svg_path) = svg_path_opt {
                 // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
@@ -776,7 +817,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     }
                     if let Some(ref te) = resolved_border.tail_end {
                         let mid = ctx.next_marker_id("tail");
-                        emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, false);
+                        emit_marker_def(
+                            &mut defs_buf,
+                            &mid,
+                            te,
+                            &stroke_color,
+                            stroke_width,
+                            false,
+                        );
                         marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
                     }
                 }
@@ -802,23 +850,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 };
                 // For connectors with swapped dimensions where the path was NOT
                 // directly generated (fallback case), apply flip via SVG transform
-                let svg_transform = if connector_needs_swap
-                    && !has_override
-                    && (shape.flip_h || shape.flip_v)
-                {
-                    let sx = if shape.flip_h { -1.0 } else { 1.0 };
-                    let sy = if shape.flip_v { -1.0 } else { 1.0 };
-                    let tx = if shape.flip_h { svg_w } else { 0.0 };
-                    let ty = if shape.flip_v { svg_h } else { 0.0 };
-                    format!(" transform=\"translate({tx:.1},{ty:.1}) scale({sx},{sy})\"")
-                } else {
-                    String::new()
-                };
+                let svg_transform =
+                    if connector_needs_swap && !has_override && (shape.flip_h || shape.flip_v) {
+                        let sx = if shape.flip_h { -1.0 } else { 1.0 };
+                        let sy = if shape.flip_v { -1.0 } else { 1.0 };
+                        let tx = if shape.flip_h { svg_w } else { 0.0 };
+                        let ty = if shape.flip_v { svg_h } else { 0.0 };
+                        format!(" transform=\"translate({tx:.1},{ty:.1}) scale({sx},{sy})\"")
+                    } else {
+                        String::new()
+                    };
                 // non-scaling-stroke prevents stroke distortion when viewBox
                 // and CSS dimensions have different aspect ratios.
                 // Ensure minimum 1.5px for visibility at screen resolution.
                 let (non_scaling, stroke_width) = if is_line_shape {
-                    (" vector-effect=\"non-scaling-stroke\"", stroke_width.max(1.5))
+                    (
+                        " vector-effect=\"non-scaling-stroke\"",
+                        stroke_width.max(1.5),
+                    )
                 } else {
                     ("", stroke_width)
                 };
@@ -961,13 +1010,21 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 shape,
                 layout_match,
                 master_match,
-                shape.style_ref.as_ref().and_then(|s| s.fill_ref.as_ref()).is_some(),
+                shape
+                    .style_ref
+                    .as_ref()
+                    .and_then(|s| s.fill_ref.as_ref())
+                    .is_some(),
             ),
             border_source: inheritance::border_source(
                 shape,
                 layout_match,
                 master_match,
-                shape.style_ref.as_ref().and_then(|s| s.ln_ref.as_ref()).is_some(),
+                shape
+                    .style_ref
+                    .as_ref()
+                    .and_then(|s| s.ln_ref.as_ref())
+                    .is_some(),
             ),
             text_source: text_style_ctx.primary_source(),
             background_source: None,
@@ -1149,24 +1206,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     row_idx
                 };
-                if row_idx != 0 || !table.first_row {
-                    if band_idx % 2 == 1 {
-                        tr_style.push_str("; background-color: rgba(0,0,0,0.04)");
-                    }
+                if (row_idx != 0 || !table.first_row) && band_idx % 2 == 1 {
+                    tr_style.push_str("; background-color: rgba(0,0,0,0.04)");
                 }
             }
 
             // First row emphasis
             if table.first_row && row_idx == 0 {
-                tr_style.push_str(
-                    "; font-weight: bold; border-bottom: 2px solid rgba(0,0,0,0.2)",
-                );
+                tr_style.push_str("; font-weight: bold; border-bottom: 2px solid rgba(0,0,0,0.2)");
             }
 
             // Last row emphasis
             if table.last_row && row_idx == row_count - 1 {
-                tr_style
-                    .push_str("; font-weight: bold; border-top: 2px solid rgba(0,0,0,0.2)");
+                tr_style.push_str("; font-weight: bold; border-top: 2px solid rgba(0,0,0,0.2)");
             }
 
             let _ = writeln!(html, "<tr style=\"{tr_style}\">");
@@ -1186,10 +1238,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     } else {
                         col_idx
                     };
-                    if col_idx != 0 || !table.first_col {
-                        if band_col_idx % 2 == 1 {
-                            td_style.push_str("background-color: rgba(0,0,0,0.04)");
-                        }
+                    if (col_idx != 0 || !table.first_col) && band_col_idx % 2 == 1 {
+                        td_style.push_str("background-color: rgba(0,0,0,0.04)");
                     }
                 }
 
@@ -1581,11 +1631,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             Self::render_run_with_defaults(
                 run,
                 ctx,
-                para.def_rpr.as_ref(),
-                run_defaults,
-                font_ref_font,
-                font_ref_color,
-                font_scale,
+                RunRenderDefaults {
+                    para_def_rpr: para.def_rpr.as_ref(),
+                    run_defaults,
+                    font_ref_font,
+                    font_ref_color,
+                    font_scale,
+                },
                 html,
             );
         }
@@ -1601,11 +1653,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     fn render_run_with_defaults(
         run: &TextRun,
         ctx: &RenderCtx<'_>,
-        para_def_rpr: Option<&ParagraphDefRPr>,
-        run_defaults: Option<&RunDefaults>,
-        font_ref_font: Option<&str>,
-        font_ref_color: Option<&ResolvedColor>,
-        font_scale: Option<f64>,
+        defaults: RunRenderDefaults<'_>,
         html: &mut String,
     ) {
         // Line break (early return)
@@ -1639,7 +1687,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let font_resolution = font
             .map(|f| (Some(f), FontResolutionSource::ExplicitRun))
             .or_else(|| {
-                para_def_rpr.and_then(|pd| {
+                defaults.para_def_rpr.and_then(|pd| {
                     pd.font_ea
                         .as_deref()
                         .or(pd.font_latin.as_deref())
@@ -1647,27 +1695,31 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 })
             })
             .or_else(|| {
-                run_defaults.and_then(|rd| {
+                defaults.run_defaults.and_then(|rd| {
                     rd.font_ea
                         .as_deref()
                         .or(rd.font_latin.as_deref())
                         .map(|f| (Some(f), FontResolutionSource::InheritedDefaults))
                 })
             })
-            .or_else(|| font_ref_font.map(|f| (Some(f), FontResolutionSource::FontRef)));
+            .or_else(|| {
+                defaults
+                    .font_ref_font
+                    .map(|f| (Some(f), FontResolutionSource::FontRef))
+            });
 
-        let (requested_font, font_source, resolved_font) = if let Some((requested, source)) = font_resolution
-        {
-            (
-                requested.map(|s| s.to_string()),
-                Some(source),
-                requested
-                    .and_then(|f| resolve_font_name(f, font_scheme))
-                    .map(|s| s.to_string()),
-            )
-        } else {
-            (None, None, None)
-        };
+        let (requested_font, font_source, resolved_font) =
+            if let Some((requested, source)) = font_resolution {
+                (
+                    requested.map(|s| s.to_string()),
+                    Some(source),
+                    requested
+                        .and_then(|f| resolve_font_name(f, font_scheme))
+                        .map(|s| s.to_string()),
+                )
+            } else {
+                (None, None, None)
+            };
 
         if let Some(ref f) = resolved_font {
             let _ = write!(run_style, "font-family: '{f}'");
@@ -1691,10 +1743,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let font_size = run
             .style
             .font_size
-            .or_else(|| para_def_rpr.and_then(|pd| pd.font_size))
-            .or_else(|| run_defaults.and_then(|rd| rd.font_size));
+            .or_else(|| defaults.para_def_rpr.and_then(|pd| pd.font_size))
+            .or_else(|| defaults.run_defaults.and_then(|rd| rd.font_size));
         if let Some(sz) = font_size {
-            let effective_sz = sz * font_scale.unwrap_or(1.0);
+            let effective_sz = sz * defaults.font_scale.unwrap_or(1.0);
             push_sep(&mut run_style);
             let _ = write!(run_style, "font-size: {effective_sz:.1}pt");
         }
@@ -1702,10 +1754,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Bold: explicit > para defRPr > inherited
         let bold = if run.style.bold {
             true
-        } else if let Some(b) = para_def_rpr.and_then(|pd| pd.bold) {
+        } else if let Some(b) = defaults.para_def_rpr.and_then(|pd| pd.bold) {
             b
         } else {
-            run_defaults.and_then(|rd| rd.bold).unwrap_or(false)
+            defaults
+                .run_defaults
+                .and_then(|rd| rd.bold)
+                .unwrap_or(false)
         };
         if bold {
             push_sep(&mut run_style);
@@ -1715,10 +1770,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Italic: explicit > para defRPr > inherited
         let italic = if run.style.italic {
             true
-        } else if let Some(i) = para_def_rpr.and_then(|pd| pd.italic) {
+        } else if let Some(i) = defaults.para_def_rpr.and_then(|pd| pd.italic) {
             i
         } else {
-            run_defaults.and_then(|rd| rd.italic).unwrap_or(false)
+            defaults
+                .run_defaults
+                .and_then(|rd| rd.italic)
+                .unwrap_or(false)
         };
         if italic {
             push_sep(&mut run_style);
@@ -1739,15 +1797,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let color_css = if !run.style.color.is_none() {
             ctx.color_to_css(&run.style.color)
         } else {
-            para_def_rpr
+            defaults
+                .para_def_rpr
                 .and_then(|pd| pd.color.as_ref())
                 .and_then(|c| ctx.color_to_css(c))
                 .or_else(|| {
-                    run_defaults
+                    defaults
+                        .run_defaults
                         .and_then(|rd| rd.color.as_ref())
                         .and_then(|c| ctx.color_to_css(c))
                 })
-                .or_else(|| font_ref_color.as_ref().map(|c| c.to_css()))
+                .or_else(|| defaults.font_ref_color.as_ref().map(|c| c.to_css()))
         };
         if let Some(css_color) = color_css {
             push_sep(&mut run_style);
@@ -1756,18 +1816,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Superscript/subscript -- use actual OOXML baseline percentage
         // baseline is in thousandths of percent (e.g., 30000 = 30%)
-        if let Some(baseline) = run.style.baseline {
-            if baseline != 0 {
-                let pct = baseline as f64 / 1000.0;
-                let abs_pct = pct.abs();
-                // Scale font size proportionally: larger offset = smaller font
-                let scale = (1.0 - abs_pct / 100.0).max(0.5);
-                push_sep(&mut run_style);
-                let _ = write!(
-                    run_style,
-                    "vertical-align: {pct:.1}%; font-size: {scale:.2}em"
-                );
-            }
+        if let Some(baseline) = run.style.baseline
+            && baseline != 0
+        {
+            let pct = baseline as f64 / 1000.0;
+            let abs_pct = pct.abs();
+            // Scale font size proportionally: larger offset = smaller font
+            let scale = (1.0 - abs_pct / 100.0).max(0.5);
+            push_sep(&mut run_style);
+            let _ = write!(
+                run_style,
+                "vertical-align: {pct:.1}%; font-size: {scale:.2}em"
+            );
         }
 
         // Letter spacing
@@ -1849,16 +1909,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             );
                         }
                         GradientType::Radial => {
-                            let _ = write!(
-                                buf,
-                                "background: radial-gradient(circle, {stops_buf})"
-                            );
+                            let _ = write!(buf, "background: radial-gradient(circle, {stops_buf})");
                         }
                         GradientType::Rectangular => {
-                            let _ = write!(
-                                buf,
-                                "background: radial-gradient(ellipse, {stops_buf})"
-                            );
+                            let _ =
+                                write!(buf, "background: radial-gradient(ellipse, {stops_buf})");
                         }
                         GradientType::Shape => {
                             let _ = write!(
@@ -1925,10 +1980,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     let joined = stops.join(", ");
                     match gf.gradient_type {
                         GradientType::Linear => {
-                            format!(
-                                "background: linear-gradient({:.0}deg, {joined})",
-                                gf.angle
-                            )
+                            format!("background: linear-gradient({:.0}deg, {joined})", gf.angle)
                         }
                         GradientType::Radial => {
                             format!("background: radial-gradient(circle, {joined})")
@@ -1982,7 +2034,10 @@ fn shape_connection_point(shape: &Shape, site_idx: usize) -> Option<(f64, f64)> 
         return None;
     };
     let site = geom.connection_sites.get(site_idx)?;
-    let path = geom.paths.iter().find(|p| p.width > 0.0 && p.height > 0.0)?;
+    let path = geom
+        .paths
+        .iter()
+        .find(|p| p.width > 0.0 && p.height > 0.0)?;
 
     let width_px = shape.size.width.to_px();
     let height_px = shape.size.height.to_px();
@@ -2006,10 +2061,17 @@ fn shape_connection_point(shape: &Shape, site_idx: usize) -> Option<(f64, f64)> 
         local_y = cy + dx * rad.sin() + dy * rad.cos();
     }
 
-    Some((shape.position.x.to_px() + local_x, shape.position.y.to_px() + local_y))
+    Some((
+        shape.position.x.to_px() + local_x,
+        shape.position.y.to_px() + local_y,
+    ))
 }
 
-fn custom_geom_text_rect_insets(shape: &Shape, width_px: f64, height_px: f64) -> (f64, f64, f64, f64) {
+fn custom_geom_text_rect_insets(
+    shape: &Shape,
+    width_px: f64,
+    height_px: f64,
+) -> (f64, f64, f64, f64) {
     let ShapeType::CustomGeom(ref geom) = shape.shape_type else {
         return (0.0, 0.0, 0.0, 0.0);
     };
@@ -2277,10 +2339,10 @@ fn line_join_to_svg(join: &LineJoin) -> &'static str {
 }
 
 fn line_miter_limit_to_svg(border: &Border) -> String {
-    if matches!(border.join, LineJoin::Miter) {
-        if let Some(limit) = border.miter_limit {
-            return format!(" stroke-miterlimit=\"{limit:.1}\"");
-        }
+    if matches!(border.join, LineJoin::Miter)
+        && let Some(limit) = border.miter_limit
+    {
+        return format!(" stroke-miterlimit=\"{limit:.1}\"");
     }
     String::new()
 }

@@ -2,8 +2,8 @@
 
 mod fixtures;
 
-use pptx2html_core::{ProvenanceSource, ProvenanceSubject};
 use pptx2html_core::model::*;
+use pptx2html_core::{ProvenanceSource, ProvenanceSubject};
 
 fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
     pptx2html_core::parser::PptxParser::parse_bytes(data).expect("PPTX parsing failed")
@@ -1385,14 +1385,20 @@ fn test_placeholder_inheritance_provenance_is_collected() {
         .iter()
         .find(|entry| entry.subject == ProvenanceSubject::Shape)
         .expect("shape provenance entry");
-    assert_eq!(shape_entry.text_source, Some(ProvenanceSource::LayoutListStyle));
+    assert_eq!(
+        shape_entry.text_source,
+        Some(ProvenanceSource::LayoutListStyle)
+    );
 
     let bg_entry = result
         .provenance_entries
         .iter()
         .find(|entry| entry.subject == ProvenanceSubject::SlideBackground)
         .expect("background provenance entry");
-    assert_eq!(bg_entry.background_source, Some(ProvenanceSource::HardcodedDefault));
+    assert_eq!(
+        bg_entry.background_source,
+        Some(ProvenanceSource::HardcodedDefault)
+    );
 }
 
 #[test]

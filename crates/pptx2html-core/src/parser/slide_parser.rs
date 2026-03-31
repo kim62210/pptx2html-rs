@@ -461,7 +461,9 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    "cNvPr" if current_shape.is_some() => parse_shape_identity(e, &mut current_shape),
+                    "cNvPr" if current_shape.is_some() => {
+                        parse_shape_identity(e, &mut current_shape)
+                    }
                     // Non-visual properties (contains placeholder)
                     "nvPr" if current_shape.is_some() => {
                         in_nv_pr = true;
@@ -506,11 +508,10 @@ pub fn parse_slide<R: Read + Seek>(
                                 Some("tri") => CompoundLine::Triple,
                                 _ => CompoundLine::Single,
                             };
-                            sb.border_alignment =
-                                match xml_utils::attr_str(e, "algn").as_deref() {
-                                    Some("in") => LineAlignment::Inset,
-                                    _ => LineAlignment::Center,
-                                };
+                            sb.border_alignment = match xml_utils::attr_str(e, "algn").as_deref() {
+                                Some("in") => LineAlignment::Inset,
+                                _ => LineAlignment::Center,
+                            };
                         }
                     }
                     // Line/border inside table cell border
@@ -900,7 +901,9 @@ pub fn parse_slide<R: Read + Seek>(
                             bottom,
                         });
                     }
-                    "cNvPr" if current_shape.is_some() => parse_shape_identity(e, &mut current_shape),
+                    "cNvPr" if current_shape.is_some() => {
+                        parse_shape_identity(e, &mut current_shape)
+                    }
                     "stCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
                         parse_connector_ref(e, &mut current_shape, true)
                     }
@@ -1202,8 +1205,8 @@ pub fn parse_slide<R: Read + Seek>(
                             sb.border_style = match val.as_str() {
                                 "solid" => BorderStyle::Solid,
                                 "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot"
-                                | "sysDashDot" | "sysDashDotDot" => BorderStyle::Dotted,
+                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" | "sysDashDot"
+                                | "sysDashDotDot" => BorderStyle::Dotted,
                                 _ => BorderStyle::Solid,
                             };
                             sb.dash_style = match val.as_str() {
@@ -3085,12 +3088,12 @@ impl ShapeBuilder {
         };
 
         let text_body = if self.has_text_body {
-                Some(TextBody {
-                    paragraphs: self.paragraphs,
-                    list_style: None,
-                    vertical_align: self.text_vertical_align,
-                    word_wrap: self.text_word_wrap,
-                    auto_fit: self.text_auto_fit,
+            Some(TextBody {
+                paragraphs: self.paragraphs,
+                list_style: None,
+                vertical_align: self.text_vertical_align,
+                word_wrap: self.text_word_wrap,
+                auto_fit: self.text_auto_fit,
                 margins: self.text_margins,
             })
         } else {
@@ -3258,7 +3261,6 @@ impl RunBuilder {
             },
             hyperlink: self.hyperlink,
             is_break: self.is_break,
-            ..Default::default()
         }
     }
 }

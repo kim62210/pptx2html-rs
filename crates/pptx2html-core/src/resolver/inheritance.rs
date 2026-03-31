@@ -10,8 +10,7 @@ use crate::model::hierarchy::{ClrMapOverride, FmtScheme, SlideLayout, SlideMaste
 use crate::model::presentation::{ClrMap, ColorScheme};
 use crate::model::slide::{Shape, Slide};
 use crate::model::{
-    Border, Color, CompoundLine, DashStyle, Fill, LineAlignment, LineCap, LineJoin, Position,
-    Size,
+    Border, Color, CompoundLine, DashStyle, Fill, LineAlignment, LineCap, LineJoin, Position, Size,
 };
 
 /// Resolve effective background for a slide (slide -> layout -> master -> white)
@@ -138,15 +137,15 @@ pub fn shape_fill_source(
     if matches!(shape.fill, Fill::NoFill) || !matches!(shape.fill, Fill::None) {
         return Some(ProvenanceSource::Slide);
     }
-    if let Some(lm) = layout_match {
-        if matches!(lm.fill, Fill::NoFill) || !matches!(lm.fill, Fill::None) {
-            return Some(ProvenanceSource::LayoutPlaceholder);
-        }
+    if let Some(lm) = layout_match
+        && (matches!(lm.fill, Fill::NoFill) || !matches!(lm.fill, Fill::None))
+    {
+        return Some(ProvenanceSource::LayoutPlaceholder);
     }
-    if let Some(mm) = master_match {
-        if matches!(mm.fill, Fill::NoFill) || !matches!(mm.fill, Fill::None) {
-            return Some(ProvenanceSource::MasterPlaceholder);
-        }
+    if let Some(mm) = master_match
+        && (matches!(mm.fill, Fill::NoFill) || !matches!(mm.fill, Fill::None))
+    {
+        return Some(ProvenanceSource::MasterPlaceholder);
     }
     if has_style_ref_fill {
         return Some(ProvenanceSource::StyleRef);
@@ -173,16 +172,15 @@ pub fn resolve_border_with_theme(
         let mut border = shape.border.clone();
         // If shape has border properties (e.g., head/tail end) but no color,
         // try to resolve color from lnRef style reference
-        if border.color.is_none() {
-            if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+        if border.color.is_none()
+            && let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
                 (&shape.style_ref, fmt_scheme, scheme, clr_map)
-                && let Some(ln_ref) = &sr.ln_ref
-                && let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
-            {
-                border.color = resolved.color;
-                if border.width == 0.0 {
-                    border.width = resolved.width;
-                }
+            && let Some(ln_ref) = &sr.ln_ref
+            && let Some(resolved) = style_ref::resolve_ln_ref(ln_ref, fmt, cs, cm)
+        {
+            border.color = resolved.color;
+            if border.width == 0.0 {
+                border.width = resolved.width;
             }
         }
         return border;
@@ -224,9 +222,7 @@ pub fn resolve_border_with_theme(
         {
             resolved.dash_style = shape.border.dash_style.clone();
         }
-        if matches!(resolved.cap, LineCap::Flat)
-            && !matches!(shape.border.cap, LineCap::Flat)
-        {
+        if matches!(resolved.cap, LineCap::Flat) && !matches!(shape.border.cap, LineCap::Flat) {
             resolved.cap = shape.border.cap.clone();
         }
         if matches!(resolved.compound, CompoundLine::Single)
@@ -239,8 +235,7 @@ pub fn resolve_border_with_theme(
         {
             resolved.alignment = shape.border.alignment.clone();
         }
-        if matches!(resolved.join, LineJoin::Miter)
-            && !matches!(shape.border.join, LineJoin::Miter)
+        if matches!(resolved.join, LineJoin::Miter) && !matches!(shape.border.join, LineJoin::Miter)
         {
             resolved.join = shape.border.join.clone();
         }
@@ -262,15 +257,15 @@ pub fn border_source(
     if shape.border.no_fill || shape.border.width > 0.0 || has_border_properties(&shape.border) {
         return Some(ProvenanceSource::Slide);
     }
-    if let Some(lm) = layout_match {
-        if lm.border.no_fill || lm.border.width > 0.0 || has_border_properties(&lm.border) {
-            return Some(ProvenanceSource::LayoutPlaceholder);
-        }
+    if let Some(lm) = layout_match
+        && (lm.border.no_fill || lm.border.width > 0.0 || has_border_properties(&lm.border))
+    {
+        return Some(ProvenanceSource::LayoutPlaceholder);
     }
-    if let Some(mm) = master_match {
-        if mm.border.no_fill || mm.border.width > 0.0 || has_border_properties(&mm.border) {
-            return Some(ProvenanceSource::MasterPlaceholder);
-        }
+    if let Some(mm) = master_match
+        && (mm.border.no_fill || mm.border.width > 0.0 || has_border_properties(&mm.border))
+    {
+        return Some(ProvenanceSource::MasterPlaceholder);
     }
     if has_style_ref_line {
         return Some(ProvenanceSource::StyleRef);

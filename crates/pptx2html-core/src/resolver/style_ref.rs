@@ -405,13 +405,15 @@ mod tests {
             idx: 0,
             color: Color::theme("accent1"),
         };
-        assert!(resolve_effect_ref(
-            &sr,
-            &test_fmt_scheme_with_effects(),
-            &test_scheme(),
-            &ClrMap::default()
-        )
-        .is_none());
+        assert!(
+            resolve_effect_ref(
+                &sr,
+                &test_fmt_scheme_with_effects(),
+                &test_scheme(),
+                &ClrMap::default()
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -421,13 +423,15 @@ mod tests {
             color: Color::theme("accent1"),
         };
         // idx 1 has no effects (empty effectLst)
-        assert!(resolve_effect_ref(
-            &sr,
-            &test_fmt_scheme_with_effects(),
-            &test_scheme(),
-            &ClrMap::default()
-        )
-        .is_none());
+        assert!(
+            resolve_effect_ref(
+                &sr,
+                &test_fmt_scheme_with_effects(),
+                &test_scheme(),
+                &ClrMap::default()
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -473,12 +477,14 @@ mod tests {
             idx: 99,
             color: Color::theme("accent1"),
         };
-        assert!(resolve_effect_ref(
-            &sr,
-            &test_fmt_scheme_with_effects(),
-            &test_scheme(),
-            &ClrMap::default()
-        )
-        .is_none());
+        assert!(
+            resolve_effect_ref(
+                &sr,
+                &test_fmt_scheme_with_effects(),
+                &test_scheme(),
+                &ClrMap::default()
+            )
+            .is_none()
+        );
     }
 }
