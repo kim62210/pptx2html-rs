@@ -46,6 +46,8 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Custom Geometry | `<a:custGeom>` | Partial |
 | Adjust Values / Guide Formulas | `<a:gdLst><a:gd fmla="...">` | Partial |
 | Custom geometry text rectangle | `<a:custGeom><a:rect .../>` | Partial |
+| Custom geometry adjust handles | `<a:ahLst><a:ahXY>` / `<a:ahPolar>` | Partial |
+| Custom geometry connection sites | `<a:cxnLst><a:cxn>` | Partial |
 
 ## Text
 
