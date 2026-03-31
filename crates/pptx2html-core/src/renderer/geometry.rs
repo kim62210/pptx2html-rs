@@ -2123,34 +2123,42 @@ fn ellipse_point(cx: f64, cy: f64, rx: f64, ry: f64, angle: f64) -> (f64, f64) {
 }
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
-    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
+    let phase = w * adj2 * 0.15;
     format!(
-        "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c2:.1},{h:.1} {c1:.1},{y2:.1} 0,{y1:.1} Z",
+        "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c3:.1},{h:.1} {c4:.1},{y2:.1} 0,{y1:.1} Z",
         a = a,
-        c1 = w * 0.25,
-        c2 = w * 0.75,
+        c1 = w * 0.25 + phase,
+        c2 = w * 0.75 - phase,
         a2 = a * 2.0,
         w = w,
         y1 = h - a,
         h = h,
+        c3 = w * 0.75 + phase,
+        c4 = w * 0.25 - phase,
         y2 = h - a * 2.0
     )
 }
 fn double_wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(6250.0) / 100_000.0;
-    let _adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
+    let phase = w * adj2 * 0.08;
     format!(
-        "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {cx:.1},{a:.1} C{c3:.1},0 {c4:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c4:.1},{h:.1} {c3:.1},{y2:.1} {cx:.1},{y1:.1} C{c2:.1},{h:.1} {c1:.1},{y2:.1} 0,{y1:.1} Z",
+        "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {cx:.1},{a:.1} C{c3:.1},0 {c4:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c5:.1},{h:.1} {c6:.1},{y2:.1} {cx:.1},{y1:.1} C{c7:.1},{h:.1} {c8:.1},{y2:.1} 0,{y1:.1} Z",
         a = a,
         a2 = a * 2.0,
-        c1 = w * 0.125,
-        c2 = w * 0.375,
+        c1 = w * 0.125 + phase,
+        c2 = w * 0.375 - phase,
         cx = w * 0.5,
-        c3 = w * 0.625,
-        c4 = w * 0.875,
+        c3 = w * 0.625 + phase,
+        c4 = w * 0.875 - phase,
         w = w,
         y1 = h - a,
         y2 = h - a * 2.0,
+        c5 = w * 0.875 + phase,
+        c6 = w * 0.625 - phase,
+        c7 = w * 0.375 + phase,
+        c8 = w * 0.125 - phase,
         h = h
     )
 }
@@ -2615,12 +2623,16 @@ fn left_right_circular_arrow_path(w: f64, h: f64) -> String {
 
 // Misc shapes
 fn chord_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _adj1 = adj.get("adj1").copied().unwrap_or(2700000.0);
-    let _adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
+    let adj1 = adj.get("adj1").copied().unwrap_or(2700000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
     let (rx, ry) = (w / 2.0, h / 2.0);
     let (cx, cy) = (rx, ry);
-    let (x1, y1) = (cx - rx * 0.866, cy + ry * 0.5);
-    let (x2, y2) = (cx + rx * 0.866, cy + ry * 0.5);
+    let start_angle = std::f64::consts::PI * 5.0 / 6.0
+        - (adj1 - 2_700_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let end_angle = std::f64::consts::PI / 6.0
+        + (adj2 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let (x1, y1) = ellipse_point(cx, cy, rx, ry, start_angle);
+    let (x2, y2) = ellipse_point(cx, cy, rx, ry, end_angle);
     format!(
         "M{x1:.1},{y1:.1} A{rx:.1},{ry:.1} 0 1,1 {x2:.1},{y2:.1} L{x1:.1},{y1:.1} Z",
         x1 = x1,
@@ -3231,6 +3243,46 @@ mod tests {
             default_path, custom_path,
             "curvedDownArrow adj1/adj2 should change the path"
         );
+    }
+
+    #[test]
+    fn test_wave_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj2".to_string(), 40000.0);
+
+        let default_path = preset_shape_svg("wave", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("wave", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "wave adj2 should change the path");
+    }
+
+    #[test]
+    fn test_double_wave_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj2".to_string(), 40000.0);
+
+        let default_path = preset_shape_svg("doubleWave", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("doubleWave", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "doubleWave adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_chord_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 5400000.0);
+        custom_adj.insert("adj2".to_string(), 10800000.0);
+
+        let default_path = preset_shape_svg("chord", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("chord", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "chord adj values should change the path");
     }
 }
 
