@@ -183,10 +183,9 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
                             }
-                            if let Some(vert) = xml_utils::attr_str(e, "vert")
-                                && vert != "horz"
-                            {
-                                sb.vertical_text = Some(vert);
+                            if let Some(vert) = xml_utils::attr_str(e, "vert") {
+                                sb.vertical_text_explicit = true;
+                                sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
                             }
                             if let Some(v) = xml_utils::attr_str(e, "lIns") {
                                 sb.text_margins.left = Emu::parse_emu(&v).to_pt();
@@ -341,10 +340,9 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
                             }
-                            if let Some(vert) = xml_utils::attr_str(e, "vert")
-                                && vert != "horz"
-                            {
-                                sb.vertical_text = Some(vert);
+                            if let Some(vert) = xml_utils::attr_str(e, "vert") {
+                                sb.vertical_text_explicit = true;
+                                sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
                             }
                             if let Some(v) = xml_utils::attr_str(e, "lIns") {
                                 sb.text_margins.left = Emu::parse_emu(&v).to_pt();
@@ -929,6 +927,7 @@ struct MasterShapeBuilder {
     text_word_wrap_explicit: bool,
     text_auto_fit: AutoFit,
     vertical_text: Option<String>,
+    vertical_text_explicit: bool,
     border: Border,
 }
 
@@ -944,6 +943,7 @@ impl MasterShapeBuilder {
             size: self.size,
             placeholder: self.placeholder,
             vertical_text: self.vertical_text,
+            vertical_text_explicit: self.vertical_text_explicit,
             border: self.border,
             text_body: if self.list_style.is_some()
                 || self.text_vertical_align_explicit

@@ -71,6 +71,7 @@ pub struct Shape {
     pub start_connection: Option<ConnectionRef>,
     pub end_connection: Option<ConnectionRef>,
     pub vertical_text: Option<String>, // "vert", "vert270", "wordArtVert", etc.
+    pub vertical_text_explicit: bool,
     pub effects: ShapeEffects,
 }
 

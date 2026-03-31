@@ -2997,10 +2997,9 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
             sb.text_word_wrap_explicit = true;
         }
         // Vertical text direction
-        if let Some(vert) = xml_utils::attr_str(e, "vert")
-            && vert != "horz"
-        {
-            sb.vertical_text = Some(vert);
+        if let Some(vert) = xml_utils::attr_str(e, "vert") {
+            sb.vertical_text_explicit = true;
+            sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
         }
     }
 }
@@ -3139,6 +3138,7 @@ struct ShapeBuilder {
     text_auto_fit: AutoFit,
     text_list_style: Option<ListStyle>,
     vertical_text: Option<String>,
+    vertical_text_explicit: bool,
     // Image cropping
     crop: Option<CropRect>,
     // Placeholder and style reference (parsed as None for now)
@@ -3278,6 +3278,7 @@ impl ShapeBuilder {
             start_connection: self.start_connection,
             end_connection: self.end_connection,
             vertical_text: self.vertical_text,
+            vertical_text_explicit: self.vertical_text_explicit,
             effects,
             ..Default::default()
         }
