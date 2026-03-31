@@ -3030,6 +3030,9 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
             sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
             sb.text_vertical_align_explicit = true;
         }
+        if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
+            sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
+        }
         // Inner margins (EMU → pt)
         if let Some(v) = xml_utils::attr_str(e, "lIns") {
             sb.text_margins.left = Emu::parse_emu(&v).to_pt();
@@ -3187,6 +3190,7 @@ struct ShapeBuilder {
     // bodyPr
     text_vertical_align: VerticalAlign,
     text_vertical_align_explicit: bool,
+    text_anchor_center: bool,
     text_margins: TextMargins,
     text_margin_top_explicit: bool,
     text_margin_bottom_explicit: bool,
@@ -3273,6 +3277,7 @@ impl ShapeBuilder {
                 list_style: self.text_list_style,
                 vertical_align: self.text_vertical_align,
                 vertical_align_explicit: self.text_vertical_align_explicit,
+                anchor_center: self.text_anchor_center,
                 margin_top_explicit: self.text_margin_top_explicit,
                 margin_bottom_explicit: self.text_margin_bottom_explicit,
                 margin_left_explicit: self.text_margin_left_explicit,

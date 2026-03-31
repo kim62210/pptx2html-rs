@@ -2573,3 +2573,27 @@ fn test_run_cap_small_renders_small_caps_variant() {
         "Expected cap='small' to render small-caps variant: {html}"
     );
 }
+
+#[test]
+fn test_body_pr_anchor_ctr_renders_horizontal_centering() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="AnchorCtr"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr anchorCtr="1"/>
+        <a:p><a:r><a:t>Centered body</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains(".text-body.h-center { align-items: center; }")
+            && html.contains("class=\"text-body v-top h-center\""),
+        "Expected anchorCtr to add horizontal centering class and CSS rule: {html}"
+    );
+}
