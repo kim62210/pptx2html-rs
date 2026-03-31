@@ -797,16 +797,21 @@ fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
-    let _a5 = adj.get("adj5").copied().unwrap_or(75000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
+    let a5 = adj.get("adj5").copied().unwrap_or(75000.0) / 100_000.0;
     let s = w * a1;
     let rx = w * 0.35;
     let ry = h * a2;
     let c = ry;
-    let (xl, xr) = (w * 0.15, w * 0.85);
-    let hh = h * 0.15;
+    let xl = w * (0.08 + a3.clamp(0.0, 1.0) * 0.2);
+    let xr = w * (0.68 + a5.clamp(0.0, 1.0) * 0.2);
+    let hh = h * (0.08 + a4.clamp(0.0, 1.0) * 0.2);
     let yh = h - hh;
+    let cx = xr + (w - xr) * (0.25 + a5.clamp(0.0, 1.0) * 0.5);
+    let xm = xr - s * (0.3 + a4.clamp(0.0, 1.0) * 0.6);
+    let xr2 = xr - s * (0.4 + a4.clamp(0.0, 1.0) * 0.6);
+    let xl2 = xl + s * (0.8 + a3.clamp(0.0, 1.0) * 0.6);
     format!(
         "M{xl:.1},{h:.1} L{xl:.1},{c:.1} A{rx:.1},{ry:.1} 0 0,1 {xr:.1},{c:.1} L{xr:.1},{yh:.1} L{w:.1},{yh:.1} L{cx:.1},{h:.1} L{xm:.1},{yh:.1} L{xr2:.1},{yh:.1} L{xr2:.1},{c:.1} A{rx2:.1},{ry2:.1} 0 0,0 {xl2:.1},{c:.1} L{xl2:.1},{h:.1} Z",
         xl = xl,
@@ -817,12 +822,12 @@ fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         xr = xr,
         yh = yh,
         w = w,
-        cx = (xr + w) / 2.0,
-        xm = xr - s,
-        xr2 = xr - s,
+        cx = cx,
+        xm = xm,
+        xr2 = xr2,
         rx2 = rx - s,
         ry2 = (ry - s).max(0.1),
-        xl2 = xl + s
+        xl2 = xl2
     )
 }
 fn left_right_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -956,8 +961,11 @@ fn wedge_ellipse_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Str
     )
 }
 fn cloud_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
+    let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
+    let bx = w * (0.18 + a1.clamp(-0.5, 0.5) * 0.25);
+    let by = h * (0.75 + a2.clamp(0.0, 1.0) * 0.35);
+    let br = w * (0.03 + a2.clamp(0.0, 1.0) * 0.03);
     format!(
         "M{x1:.1},{y1:.1} C{x1:.1},{y0:.1} {x2:.1},{y0:.1} {x3:.1},{y0:.1} C{x4:.1},{y0:.1} {x5:.1},{y2:.1} {x5:.1},{y3:.1} C{x5:.1},{y4:.1} {x4:.1},{y5:.1} {x3:.1},{y5:.1} C{x2:.1},{y5:.1} {x1:.1},{y4:.1} {x1:.1},{y3:.1} C{x0:.1},{y3:.1} {x0:.1},{y1:.1} {x1:.1},{y1:.1} Z M{bx1:.1},{by1:.1} A{br:.1},{br:.1} 0 1,1 {bx2:.1},{by2:.1} A{br:.1},{br:.1} 0 1,1 {bx1:.1},{by1:.1} Z",
         x0 = w * 0.05,
@@ -972,11 +980,11 @@ fn cloud_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y3 = h * 0.55,
         y4 = h * 0.75,
         y5 = h * 0.85,
-        bx1 = w * 0.2,
-        by1 = h * 0.9,
-        bx2 = w * 0.15,
-        by2 = h * 1.05,
-        br = w * 0.04
+        bx1 = bx,
+        by1 = by,
+        bx2 = bx - br * 1.25,
+        by2 = by + br * 2.5,
+        br = br
     )
 }
 fn callout1_path(w: f64, h: f64) -> String {
@@ -1675,7 +1683,7 @@ fn math_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
-    let _a2_angle = adj.get("adj2").copied().unwrap_or(6600000.0);
+    let a2_angle = adj.get("adj2").copied().unwrap_or(6600000.0);
     let a3 = adj.get("adj3").copied().unwrap_or(11760.0) / 100_000.0;
     let bar_h = h * a3;
     let gap = h * a1;
@@ -1684,6 +1692,9 @@ fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let y2 = cy - gap / 2.0;
     let y3 = cy + gap / 2.0;
     let y4 = cy + gap / 2.0 + bar_h;
+    let skew = (a2_angle - 6_600_000.0) / 21_600_000.0;
+    let x1 = w * (0.65 + skew * 0.6);
+    let x2 = w * (0.35 - skew * 0.6);
     format!(
         "M0,{y1:.1} L{w:.1},{y1:.1} L{w:.1},{y2:.1} L0,{y2:.1} Z M0,{y3:.1} L{w:.1},{y3:.1} L{w:.1},{y4:.1} L0,{y4:.1} Z M{x1:.1},0 L{x2:.1},{h:.1}",
         y1 = y1,
@@ -1691,8 +1702,8 @@ fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y3 = y3,
         y4 = y4,
         w = w,
-        x1 = w * 0.65,
-        x2 = w * 0.35,
+        x1 = x1,
+        x2 = x2,
         h = h
     )
 }
@@ -3340,6 +3351,51 @@ mod tests {
         let custom_path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &custom_adj).unwrap();
 
         assert_ne!(default_path, custom_path, "leftUpArrow adj3 should change the path");
+    }
+
+    #[test]
+    fn test_uturn_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj3".to_string(), 45000.0);
+        custom_adj.insert("adj4".to_string(), 70000.0);
+        custom_adj.insert("adj5".to_string(), 85000.0);
+
+        let default_path = preset_shape_svg("uturnArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("uturnArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "uturnArrow adj3/adj4/adj5 should change the path");
+    }
+
+    #[test]
+    fn test_cloud_callout_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), -5000.0);
+        custom_adj.insert("adj2".to_string(), 45000.0);
+
+        let default_path = preset_shape_svg("cloudCallout", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("cloudCallout", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "cloudCallout adj1/adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_math_not_equal_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj2".to_string(), 9600000.0);
+
+        let default_path = preset_shape_svg("mathNotEqual", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("mathNotEqual", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "mathNotEqual adj2 should change the path"
+        );
     }
 }
 
