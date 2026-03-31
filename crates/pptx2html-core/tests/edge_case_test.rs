@@ -1439,6 +1439,116 @@ fn test_custgeom_ifelse_formula_uses_false_branch_for_zero() {
     }
 }
 
+#[test]
+fn test_custgeom_sqrt_formula_drives_point_coordinate() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideSqrt"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="base" fmla="val 8100"/>
+            <a:gd name="root" fmla="sqrt base"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="root" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!((x - 90.0).abs() < 0.01, "expected sqrt result 90, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_mod_formula_uses_vector_length_semantics() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideMod"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="len" fmla="mod 3 4 12"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="len" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!((x - 13.0).abs() < 0.01, "expected vector-length mod result 13, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
+#[test]
+fn test_custgeom_abs_formula_normalizes_negative_value() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GuideAbs"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="2000000"/></a:xfrm>
+        <a:custGeom>
+          <a:gdLst>
+            <a:gd name="neg" fmla="val -4500"/>
+            <a:gd name="pos" fmla="abs neg"/>
+          </a:gdLst>
+          <a:pathLst>
+            <a:path w="21600" h="21600">
+              <a:moveTo><a:pt x="pos" y="0"/></a:moveTo>
+              <a:lnTo><a:pt x="21600" y="21600"/></a:lnTo>
+            </a:path>
+          </a:pathLst>
+        </a:custGeom>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => match &geom.paths[0].commands[0] {
+            PathCommand::MoveTo { x, .. } => {
+                assert!((x - 4500.0).abs() < 0.01, "expected abs result 4500, got {x}");
+            }
+            other => panic!("Expected MoveTo, got {:?}", other),
+        },
+        other => panic!("Expected CustomGeom, got {:?}", other),
+    }
+}
+
 // ── Auto-fit (normAutofit / spAutoFit) ──
 
 #[test]

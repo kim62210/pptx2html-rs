@@ -2566,6 +2566,30 @@ fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
                 0.0
             }
         }
+        "abs" => {
+            if tokens.len() >= 2 {
+                resolve(tokens[1]).abs()
+            } else {
+                0.0
+            }
+        }
+        "sqrt" => {
+            if tokens.len() >= 2 {
+                resolve(tokens[1]).max(0.0).sqrt()
+            } else {
+                0.0
+            }
+        }
+        "mod" => {
+            if tokens.len() >= 4 {
+                let x = resolve(tokens[1]);
+                let y = resolve(tokens[2]);
+                let z = resolve(tokens[3]);
+                (x * x + y * y + z * z).sqrt()
+            } else {
+                0.0
+            }
+        }
         _ => 0.0,
     }
 }
