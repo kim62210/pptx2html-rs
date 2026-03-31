@@ -44,7 +44,8 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Heart | `<a:prstGeom prst="heart">` | Supported |
 | Lightning Bolt | `<a:prstGeom prst="lightningBolt">` | Supported |
 | Custom Geometry | `<a:custGeom>` | Partial |
-| Adjust Values | `<a:avLst><a:gd>` | Partial |
+| Adjust Values / Guide Formulas | `<a:gdLst><a:gd fmla="...">` | Partial |
+| Custom geometry text rectangle | `<a:custGeom><a:rect .../>` | Partial |
 
 ## Text
 

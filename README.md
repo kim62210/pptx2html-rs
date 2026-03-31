@@ -11,7 +11,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - High-fidelity layout preservation using absolute positioning
 - Theme color resolution with 12 color modifiers (tint, shade, lumMod, etc.)
 - Slide master / layout inheritance chain with placeholder matching
-- 187 preset shape SVG rendering with broad adjust value support across arrows, arcs, waves, and chord presets
+- 187 preset shape SVG rendering with broad adjust value support and expanded custom-geometry guide/formula handling
 - SVG stroke dash styles (solid, dash, dot, dashDot, etc.)
 - Line ending markers (arrow, triangle, stealth, diamond, oval)
 - Table, group shape, and connector support
@@ -170,7 +170,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 
 | Category | Highlights |
 |----------|-----------|
-| Shapes | 187 preset shapes with broad adjust value coverage + custom geometry SVG rendering |
+| Shapes | 187 preset shapes with broad adjust value coverage + custom geometry SVG rendering, guide formulas, and text rectangles |
 | Text | Bold, italic, underline, strikethrough, super/subscript, vertical text, shadows, highlights |
 | Colors | RGB, theme, system, preset with 12 modifiers (tint, shade, lumMod, satMod, etc.) |
 | Fills | Solid, gradient, image, noFill; style references (fillRef/lnRef) |
@@ -230,7 +230,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline diagram and module 
 ## Testing
 
 ```bash
-# Rust tests (233 tests)
+# Rust tests (261 tests)
 cargo test --workspace
 
 # Python tests (32 tests)
@@ -240,8 +240,8 @@ cd pptx2html-enhance && .venv/bin/python -m pytest tests/ -v
 cargo bench --package pptx2html-core
 ```
 
-265 tests total, all passing:
-- **Rust (233):** 97 unit tests (color, HSL, modifiers, placeholders, style refs, SVG geometry) + 128 integration tests (PPTX generation/parsing/rendering + edge cases + metadata sideband) + 6 CLI tests + 2 doc-tests
+293 tests total, all passing:
+- **Rust (261):** 105 unit tests (color, HSL, modifiers, placeholders, style refs, SVG geometry) + 148 integration tests (PPTX generation/parsing/rendering + edge cases + custom geometry guide formulas + metadata sideband) + 6 CLI tests + 2 doc-tests
 - **Python (32):** Enhancer pipeline, SmartArt/Math/Effects handlers, HTML patching (mock LLM provider)
 
 ## Autoresearch
