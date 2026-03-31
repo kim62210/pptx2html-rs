@@ -1979,6 +1979,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             push_sep(&mut run_style);
             run_style.push_str(st_css);
         }
+        if let Some(cap_css) = run.style.capitalization.to_css() {
+            push_sep(&mut run_style);
+            run_style.push_str(cap_css);
+        }
 
         // Color -- explicit > para defRPr > inherited > fontRef > none
         // Use or_else chaining so that a None at any level falls through to the next

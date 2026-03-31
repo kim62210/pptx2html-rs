@@ -3102,6 +3102,9 @@ fn parse_run_props(e: &quick_xml::events::BytesStart<'_>, run: &mut Option<RunBu
         if let Some(strike) = xml_utils::attr_str(e, "strike") {
             rb.strikethrough = StrikethroughType::from_ooxml(&strike);
         }
+        if let Some(cap) = xml_utils::attr_str(e, "cap") {
+            rb.capitalization = TextCapitalization::from_ooxml(&cap);
+        }
         if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
             rb.baseline = baseline.parse::<i32>().ok();
         }
@@ -3398,6 +3401,7 @@ struct RunBuilder {
     italic: bool,
     underline: UnderlineType,
     strikethrough: StrikethroughType,
+    capitalization: TextCapitalization,
     color: Color,
     font_latin: Option<String>,
     font_ea: Option<String>,
@@ -3419,6 +3423,7 @@ impl RunBuilder {
                 italic: self.italic,
                 underline: self.underline,
                 strikethrough: self.strikethrough,
+                capitalization: self.capitalization,
                 color: self.color,
                 baseline: self.baseline,
                 letter_spacing: self.letter_spacing,

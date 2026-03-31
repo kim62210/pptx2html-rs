@@ -83,6 +83,32 @@ pub enum StrikethroughType {
     Double,
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum TextCapitalization {
+    #[default]
+    None,
+    All,
+    Small,
+}
+
+impl TextCapitalization {
+    pub fn from_ooxml(val: &str) -> Self {
+        match val {
+            "all" => Self::All,
+            "small" => Self::Small,
+            _ => Self::None,
+        }
+    }
+
+    pub fn to_css(&self) -> Option<&'static str> {
+        match self {
+            Self::None => None,
+            Self::All => Some("text-transform: uppercase"),
+            Self::Small => Some("font-variant: small-caps"),
+        }
+    }
+}
+
 impl StrikethroughType {
     /// Parse OOXML `strike` attribute value
     pub fn from_ooxml(val: &str) -> Self {
@@ -112,6 +138,7 @@ pub struct TextStyle {
     pub italic: bool,
     pub underline: UnderlineType,
     pub strikethrough: StrikethroughType,
+    pub capitalization: TextCapitalization,
     pub color: Color,
     pub baseline: Option<i32>, // superscript(+)/subscript(-) offset (1/1000 %)
     pub letter_spacing: Option<f64>, // in pt

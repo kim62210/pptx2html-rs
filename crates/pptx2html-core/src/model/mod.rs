@@ -33,5 +33,5 @@ pub use style::{
     Alignment, Border, BorderStyle, CompoundLine, DashStyle, Fill, FontStyle, GlowEffect,
     GradientFill, GradientStop, GradientType, ImageFill, LineAlignment, LineCap, LineEnd,
     LineEndSize, LineEndType, LineJoin, OuterShadow, ShapeEffects, SolidFill, StrikethroughType,
-    TextShadow, TextStyle, UnderlineType,
+    TextCapitalization, TextShadow, TextStyle, UnderlineType,
 };

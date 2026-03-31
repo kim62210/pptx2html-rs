@@ -2527,3 +2527,49 @@ fn test_run_without_any_size_uses_hardcoded_default_font_size() {
         "Expected renderer hardcoded default font size of 18pt when no size is specified: {html}"
     );
 }
+
+#[test]
+fn test_run_cap_all_renders_uppercase_transform() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="AllCaps"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr cap="all"/><a:t>All caps text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("text-transform: uppercase"),
+        "Expected cap='all' to render uppercase transform: {html}"
+    );
+}
+
+#[test]
+fn test_run_cap_small_renders_small_caps_variant() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="SmallCaps"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr cap="small"/><a:t>Small caps text</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("font-variant: small-caps"),
+        "Expected cap='small' to render small-caps variant: {html}"
+    );
+}
