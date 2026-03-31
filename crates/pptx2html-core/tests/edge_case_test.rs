@@ -2471,3 +2471,28 @@ fn test_default_body_pr_does_not_force_nowrap() {
         "Default bodyPr wrap should remain square/wrapped unless wrap='none' is explicit: {tb_chunk}"
     );
 }
+
+#[test]
+fn test_wrapped_text_body_emits_overflow_wrap_anywhere() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="WrapAnywhere"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1800000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>SupercalifragilisticexpialidociousWithoutSpaces</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 320.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Expected wrapped text body to opt into emergency line breaking: {tb_chunk}"
+    );
+}

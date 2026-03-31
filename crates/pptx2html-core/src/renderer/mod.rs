@@ -1064,6 +1064,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             // Text wrapping control
             if !effective_word_wrap {
                 tb_style.push_str("; white-space: nowrap");
+            } else {
+                tb_style.push_str("; overflow-wrap: anywhere");
             }
             // Vertical text rendering
             let mut has_vert270 = false;
