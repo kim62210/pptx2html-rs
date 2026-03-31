@@ -1088,6 +1088,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     _ => {}
                 }
             }
+            if text_body.text_rotation_deg != 0.0 {
+                let _ = write!(tb_style, "; transform: rotate({:.1}deg)", text_body.text_rotation_deg);
+            }
             // Extract auto-fit scaling factors
             let (font_scale, ln_spc_reduction) = match effective_auto_fit {
                 AutoFit::Normal {

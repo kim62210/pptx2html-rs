@@ -2597,3 +2597,26 @@ fn test_body_pr_anchor_ctr_renders_horizontal_centering() {
         "Expected anchorCtr to add horizontal centering class and CSS rule: {html}"
     );
 }
+
+#[test]
+fn test_body_pr_rotation_renders_text_transform() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="TextRot"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr rot="5400000"/>
+        <a:p><a:r><a:t>Rotated body</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("transform: rotate(90.0deg)"),
+        "Expected bodyPr rot to render a text-body rotation transform: {html}"
+    );
+}
