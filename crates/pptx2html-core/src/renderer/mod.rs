@@ -1042,6 +1042,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 Self::resolve_text_vertical_align(text_body, layout_match, master_match);
             let effective_word_wrap = Self::resolve_text_word_wrap(text_body, layout_match, master_match);
             let effective_margins = Self::resolve_text_margins(text_body, layout_match, master_match);
+            let effective_vertical_text = Self::resolve_vertical_text(shape, layout_match, master_match);
             let v_class = match effective_vertical_align {
                 VerticalAlign::Top => "v-top",
                 VerticalAlign::Middle => "v-middle",
@@ -1063,7 +1064,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
             // Vertical text rendering
             let mut has_vert270 = false;
-            if let Some(ref vert) = shape.vertical_text {
+            if let Some(vert) = effective_vertical_text {
                 match vert.as_str() {
                     "vert" | "wordArtVert" | "eaVert" => {
                         tb_style.push_str("; writing-mode: vertical-rl");
@@ -1246,6 +1247,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             return word_wrap;
         }
         text_body.word_wrap
+    }
+
+    fn resolve_vertical_text<'a>(
+        shape: &'a Shape,
+        layout_match: Option<&'a Shape>,
+        master_match: Option<&'a Shape>,
+    ) -> Option<&'a String> {
+        shape
+            .vertical_text
+            .as_ref()
+            .or_else(|| layout_match.and_then(|matched| matched.vertical_text.as_ref()))
+            .or_else(|| master_match.and_then(|matched| matched.vertical_text.as_ref()))
     }
 
     fn resolve_text_margins(

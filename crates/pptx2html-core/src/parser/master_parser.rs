@@ -183,6 +183,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
                             }
+                            if let Some(vert) = xml_utils::attr_str(e, "vert")
+                                && vert != "horz"
+                            {
+                                sb.vertical_text = Some(vert);
+                            }
                             if let Some(v) = xml_utils::attr_str(e, "lIns") {
                                 sb.text_margins.left = Emu::parse_emu(&v).to_pt();
                                 sb.text_margin_left_explicit = true;
@@ -335,6 +340,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                             if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
                                 sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
                                 sb.text_vertical_align_explicit = true;
+                            }
+                            if let Some(vert) = xml_utils::attr_str(e, "vert")
+                                && vert != "horz"
+                            {
+                                sb.vertical_text = Some(vert);
                             }
                             if let Some(v) = xml_utils::attr_str(e, "lIns") {
                                 sb.text_margins.left = Emu::parse_emu(&v).to_pt();
@@ -918,6 +928,7 @@ struct MasterShapeBuilder {
     text_word_wrap: bool,
     text_word_wrap_explicit: bool,
     text_auto_fit: AutoFit,
+    vertical_text: Option<String>,
     border: Border,
 }
 
@@ -932,6 +943,7 @@ impl MasterShapeBuilder {
             position: self.position,
             size: self.size,
             placeholder: self.placeholder,
+            vertical_text: self.vertical_text,
             border: self.border,
             text_body: if self.list_style.is_some()
                 || self.text_vertical_align_explicit
