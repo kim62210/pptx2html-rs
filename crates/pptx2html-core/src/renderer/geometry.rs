@@ -566,11 +566,12 @@ fn bent_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
+    let a4 = adj.get("adj4").copied().unwrap_or(43750.0) / 100_000.0;
     let s = h * a1;
     let c = h * a2;
     let xh = w * (1.0 - a3);
     let (yt, yb) = (c - s / 2.0, c + s / 2.0);
+    let hd = (c + h * a4.clamp(0.1, 0.9)).min(h);
     format!(
         "M0,{h:.1} L0,{yb:.1} L{xh:.1},{yb:.1} L{xh:.1},0 L{w:.1},{c:.1} L{xh:.1},{hd:.1} L{xh:.1},{yt:.1} L{s:.1},{yt:.1} L{s:.1},{h:.1} Z",
         h = h,
@@ -578,7 +579,7 @@ fn bent_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         xh = xh,
         w = w,
         c = c,
-        hd = c * 2.0,
+        hd = hd,
         yt = yt,
         s = s
     )
@@ -778,16 +779,16 @@ fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let s = w * a1;
     let hh = h * a2;
-    let _ = a3;
     let xm = w - s;
     let cx = xm + s / 2.0;
+    let xl = xm - s * (0.2 + a3.clamp(0.0, 1.0) * 0.8);
     format!(
         "M0,{h:.1} L0,{y1:.1} L{xm:.1},{y1:.1} L{xm:.1},{hh:.1} L{xl:.1},{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{w:.1},{y1:.1} L{s:.1},{y1:.1} L{s:.1},{h:.1} Z",
         h = h,
         y1 = h - s,
         xm = xm,
         hh = hh,
-        xl = xm - s * 0.5,
+        xl = xl,
         cx = cx,
         w = w,
         s = s
@@ -826,12 +827,13 @@ fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn left_right_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let s = w.min(h) * a1;
     let cx = w / 2.0;
     let cy = h / 2.0;
-    let hd = w * 0.2;
+    let hd = w * (0.1 + a2.clamp(0.0, 1.0) * 0.25);
+    let hh = h * (0.1 + a3.clamp(0.0, 1.0) * 0.25);
     format!(
         "M0,{cy:.1} L{hd:.1},{y1:.1} L{hd:.1},{y2:.1} L{x1:.1},{y2:.1} L{x1:.1},{hh:.1} L{x2:.1},{hh:.1} L{cx:.1},0 L{x3:.1},{hh:.1} L{x4:.1},{hh:.1} L{x4:.1},{y2:.1} L{x5:.1},{y2:.1} L{x5:.1},{y1:.1} L{w:.1},{cy:.1} L{x5:.1},{y3:.1} L{x5:.1},{y4:.1} L{hd:.1},{y4:.1} L{hd:.1},{y3:.1} Z",
         cy = cy,
@@ -839,7 +841,7 @@ fn left_right_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
         y1 = cy - s * 1.5,
         y2 = cy - s / 2.0,
         x1 = cx - s / 2.0,
-        hh = h * 0.2,
+        hh = hh,
         x2 = cx - s * 1.5,
         cx = cx,
         x3 = cx + s * 1.5,
@@ -880,18 +882,19 @@ fn quad_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 fn left_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let s = w.min(h) * a1;
     let (hd, hh) = (w * a2, h * a2);
+    let body_reach = w * (0.2 + a3.clamp(0.0, 1.0) * 0.35);
     format!(
         "M0,{cy:.1} L{hd:.1},{y1:.1} L{hd:.1},{y2:.1} L{x1:.1},{y2:.1} L{x1:.1},{hh:.1} L{x2:.1},{hh:.1} L{x3:.1},0 L{w:.1},{hh:.1} L{x4:.1},{hh:.1} L{x4:.1},{h:.1} L{hd:.1},{h:.1} L{hd:.1},{y3:.1} Z",
         cy = h / 2.0,
         hd = hd,
         y1 = h / 2.0 - s,
         y2 = h / 2.0 - s / 2.0,
-        x1 = w - s * 2.0,
+        x1 = (w - body_reach).max(hd),
         hh = hh,
-        x2 = w - s * 2.5,
+        x2 = (w - body_reach - s * 0.5).max(hd),
         x3 = w - s,
         w = w,
         x4 = w - s / 2.0,
@@ -3283,6 +3286,60 @@ mod tests {
         let custom_path = preset_shape_svg("chord", 120.0, 100.0, &custom_adj).unwrap();
 
         assert_ne!(default_path, custom_path, "chord adj values should change the path");
+    }
+
+    #[test]
+    fn test_bent_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj4".to_string(), 70000.0);
+
+        let default_path = preset_shape_svg("bentArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("bentArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "bentArrow adj4 should change the path");
+    }
+
+    #[test]
+    fn test_bent_up_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj3".to_string(), 70000.0);
+
+        let default_path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "bentUpArrow adj3 should change the path");
+    }
+
+    #[test]
+    fn test_left_right_up_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj2".to_string(), 60000.0);
+        custom_adj.insert("adj3".to_string(), 70000.0);
+
+        let default_path =
+            preset_shape_svg("leftRightUpArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path =
+            preset_shape_svg("leftRightUpArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "leftRightUpArrow adj2/adj3 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_left_up_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj3".to_string(), 70000.0);
+
+        let default_path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(default_path, custom_path, "leftUpArrow adj3 should change the path");
     }
 }
 
