@@ -614,87 +614,115 @@ fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
     )
 }
 fn curved_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let body_top = h * a1.clamp(0.08, 0.42);
+    let body_bottom = h - body_top;
+    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_ctrl_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
+    let ctrl_front_x = w * (0.15 + a2.clamp(0.0, 1.0) * 0.3);
+    let ctrl_back_x = w * (0.25 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_x = w * (0.05 + a2.clamp(0.0, 1.0) * 0.3);
     let cy = h / 2.0;
     let xh = w * (1.0 - a3);
     format!(
-        "M0,{h:.1} C0,{y1:.1} {x1:.1},{y2:.1} {xh:.1},{y2:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{y3:.1} C{x2:.1},{y3:.1} {x3:.1},{y4:.1} {x3:.1},{h:.1} Z",
+        "M0,{h:.1} C0,{ctrl_y:.1} {ctrl_front_x:.1},{body_top:.1} {xh:.1},{body_top:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{body_bottom:.1} C{ctrl_back_x:.1},{body_bottom:.1} {tail_x:.1},{tail_ctrl_y:.1} {tail_x:.1},{h:.1} Z",
         h = h,
-        y1 = h * 0.3,
-        x1 = w * 0.3,
-        y2 = h * 0.25,
+        ctrl_y = ctrl_y,
+        ctrl_front_x = ctrl_front_x,
+        body_top = body_top,
         xh = xh,
         w = w,
         cy = cy,
-        y3 = h * 0.75,
-        x2 = w * 0.45,
-        x3 = w * 0.2,
-        y4 = h * 0.7
+        body_bottom = body_bottom,
+        ctrl_back_x = ctrl_back_x,
+        tail_x = tail_x,
+        tail_ctrl_y = tail_ctrl_y
     )
 }
 fn curved_left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
+    let body_top = h * a1.clamp(0.08, 0.42);
+    let body_bottom = h - body_top;
+    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_ctrl_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
+    let ctrl_front_x = w * (0.85 - a2.clamp(0.0, 1.0) * 0.3);
+    let ctrl_back_x = w * (0.75 - a2.clamp(0.0, 1.0) * 0.4);
+    let tail_x = w * (0.95 - a2.clamp(0.0, 1.0) * 0.3);
     let cy = h / 2.0;
     let hw = w * a3;
     format!(
-        "M{w:.1},{h:.1} C{w:.1},{y1:.1} {x1:.1},{y2:.1} {hw:.1},{y2:.1} L{hw:.1},0 L0,{cy:.1} L{hw:.1},{h:.1} L{hw:.1},{y3:.1} C{x2:.1},{y3:.1} {x3:.1},{y4:.1} {x3:.1},{h:.1} Z",
+        "M{w:.1},{h:.1} C{w:.1},{ctrl_y:.1} {ctrl_front_x:.1},{body_top:.1} {hw:.1},{body_top:.1} L{hw:.1},0 L0,{cy:.1} L{hw:.1},{h:.1} L{hw:.1},{body_bottom:.1} C{ctrl_back_x:.1},{body_bottom:.1} {tail_x:.1},{tail_ctrl_y:.1} {tail_x:.1},{h:.1} Z",
         w = w,
         h = h,
-        y1 = h * 0.3,
-        x1 = w * 0.7,
-        y2 = h * 0.25,
+        ctrl_y = ctrl_y,
+        ctrl_front_x = ctrl_front_x,
+        body_top = body_top,
         hw = hw,
         cy = cy,
-        y3 = h * 0.75,
-        x2 = w * 0.55,
-        x3 = w * 0.8,
-        y4 = h * 0.7
+        body_bottom = body_bottom,
+        ctrl_back_x = ctrl_back_x,
+        tail_x = tail_x,
+        tail_ctrl_y = tail_ctrl_y
     )
 }
 fn curved_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cx = w / 2.0;
     let hh = h * a3;
+    let body_left = w * a1.clamp(0.08, 0.42);
+    let body_right = w - body_left;
+    let ctrl_x = w * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_ctrl_x = w * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
+    let ctrl_top_y = h * (0.9 - a2.clamp(0.0, 1.0) * 0.4);
+    let tail_top_y = h * (0.45 + a2.clamp(0.0, 1.0) * 0.2);
+    let tail_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.4);
     format!(
-        "M{w:.1},{h:.1} C{x1:.1},{h:.1} {x2:.1},{y1:.1} {x2:.1},{hh:.1} L0,{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{x3:.1},{hh:.1} C{x3:.1},{y2:.1} {x4:.1},{y3:.1} {w:.1},{y3:.1} Z",
+        "M{w:.1},{h:.1} C{body_left_plus:.1},{h:.1} {ctrl_x:.1},{ctrl_top_y:.1} {ctrl_x:.1},{hh:.1} L0,{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{body_right:.1},{hh:.1} C{body_right:.1},{tail_top_y:.1} {tail_ctrl_x:.1},{tail_y:.1} {w:.1},{tail_y:.1} Z",
         w = w,
         h = h,
-        x1 = w * 0.3,
-        x2 = w * 0.25,
-        y1 = h * 0.7,
+        body_left_plus = (body_left + w * 0.05).min(w * 0.45),
+        ctrl_x = ctrl_x,
+        ctrl_top_y = ctrl_top_y,
         hh = hh,
         cx = cx,
-        x3 = w * 0.75,
-        y2 = h * 0.55,
-        x4 = w * 0.7,
-        y3 = h * 0.8
+        body_right = body_right,
+        tail_top_y = tail_top_y,
+        tail_ctrl_x = tail_ctrl_x,
+        tail_y = tail_y
     )
 }
 fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let _a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let _a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
+    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
+    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
     let cx = w / 2.0;
     let hy = h * (1.0 - a3);
+    let body_left = w * a1.clamp(0.08, 0.42);
+    let body_right = w - body_left;
+    let ctrl_x = w * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_ctrl_x = w * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
+    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
+    let tail_ctrl_y = h * (0.45 + a2.clamp(0.0, 1.0) * 0.2);
+    let tail_y = h * (0.6 - a2.clamp(0.0, 1.0) * 0.2);
     format!(
-        "M{w:.1},0 C{x1:.1},0 {x2:.1},{y1:.1} {x2:.1},{hy:.1} L0,{hy:.1} L{cx:.1},{h:.1} L{w:.1},{hy:.1} L{x3:.1},{hy:.1} C{x3:.1},{y2:.1} {x4:.1},{y3:.1} {w:.1},{y3:.1} Z",
+        "M{w:.1},0 C{body_left_plus:.1},0 {ctrl_x:.1},{ctrl_y:.1} {ctrl_x:.1},{hy:.1} L0,{hy:.1} L{cx:.1},{h:.1} L{w:.1},{hy:.1} L{body_right:.1},{hy:.1} C{body_right:.1},{tail_ctrl_y:.1} {tail_ctrl_x:.1},{tail_y:.1} {w:.1},{tail_y:.1} Z",
         w = w,
-        x1 = w * 0.3,
-        x2 = w * 0.25,
-        y1 = h * 0.3,
+        body_left_plus = (body_left + w * 0.05).min(w * 0.45),
+        ctrl_x = ctrl_x,
+        ctrl_y = ctrl_y,
         hy = hy,
         cx = cx,
         h = h,
-        x3 = w * 0.75,
-        y2 = h * 0.45,
-        x4 = w * 0.7,
-        y3 = h * 0.2
+        body_right = body_right,
+        tail_ctrl_y = tail_ctrl_y,
+        tail_ctrl_x = tail_ctrl_x,
+        tail_y = tail_y
     )
 }
 fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -3138,6 +3166,70 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "circularArrow adj values should change the path"
+        );
+    }
+
+    #[test]
+    fn test_curved_right_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 10000.0);
+        custom_adj.insert("adj2".to_string(), 80000.0);
+
+        let default_path = preset_shape_svg("curvedRightArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("curvedRightArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "curvedRightArrow adj1/adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_curved_left_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 10000.0);
+        custom_adj.insert("adj2".to_string(), 80000.0);
+
+        let default_path = preset_shape_svg("curvedLeftArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("curvedLeftArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "curvedLeftArrow adj1/adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_curved_up_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 10000.0);
+        custom_adj.insert("adj2".to_string(), 80000.0);
+
+        let default_path = preset_shape_svg("curvedUpArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("curvedUpArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "curvedUpArrow adj1/adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_curved_down_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 10000.0);
+        custom_adj.insert("adj2".to_string(), 80000.0);
+
+        let default_path = preset_shape_svg("curvedDownArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("curvedDownArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "curvedDownArrow adj1/adj2 should change the path"
         );
     }
 }
