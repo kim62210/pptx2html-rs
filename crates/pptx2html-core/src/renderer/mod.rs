@@ -1339,15 +1339,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         if shape.vertical_text_explicit {
             return shape.vertical_text.as_ref();
         }
-        if let Some(layout_match) = layout_match {
-            if layout_match.vertical_text_explicit {
-                return layout_match.vertical_text.as_ref();
-            }
+        if let Some(layout_match) = layout_match
+            && layout_match.vertical_text_explicit
+        {
+            return layout_match.vertical_text.as_ref();
         }
-        if let Some(master_match) = master_match {
-            if master_match.vertical_text_explicit {
-                return master_match.vertical_text.as_ref();
-            }
+        if let Some(master_match) = master_match
+            && master_match.vertical_text_explicit
+        {
+            return master_match.vertical_text.as_ref();
         }
         shape
             .vertical_text
