@@ -20,6 +20,11 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  PACKAGE_NAME: '@briank-dev/pptx2html-turbo'
+  PACKAGE_AUTHOR: 'Brian Kim <hyungjoo.drb@gmail.com>'
+  PACKAGE_HOMEPAGE: 'https://github.com/kim62210/pptx2html-turbo'
+  PACKAGE_BUGS_URL: 'https://github.com/kim62210/pptx2html-turbo/issues'
+  PACKAGE_DESCRIPTION: 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies'
 
 jobs:
   publish:
@@ -47,7 +52,7 @@ jobs:
 
       - name: Copy README and LICENSE
         run: |
-          cp README.md crates/pptx2html-wasm/pkg/
+          cp crates/pptx2html-wasm/README.md crates/pptx2html-wasm/pkg/
           cp LICENSE crates/pptx2html-wasm/pkg/
 
       - name: Enhance package.json
@@ -57,19 +62,18 @@ jobs:
           VERSION=$(grep '^version' ../Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
 
           # Create enhanced package.json using node
-          node -e "
-          const pkg = require('./package.json');
-          pkg.name = '@briank-dev/pptx2html-turbo';
-          pkg.version = '${VERSION}';
-          pkg.description = 'Convert PPTX slides to pixel-perfect HTML in the browser — pure Rust/WASM, zero dependencies';
-          pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
-          pkg.author = 'Brian Kim <hyungjoo.drb@gmail.com>';
-          pkg.homepage = 'https://github.com/kim62210/pptx2html-turbo';
-          pkg.bugs = { url: 'https://github.com/kim62210/pptx2html-turbo/issues' };
-          pkg.engines = { node: '>=16' };
-          pkg.exports = {
-            '.': {
-              import: './pptx2html_wasm.js',
+           node -e "
+           const pkg = require('./package.json');
+           pkg.name = process.env.PACKAGE_NAME;
+           pkg.version = '${VERSION}';
+           pkg.description = process.env.PACKAGE_DESCRIPTION;
+           pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
+           pkg.author = process.env.PACKAGE_AUTHOR;
+           pkg.homepage = process.env.PACKAGE_HOMEPAGE;
+           pkg.bugs = { url: process.env.PACKAGE_BUGS_URL };
+           pkg.exports = {
+             '.': {
+               import: './pptx2html_wasm.js',
               types: './pptx2html_wasm.d.ts'
             }
           };
