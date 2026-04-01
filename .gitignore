@@ -2,6 +2,7 @@
 
 # WASM build artifacts
 crates/pptx2html-wasm/pkg/
+crates/pptx2html-wasm/_site/
 
 # Python
 __pycache__/

@@ -15,6 +15,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   border: 2px dashed #ccc; border-radius: 8px; padding: 48px; text-align: center;
   cursor: pointer; transition: border-color 0.2s, background 0.2s;
   background: #fff; margin-bottom: 24px;
+  display: block;
 }
 .drop-zone.dragover { border-color: #4472C4; background: #f0f4ff; }
 .drop-zone p { font-size: 16px; color: #888; }
@@ -29,7 +30,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   width: 100%; min-height: 600px; border: 1px solid #e0e0e0;
   border-radius: 8px; background: #fff; display: none;
 }
-input[type="file"] { display: none; }
+input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 </style>
 </head>
 <body>
@@ -38,10 +49,10 @@ input[type="file"] { display: none; }
   <p>Drop a PPTX file to convert it to HTML in your browser — pure Rust/WASM, zero dependencies.</p>
 </div>
 <div class="container">
-  <div class="drop-zone" id="dropZone">
+  <label class="drop-zone" id="dropZone" for="fileInput">
     <span class="icon">&#128196;</span>
     <p>Drop a .pptx file here or click to select</p>
-  </div>
+  </label>
   <input type="file" id="fileInput" accept=".pptx">
   <div class="status" id="status"></div>
   <div class="meta" id="meta"></div>
@@ -91,8 +102,10 @@ async function handleFile(file) {
   }
 }
 
-dropZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+  e.target.value = '';
+});
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', (e) => {
