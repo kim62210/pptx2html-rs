@@ -89,14 +89,14 @@ jobs:
           du -h *.wasm
 
       - name: Publish to npm (dry run)
-        if: github.event.inputs.dry_run == 'true'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true'
         working-directory: crates/pptx2html-wasm/pkg
         run: npm publish --dry-run --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
-        if: github.event.inputs.dry_run != 'true' || startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false')
         working-directory: crates/pptx2html-wasm/pkg
         run: npm publish --access public
         env:
