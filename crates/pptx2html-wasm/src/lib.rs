@@ -136,11 +136,12 @@ impl ConversionResult {
 /// Convert PPTX with explicit options.
 ///
 /// ```js
-/// const html = convert_with_options(data, {
-///   embedImages: false,
-///   includeHidden: true,
-///   slideIndices: [1, 3, 5],
-/// });
+/// const html = convert_with_options(
+///   data,
+///   false,
+///   true,
+///   new Uint32Array([1, 3, 5]),
+/// );
 /// ```
 ///
 /// `slide_indices` uses 1-based indexing. Pass an empty array to include all slides.
@@ -184,6 +185,15 @@ pub fn convert_with_metadata(data: &[u8]) -> Result<ConversionResult, JsError> {
 }
 
 /// Convert PPTX with options and return both HTML and metadata.
+///
+/// ```js
+/// const result = convert_with_options_metadata(
+///   data,
+///   false,
+///   true,
+///   new Uint32Array([1, 3, 5]),
+/// );
+/// ```
 #[wasm_bindgen]
 pub fn convert_with_options_metadata(
     data: &[u8],
