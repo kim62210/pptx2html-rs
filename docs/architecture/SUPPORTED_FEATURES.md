@@ -214,7 +214,7 @@
 | Strikethrough (strike) | planned | text-decoration |
 | Character spacing (spc) | implemented | letter-spacing (explicit + inherited defRPr defaults) |
 | Baseline offset (super/sub) | implemented | vertical-align + font-size (explicit + inherited defRPr defaults) |
-| Capitalization (cap) | planned | text-transform |
+| Capitalization (cap) | implemented | text-transform / small-caps, including inherited defRPr defaults |
 | Kerning | deferred | font-kerning |
 | Text color (solidFill) | planned | color |
 | Latin font | planned | font-family |
@@ -234,11 +234,11 @@
 | Word wrap (wrap) | implemented | nowrap + wrapped fallback rules with placeholder inheritance |
 | Text insets (lIns, tIns, rIns, bIns) | implemented | padding with placeholder inheritance |
 | Vertical anchor (anchor) | implemented | flexbox alignment with placeholder inheritance |
-| Horizontal centering (anchorCtr) | planned | |
+| Horizontal centering (anchorCtr) | implemented | flexbox align-items with placeholder inheritance |
 | No autofit | implemented | explicit state preserved for inheritance and downstream rendering |
 | Normal autofit (shrink text) | implemented | fontScale + lnSpcReduction |
 | Shape autofit (resize shape) | implemented | growth-oriented HTML sizing contract |
-| Text rotation | planned | CSS transform |
+| Text rotation | implemented | CSS transform with placeholder inheritance |
 | Multiple columns | deferred | CSS column-count |
 
 ---
