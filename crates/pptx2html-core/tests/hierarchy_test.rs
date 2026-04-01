@@ -2357,7 +2357,8 @@ fn test_body_inherits_underline_and_strikethrough_from_tx_styles() {
     let html = render_html(&pptx);
 
     assert!(
-        html.contains("text-decoration: underline") && html.contains("text-decoration: line-through"),
+        html.contains("text-decoration: underline")
+            && html.contains("text-decoration: line-through"),
         "Body should inherit underline and strikethrough from bodyStyle defRPr: {html}"
     );
 }

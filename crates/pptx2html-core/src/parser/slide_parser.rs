@@ -430,7 +430,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                                pb.def_rpr_capitalization =
+                                    Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
@@ -571,13 +572,25 @@ pub fn parse_slide<R: Read + Seek>(
                         parse_def_rpr_attrs(e, &mut rd);
                         current_shape_run_defaults = Some(rd);
                     }
-                    "lnSpc" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                    "lnSpc"
+                        if in_shape_lst_style
+                            && current_shape_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_ln_spc = true;
                     }
-                    "spcBef" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                    "spcBef"
+                        if in_shape_lst_style
+                            && current_shape_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_spc_bef = true;
                     }
-                    "spcAft" if in_shape_lst_style && current_shape_lvl.is_some() && !in_shape_def_rpr => {
+                    "spcAft"
+                        if in_shape_lst_style
+                            && current_shape_lvl.is_some()
+                            && !in_shape_def_rpr =>
+                    {
                         in_shape_spc_aft = true;
                     }
                     // normAutofit — shrink text to fit (child of bodyPr)
@@ -625,7 +638,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                                pb.def_rpr_capitalization =
+                                    Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
@@ -1097,7 +1111,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                                pb.def_rpr_capitalization =
+                                    Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
@@ -1258,7 +1273,8 @@ pub fn parse_slide<R: Read + Seek>(
                                 pb.def_rpr_baseline = baseline.parse::<i32>().ok();
                             }
                             if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+                                pb.def_rpr_capitalization =
+                                    Some(TextCapitalization::from_ooxml(&cap));
                             }
                             if let Some(u) = xml_utils::attr_str(e, "u") {
                                 pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));

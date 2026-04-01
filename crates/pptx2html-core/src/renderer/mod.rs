@@ -1041,16 +1041,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Text
         if let Some(ref text_body) = shape.text_body {
-            let effective_auto_fit = Self::resolve_text_auto_fit(text_body, layout_match, master_match);
+            let effective_auto_fit =
+                Self::resolve_text_auto_fit(text_body, layout_match, master_match);
             let effective_vertical_align =
                 Self::resolve_text_vertical_align(text_body, layout_match, master_match);
-            let effective_word_wrap = Self::resolve_text_word_wrap(text_body, layout_match, master_match);
-            let effective_margins = Self::resolve_text_margins(text_body, layout_match, master_match);
+            let effective_word_wrap =
+                Self::resolve_text_word_wrap(text_body, layout_match, master_match);
+            let effective_margins =
+                Self::resolve_text_margins(text_body, layout_match, master_match);
             let effective_anchor_center =
                 Self::resolve_text_anchor_center(text_body, layout_match, master_match);
             let effective_text_rotation =
                 Self::resolve_text_rotation(text_body, layout_match, master_match);
-            let effective_vertical_text = Self::resolve_vertical_text(shape, layout_match, master_match);
+            let effective_vertical_text =
+                Self::resolve_vertical_text(shape, layout_match, master_match);
             let v_class = match effective_vertical_align {
                 VerticalAlign::Top => "v-top",
                 VerticalAlign::Middle => "v-middle",
@@ -1093,7 +1097,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
             }
             if effective_text_rotation != 0.0 {
-                let _ = write!(tb_style, "; transform: rotate({effective_text_rotation:.1}deg)");
+                let _ = write!(
+                    tb_style,
+                    "; transform: rotate({effective_text_rotation:.1}deg)"
+                );
             }
             // Extract auto-fit scaling factors
             let (font_scale, ln_spc_reduction) = match effective_auto_fit {
@@ -1126,7 +1133,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 html,
                 "<div class=\"text-body {v_class}{}{}\" style=\"{tb_style}\">",
                 if effective_word_wrap { "" } else { " nowrap" },
-                if effective_anchor_center { " h-center" } else { "" }
+                if effective_anchor_center {
+                    " h-center"
+                } else {
+                    ""
+                }
             );
             // Track auto-number counters per level for this text body
             let mut auto_num_counters: [i32; 9] = [0; 9];
@@ -1163,7 +1174,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .and_then(|ph| ph.ph_type.as_ref());
         let source = placeholder::text_style_source(ph_type);
 
-        let slide_list_style = shape.text_body.as_ref().and_then(|tb| tb.list_style.as_ref());
+        let slide_list_style = shape
+            .text_body
+            .as_ref()
+            .and_then(|tb| tb.list_style.as_ref());
 
         let layout_list_style = layout_match
             .and_then(|matched| matched.text_body.as_ref())
@@ -2044,19 +2058,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             push_sep(&mut run_style);
             run_style.push_str(&ul_css);
         }
-        let strikethrough: StrikethroughType = if !matches!(run.style.strikethrough, StrikethroughType::None) {
-            run.style.strikethrough.clone()
-        } else if let Some(s) = defaults
-            .para_def_rpr
-            .and_then(|pd| pd.strikethrough.clone())
-        {
-            s.clone()
-        } else {
-            defaults
-                .run_defaults
-                .and_then(|rd| rd.strikethrough.clone())
-                .unwrap_or_default()
-        };
+        let strikethrough: StrikethroughType =
+            if !matches!(run.style.strikethrough, StrikethroughType::None) {
+                run.style.strikethrough.clone()
+            } else if let Some(s) = defaults
+                .para_def_rpr
+                .and_then(|pd| pd.strikethrough.clone())
+            {
+                s.clone()
+            } else {
+                defaults
+                    .run_defaults
+                    .and_then(|rd| rd.strikethrough.clone())
+                    .unwrap_or_default()
+            };
         if let Some(st_css) = strikethrough.to_css() {
             push_sep(&mut run_style);
             run_style.push_str(st_css);
