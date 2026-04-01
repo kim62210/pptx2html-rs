@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-04-01
+
 ### Rendering — Text Fidelity
 - Preserve slide `lstStyle` precedence over layout, master, and default text styles
 - Inherit placeholder `bodyPr` properties across slide/layout/master chains
@@ -15,11 +17,39 @@ All notable changes to this project will be documented in this file.
 - Add wrapped text emergency line breaking via `overflow-wrap: anywhere`
 - Ensure explicit `wrap="none"` survives child run styling
 - Apply hardcoded 18pt default font size when no run size is specified
-- Inherit character spacing (`spc`) and baseline offset (`baseline`) from text defaults
+- Inherit character spacing (`spc`), baseline offset (`baseline`), underline/strike, and capitalization from text defaults
+- Support `anchorCtr` and bodyPr text rotation, including placeholder inheritance
+- Clamp oversized `normAutofit` values before rendering
 
 ### Tests
 - Add hierarchy regressions for placeholder `bodyPr` inheritance (autofit, wrap, margins, vertical anchor, vertical text, baseline, letter spacing)
-- Add edge-case coverage for wrapped text line breaking, explicit nowrap preservation, `spAutoFit`, and hardcoded default font size
+- Add edge-case coverage for wrapped text line breaking, explicit nowrap preservation, `spAutoFit`, hardcoded default font size, capitalization, anchor centering, and text rotation
+
+### npm / WASM
+- Bump the WASM package to `1.0.4`
+- Add a package-focused README for the public npm module
+- Clarify WASM API examples and slide index conventions
+- Prepare npm publish metadata in workflow inputs instead of relying on opaque inline values
+
+### Demo / CI / Evaluation
+- Harden the local WASM demo file picker and allow re-selecting the same file
+- Expand the PowerPoint fidelity golden set with a bodyPr-focused text fixture
+- Restore CI stability by applying rustfmt-clean output for recent text fidelity work
+
+## [1.0.3] - 2026-03-30
+
+### npm / WASM
+- Rename the published npm package to `@briank-dev/pptx2html-turbo`
+
+## [1.0.2] - 2026-03-30
+
+### Open Source
+- Correct repository metadata to point at `kim62210/pptx2html-turbo`
+
+## [1.0.1] - 2026-03-30
+
+### npm / WASM
+- Include `README.md` and `LICENSE` in the npm package payload
 
 ## [1.0.0] - 2026-03-30
 
