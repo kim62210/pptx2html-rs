@@ -279,6 +279,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-bar-horizontal {{ fill: #4472C4; }}
 .chart-line {{ fill: none; stroke-width: 2; }}
 .chart-point {{ stroke: none; }}
+.chart-pie-slice {{ stroke: #fff; stroke-width: 1; }}
 .unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 "#
         )
@@ -765,6 +766,34 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                 let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
                                 for (x, y) in points {
                                     let _ = writeln!(html, "<circle class=\"chart-point\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"3\" />");
+                                }
+                            }
+                        }
+                        ChartType::Pie => {
+                            let radius = (chart_height.min(w) / 2.0 - 8.0).max(12.0);
+                            let center_x = w / 2.0;
+                            let center_y = chart_height / 2.0;
+                            let values = &first_series.values;
+                            let total = values.iter().copied().filter(|v| *v > 0.0).sum::<f64>();
+                            if total > 0.0 {
+                                let mut start_angle = -std::f64::consts::FRAC_PI_2;
+                                for (idx, value) in values.iter().enumerate() {
+                                    if *value <= 0.0 {
+                                        continue;
+                                    }
+                                    let color = palette[idx % palette.len()];
+                                    let sweep = (*value / total) * std::f64::consts::TAU;
+                                    let end_angle = start_angle + sweep;
+                                    let x1 = center_x + radius * start_angle.cos();
+                                    let y1 = center_y + radius * start_angle.sin();
+                                    let x2 = center_x + radius * end_angle.cos();
+                                    let y2 = center_y + radius * end_angle.sin();
+                                    let large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 };
+                                    let path = format!(
+                                        "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
+                                    );
+                                    let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
+                                    start_angle = end_angle;
                                 }
                             }
                         }
