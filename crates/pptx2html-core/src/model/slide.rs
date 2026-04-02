@@ -224,6 +224,8 @@ pub struct ChartSeries {
 pub struct ChartSpec {
     pub chart_type: ChartType,
     pub grouping: ChartGrouping,
+    pub gap_width: Option<i32>,
+    pub overlap: Option<i32>,
     pub series: Vec<ChartSeries>,
 }
 

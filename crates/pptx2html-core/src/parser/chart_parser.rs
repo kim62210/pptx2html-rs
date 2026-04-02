@@ -19,6 +19,8 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_pie_chart = false;
     let mut chart_type = ChartType::Column;
     let mut grouping = ChartGrouping::Clustered;
+    let mut gap_width = None;
+    let mut overlap = None;
     let mut current_series: Option<SeriesBuilder> = None;
     let mut series = Vec::new();
     let mut in_tx = false;
@@ -59,6 +61,16 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                                 _ => ChartGrouping::Clustered,
                             };
                         }
+                    }
+                    "gapWidth" if in_bar_chart => {
+                        gap_width = xml_utils::attr_str(e, "val")
+                            .and_then(|val| val.parse::<i32>().ok())
+                            .map(|val| val.clamp(0, 500));
+                    }
+                    "overlap" if in_bar_chart => {
+                        overlap = xml_utils::attr_str(e, "val")
+                            .and_then(|val| val.parse::<i32>().ok())
+                            .map(|val| val.clamp(-100, 100));
                     }
                     "ser" if in_bar_chart || in_line_chart || in_pie_chart => {
                         current_series = Some(SeriesBuilder::default())
@@ -123,6 +135,8 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
         Ok(Some(ChartSpec {
             chart_type,
             grouping,
+            gap_width,
+            overlap,
             series,
         }))
     }
