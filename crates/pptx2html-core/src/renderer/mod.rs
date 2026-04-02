@@ -277,6 +277,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-legend-swatch {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
 .chart-bar {{ fill: #4472C4; }}
 .chart-bar-horizontal {{ fill: #4472C4; }}
+.chart-line {{ fill: none; stroke-width: 2; }}
+.chart-point {{ stroke: none; }}
 .unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 "#
         )
@@ -730,6 +732,39 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
                                     let y = outer_gap + idx as f64 * (group_height + outer_gap) + series_idx as f64 * (bar_height + inner_gap);
                                     let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                }
+                            }
+                        }
+                        ChartType::Line => {
+                            let left_pad = 8.0;
+                            let right_pad = 8.0;
+                            let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let step_x = if category_count > 1 {
+                                usable_width / (category_count as f64 - 1.0)
+                            } else {
+                                0.0
+                            };
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                let mut points = Vec::new();
+                                for (idx, value) in series.values.iter().enumerate() {
+                                    let x = left_pad + idx as f64 * step_x;
+                                    let y = chart_height
+                                        - if *value <= 0.0 {
+                                            0.0
+                                        } else {
+                                            (*value / max_value) * (chart_height - 8.0)
+                                        };
+                                    points.push((x, y));
+                                }
+                                let polyline_points = points
+                                    .iter()
+                                    .map(|(x, y)| format!("{x:.1},{y:.1}"))
+                                    .collect::<Vec<_>>()
+                                    .join(" ");
+                                let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
+                                for (x, y) in points {
+                                    let _ = writeln!(html, "<circle class=\"chart-point\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"3\" />");
                                 }
                             }
                         }

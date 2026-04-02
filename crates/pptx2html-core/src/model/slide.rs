@@ -200,6 +200,7 @@ pub enum ChartType {
     #[default]
     Column,
     Bar,
+    Line,
 }
 
 #[derive(Debug, Clone, Default)]

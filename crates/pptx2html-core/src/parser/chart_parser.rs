@@ -15,6 +15,7 @@ struct SeriesBuilder {
 pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut reader = Reader::from_str(xml);
     let mut in_bar_chart = false;
+    let mut in_line_chart = false;
     let mut chart_type = ChartType::Column;
     let mut current_series: Option<SeriesBuilder> = None;
     let mut series = Vec::new();
@@ -30,6 +31,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
                 match local.as_str() {
                     "barChart" | "bar3DChart" => in_bar_chart = true,
+                    "lineChart" | "line3DChart" => {
+                        in_line_chart = true;
+                        chart_type = ChartType::Line;
+                    }
                     "barDir" if in_bar_chart => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             chart_type = if val == "bar" {
@@ -39,7 +44,9 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             };
                         }
                     }
-                    "ser" if in_bar_chart => current_series = Some(SeriesBuilder::default()),
+                    "ser" if in_bar_chart || in_line_chart => {
+                        current_series = Some(SeriesBuilder::default())
+                    }
                     "tx" if current_series.is_some() => in_tx = true,
                     "cat" if current_series.is_some() => in_cat = true,
                     "val" if current_series.is_some() => in_val = true,
@@ -83,6 +90,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         }
                     }
                     "barChart" | "bar3DChart" => in_bar_chart = false,
+                    "lineChart" | "line3DChart" => in_line_chart = false,
                     _ => {}
                 }
             }

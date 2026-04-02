@@ -178,7 +178,7 @@ See [docs/architecture/SUPPORTED_FEATURES.md](docs/architecture/SUPPORTED_FEATUR
 | Images | Base64 embedding, deterministic external assets under `images/slide-N/`, cropping, MIME auto-detection |
 | Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles, and bodyPr property carry-over (wrap, margins, vertical anchor, vertical text, autofit) |
 | Bullets | Character and auto-numbered bullets with font, size, color |
-| Charts | Direct clustered bar/column chart rendering (single- and multi-series MVP) with preview/placeholder fallback for other chart types |
+| Charts | Direct clustered bar/column chart rendering plus simple line chart rendering (single- and multi-series MVP) with preview/placeholder fallback for other chart types |
 | Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
 | LLM Enhance | Post-processing layer: SmartArt→HTML/CSS, OMML→MathML, DrawingML→CSS via LLM (pptx2html-enhance) |
 

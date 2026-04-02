@@ -281,6 +281,165 @@ fn build_multi_series_column_chart_pptx() -> Vec<u8> {
     build_chart_pptx("col", 2)
 }
 
+fn build_line_chart_pptx(series_count: usize) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="LineChart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart r:id="rId2"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>"#;
+
+    let mut series_xml = String::new();
+    for idx in 0..series_count {
+        let name = if idx == 0 { "Revenue" } else { "Profit" };
+        let v1 = if idx == 0 { "10" } else { "5" };
+        let v2 = if idx == 0 { "20" } else { "7" };
+        let v3 = if idx == 0 { "30" } else { "9" };
+        series_xml.push_str(&format!(
+            r#"<c:ser>
+          <c:idx val="{idx}"/>
+          <c:order val="{idx}"/>
+          <c:tx><c:v>{name}</c:v></c:tx>
+          <c:cat>
+            <c:strLit>
+              <c:ptCount val="3"/>
+              <c:pt idx="0"><c:v>Q1</c:v></c:pt>
+              <c:pt idx="1"><c:v>Q2</c:v></c:pt>
+              <c:pt idx="2"><c:v>Q3</c:v></c:pt>
+            </c:strLit>
+          </c:cat>
+          <c:val>
+            <c:numLit>
+              <c:ptCount val="3"/>
+              <c:pt idx="0"><c:v>{v1}</c:v></c:pt>
+              <c:pt idx="1"><c:v>{v2}</c:v></c:pt>
+              <c:pt idx="2"><c:v>{v3}</c:v></c:pt>
+            </c:numLit>
+          </c:val>
+        </c:ser>"#
+        ));
+    }
+
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:lineChart>
+        <c:grouping val="standard"/>
+        {series_xml}
+        <c:axId val="123"/>
+        <c:axId val="456"/>
+      </c:lineChart>
+      <c:catAx>
+        <c:axId val="123"/>
+        <c:crossAx val="456"/>
+      </c:catAx>
+      <c:valAx>
+        <c:axId val="456"/>
+        <c:crossAx val="123"/>
+      </c:valAx>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#
+    );
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T">
+  <a:themeElements>
+    <a:clrScheme name="O">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme>
+  </a:themeElements>
+</a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
 fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -1341,6 +1500,45 @@ fn test_multi_series_bar_chart_renders_grouped_horizontal_bars() {
     assert!(html.contains("chart-bar-horizontal"), "Multi-series bar chart should render horizontal bars: {html}");
     assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series legend/labels should include both series names: {html}");
     assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series bar chart should not use placeholder once grouped rendering is supported: {html}");
+}
+
+#[test]
+fn test_line_chart_parses_direct_spec() {
+    let pptx = build_line_chart_pptx(1);
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Line);
+            assert_eq!(spec.series.len(), 1);
+            assert_eq!(spec.series[0].name.as_deref(), Some("Revenue"));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_line_chart_renders_directly() {
+    let pptx = build_line_chart_pptx(1);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Line chart should render directly: {html}");
+    assert!(html.contains("chart-line"), "Line chart should render a line path/polyline: {html}");
+    assert!(html.contains("chart-point"), "Line chart should render point markers: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Line chart should not use placeholder: {html}");
+}
+
+#[test]
+fn test_multi_series_line_chart_renders_directly() {
+    let pptx = build_line_chart_pptx(2);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series line chart should render directly: {html}");
+    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series line chart should render legend labels: {html}");
+    assert!(html.matches("chart-line").count() >= 2, "Multi-series line chart should render one line per series: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series line chart should not use placeholder: {html}");
 }
 
 // ── Shape effect tests (outerShdw / glow) ──
