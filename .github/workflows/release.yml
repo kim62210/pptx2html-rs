@@ -75,9 +75,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install evaluate test dependencies
+        run: python -m pip install -r evaluate/requirements-test.txt
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+      - name: Generate PowerPoint evidence summary
+        run: |
+          mkdir -p artifacts/evaluate
+          python evaluate/powerpoint_evidence.py summary --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-summary.json
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
