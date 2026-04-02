@@ -192,6 +192,27 @@ pub struct ChartData {
     pub rel_id: String,
     pub preview_image: Option<Vec<u8>>,
     pub preview_mime: Option<String>,
+    pub direct_spec: Option<ChartSpec>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartType {
+    #[default]
+    Column,
+    Bar,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChartSeries {
+    pub name: Option<String>,
+    pub categories: Vec<String>,
+    pub values: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChartSpec {
+    pub chart_type: ChartType,
+    pub series: Vec<ChartSeries>,
 }
 
 /// Table data

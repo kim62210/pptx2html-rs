@@ -268,6 +268,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
 .shape-svg + .text-body {{ position: relative; z-index: 1; }}
 .chart-placeholder {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
+.chart-direct {{ width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: stretch; gap: 8px; color: #333; }}
+.chart-series-label {{ font-size: 12px; font-weight: 600; color: #555; }}
+.chart-svg {{ width: 100%; height: 100%; }}
+.chart-axis-labels {{ display: flex; justify-content: space-between; font-size: 11px; color: #666; gap: 8px; }}
+.chart-bar {{ fill: #4472C4; }}
 .unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 "#
         )
@@ -661,7 +666,32 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Chart
         if let ShapeType::Chart(ref chart_data) = shape.shape_type {
-            if let Some(ref img_data) = chart_data.preview_image {
+            if let Some(ref spec) = chart_data.direct_spec {
+                if let Some(first_series) = spec.series.first() {
+                    let _ = writeln!(html, "<div class=\"chart-direct\">");
+                    if let Some(series_name) = first_series.name.as_deref() {
+                        let _ = writeln!(html, "<div class=\"chart-series-label\">{}</div>", escape_html(series_name));
+                    }
+                    let max_value = first_series.values.iter().copied().fold(0.0_f64, f64::max).max(1.0);
+                    let bar_count = first_series.values.len().max(1);
+                    let bar_gap = 12.0;
+                    let bar_width = ((w - bar_gap * ((bar_count as f64) + 1.0)) / bar_count as f64).max(8.0);
+                    let chart_height = (h - 28.0).max(60.0);
+                    let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
+                    for (idx, value) in first_series.values.iter().enumerate() {
+                        let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
+                        let x = bar_gap + idx as f64 * (bar_width + bar_gap);
+                        let y = chart_height - bar_height;
+                        let _ = writeln!(html, "<rect class=\"chart-bar\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                    }
+                    html.push_str("</svg>\n<div class=\"chart-axis-labels\">");
+                    for category in &first_series.categories {
+                        let _ = writeln!(html, "<span>{}</span>", escape_html(category));
+                    }
+                    html.push_str("</div>\n</div>\n</div>\n");
+                    return;
+                }
+            } else if let Some(ref img_data) = chart_data.preview_image {
                 if !img_data.is_empty() {
                     let mime = chart_data.preview_mime.as_deref().unwrap_or("image/png");
                     let src = if ctx.embed_images {

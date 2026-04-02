@@ -1,6 +1,7 @@
 //! PPTX ZIP/XML parser
 //! PPTX = ZIP archive containing OOXML (PresentationML) XML files
 
+mod chart_parser;
 mod layout_parser;
 pub mod master_parser;
 mod relationships;

@@ -6,6 +6,7 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 use zip::ZipArchive;
 
+use super::chart_parser;
 use super::master_parser::{is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs};
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
@@ -2207,7 +2208,16 @@ pub fn parse_slide<R: Read + Seek>(
                     "graphicFrame" => {
                         if graphic_data_is_chart {
                             // Chart: build a chart shape
-                            if let Some(sb) = current_shape.take() {
+                            if let Some(mut sb) = current_shape.take() {
+                                if let Some(rel_id) = sb.chart_rel_id.as_ref()
+                                    && let Some(target) = rels.get(rel_id)
+                                {
+                                    let path = resolve_rel_path("ppt/slides", target);
+                                    if let Ok(chart_xml) = read_archive_entry(archive, &path) {
+                                        sb.chart_direct_spec =
+                                            chart_parser::parse_chart(&chart_xml).ok().flatten();
+                                    }
+                                }
                                 let shape = sb.build();
                                 if !grp_stack.is_empty() {
                                     if let Some(gc) = grp_stack.last_mut() {
@@ -3271,6 +3281,7 @@ struct ShapeBuilder {
     // Chart detection
     is_chart: bool,
     chart_rel_id: Option<String>,
+    chart_direct_spec: Option<ChartSpec>,
     // Unsupported content type (SmartArt, OLE, Math)
     unsupported_content: Option<String>,
     // Typed classification for unresolved element
@@ -3303,6 +3314,7 @@ impl ShapeBuilder {
                 rel_id: self.chart_rel_id.unwrap_or_default(),
                 preview_image: None,
                 preview_mime: None,
+                direct_spec: self.chart_direct_spec,
             })
         } else if self.is_picture {
             ShapeType::Picture(PictureData {
@@ -3409,6 +3421,15 @@ impl ShapeBuilder {
             ..Default::default()
         }
     }
+}
+
+fn read_archive_entry<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> PptxResult<String> {
+    let mut file = archive
+        .by_name(name)
+        .map_err(|_| PptxError::MissingFile(name.to_string()))?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
 }
 
 fn store_shape_level_defaults(shape: &mut Option<ShapeBuilder>, lvl: usize, pd: ParagraphDefaults) {
