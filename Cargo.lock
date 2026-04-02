@@ -661,6 +661,7 @@ version = "1.0.0"
 dependencies = [
  "pptx2html-core",
  "pyo3",
+ "zip",
 ]
 
 [[package]]
@@ -669,6 +670,7 @@ version = "1.0.4"
 dependencies = [
  "pptx2html-core",
  "wasm-bindgen",
+ "zip",
 ]
 
 [[package]]

@@ -12,6 +12,13 @@ categories = ["parser-implementations"]
 name = "pptx2html"
 crate-type = ["cdylib"]
 
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
 [dependencies]
 pptx2html-core = { path = "../pptx2html-core" }
-pyo3 = { version = "0.25", features = ["extension-module"] }
+pyo3 = { version = "0.25" }
+
+[dev-dependencies]
+zip = { version = "2", default-features = false, features = ["deflate"] }
