@@ -683,8 +683,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             && series.values.len() == category_count
                             && series.categories == first_series.categories
                     });
+                let direct_chart_supported = all_series_compatible
+                    && match spec.chart_type {
+                        ChartType::Pie => spec.series.len() == 1,
+                        _ => true,
+                    };
 
-                if all_series_compatible {
+                if direct_chart_supported {
                     let palette = ["#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47"];
                     let max_value = spec
                         .series
