@@ -123,7 +123,10 @@ For a single entrypoint over scaffold / validate / summary / ready, use:
 ```bash
 python powerpoint_evidence.py summary --golden-set-dir golden_set --output-dir powerpoint_golden
 python powerpoint_evidence.py ready --golden-set-dir golden_set --output-dir powerpoint_golden
+python powerpoint_evidence.py gate --family text-layout --golden-set-dir golden_set --output-dir powerpoint_golden
 ```
+
+`gate --family text-layout` checks the exact-promotion fixture bundle from the Text/Layout gate and returns exit code 0 only when the required decks, metadata, slide exports, and manifest consistency are all satisfied.
 
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
