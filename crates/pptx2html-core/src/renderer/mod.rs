@@ -277,6 +277,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-legend-swatch {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
 .chart-bar {{ fill: #4472C4; }}
 .chart-bar-horizontal {{ fill: #4472C4; }}
+.chart-bar-stacked {{ fill: #4472C4; }}
 .chart-line {{ fill: none; stroke-width: 2; }}
 .chart-point {{ stroke: none; }}
 .chart-pie-slice {{ stroke: #fff; stroke-width: 1; }}
@@ -726,29 +727,102 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     }
                     html.push_str("</div>\n");
                     let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
+                    let grouping_attr = match spec.grouping {
+                        ChartGrouping::Clustered => "clustered",
+                        ChartGrouping::Stacked => "stacked",
+                        ChartGrouping::PercentStacked => "percent-stacked",
+                        ChartGrouping::Standard => "standard",
+                    };
+                    let _ = writeln!(html, "<g data-chart-grouping=\"{grouping_attr}\">");
                     match spec.chart_type {
                         ChartType::Column => {
                             let group_width = ((w - outer_gap * ((category_count as f64) + 1.0)) / category_count as f64).max(16.0);
-                            let bar_width = ((group_width - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
-                            for (series_idx, series) in spec.series.iter().enumerate() {
-                                let color = palette[series_idx % palette.len()];
-                                for (idx, value) in series.values.iter().enumerate() {
-                                    let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
-                                    let x = outer_gap + idx as f64 * (group_width + outer_gap) + series_idx as f64 * (bar_width + inner_gap);
-                                    let y = chart_height - bar_height;
-                                    let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                            match spec.grouping {
+                                ChartGrouping::Stacked | ChartGrouping::PercentStacked => {
+                                    let bar_width = group_width.max(8.0);
+                                    let mut category_totals = vec![0.0; category_count];
+                                    if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                        for (idx, total) in category_totals.iter_mut().enumerate().take(category_count) {
+                                            *total = spec.series.iter().map(|s| s.values[idx].max(0.0)).sum::<f64>().max(1.0);
+                                        }
+                                    }
+                                    let mut accumulated = vec![0.0; category_count];
+                                    for (series_idx, series) in spec.series.iter().enumerate() {
+                                        let color = palette[series_idx % palette.len()];
+                                        for (idx, value) in series.values.iter().enumerate() {
+                                            let normalized = if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                                value.max(0.0) / category_totals[idx]
+                                            } else {
+                                                *value
+                                            };
+                                            let bar_height = if normalized <= 0.0 { 0.0 } else if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                                normalized * (chart_height - 8.0)
+                                            } else {
+                                                (normalized / max_value) * (chart_height - 8.0)
+                                            };
+                                            let x = outer_gap + idx as f64 * (group_width + outer_gap);
+                                            let y = chart_height - accumulated[idx] - bar_height;
+                                            accumulated[idx] += bar_height;
+                                            let _ = writeln!(html, "<rect class=\"chart-bar-stacked\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    let bar_width = ((group_width - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
+                                    for (series_idx, series) in spec.series.iter().enumerate() {
+                                        let color = palette[series_idx % palette.len()];
+                                        for (idx, value) in series.values.iter().enumerate() {
+                                            let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
+                                            let x = outer_gap + idx as f64 * (group_width + outer_gap) + series_idx as f64 * (bar_width + inner_gap);
+                                            let y = chart_height - bar_height;
+                                            let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                        }
+                                    }
                                 }
                             }
                         }
                         ChartType::Bar => {
                             let group_height = ((chart_height - outer_gap * ((category_count as f64) + 1.0)) / category_count as f64).max(16.0);
-                            let bar_height = ((group_height - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
-                            for (series_idx, series) in spec.series.iter().enumerate() {
-                                let color = palette[series_idx % palette.len()];
-                                for (idx, value) in series.values.iter().enumerate() {
-                                    let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
-                                    let y = outer_gap + idx as f64 * (group_height + outer_gap) + series_idx as f64 * (bar_height + inner_gap);
-                                    let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                            match spec.grouping {
+                                ChartGrouping::Stacked | ChartGrouping::PercentStacked => {
+                                    let bar_height = group_height.max(8.0);
+                                    let mut category_totals = vec![0.0; category_count];
+                                    if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                        for (idx, total) in category_totals.iter_mut().enumerate().take(category_count) {
+                                            *total = spec.series.iter().map(|s| s.values[idx].max(0.0)).sum::<f64>().max(1.0);
+                                        }
+                                    }
+                                    let mut accumulated = vec![0.0; category_count];
+                                    for (series_idx, series) in spec.series.iter().enumerate() {
+                                        let color = palette[series_idx % palette.len()];
+                                        for (idx, value) in series.values.iter().enumerate() {
+                                            let normalized = if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                                value.max(0.0) / category_totals[idx]
+                                            } else {
+                                                *value
+                                            };
+                                            let width = if normalized <= 0.0 { 0.0 } else if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                                normalized * (w - 8.0)
+                                            } else {
+                                                (normalized / max_value) * (w - 8.0)
+                                            };
+                                            let x = accumulated[idx];
+                                            let y = outer_gap + idx as f64 * (group_height + outer_gap);
+                                            accumulated[idx] += width;
+                                            let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    let bar_height = ((group_height - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
+                                    for (series_idx, series) in spec.series.iter().enumerate() {
+                                        let color = palette[series_idx % palette.len()];
+                                        for (idx, value) in series.values.iter().enumerate() {
+                                            let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
+                                            let y = outer_gap + idx as f64 * (group_height + outer_gap) + series_idx as f64 * (bar_height + inner_gap);
+                                            let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1111,8 +1185,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                      {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}/>",
                     path_svg.d
                 );
-            }
-            html.push_str("</svg>\n");
+                    }
+                    html.push_str("</g>\n");
+                    html.push_str("</svg>\n");
         }
 
         // Image

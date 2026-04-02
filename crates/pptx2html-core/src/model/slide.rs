@@ -204,6 +204,15 @@ pub enum ChartType {
     Pie,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartGrouping {
+    #[default]
+    Clustered,
+    Stacked,
+    PercentStacked,
+    Standard,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ChartSeries {
     pub name: Option<String>,
@@ -214,6 +223,7 @@ pub struct ChartSeries {
 #[derive(Debug, Clone, Default)]
 pub struct ChartSpec {
     pub chart_type: ChartType,
+    pub grouping: ChartGrouping,
     pub series: Vec<ChartSeries>,
 }
 

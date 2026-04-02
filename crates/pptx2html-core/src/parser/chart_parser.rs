@@ -3,7 +3,7 @@ use quick_xml::events::Event;
 
 use super::xml_utils;
 use crate::error::PptxResult;
-use crate::model::{ChartSeries, ChartSpec, ChartType};
+use crate::model::{ChartGrouping, ChartSeries, ChartSpec, ChartType};
 
 #[derive(Default)]
 struct SeriesBuilder {
@@ -18,6 +18,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_line_chart = false;
     let mut in_pie_chart = false;
     let mut chart_type = ChartType::Column;
+    let mut grouping = ChartGrouping::Clustered;
     let mut current_series: Option<SeriesBuilder> = None;
     let mut series = Vec::new();
     let mut in_tx = false;
@@ -46,6 +47,16 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                                 ChartType::Bar
                             } else {
                                 ChartType::Column
+                            };
+                        }
+                    }
+                    "grouping" if in_bar_chart || in_line_chart => {
+                        if let Some(val) = xml_utils::attr_str(e, "val") {
+                            grouping = match val.as_str() {
+                                "stacked" => ChartGrouping::Stacked,
+                                "percentStacked" => ChartGrouping::PercentStacked,
+                                "standard" => ChartGrouping::Standard,
+                                _ => ChartGrouping::Clustered,
                             };
                         }
                     }
@@ -109,6 +120,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     if series.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(ChartSpec { chart_type, series }))
+        Ok(Some(ChartSpec {
+            chart_type,
+            grouping,
+            series,
+        }))
     }
 }
