@@ -110,6 +110,14 @@ The PowerShell export now scaffolds `metadata.json` in each deck directory and a
 python validate_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
 ```
 
+Summarize exact-evidence readiness in a human-readable JSON report with:
+
+```bash
+python summarize_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
+```
+
+The summary reports missing decks, missing metadata, incomplete slide exports, manifest consistency, batch identity, and an `evidence_ready_for_exact_promotion` boolean.
+
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
 ### 3. Run fidelity evaluation
@@ -145,6 +153,8 @@ evaluate/
 ├── reference_render.py        # LibreOffice headless -> PNG
 ├── reference_render_powerpoint.ps1 # PowerPoint COM export bootstrap
 ├── validate_powerpoint_golden.py   # Validate PowerPoint evidence batches
+├── summarize_powerpoint_golden.py  # Summarize evidence readiness and gaps
+├── scaffold_powerpoint_golden_batch.py # Scaffold metadata.json and manifest.json
 ├── candidate_render.py        # Playwright HTML -> PNG
 ├── create_golden_set.py       # Generate golden PPTX test files
 ├── requirements.txt           # Python dependencies

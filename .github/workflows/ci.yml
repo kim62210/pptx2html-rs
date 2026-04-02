@@ -84,4 +84,4 @@ jobs:
       - name: Install evaluate test dependencies
         run: python -m pip install -r evaluate/requirements-test.txt
       - name: Run evaluate helper tests
-        run: python -m unittest evaluate.tests.test_validate_powerpoint_golden evaluate.tests.test_scaffold_powerpoint_golden_batch -v
+        run: python -m unittest evaluate.tests.test_validate_powerpoint_golden evaluate.tests.test_scaffold_powerpoint_golden_batch evaluate.tests.test_summarize_powerpoint_golden -v
