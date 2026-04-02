@@ -16,3 +16,4 @@ evaluate/golden_references/**/slide_*.png
 evaluate/.venv/
 .claude/
 .serena/
+.worktrees/
