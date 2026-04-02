@@ -3,7 +3,17 @@ param(
     [string]$InputDir,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputDir
+    [string]$OutputDir,
+
+    [string]$PowerPointChannel = "Manual",
+
+    [string]$WindowsVersion = "Unknown",
+
+    [string]$OutputResolution = "Unknown",
+
+    [string]$GoldenSetRevision = "Unknown",
+
+    [string]$CaptureDate = (Get-Date -Format "yyyy-MM-dd")
 )
 
 Set-StrictMode -Version Latest
@@ -28,10 +38,14 @@ if (-not (Test-Path -Path $OutputDir)) {
 
 $powerPoint = $null
 $presentations = $null
+$scriptRoot = Split-Path -Parent $PSCommandPath
+$resolvedOutput = Resolve-Path -Path $OutputDir
+$powerPointVersion = $null
 
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
     $powerPoint.Visible = 1
+    $powerPointVersion = $powerPoint.Version
     $presentations = $powerPoint.Presentations
 
     Get-ChildItem -Path $resolvedInput -Filter *.pptx | Sort-Object Name | ForEach-Object {
@@ -66,3 +80,24 @@ finally {
     [GC]::Collect()
     [GC]::WaitForPendingFinalizers()
 }
+
+$python = Get-Command python -ErrorAction SilentlyContinue
+if ($null -eq $python) {
+    $python = Get-Command py -ErrorAction SilentlyContinue
+}
+
+if ($null -eq $python) {
+    throw "Python is required to scaffold metadata.json and manifest.json"
+}
+
+$exportCommand = "pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden"
+& $python.Source (Join-Path $scriptRoot "scaffold_powerpoint_golden_batch.py") `
+    --golden-set-dir $resolvedInput `
+    --output-dir $resolvedOutput `
+    --powerpoint-version $powerPointVersion `
+    --powerpoint-channel $PowerPointChannel `
+    --windows-version $WindowsVersion `
+    --export-command $exportCommand `
+    --output-resolution $OutputResolution `
+    --golden-set-revision $GoldenSetRevision `
+    --capture-date $CaptureDate

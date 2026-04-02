@@ -12,6 +12,7 @@ Each input deck gets its own subdirectory:
 
 ```text
 evaluate/powerpoint_golden/
+  manifest.json
   <deck-name>/
     Slide1.PNG
     Slide2.PNG
@@ -24,10 +25,16 @@ evaluate/powerpoint_golden/
 On a Windows machine with Microsoft PowerPoint installed:
 
 ```powershell
-pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden
+pwsh -File ./reference_render_powerpoint.ps1 `
+  -InputDir ./golden_set `
+  -OutputDir ./powerpoint_golden `
+  -PowerPointChannel "Current Channel" `
+  -WindowsVersion "Windows 11 23H2" `
+  -OutputResolution "960x540" `
+  -GoldenSetRevision <commit-sha>
 ```
 
-The script opens each `.pptx` file in `evaluate/golden_set/` and exports each deck as slide images using PowerPoint's native rendering engine.
+The script opens each `.pptx` file in `evaluate/golden_set/`, exports each deck as slide images using PowerPoint's native rendering engine, then scaffolds `metadata.json` for every deck plus a root `manifest.json`.
 
 ## Rules
 
@@ -50,6 +57,8 @@ Record this metadata in `metadata.json` inside each deck directory. Required key
   "capture_date": "2026-04-02"
 }
 ```
+
+The root `manifest.json` records the same batch metadata plus the exported deck list and expected slide counts. See `manifest.example.json` for the expected shape.
 
 Validate the batch locally with:
 

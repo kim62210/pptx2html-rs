@@ -95,10 +95,16 @@ python reference_render.py --input golden_set/ --output golden_references/
 On Windows with Microsoft PowerPoint installed:
 
 ```powershell
-pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden
+pwsh -File ./reference_render_powerpoint.ps1 `
+  -InputDir ./golden_set `
+  -OutputDir ./powerpoint_golden `
+  -PowerPointChannel "Current Channel" `
+  -WindowsVersion "Windows 11 23H2" `
+  -OutputResolution "960x540" `
+  -GoldenSetRevision <commit-sha>
 ```
 
-After exporting, add `metadata.json` to each `evaluate/powerpoint_golden/<deck-name>/` directory and validate the batch:
+The PowerShell export now scaffolds `metadata.json` in each deck directory and a root `manifest.json`. Validate the batch afterward with:
 
 ```bash
 python validate_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
