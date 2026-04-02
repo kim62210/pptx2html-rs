@@ -49,6 +49,26 @@ playwright install chromium
 
 Use PowerPoint references before promoting any feature to `exact` in the capability matrix.
 
+### Text/Layout exact-promotion gate
+
+Before upgrading **Text** or **Layout / inheritance** to `exact`, keep the following evidence bundle together:
+
+1. **Fixture coverage** from `create_golden_set.py` for all of these families:
+   - `basic_text_08_narrow_box_autofit.pptx`
+   - `basic_text_09_mixed_font_paragraph.pptx`
+   - `basic_text_10_bodypr_fidelity.pptx`
+   - `basic_text_11_wrap_gate_sentence.pptx`
+   - `basic_text_12_wrap_gate_unbreakable.pptx`
+   - `basic_text_13_autofit_modes.pptx`
+   - `basic_text_14_complex_script_fonts.pptx`
+   - `basic_text_15_mixed_script_single_run.pptx`
+   - `basic_text_16_cjk_autofit_wrap_gate.pptx`
+2. **PowerPoint-native captures** for each deck under `evaluate/powerpoint_golden/<deck-name>/Slide*.PNG`.
+3. **Local converter verification** with `cargo test --workspace` on the same revision.
+4. **Capability-doc update** that records which fixture set and PowerPoint capture batch justified the tier change.
+
+If any item above is missing, keep the family at `approximate`.
+
 ### 1. Generate golden PPTX test set
 
 ```bash
@@ -126,7 +146,7 @@ evaluate/
 
 | Category     | Count | Tests                                    |
 |--------------|-------|------------------------------------------|
-| basic_text   | 10    | Bold, italic, sizes, colors, alignment, font fallback, vertical text, narrow autofit, mixed fonts, bodyPr fidelity |
+| basic_text   | 16    | Bold, italic, sizes, colors, alignment, font fallback, vertical text, narrow autofit, mixed fonts, bodyPr fidelity, sentence-wrap gate, unbreakable-wrap gate, autofit comparison, complex-script fonts, mixed-script single-run segmentation, CJK autofit wrap gate |
 | shapes       | 5     | Rectangles, ellipses, arrows, stars      |
 | theme_colors | 5     | 12 theme colors, tint, shade, dark bg    |
 | tables       | 5     | Headers, merge, colors, alignment, large |

@@ -1,3 +1,5 @@
+use crate::model::{TextParagraph, TextRun};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontResolutionSource {
     ExplicitRun,
@@ -15,4 +17,261 @@ pub struct FontResolutionEntry {
     pub resolved_typeface: Option<String>,
     pub source: Option<FontResolutionSource>,
     pub fallback_used: bool,
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextWrapPolicy {
+    Normal,
+    Emergency,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScriptCategory {
+    LatinLike,
+    EastAsian,
+    Complex,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScriptSegment {
+    pub category: ScriptCategory,
+    pub text: String,
+}
+
+pub fn classify_wrap_policy(
+    paragraphs: &[TextParagraph],
+    available_width_px: f64,
+    font_scale: Option<f64>,
+) -> TextWrapPolicy {
+    let max_token_width_px = paragraphs
+        .iter()
+        .flat_map(|para| para.runs.iter())
+        .filter(|run| !run.is_break)
+        .map(|run| longest_token_width_px(run, font_scale))
+        .fold(0.0, f64::max);
+
+    if max_token_width_px > available_width_px.max(1.0) {
+        TextWrapPolicy::Emergency
+    } else {
+        TextWrapPolicy::Normal
+    }
+}
+
+fn longest_token_width_px(run: &TextRun, font_scale: Option<f64>) -> f64 {
+    let font_size_pt = run.style.font_size.unwrap_or(18.0) * font_scale.unwrap_or(1.0);
+    let font_size_px = font_size_pt * (96.0 / 72.0);
+
+    run.text
+        .split_whitespace()
+        .map(|token| estimate_unbreakable_token_width_px(token, font_size_px))
+        .fold(0.0, f64::max)
+}
+
+fn estimate_unbreakable_token_width_px(token: &str, font_size_px: f64) -> f64 {
+    if token.is_empty() {
+        return 0.0;
+    }
+
+    if token.chars().all(is_east_asian_char) {
+        return token
+            .chars()
+            .map(estimated_glyph_em_width)
+            .fold(0.0, f64::max)
+            * font_size_px;
+    }
+
+    token.chars().map(estimated_glyph_em_width).sum::<f64>() * font_size_px
+}
+
+fn estimated_glyph_em_width(ch: char) -> f64 {
+    match ch {
+        '\u{4E00}'..='\u{9FFF}'
+        | '\u{3400}'..='\u{4DBF}'
+        | '\u{3040}'..='\u{30FF}'
+        | '\u{AC00}'..='\u{D7A3}' => 1.0,
+        '\u{0590}'..='\u{05FF}' | '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' => {
+            0.75
+        }
+        'A'..='Z' | '0'..='9' => 0.62,
+        'a'..='z' => 0.56,
+        '-' | '_' | '/' | '\\' | '.' | ',' | ':' | ';' => 0.35,
+        _ if ch.is_whitespace() => 0.0,
+        _ => 0.6,
+    }
+}
+
+pub fn classify_script_category(text: &str) -> ScriptCategory {
+    if text.chars().any(is_complex_script_char) {
+        ScriptCategory::Complex
+    } else if text.chars().any(is_east_asian_char) {
+        ScriptCategory::EastAsian
+    } else {
+        ScriptCategory::LatinLike
+    }
+}
+
+pub fn segment_by_script(text: &str) -> Vec<ScriptSegment> {
+    let mut segments = Vec::new();
+    let mut current_category: Option<ScriptCategory> = None;
+    let mut current_text = String::new();
+
+    for ch in text.chars() {
+        if ch.is_whitespace() {
+            current_text.push(ch);
+            continue;
+        }
+
+        let category = if is_complex_script_char(ch) {
+            ScriptCategory::Complex
+        } else if is_east_asian_char(ch) {
+            ScriptCategory::EastAsian
+        } else {
+            ScriptCategory::LatinLike
+        };
+
+        if current_category == Some(category) || current_category.is_none() {
+            current_category = Some(category);
+            current_text.push(ch);
+            continue;
+        }
+
+        if let Some(prev_category) = current_category {
+            segments.push(ScriptSegment {
+                category: prev_category,
+                text: std::mem::take(&mut current_text),
+            });
+        }
+        current_category = Some(category);
+        current_text.push(ch);
+    }
+
+    if let Some(category) = current_category {
+        segments.push(ScriptSegment {
+            category,
+            text: current_text,
+        });
+    } else if !text.is_empty() {
+        segments.push(ScriptSegment {
+            category: ScriptCategory::LatinLike,
+            text: text.to_string(),
+        });
+    }
+
+    segments
+}
+
+fn is_east_asian_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{4E00}'..='\u{9FFF}'
+            | '\u{3400}'..='\u{4DBF}'
+            | '\u{3040}'..='\u{30FF}'
+            | '\u{AC00}'..='\u{D7A3}'
+    )
+}
+
+fn is_complex_script_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{0590}'..='\u{05FF}'
+            | '\u{0600}'..='\u{06FF}'
+            | '\u{0750}'..='\u{077F}'
+            | '\u{08A0}'..='\u{08FF}'
+            | '\u{FB50}'..='\u{FDFF}'
+            | '\u{FE70}'..='\u{FEFF}'
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::{FontStyle, TextParagraph, TextRun, TextStyle};
+
+    use super::{
+        ScriptCategory, TextWrapPolicy, classify_script_category, classify_wrap_policy,
+        segment_by_script,
+    };
+
+    #[test]
+    fn classify_wrap_policy_keeps_regular_sentence_normal() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "This sentence should wrap at spaces without emergency breaks".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, 220.0, None),
+            TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_long_unbreakable_token_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "SupercalifragilisticexpialidociousWithoutSpaces".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, 120.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_script_category_detects_complex_script_text() {
+        assert_eq!(
+            classify_script_category("مرحبا بالعالم"),
+            ScriptCategory::Complex
+        );
+    }
+
+    #[test]
+    fn segment_by_script_splits_latin_and_complex_runs() {
+        let segments = segment_by_script("Hello مرحبا world");
+        assert_eq!(segments.len(), 3);
+        assert_eq!(segments[0].category, ScriptCategory::LatinLike);
+        assert_eq!(segments[1].category, ScriptCategory::Complex);
+        assert_eq!(segments[2].category, ScriptCategory::LatinLike);
+    }
+
+    #[test]
+    fn classify_wrap_policy_keeps_cjk_sentence_normal() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "자동줄바꿈이가능한한글문장은긴토큰처럼취급되면안됩니다".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, 90.0, Some(0.7)),
+            TextWrapPolicy::Normal
+        );
+    }
 }

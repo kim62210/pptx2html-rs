@@ -234,6 +234,20 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                             theme.font_scheme.minor_east_asian = Some(typeface);
                         }
                     }
+                    "cs" if in_major_font => {
+                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            && !typeface.is_empty()
+                        {
+                            theme.font_scheme.major_complex_script = Some(typeface);
+                        }
+                    }
+                    "cs" if in_minor_font => {
+                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            && !typeface.is_empty()
+                        {
+                            theme.font_scheme.minor_complex_script = Some(typeface);
+                        }
+                    }
                     // Empty color elements inside effect outerShdw/glow
                     "srgbClr" if in_outer_shdw || in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {

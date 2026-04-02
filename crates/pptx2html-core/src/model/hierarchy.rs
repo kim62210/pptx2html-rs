@@ -80,6 +80,7 @@ pub struct RunDefaults {
     pub color: Option<Color>,
     pub font_latin: Option<String>,
     pub font_ea: Option<String>,
+    pub font_cs: Option<String>,
 }
 
 /// Spacing value -- percentage or absolute points

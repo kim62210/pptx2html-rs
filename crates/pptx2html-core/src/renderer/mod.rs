@@ -20,7 +20,10 @@ use crate::resolver::inheritance;
 use crate::resolver::placeholder;
 use crate::resolver::style_ref;
 use provenance::{ProvenanceSource, ProvenanceSubject, RenderedProvenanceEntry};
-use text_metrics::{FontResolutionEntry, FontResolutionSource};
+use text_metrics::{
+    FontResolutionEntry, FontResolutionSource, ScriptCategory, TextWrapPolicy,
+    classify_script_category, classify_wrap_policy, segment_by_script,
+};
 
 use std::cell::RefCell;
 
@@ -258,7 +261,8 @@ body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif
 .text-body.v-bottom {{ justify-content: flex-end; }}
 .text-body.h-center {{ align-items: center; }}
 .paragraph {{ margin: 0; }}
-.run {{ white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }}
+.run {{ white-space: pre-wrap; word-break: normal; overflow-wrap: normal; }}
+.text-body.emergency-wrap .run {{ word-break: break-word; overflow-wrap: anywhere; }}
 .text-body.nowrap .run {{ white-space: inherit; word-break: normal; overflow-wrap: normal; }}
 img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
 .shape-svg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; }}
@@ -1073,10 +1077,30 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             if matches!(effective_auto_fit, AutoFit::Shrink) {
                 tb_style.push_str("; height: auto; min-height: 100%");
             }
+            // Extract auto-fit scaling factors
+            let (font_scale, ln_spc_reduction) = match effective_auto_fit {
+                AutoFit::Normal {
+                    font_scale,
+                    line_spacing_reduction,
+                } => (*font_scale, *line_spacing_reduction),
+                _ => (None, None),
+            };
+            let content_width_px = (w
+                - ((effective_margins.left
+                    + effective_margins.right
+                    + rect_insets.1
+                    + rect_insets.3)
+                    * (96.0 / 72.0)))
+                .max(1.0);
+            let wrap_policy = if effective_word_wrap {
+                classify_wrap_policy(&text_body.paragraphs, content_width_px, font_scale)
+            } else {
+                TextWrapPolicy::Normal
+            };
             // Text wrapping control
             if !effective_word_wrap {
                 tb_style.push_str("; white-space: nowrap");
-            } else {
+            } else if matches!(wrap_policy, TextWrapPolicy::Emergency) {
                 tb_style.push_str("; overflow-wrap: anywhere");
             }
             // Vertical text rendering
@@ -1102,14 +1126,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     "; transform: rotate({effective_text_rotation:.1}deg)"
                 );
             }
-            // Extract auto-fit scaling factors
-            let (font_scale, ln_spc_reduction) = match effective_auto_fit {
-                AutoFit::Normal {
-                    font_scale,
-                    line_spacing_reduction,
-                } => (*font_scale, *line_spacing_reduction),
-                _ => (None, None),
-            };
             // Add overflow:hidden when text is auto-fitted with fontScale
             if font_scale.is_some() {
                 tb_style.push_str("; overflow: hidden");
@@ -1131,8 +1147,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
             let _ = writeln!(
                 html,
-                "<div class=\"text-body {v_class}{}{}\" style=\"{tb_style}\">",
+                "<div class=\"text-body {v_class}{}{}{}\" style=\"{tb_style}\">",
                 if effective_word_wrap { "" } else { " nowrap" },
+                if matches!(wrap_policy, TextWrapPolicy::Emergency) {
+                    " emergency-wrap"
+                } else {
+                    ""
+                },
                 if effective_anchor_center {
                     " h-center"
                 } else {
@@ -1925,7 +1946,38 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let mut run_style = String::with_capacity(128);
 
         // Font family: explicit > para defRPr > inherited defRPr > fontRef > theme
-        let font = run.font.east_asian.as_deref().or(run.font.latin.as_deref());
+        fn choose_script_font<'a>(
+            text: &str,
+            latin: Option<&'a str>,
+            east_asian: Option<&'a str>,
+            complex_script: Option<&'a str>,
+        ) -> Option<&'a str> {
+            match classify_script_category(text) {
+                ScriptCategory::Complex => complex_script.or(latin).or(east_asian),
+                ScriptCategory::EastAsian => east_asian.or(latin).or(complex_script),
+                ScriptCategory::LatinLike => latin.or(east_asian).or(complex_script),
+            }
+        }
+
+        fn choose_script_font_for_category<'a>(
+            category: ScriptCategory,
+            latin: Option<&'a str>,
+            east_asian: Option<&'a str>,
+            complex_script: Option<&'a str>,
+        ) -> Option<&'a str> {
+            match category {
+                ScriptCategory::Complex => complex_script.or(latin).or(east_asian),
+                ScriptCategory::EastAsian => east_asian.or(latin).or(complex_script),
+                ScriptCategory::LatinLike => latin.or(east_asian).or(complex_script),
+            }
+        }
+
+        let font = choose_script_font(
+            &run.text,
+            run.font.latin.as_deref(),
+            run.font.east_asian.as_deref(),
+            run.font.complex_script.as_deref(),
+        );
 
         let font_scheme = ctx.pres.primary_theme().map(|t| &t.font_scheme);
 
@@ -1948,17 +2000,23 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             .map(|f| (Some(f), FontResolutionSource::ExplicitRun))
             .or_else(|| {
                 defaults.para_def_rpr.and_then(|pd| {
-                    pd.font_ea
-                        .as_deref()
-                        .or(pd.font_latin.as_deref())
+                    choose_script_font(
+                        &run.text,
+                        pd.font_latin.as_deref(),
+                        pd.font_ea.as_deref(),
+                        pd.font_cs.as_deref(),
+                    )
                         .map(|f| (Some(f), FontResolutionSource::ParagraphDefaults))
                 })
             })
             .or_else(|| {
                 defaults.run_defaults.and_then(|rd| {
-                    rd.font_ea
-                        .as_deref()
-                        .or(rd.font_latin.as_deref())
+                    choose_script_font(
+                        &run.text,
+                        rd.font_latin.as_deref(),
+                        rd.font_ea.as_deref(),
+                        rd.font_cs.as_deref(),
+                    )
                         .map(|f| (Some(f), FontResolutionSource::InheritedDefaults))
                 })
             })
@@ -1980,10 +2038,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             } else {
                 (None, None, None)
             };
-
-        if let Some(ref f) = resolved_font {
-            let _ = write!(run_style, "font-family: '{f}'");
-        }
 
         let font_slide_index = ctx.collector.borrow().current_slide_index + 1;
         ctx.push_font_resolution(FontResolutionEntry {
@@ -2172,18 +2226,70 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             );
         }
 
-        let text = escape_html(&run.text);
+        let segment_html = {
+            let segments = segment_by_script(&run.text);
+            let mut inner_html = String::new();
+            for segment in segments {
+                let requested_segment_font = choose_script_font_for_category(
+                    segment.category,
+                    run.font.latin.as_deref(),
+                    run.font.east_asian.as_deref(),
+                    run.font.complex_script.as_deref(),
+                )
+                .or_else(|| {
+                    defaults.para_def_rpr.and_then(|pd| {
+                        choose_script_font_for_category(
+                            segment.category,
+                            pd.font_latin.as_deref(),
+                            pd.font_ea.as_deref(),
+                            pd.font_cs.as_deref(),
+                        )
+                    })
+                })
+                .or_else(|| {
+                    defaults.run_defaults.and_then(|rd| {
+                        choose_script_font_for_category(
+                            segment.category,
+                            rd.font_latin.as_deref(),
+                            rd.font_ea.as_deref(),
+                            rd.font_cs.as_deref(),
+                        )
+                    })
+                })
+                .or(defaults.font_ref_font);
+
+                let resolved_segment_font = requested_segment_font
+                    .and_then(|name| resolve_font_name(name, font_scheme))
+                    .map(str::to_string);
+
+                if let Some(font_name) = resolved_segment_font {
+                    let _ = write!(
+                        inner_html,
+                        "<span class=\"run-segment\" style=\"font-family: '{}'\">{}</span>",
+                        escape_html(&font_name),
+                        escape_html(&segment.text)
+                    );
+                } else {
+                    let _ = write!(
+                        inner_html,
+                        "<span class=\"run-segment\">{}</span>",
+                        escape_html(&segment.text)
+                    );
+                }
+            }
+            inner_html
+        };
 
         if let Some(ref href) = run.hyperlink {
             let _ = write!(
                 html,
-                "<a class=\"run\" href=\"{}\" style=\"{run_style}\">{text}</a>",
+                "<a class=\"run\" href=\"{}\" style=\"{run_style}\">{segment_html}</a>",
                 escape_html(href)
             );
         } else {
             let _ = write!(
                 html,
-                "<span class=\"run\" style=\"{run_style}\">{text}</span>"
+                "<span class=\"run\" style=\"{run_style}\">{segment_html}</span>"
             );
         }
     }

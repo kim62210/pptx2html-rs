@@ -451,6 +451,13 @@ pub fn parse_slide_master<R: Read + Seek>(
                             rd.font_ea = Some(typeface);
                         }
                     }
+                    "cs" if in_shape_def_rpr => {
+                        if let Some(rd) = shape_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_cs = Some(typeface);
+                        }
+                    }
                     "srgbClr" if in_shape_def_rpr => {
                         if let Some(val) = xml_utils::attr_str(e, "val")
                             && let Some(rd) = shape_run_defaults.as_mut()
@@ -518,6 +525,13 @@ pub fn parse_slide_master<R: Read + Seek>(
                             && let Some(typeface) = xml_utils::attr_str(e, "typeface")
                         {
                             rd.font_ea = Some(typeface);
+                        }
+                    }
+                    "cs" if in_def_rpr => {
+                        if let Some(rd) = current_run_defaults.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rd.font_cs = Some(typeface);
                         }
                     }
                     // Color elements (Empty variant) inside defRPr

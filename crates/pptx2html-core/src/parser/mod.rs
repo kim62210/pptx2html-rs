@@ -428,6 +428,13 @@ impl PptxParser {
                                 rd.font_ea = Some(typeface);
                             }
                         }
+                        "cs" if in_def_rpr => {
+                            if let Some(rd) = current_run_defaults.as_mut()
+                                && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                            {
+                                rd.font_cs = Some(typeface);
+                            }
+                        }
                         // Color (Empty variant) inside defRPr
                         "srgbClr" if in_def_rpr => {
                             if let Some(val) = xml_utils::attr_str(e, "val")

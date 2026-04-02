@@ -1139,12 +1139,16 @@ fn test_font_scheme_resolve_typeface() {
         minor_latin: "Calibri".to_string(),
         major_east_asian: Some("Malgun Gothic".to_string()),
         minor_east_asian: Some("Malgun Gothic".to_string()),
+        major_complex_script: Some("Times New Roman".to_string()),
+        minor_complex_script: Some("Amiri".to_string()),
     };
 
     assert_eq!(fs.resolve_typeface("+mj-lt"), Some("Calibri Light"));
     assert_eq!(fs.resolve_typeface("+mn-lt"), Some("Calibri"));
     assert_eq!(fs.resolve_typeface("+mj-ea"), Some("Malgun Gothic"));
     assert_eq!(fs.resolve_typeface("+mn-ea"), Some("Malgun Gothic"));
+    assert_eq!(fs.resolve_typeface("+mj-cs"), Some("Times New Roman"));
+    assert_eq!(fs.resolve_typeface("+mn-cs"), Some("Amiri"));
     assert_eq!(fs.resolve_typeface("Arial"), None);
 }
 

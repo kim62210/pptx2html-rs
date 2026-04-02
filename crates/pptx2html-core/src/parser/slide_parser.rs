@@ -1735,6 +1735,34 @@ pub fn parse_slide<R: Read + Seek>(
                             rb.font_ea = Some(typeface);
                         }
                     }
+                    "cs" => {
+                        if let Some(rb) = cell_run.as_mut() {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                rb.font_cs = Some(typeface);
+                            }
+                        } else if in_shape_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                                && let Some(rd) = current_shape_run_defaults.as_mut()
+                            {
+                                rd.font_cs = Some(typeface);
+                            }
+                        } else if in_para_def_rpr {
+                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
+                                let target = if in_tc {
+                                    &mut cell_paragraph
+                                } else {
+                                    &mut current_paragraph
+                                };
+                                if let Some(pb) = target.as_mut() {
+                                    pb.def_rpr_font_cs = Some(typeface);
+                                }
+                            }
+                        } else if let Some(rb) = current_run.as_mut()
+                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+                        {
+                            rb.font_cs = Some(typeface);
+                        }
+                    }
                     // Spacing percentage (inside lnSpc/spcBef/spcAft) — cell or regular
                     "spcPct" => {
                         if let Some(val_str) = xml_utils::attr_str(e, "val")
@@ -3421,6 +3449,7 @@ struct ParagraphBuilder {
     def_rpr_color: Option<Color>,
     def_rpr_font_latin: Option<String>,
     def_rpr_font_ea: Option<String>,
+    def_rpr_font_cs: Option<String>,
 }
 
 impl ParagraphBuilder {
@@ -3436,6 +3465,7 @@ impl ParagraphBuilder {
             || self.def_rpr_color.is_some()
             || self.def_rpr_font_latin.is_some()
             || self.def_rpr_font_ea.is_some()
+            || self.def_rpr_font_cs.is_some()
         {
             Some(ParagraphDefRPr {
                 font_size: self.def_rpr_font_size,
@@ -3449,6 +3479,7 @@ impl ParagraphBuilder {
                 color: self.def_rpr_color,
                 font_latin: self.def_rpr_font_latin,
                 font_ea: self.def_rpr_font_ea,
+                font_cs: self.def_rpr_font_cs,
             })
         } else {
             None
@@ -3481,6 +3512,7 @@ struct RunBuilder {
     color: Color,
     font_latin: Option<String>,
     font_ea: Option<String>,
+    font_cs: Option<String>,
     baseline: Option<i32>,
     letter_spacing: Option<f64>,
     highlight: Option<Color>,
@@ -3510,7 +3542,7 @@ impl RunBuilder {
             font: FontStyle {
                 latin: self.font_latin,
                 east_asian: self.font_ea,
-                ..Default::default()
+                complex_script: self.font_cs,
             },
             hyperlink: self.hyperlink,
             is_break: self.is_break,

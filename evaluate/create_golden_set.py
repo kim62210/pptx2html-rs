@@ -2,7 +2,7 @@
 """
 Generate golden PPTX test files for the fidelity evaluation pipeline.
 
-Creates 50 PPTX files across 10 categories (5 each) using python-pptx.
+Creates a golden PPTX corpus across 10 categories using python-pptx.
 Each file exercises specific PPTX features that pptx2html-rs must handle.
 
     Categories:
@@ -30,6 +30,7 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml import parse_xml
 from pptx.util import Emu, Inches, Pt
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ def _create_test_image(
 # Category: basic_text
 # ---------------------------------------------------------------------------
 def _create_basic_text(output_dir: Path) -> list[Path]:
-    """Generate 5 PPTX files testing text formatting."""
+    """Generate the full basic_text fixture family for text fidelity checks."""
     files: list[Path] = []
 
     # 1. Bold/Italic/Underline combinations
@@ -306,6 +307,134 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
     run2.font.size = Pt(16)
 
     path = output_dir / "basic_text_10_bodypr_fidelity.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(2.4), Inches(2.8))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "This sentence should wrap at spaces before emergency breaks are needed."
+    run.font.size = Pt(18)
+
+    path = output_dir / "basic_text_11_wrap_gate_sentence.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(1.5), Inches(2.8))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "SupercalifragilisticexpialidociousWithoutSpaces"
+    run.font.size = Pt(18)
+
+    path = output_dir / "basic_text_12_wrap_gate_unbreakable.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    labels = [
+        ("No autofit", Inches(0.7), None),
+        ("Normal autofit shrink", Inches(3.4), "norm"),
+        ("Shape autofit grows", Inches(6.1), "shape"),
+    ]
+    for label, left, mode in labels:
+        txBox = slide.shapes.add_textbox(left, Inches(1.0), Inches(2.0), Inches(3.8))
+        tf = txBox.text_frame
+        tf.word_wrap = True
+        body_pr = txBox.text_frame._txBody.bodyPr
+        if mode == "norm":
+            body_pr.append(
+                parse_xml(
+                    r'<a:normAutofit xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" fontScale="65000" lnSpcReduction="15000"/>'
+                )
+            )
+        elif mode == "shape":
+            body_pr.append(
+                parse_xml(
+                    r'<a:spAutoFit xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"/>'
+                )
+            )
+
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = f"{label}: a narrow text box used to compare wrapping and shrink behavior across autofit modes."
+        run.font.size = Pt(20)
+
+    path = output_dir / "basic_text_13_autofit_modes.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(8.2), Inches(2.4))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "مرحبا بالعالم"
+    run.font.name = "Amiri"
+    run.font.size = Pt(24)
+    run2 = p.add_run()
+    run2.text = " / שלום עולם"
+    run2.font.name = "Noto Sans Hebrew"
+    run2.font.size = Pt(24)
+
+    p2 = tf.add_paragraph()
+    run3 = p2.add_run()
+    run3.text = "Arabic and Hebrew runs should keep their complex-script typefaces."
+    run3.font.size = Pt(18)
+
+    path = output_dir / "basic_text_14_complex_script_fonts.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(8.2), Inches(2.6))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "Hello مرحبا world שלום"
+    run.font.name = "Calibri"
+    run.font.size = Pt(24)
+    body_pr = txBox.text_frame._txBody.bodyPr
+    body_pr.set("rtlCol", "0")
+
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = "One run mixes Latin, Arabic, and Hebrew to validate span segmentation."
+    run2.font.size = Pt(18)
+
+    path = output_dir / "basic_text_15_mixed_script_single_run.pptx"
+    prs.save(str(path))
+    files.append(path)
+
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(2.0), Inches(2.8))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    body_pr = txBox.text_frame._txBody.bodyPr
+    body_pr.append(
+        parse_xml(
+            r'<a:normAutofit xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" fontScale="70000"/>'
+        )
+    )
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "자동줄바꿈이가능한한글문장은긴토큰처럼취급되면안됩니다"
+    run.font.size = Pt(18)
+
+    path = output_dir / "basic_text_16_cjk_autofit_wrap_gate.pptx"
     prs.save(str(path))
     files.append(path)
 

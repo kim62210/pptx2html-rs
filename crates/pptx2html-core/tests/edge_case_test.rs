@@ -2292,6 +2292,37 @@ fn test_norm_autofit_line_spacing_reduction_is_clamped_to_one() {
 }
 
 #[test]
+fn test_norm_autofit_cjk_sentence_does_not_force_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CjkAutofit"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="70000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>자동줄바꿈이가능한한글문장은긴토큰처럼취급되면안됩니다</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "CJK autofit text should not opt into emergency wrapping by default: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "CJK autofit text should rely on natural line breaking, not emergency wrap: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_norm_autofit_no_font_scale_no_overflow() {
     let slide = r#"
     <p:sp>
@@ -2404,6 +2435,209 @@ fn test_font_resolution_ledger_tracks_literal_font_without_fallback() {
     assert_eq!(entry.requested_typeface.as_deref(), Some("Calibri"));
     assert_eq!(entry.resolved_typeface.as_deref(), Some("Calibri"));
     assert!(!entry.fallback_used);
+}
+
+#[test]
+fn test_font_resolution_ledger_tracks_complex_script_run_font() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ArabicBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:cs typeface="Amiri"/></a:rPr><a:t>مرحبا بالعالم</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "مرحبا بالعالم")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("Amiri"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Amiri"));
+    assert!(!entry.fallback_used);
+    assert!(result.html.contains("font-family: 'Amiri'"));
+}
+
+#[test]
+fn test_font_resolution_ledger_tracks_complex_script_paragraph_default_font() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ArabicDefaultBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:pPr><a:defRPr sz="1800"><a:cs typeface="Scheherazade New"/></a:defRPr></a:pPr>
+          <a:r><a:t>السلام عليكم</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "السلام عليكم")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("Scheherazade New"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Scheherazade New"));
+    assert_eq!(entry.source, Some(pptx2html_core::FontResolutionSource::ParagraphDefaults));
+    assert!(result.html.contains("font-family: 'Scheherazade New'"));
+}
+
+#[test]
+fn test_font_resolution_ledger_tracks_theme_complex_script_font_fallback() {
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont>
+        <a:latin typeface="Noto Sans"/>
+        <a:cs typeface="Times New Roman"/>
+      </a:majorFont>
+      <a:minorFont>
+        <a:latin typeface="Pretendard"/>
+        <a:cs typeface="Amiri"/>
+      </a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ThemeArabicBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:cs typeface="+mn-cs"/></a:rPr><a:t>مرحبا بالسمة</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_full_theme(theme_xml)
+        .build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "مرحبا بالسمة")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("+mn-cs"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Amiri"));
+    assert!(entry.fallback_used);
+    assert!(result.html.contains("font-family: 'Amiri'"));
+}
+
+#[test]
+fn test_mixed_script_single_run_splits_font_family_segments() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="MixedRunBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/><a:cs typeface="Amiri"/></a:rPr><a:t>Hello مرحبا world</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("font-family: 'Calibri'"));
+    assert!(html.contains("font-family: 'Amiri'"));
+    assert!(html.contains("Hello"), "latin content should survive as its own segment: {html}");
+    assert!(html.contains("مرحبا"), "arabic content should survive as its own segment: {html}");
+    assert!(html.contains("world"), "trailing latin content should survive as its own segment: {html}");
+}
+
+#[test]
+fn test_mixed_script_single_run_splits_theme_complex_script_segments() {
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont>
+        <a:latin typeface="Aptos Display"/>
+        <a:cs typeface="Times New Roman"/>
+      </a:majorFont>
+      <a:minorFont>
+        <a:latin typeface="Aptos"/>
+        <a:cs typeface="Amiri"/>
+      </a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ThemeMixedRunBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="+mn-lt"/><a:cs typeface="+mn-cs"/></a:rPr><a:t>Hello مرحبا</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_full_theme(theme_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("font-family: 'Aptos'"));
+    assert!(html.contains("font-family: 'Amiri'"));
+    assert!(html.contains("Hello"), "latin themed segment should survive: {html}");
+    assert!(html.contains("مرحبا"), "arabic themed segment should survive: {html}");
 }
 
 #[test]
@@ -2555,6 +2789,64 @@ fn test_wrapped_text_body_emits_overflow_wrap_anywhere() {
     assert!(
         tb_chunk.contains("overflow-wrap: anywhere"),
         "Expected wrapped text body to opt into emergency line breaking: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_wrapped_text_body_does_not_force_emergency_wrap_for_regular_sentence() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="RegularWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2600000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>This sentence should wrap at spaces before emergency breaking is needed.</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 320.min(html.len() - tb_start)];
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "Regular wrapped sentences should not opt into emergency breaking: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "Regular wrapped sentences should not carry an emergency-wrap marker: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_unbreakable_text_body_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="EmergencyWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>SupercalifragilisticexpialidociousWithoutSpaces</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 360.min(html.len() - tb_start)];
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Unbreakable tokens should still opt into emergency wrapping: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Unbreakable tokens should carry an emergency-wrap marker: {tb_chunk}"
     );
 }
 

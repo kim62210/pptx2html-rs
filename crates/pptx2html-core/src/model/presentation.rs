@@ -83,10 +83,12 @@ pub struct FontScheme {
     pub minor_latin: String,
     pub major_east_asian: Option<String>,
     pub minor_east_asian: Option<String>,
+    pub major_complex_script: Option<String>,
+    pub minor_complex_script: Option<String>,
 }
 
 impl FontScheme {
-    /// Resolve "+mj-lt" / "+mn-lt" / "+mj-ea" / "+mn-ea" theme font references
+    /// Resolve "+mj-lt" / "+mn-lt" / "+mj-ea" / "+mn-ea" / "+mj-cs" / "+mn-cs" theme font references
     /// to actual typeface names. Returns None if the reference is not recognized
     /// or if the resolved name is empty.
     pub fn resolve_typeface<'a>(&'a self, typeface: &str) -> Option<&'a str> {
@@ -95,6 +97,8 @@ impl FontScheme {
             "+mn-lt" => Some(self.minor_latin.as_str()),
             "+mj-ea" => self.major_east_asian.as_deref(),
             "+mn-ea" => self.minor_east_asian.as_deref(),
+            "+mj-cs" => self.major_complex_script.as_deref(),
+            "+mn-cs" => self.minor_complex_script.as_deref(),
             _ => None,
         };
         result.filter(|s| !s.is_empty())
