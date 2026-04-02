@@ -2669,6 +2669,60 @@ fn test_mixed_script_single_run_splits_theme_complex_script_segments() {
 }
 
 #[test]
+fn test_mixed_script_single_run_keeps_emoji_zwj_cluster_in_single_segment() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="EmojiClusterBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/><a:cs typeface="Segoe UI Emoji"/></a:rPr><a:t>Hello 👩‍💻 مرحبا</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("👩‍💻"), "emoji cluster text should survive intact: {html}");
+    assert!(html.contains("font-family: 'Segoe UI Emoji'"), "emoji cluster should use complex-script/emoji font path: {html}");
+    assert!(!html.contains("👩</span><span class=\"run-segment\""), "emoji cluster must not split at ZWJ boundaries: {html}");
+}
+
+#[test]
+fn test_mixed_script_single_run_uses_emoji_font_for_emoji_segment() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="EmojiFontBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/><a:cs typeface="Segoe UI Emoji"/></a:rPr><a:t>A👩‍💻B</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+
+    let emoji_segment_idx = html.find("👩‍💻</span>").expect("emoji cluster segment");
+    let emoji_window = &html[emoji_segment_idx.saturating_sub(120)..emoji_segment_idx + 24];
+    assert!(emoji_window.contains("Segoe UI Emoji"), "emoji cluster should resolve to emoji font, not latin fallback: {emoji_window}");
+
+    let leading_a_idx = html.find(">A</span>").expect("leading latin segment");
+    let leading_window = &html[leading_a_idx.saturating_sub(120)..leading_a_idx + 10];
+    assert!(leading_window.contains("Calibri"), "leading latin segment should keep latin font: {leading_window}");
+
+    let trailing_b_idx = html.find(">B</span>").expect("trailing latin segment");
+    let trailing_window = &html[trailing_b_idx.saturating_sub(120)..trailing_b_idx + 10];
+    assert!(trailing_window.contains("Calibri"), "trailing latin segment should keep latin font: {trailing_window}");
+}
+
+#[test]
 fn test_rtl_paragraph_is_parsed_and_rendered() {
     let slide = r#"
     <p:sp>

@@ -462,6 +462,27 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
     prs.save(str(path))
     files.append(path)
 
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(8.2), Inches(2.6))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "A👩‍💻B"
+    run.font.name = "Segoe UI Emoji"
+    run.font.size = Pt(24)
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = (
+        "Emoji ZWJ clusters should stay intact and receive emoji-aware font selection."
+    )
+    run2.font.size = Pt(18)
+
+    path = output_dir / "basic_text_18_emoji_cluster_segments.pptx"
+    prs.save(str(path))
+    files.append(path)
+
     return files
 
 

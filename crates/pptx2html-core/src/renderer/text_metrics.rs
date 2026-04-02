@@ -31,6 +31,7 @@ pub enum ScriptCategory {
     LatinLike,
     EastAsian,
     Complex,
+    Emoji,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,6 +105,8 @@ fn estimated_glyph_em_width(ch: char) -> f64 {
 pub fn classify_script_category(text: &str) -> ScriptCategory {
     if text.chars().any(is_complex_script_char) {
         ScriptCategory::Complex
+    } else if text.chars().any(is_emoji_char) {
+        ScriptCategory::Emoji
     } else if text.chars().any(is_east_asian_char) {
         ScriptCategory::EastAsian
     } else {
@@ -115,14 +118,20 @@ pub fn segment_by_script(text: &str) -> Vec<ScriptSegment> {
     let mut segments = Vec::new();
     let mut current_category: Option<ScriptCategory> = None;
     let mut current_text = String::new();
+    let mut keep_with_current = false;
 
     for ch in text.chars() {
-        if ch.is_whitespace() {
+        if ch.is_whitespace() || is_cluster_joiner(ch) {
             current_text.push(ch);
+            if is_cluster_joiner(ch) {
+                keep_with_current = true;
+            }
             continue;
         }
 
-        let category = if is_complex_script_char(ch) {
+        let category = if is_emoji_char(ch) {
+            ScriptCategory::Emoji
+        } else if is_complex_script_char(ch) {
             ScriptCategory::Complex
         } else if is_east_asian_char(ch) {
             ScriptCategory::EastAsian
@@ -130,9 +139,12 @@ pub fn segment_by_script(text: &str) -> Vec<ScriptSegment> {
             ScriptCategory::LatinLike
         };
 
-        if current_category == Some(category) || current_category.is_none() {
-            current_category = Some(category);
+        if keep_with_current || current_category == Some(category) || current_category.is_none() {
+            if current_category.is_none() {
+                current_category = Some(category);
+            }
             current_text.push(ch);
+            keep_with_current = false;
             continue;
         }
 
@@ -144,6 +156,7 @@ pub fn segment_by_script(text: &str) -> Vec<ScriptSegment> {
         }
         current_category = Some(category);
         current_text.push(ch);
+        keep_with_current = false;
     }
 
     if let Some(category) = current_category {
@@ -159,6 +172,42 @@ pub fn segment_by_script(text: &str) -> Vec<ScriptSegment> {
     }
 
     segments
+}
+
+fn is_cluster_joiner(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{200D}'
+            | '\u{FE0E}'
+            | '\u{FE0F}'
+            | '\u{0300}'..='\u{036F}'
+            | '\u{1AB0}'..='\u{1AFF}'
+            | '\u{1DC0}'..='\u{1DFF}'
+            | '\u{20D0}'..='\u{20FF}'
+            | '\u{FE20}'..='\u{FE2F}'
+            | '\u{093C}'
+            | '\u{094D}'
+            | '\u{09BC}'
+            | '\u{0A3C}'
+            | '\u{0ABC}'
+            | '\u{0B3C}'
+            | '\u{0CBC}'
+            | '\u{0D4D}'
+            | '\u{0E31}'
+            | '\u{0E34}'..='\u{0E3A}'
+            | '\u{0E47}'..='\u{0E4E}'
+            | '\u{0EB1}'
+            | '\u{0EC8}'..='\u{0ECD}'
+    )
+}
+
+fn is_emoji_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{1F300}'..='\u{1FAFF}'
+            | '\u{2600}'..='\u{26FF}'
+            | '\u{2700}'..='\u{27BF}'
+    )
 }
 
 fn is_east_asian_char(ch: char) -> bool {
@@ -265,6 +314,11 @@ mod tests {
     }
 
     #[test]
+    fn classify_script_category_detects_emoji_text() {
+        assert_eq!(classify_script_category("👩‍💻"), ScriptCategory::Emoji);
+    }
+
+    #[test]
     fn segment_by_script_splits_latin_and_complex_runs() {
         let segments = segment_by_script("Hello مرحبا world");
         assert_eq!(segments.len(), 3);
@@ -279,6 +333,35 @@ mod tests {
         assert_eq!(segments.len(), 3);
         assert_eq!(segments[0].category, ScriptCategory::LatinLike);
         assert_eq!(segments[1].category, ScriptCategory::Complex);
+        assert_eq!(segments[2].category, ScriptCategory::LatinLike);
+    }
+
+    #[test]
+    fn segment_by_script_keeps_emoji_zwj_cluster_together() {
+        let segments = segment_by_script("Hello 👩‍💻 world");
+        assert_eq!(segments.len(), 3);
+        assert_eq!(segments[0].text, "Hello ");
+        assert!(segments[1].text.starts_with("👩‍💻"));
+        assert!(segments[2].text.ends_with("world"));
+    }
+
+    #[test]
+    fn segment_by_script_keeps_combining_mark_with_base_character() {
+        let segments = segment_by_script("Hello क़ world");
+        let complex_segment = segments
+            .iter()
+            .find(|segment| segment.category == ScriptCategory::Complex)
+            .expect("complex segment");
+        assert!(complex_segment.text.starts_with("क़"));
+    }
+
+    #[test]
+    fn segment_by_script_splits_latin_and_emoji_runs() {
+        let segments = segment_by_script("A👩‍💻B");
+        assert_eq!(segments.len(), 3);
+        assert_eq!(segments[0].category, ScriptCategory::LatinLike);
+        assert_eq!(segments[1].category, ScriptCategory::Emoji);
+        assert_eq!(segments[1].text, "👩‍💻");
         assert_eq!(segments[2].category, ScriptCategory::LatinLike);
     }
 

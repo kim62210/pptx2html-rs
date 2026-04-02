@@ -1954,6 +1954,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         ) -> Option<&'a str> {
             match classify_script_category(text) {
                 ScriptCategory::Complex => complex_script.or(latin).or(east_asian),
+                ScriptCategory::Emoji => complex_script.or(latin).or(east_asian),
                 ScriptCategory::EastAsian => east_asian.or(latin).or(complex_script),
                 ScriptCategory::LatinLike => latin.or(east_asian).or(complex_script),
             }
@@ -1967,6 +1968,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         ) -> Option<&'a str> {
             match category {
                 ScriptCategory::Complex => complex_script.or(latin).or(east_asian),
+                ScriptCategory::Emoji => complex_script.or(latin).or(east_asian),
                 ScriptCategory::EastAsian => east_asian.or(latin).or(complex_script),
                 ScriptCategory::LatinLike => latin.or(east_asian).or(complex_script),
             }
