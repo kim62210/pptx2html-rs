@@ -1322,12 +1322,25 @@ fn test_chart_renders_direct_bar_chart_horizontally() {
 }
 
 #[test]
-fn test_multi_series_chart_still_falls_back_to_placeholder() {
+fn test_multi_series_column_chart_renders_grouped_directly() {
     let pptx = build_multi_series_column_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-placeholder"), "Multi-series chart should still use safe fallback for MVP: {html}");
-    assert!(!html.contains("<div class=\"chart-direct\">"), "Multi-series chart should not be partially direct-rendered: {html}");
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series chart should render directly once grouped rendering is supported: {html}");
+    assert!(html.contains("chart-bar"), "Multi-series column chart should render bar elements: {html}");
+    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series legend/labels should include both series names: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series chart should not fall back once grouped rendering is supported: {html}");
+}
+
+#[test]
+fn test_multi_series_bar_chart_renders_grouped_horizontal_bars() {
+    let pptx = build_chart_pptx("bar", 2);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series bar chart should render directly: {html}");
+    assert!(html.contains("chart-bar-horizontal"), "Multi-series bar chart should render horizontal bars: {html}");
+    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series legend/labels should include both series names: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series bar chart should not use placeholder once grouped rendering is supported: {html}");
 }
 
 // ── Shape effect tests (outerShdw / glow) ──

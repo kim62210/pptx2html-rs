@@ -272,6 +272,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-series-label {{ font-size: 12px; font-weight: 600; color: #555; }}
 .chart-svg {{ width: 100%; height: 100%; }}
 .chart-axis-labels {{ display: flex; justify-content: space-between; font-size: 11px; color: #666; gap: 8px; }}
+.chart-legend {{ display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #555; }}
+.chart-legend-item {{ display: inline-flex; align-items: center; gap: 4px; }}
+.chart-legend-swatch {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
 .chart-bar {{ fill: #4472C4; }}
 .chart-bar-horizontal {{ fill: #4472C4; }}
 .unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
@@ -667,42 +670,77 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
         // Chart
         if let ShapeType::Chart(ref chart_data) = shape.shape_type {
-            if let Some(ref spec) = chart_data.direct_spec && spec.series.len() == 1 {
-                let first_series = &spec.series[0];
-                let _ = writeln!(html, "<div class=\"chart-direct\">");
-                if let Some(series_name) = first_series.name.as_deref() {
-                    let _ = writeln!(html, "<div class=\"chart-series-label\">{}</div>", escape_html(series_name));
-                }
-                let max_value = first_series.values.iter().copied().fold(0.0_f64, f64::max).max(1.0);
-                let bar_count = first_series.values.len().max(1);
-                let bar_gap = 12.0;
-                let chart_height = (h - 28.0).max(60.0);
-                let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
-                match spec.chart_type {
-                    ChartType::Column => {
-                        let bar_width = ((w - bar_gap * ((bar_count as f64) + 1.0)) / bar_count as f64).max(8.0);
-                        for (idx, value) in first_series.values.iter().enumerate() {
-                            let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
-                            let x = bar_gap + idx as f64 * (bar_width + bar_gap);
-                            let y = chart_height - bar_height;
-                            let _ = writeln!(html, "<rect class=\"chart-bar\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+            if let Some(ref spec) = chart_data.direct_spec
+                && let Some(first_series) = spec.series.first()
+            {
+                let category_count = first_series.categories.len();
+                let all_series_compatible = category_count > 0
+                    && spec.series.iter().all(|series| {
+                        series.categories.len() == category_count
+                            && series.values.len() == category_count
+                            && series.categories == first_series.categories
+                    });
+
+                if all_series_compatible {
+                    let palette = ["#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47"];
+                    let max_value = spec
+                        .series
+                        .iter()
+                        .flat_map(|series| series.values.iter().copied())
+                        .fold(0.0_f64, f64::max)
+                        .max(1.0);
+                    let outer_gap = 12.0;
+                    let inner_gap = 4.0;
+                    let chart_height = (h - 52.0).max(60.0);
+                    let series_count = spec.series.len().max(1) as f64;
+
+                    let _ = writeln!(html, "<div class=\"chart-direct\">");
+                    html.push_str("<div class=\"chart-legend\">\n");
+                    for (series_idx, series) in spec.series.iter().enumerate() {
+                        let color = palette[series_idx % palette.len()];
+                        let label = series.name.as_deref().unwrap_or("Series");
+                        let _ = writeln!(
+                            html,
+                            "<span class=\"chart-legend-item\"><span class=\"chart-legend-swatch\" style=\"background:{color}\"></span>{}</span>",
+                            escape_html(label)
+                        );
+                    }
+                    html.push_str("</div>\n");
+                    let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
+                    match spec.chart_type {
+                        ChartType::Column => {
+                            let group_width = ((w - outer_gap * ((category_count as f64) + 1.0)) / category_count as f64).max(16.0);
+                            let bar_width = ((group_width - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                for (idx, value) in series.values.iter().enumerate() {
+                                    let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
+                                    let x = outer_gap + idx as f64 * (group_width + outer_gap) + series_idx as f64 * (bar_width + inner_gap);
+                                    let y = chart_height - bar_height;
+                                    let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                }
+                            }
+                        }
+                        ChartType::Bar => {
+                            let group_height = ((chart_height - outer_gap * ((category_count as f64) + 1.0)) / category_count as f64).max(16.0);
+                            let bar_height = ((group_height - inner_gap * (series_count - 1.0)) / series_count).max(4.0);
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                for (idx, value) in series.values.iter().enumerate() {
+                                    let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
+                                    let y = outer_gap + idx as f64 * (group_height + outer_gap) + series_idx as f64 * (bar_height + inner_gap);
+                                    let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                }
+                            }
                         }
                     }
-                    ChartType::Bar => {
-                        let row_height = ((chart_height - bar_gap * ((bar_count as f64) + 1.0)) / bar_count as f64).max(8.0);
-                        for (idx, value) in first_series.values.iter().enumerate() {
-                            let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
-                            let y = bar_gap + idx as f64 * (row_height + bar_gap);
-                            let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{row_height:.1}\" rx=\"2\" />");
-                        }
+                    html.push_str("</svg>\n<div class=\"chart-axis-labels\">");
+                    for category in &first_series.categories {
+                        let _ = writeln!(html, "<span>{}</span>", escape_html(category));
                     }
+                    html.push_str("</div>\n</div>\n</div>\n");
+                    return;
                 }
-                html.push_str("</svg>\n<div class=\"chart-axis-labels\">");
-                for category in &first_series.categories {
-                    let _ = writeln!(html, "<span>{}</span>", escape_html(category));
-                }
-                html.push_str("</div>\n</div>\n</div>\n");
-                return;
             }
 
             if let Some(ref img_data) = chart_data.preview_image && !img_data.is_empty() {
