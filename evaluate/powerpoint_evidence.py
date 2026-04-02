@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 
 EXACT_PROMOTION_FAMILIES = {
@@ -39,6 +40,13 @@ def main(argv: list[str] | None = None) -> int:
     def add_common_paths(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument("--golden-set-dir", required=True)
         subparser.add_argument("--output-dir", required=True)
+        subparser.add_argument("--output-json", type=Path)
+
+    def emit(payload: dict[str, object], output_json: Path | None) -> None:
+        text = json.dumps(payload, indent=2, ensure_ascii=False)
+        print(text)
+        if output_json is not None:
+            output_json.write_text(text + "\n", encoding="utf-8")
 
     summary_parser = subparsers.add_parser("summary")
     add_common_paths(summary_parser)
@@ -81,12 +89,12 @@ def main(argv: list[str] | None = None) -> int:
                 "capture_date": args.capture_date,
             },
         )
-        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        emit(summary, args.output_json)
         return 0
 
     if args.command == "validate":
         summary = validate_powerpoint_golden_batch(args.golden_set_dir, args.output_dir)
-        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        emit(summary, args.output_json)
         return 0
 
     summary = summarize_powerpoint_golden_batch(args.golden_set_dir, args.output_dir)
@@ -126,10 +134,10 @@ def main(argv: list[str] | None = None) -> int:
                 and summary["manifest_slide_count_matches"]
             ),
         }
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        emit(payload, args.output_json)
         return 0 if payload["family_ready_for_exact_promotion"] else 1
 
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    emit(summary, args.output_json)
     if args.command == "ready":
         return 0 if summary["evidence_ready_for_exact_promotion"] else 1
     return 0

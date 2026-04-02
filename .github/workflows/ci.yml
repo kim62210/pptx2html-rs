@@ -85,3 +85,13 @@ jobs:
         run: python -m pip install -r evaluate/requirements-test.txt
       - name: Run evaluate helper tests
         run: python -m unittest evaluate.tests.test_validate_powerpoint_golden evaluate.tests.test_scaffold_powerpoint_golden_batch evaluate.tests.test_summarize_powerpoint_golden evaluate.tests.test_powerpoint_evidence_cli -v
+      - name: Generate PowerPoint evidence reports
+        run: |
+          mkdir -p artifacts/evaluate
+          python evaluate/powerpoint_evidence.py summary --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-summary.json
+          python evaluate/powerpoint_evidence.py gate --family text-layout --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-text-layout-gate.json || true
+      - name: Upload evaluate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluate-artifacts
+          path: artifacts/evaluate/*.json

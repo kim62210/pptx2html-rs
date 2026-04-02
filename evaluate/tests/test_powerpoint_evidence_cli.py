@@ -134,6 +134,35 @@ class PowerPointEvidenceCliTests(unittest.TestCase):
             self.assertEqual(payload["golden_deck_count"], 1)
             self.assertEqual(payload["missing_decks"], ["sample"])
 
+    def test_summary_command_writes_output_json_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            golden_set = root / "golden_set"
+            output_dir = root / "powerpoint_golden"
+            report_path = root / "summary.json"
+            golden_set.mkdir()
+            output_dir.mkdir()
+            self._create_pptx(golden_set / "sample.pptx", slide_count=1)
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "summary",
+                        "--golden-set-dir",
+                        str(golden_set),
+                        "--output-dir",
+                        str(output_dir),
+                        "--output-json",
+                        str(report_path),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(report_path.is_file())
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["golden_deck_count"], 1)
+
     def test_gate_command_returns_nonzero_when_required_family_decks_are_missing(
         self,
     ) -> None:
@@ -312,6 +341,39 @@ class PowerPointEvidenceCliTests(unittest.TestCase):
             payload = json.loads(stdout.getvalue())
             self.assertTrue(payload["family_ready_for_exact_promotion"])
             self.assertEqual(payload["missing_required_decks"], [])
+
+    def test_gate_command_writes_output_json_file_even_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            golden_set = root / "golden_set"
+            output_dir = root / "powerpoint_golden"
+            report_path = root / "gate.json"
+            golden_set.mkdir()
+            output_dir.mkdir()
+            self._create_pptx(
+                golden_set / f"{TEXT_LAYOUT_DECKS[0]}.pptx", slide_count=1
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "gate",
+                        "--family",
+                        "text-layout",
+                        "--golden-set-dir",
+                        str(golden_set),
+                        "--output-dir",
+                        str(output_dir),
+                        "--output-json",
+                        str(report_path),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertTrue(report_path.is_file())
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertFalse(payload["family_ready_for_exact_promotion"])
 
     def _create_pptx(self, path: Path, slide_count: int) -> None:
         presentation = Presentation()

@@ -128,6 +128,8 @@ python powerpoint_evidence.py gate --family text-layout --golden-set-dir golden_
 
 `gate --family text-layout` checks the exact-promotion fixture bundle from the Text/Layout gate and returns exit code 0 only when the required decks, metadata, slide exports, and manifest consistency are all satisfied.
 
+The CI `evaluate-tools` job exports `powerpoint-evidence-summary.json` and `powerpoint-evidence-text-layout-gate.json` as artifacts so exact-evidence status stays visible even when the gate is advisory.
+
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
 ### 3. Run fidelity evaluation
