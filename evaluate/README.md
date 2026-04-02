@@ -98,6 +98,12 @@ On Windows with Microsoft PowerPoint installed:
 pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden
 ```
 
+After exporting, add `metadata.json` to each `evaluate/powerpoint_golden/<deck-name>/` directory and validate the batch:
+
+```bash
+python validate_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
+```
+
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
 ### 3. Run fidelity evaluation
@@ -132,6 +138,7 @@ evaluate/
 ├── evaluate_fidelity.py       # Immutable scoring function (DO NOT MODIFY)
 ├── reference_render.py        # LibreOffice headless -> PNG
 ├── reference_render_powerpoint.ps1 # PowerPoint COM export bootstrap
+├── validate_powerpoint_golden.py   # Validate PowerPoint evidence batches
 ├── candidate_render.py        # Playwright HTML -> PNG
 ├── create_golden_set.py       # Generate golden PPTX test files
 ├── requirements.txt           # Python dependencies

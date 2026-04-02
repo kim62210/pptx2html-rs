@@ -16,6 +16,7 @@ evaluate/powerpoint_golden/
     Slide1.PNG
     Slide2.PNG
     ...
+    metadata.json
 ```
 
 ## Generation Workflow
@@ -36,13 +37,24 @@ The script opens each `.pptx` file in `evaluate/golden_set/` and exports each de
 
 ## Capture Metadata Template
 
-Record this metadata alongside each capture batch (in the PR, release notes, or a sibling text file):
+Record this metadata in `metadata.json` inside each deck directory. Required keys:
 
-- Microsoft PowerPoint version and update channel
-- Windows version / build number
-- Export method (`reference_render_powerpoint.ps1` invocation)
-- Output resolution / DPI assumptions
-- Golden-set revision or commit SHA
-- Notes about any manual cleanup or export anomalies
+```json
+{
+  "powerpoint_version": "16.0.17726.20160",
+  "powerpoint_channel": "Current Channel",
+  "windows_version": "Windows 11 23H2",
+  "export_command": "pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden",
+  "output_resolution": "960x540",
+  "golden_set_revision": "abc1234",
+  "capture_date": "2026-04-02"
+}
+```
+
+Validate the batch locally with:
+
+```bash
+python validate_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
+```
 
 Text/layout `exact` promotions should cite this metadata together with the matching fixture list from `evaluate/README.md`.
