@@ -188,8 +188,12 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 
 | Feature | ECMA-376 Element | Status |
 |---------|-----------------|--------|
-| Chart detection | `<c:chart>` URI | Fallback |
+| Chart detection | `<c:chart>` URI | Supported |
+| Direct bar/column charts | `<c:barChart>` | Approximate |
+| Direct line charts | `<c:lineChart>` | Approximate |
+| Direct pie charts (single-series) | `<c:pieChart>` | Approximate |
 | Chart preview image | embedded preview | Fallback |
+| Unsupported / complex chart families | other chart spaces | Fallback |
 | Chart placeholder | — | Fallback |
 | SmartArt | `<dgm:*>` | Fallback |
 | OLE objects | `<p:oleObj>` | Fallback |

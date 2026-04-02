@@ -17,6 +17,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
 - Text styling: bold, italic, underline, strikethrough, super/subscript, bullets, vertical text, shadows, highlights, letter spacing
+- Direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line and single-series pie charts
 - Graceful placeholders for unsupported content (SmartArt, OLE, Math)
 - Self-contained HTML output (single file, no external dependencies)
 
@@ -178,7 +179,7 @@ See [docs/architecture/SUPPORTED_FEATURES.md](docs/architecture/SUPPORTED_FEATUR
 | Images | Base64 embedding, deterministic external assets under `images/slide-N/`, cropping, MIME auto-detection |
 | Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles, and bodyPr property carry-over (wrap, margins, vertical anchor, vertical text, autofit) |
 | Bullets | Character and auto-numbered bullets with font, size, color |
-| Charts | Direct clustered bar/column chart rendering plus simple line and pie chart rendering (single- and multi-series MVP where applicable) with preview/placeholder fallback for other chart types |
+| Charts | Direct clustered, stacked, and percent-stacked bar/column chart rendering plus simple line and single-series pie chart rendering, with preview/placeholder fallback for unsupported chart families and complex pie variants |
 | Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
 | LLM Enhance | Post-processing layer: SmartArt→HTML/CSS, OMML→MathML, DrawingML→CSS via LLM (pptx2html-enhance) |
 

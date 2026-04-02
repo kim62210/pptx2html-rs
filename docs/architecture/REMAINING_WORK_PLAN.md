@@ -18,6 +18,7 @@ Provide a sequenced backlog for the remaining pptx2html-rs work, grounded in the
 
 - **Text**: rendered and significantly improved, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
 - **Layout / inheritance**: most placeholder and bodyPr carry-over behavior is implemented, but exactness depends on broader verification and a few remaining metadata/template-style items.
+- **Charts**: approximate direct rendering now covers clustered, stacked, and percent-stacked bar/column charts plus simple line and single-series pie charts, but richer labels, axes, and additional chart families remain.
 - **Verification**: PowerPoint-first evaluation infrastructure exists, but the golden/reference workflow still needs to be turned into a routine release gate for exact claims.
 
 ---
@@ -132,16 +133,30 @@ These items directly block promotion from `approximate` to `exact`.
 
 ## Priority 2 — New rendering domains
 
-### P2.1 Charts direct rendering
+### P2.1 Charts direct rendering expansion
 
-**Current state:** fallback / parsed
+**Current state:** approximate / rendered
 
-**Goal:** Move chart handling from detection/placeholder to approximate direct rendering.
+**Goal:** Broaden direct chart coverage while preserving deterministic fallback behavior for unsupported or structurally incompatible chart types.
 
-**Likely work:**
-- Parse chart relationships and chart-space model more deeply.
-- Render a first chart family (likely bar/column) directly to SVG/HTML.
-- Keep stable fallback for unsupported chart types.
+**Remaining focus areas:**
+- Polish the current direct renderer for bar/column/line/pie charts (axis titles, data labels, gap width, overlap, markers, legend/layout details).
+- Add additional direct-rendered chart families such as doughnut, area, and scatter.
+- Preserve preview-image or placeholder fallback for unsupported chart spaces, 3D chart variants, and incompatible series structures.
+
+**Files likely involved:**
+- `crates/pptx2html-core/src/model/slide.rs`
+- `crates/pptx2html-core/src/parser/chart_parser.rs`
+- `crates/pptx2html-core/src/parser/slide_parser.rs`
+- `crates/pptx2html-core/src/renderer/mod.rs`
+- `crates/pptx2html-core/tests/integration_test.rs`
+- `README.md`
+- `docs/architecture/CAPABILITY_MATRIX.md`
+
+**Suggested slices:**
+1. Add axis-title, data-label, and spacing/overlap polish for the current bar/column renderer.
+2. Add one ring/filled family (`doughnut` or `area`) while keeping stable fallback for unsupported variants.
+3. Add one axis-rich family (`scatter` or `area` with marker support) and extend fallback coverage for unsupported structures.
 
 ### P2.2 Notes / comments / media / animation fallback contracts
 
@@ -179,7 +194,7 @@ These remain intentionally lower priority unless product direction changes.
 4. **Colors and fills exact pass**
 5. **Tables exact pass**
 6. **Images exact pass**
-7. **Charts direct rendering**
+7. **Charts direct rendering expansion**
 8. **Notes/comments/media/animation fallback contracts**
 
 ---

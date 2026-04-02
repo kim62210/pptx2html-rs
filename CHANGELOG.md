@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Rendering — Charts
+- Render clustered, stacked, and percent-stacked bar/column charts directly
+- Render simple line charts directly
+- Render simple single-series pie charts directly
+- Keep multi-series pie, 3D pie, and unsupported chart families on stable preview/placeholder fallback paths
+
+### Tests
+- Add chart integration coverage for clustered, stacked, percent-stacked, line, and pie direct-rendering paths
+- Add regression coverage for chart fallback behavior when direct rendering is not supported
+
+### CI / Evaluation
+- Attach `powerpoint-evidence-summary.json` to tag-based GitHub Release artifacts
+
 ## [1.0.4] - 2026-04-01
 
 ### Rendering — Text Fidelity

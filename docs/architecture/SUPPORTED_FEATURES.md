@@ -62,7 +62,7 @@
 | p:grpSp (group) | planned | Group with child transforms |
 | p:cxnSp (connector) | planned | Line connectors |
 | p:graphicFrame (table) | planned | Table content |
-| p:graphicFrame (chart) | deferred | Very complex, separate effort |
+| p:graphicFrame (chart) | wip | Direct rendering exists for clustered/stacked/percent-stacked bar-column charts plus simple line and single-series pie; unsupported chart families still fall back |
 | p:graphicFrame (SmartArt) | deferred | Requires diagram layout engine |
 | p:graphicFrame (OLE) | deferred | Not renderable in HTML |
 | mc:AlternateContent | planned | Fallback handling |
