@@ -96,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
         missing_required_decks = [
             deck for deck in required_decks if deck not in available_decks
         ]
+        invalid_required_decks = [
+            deck for deck in summary["invalid_metadata"] if deck in required_decks
+        ]
         incomplete_required_decks = [
             detail["name"]
             for detail in summary["deck_details"]
@@ -103,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
             and (
                 not detail["has_output"]
                 or not detail["has_metadata"]
-                or detail["name"] in summary["invalid_metadata"]
+                or detail["name"] in invalid_required_decks
                 or detail["name"] in summary["incomplete_slide_exports"]
             )
         ]
@@ -111,15 +114,16 @@ def main(argv: list[str] | None = None) -> int:
             "family": args.family,
             "required_decks": required_decks,
             "missing_required_decks": missing_required_decks,
+            "invalid_required_decks": invalid_required_decks,
             "incomplete_required_decks": incomplete_required_decks,
             "batch_identity": summary["batch_identity"],
             "family_ready_for_exact_promotion": (
                 not missing_required_decks
+                and not invalid_required_decks
                 and not incomplete_required_decks
                 and summary["manifest_present"]
                 and summary["manifest_deck_count_matches"]
                 and summary["manifest_slide_count_matches"]
-                and not summary["invalid_metadata"]
             ),
         }
         print(json.dumps(payload, indent=2, ensure_ascii=False))
