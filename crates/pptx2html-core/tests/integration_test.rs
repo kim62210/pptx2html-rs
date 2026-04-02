@@ -2043,6 +2043,29 @@ fn test_percent_stacked_column_chart_normalizes_to_full_height() {
 }
 
 #[test]
+fn test_stacked_bar_chart_renders_directly() {
+    let pptx = build_stacked_chart_pptx("bar", "stacked", 2);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Stacked bar chart should render directly: {html}");
+    assert!(html.contains("Revenue") && html.contains("Profit"), "Stacked bar chart should render legend labels: {html}");
+    assert!(html.contains("chart-bar-horizontal"), "Stacked bar chart should emit horizontal bar segments: {html}");
+    assert!(html.contains("data-chart-grouping=\"stacked\""), "Stacked bar chart should expose stacked grouping marker: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Stacked bar chart should not use placeholder: {html}");
+}
+
+#[test]
+fn test_percent_stacked_bar_chart_normalizes_to_full_width() {
+    let pptx = build_stacked_chart_pptx("bar", "percentStacked", 2);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "100% stacked bar chart should render directly: {html}");
+    assert!(html.contains("chart-bar-horizontal"), "100% stacked bar chart should render horizontal bar segments: {html}");
+    assert!(html.contains("data-chart-grouping=\"percent-stacked\""), "100% stacked bar chart should expose percent-stacked grouping marker: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "100% stacked bar chart should not use placeholder: {html}");
+}
+
+#[test]
 fn test_pie_chart_parses_direct_spec() {
     let pptx = build_pie_chart_pptx();
     let pres = parse_pptx(&pptx);
