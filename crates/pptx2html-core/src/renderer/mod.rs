@@ -704,14 +704,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
                     let _ = writeln!(html, "<div class=\"chart-direct\">");
                     html.push_str("<div class=\"chart-legend\">\n");
-                    for (series_idx, series) in spec.series.iter().enumerate() {
-                        let color = palette[series_idx % palette.len()];
-                        let label = series.name.as_deref().unwrap_or("Series");
-                        let _ = writeln!(
-                            html,
-                            "<span class=\"chart-legend-item\"><span class=\"chart-legend-swatch\" style=\"background:{color}\"></span>{}</span>",
-                            escape_html(label)
-                        );
+                    if matches!(spec.chart_type, ChartType::Pie) {
+                        for (idx, category) in first_series.categories.iter().enumerate() {
+                            let color = palette[idx % palette.len()];
+                            let _ = writeln!(
+                                html,
+                                "<span class=\"chart-legend-item\"><span class=\"chart-legend-swatch\" style=\"background:{color}\"></span>{}</span>",
+                                escape_html(category)
+                            );
+                        }
+                    } else {
+                        for (series_idx, series) in spec.series.iter().enumerate() {
+                            let color = palette[series_idx % palette.len()];
+                            let label = series.name.as_deref().unwrap_or("Series");
+                            let _ = writeln!(
+                                html,
+                                "<span class=\"chart-legend-item\"><span class=\"chart-legend-swatch\" style=\"background:{color}\"></span>{}</span>",
+                                escape_html(label)
+                            );
+                        }
                     }
                     html.push_str("</div>\n");
                     let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
