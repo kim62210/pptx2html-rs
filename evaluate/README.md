@@ -118,6 +118,13 @@ python summarize_powerpoint_golden.py --golden-set-dir golden_set --output-dir p
 
 The summary reports missing decks, missing metadata, incomplete slide exports, manifest consistency, batch identity, and an `evidence_ready_for_exact_promotion` boolean.
 
+For a single entrypoint over scaffold / validate / summary / ready, use:
+
+```bash
+python powerpoint_evidence.py summary --golden-set-dir golden_set --output-dir powerpoint_golden
+python powerpoint_evidence.py ready --golden-set-dir golden_set --output-dir powerpoint_golden
+```
+
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
 ### 3. Run fidelity evaluation
@@ -155,6 +162,7 @@ evaluate/
 ├── validate_powerpoint_golden.py   # Validate PowerPoint evidence batches
 ├── summarize_powerpoint_golden.py  # Summarize evidence readiness and gaps
 ├── scaffold_powerpoint_golden_batch.py # Scaffold metadata.json and manifest.json
+├── powerpoint_evidence.py          # Unified CLI for scaffold/validate/summary/ready
 ├── candidate_render.py        # Playwright HTML -> PNG
 ├── create_golden_set.py       # Generate golden PPTX test files
 ├── requirements.txt           # Python dependencies
