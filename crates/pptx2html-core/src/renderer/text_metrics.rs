@@ -177,6 +177,21 @@ fn is_complex_script_char(ch: char) -> bool {
         '\u{0590}'..='\u{05FF}'
             | '\u{0600}'..='\u{06FF}'
             | '\u{0750}'..='\u{077F}'
+            | '\u{0900}'..='\u{097F}'
+            | '\u{0980}'..='\u{09FF}'
+            | '\u{0A00}'..='\u{0A7F}'
+            | '\u{0A80}'..='\u{0AFF}'
+            | '\u{0B00}'..='\u{0B7F}'
+            | '\u{0B80}'..='\u{0BFF}'
+            | '\u{0C00}'..='\u{0C7F}'
+            | '\u{0C80}'..='\u{0CFF}'
+            | '\u{0D00}'..='\u{0D7F}'
+            | '\u{0D80}'..='\u{0DFF}'
+            | '\u{0E00}'..='\u{0E7F}'
+            | '\u{0E80}'..='\u{0EFF}'
+            | '\u{0F00}'..='\u{0FFF}'
+            | '\u{1000}'..='\u{109F}'
+            | '\u{1780}'..='\u{17FF}'
             | '\u{08A0}'..='\u{08FF}'
             | '\u{FB50}'..='\u{FDFF}'
             | '\u{FE70}'..='\u{FEFF}'
@@ -245,8 +260,22 @@ mod tests {
     }
 
     #[test]
+    fn classify_script_category_detects_indic_text_as_complex() {
+        assert_eq!(classify_script_category("नमस्ते दुनिया"), ScriptCategory::Complex);
+    }
+
+    #[test]
     fn segment_by_script_splits_latin_and_complex_runs() {
         let segments = segment_by_script("Hello مرحبا world");
+        assert_eq!(segments.len(), 3);
+        assert_eq!(segments[0].category, ScriptCategory::LatinLike);
+        assert_eq!(segments[1].category, ScriptCategory::Complex);
+        assert_eq!(segments[2].category, ScriptCategory::LatinLike);
+    }
+
+    #[test]
+    fn segment_by_script_splits_latin_and_indic_runs() {
+        let segments = segment_by_script("Hello नमस्ते world");
         assert_eq!(segments.len(), 3);
         assert_eq!(segments[0].category, ScriptCategory::LatinLike);
         assert_eq!(segments[1].category, ScriptCategory::Complex);

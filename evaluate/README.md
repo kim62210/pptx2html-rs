@@ -63,6 +63,7 @@ Before upgrading **Text** or **Layout / inheritance** to `exact`, keep the follo
    - `basic_text_14_complex_script_fonts.pptx`
    - `basic_text_15_mixed_script_single_run.pptx`
    - `basic_text_16_cjk_autofit_wrap_gate.pptx`
+   - `basic_text_17_indic_complex_script_fonts.pptx`
 2. **PowerPoint-native captures** for each deck under `evaluate/powerpoint_golden/<deck-name>/Slide*.PNG`.
 3. **Local converter verification** with `cargo test --workspace` on the same revision.
 4. **Capability-doc update** that records which fixture set and PowerPoint capture batch justified the tier change.
@@ -146,7 +147,7 @@ evaluate/
 
 | Category     | Count | Tests                                    |
 |--------------|-------|------------------------------------------|
-| basic_text   | 16    | Bold, italic, sizes, colors, alignment, font fallback, vertical text, narrow autofit, mixed fonts, bodyPr fidelity, sentence-wrap gate, unbreakable-wrap gate, autofit comparison, complex-script fonts, mixed-script single-run segmentation, CJK autofit wrap gate |
+| basic_text   | 17    | Bold, italic, sizes, colors, alignment, font fallback, vertical text, narrow autofit, mixed fonts, bodyPr fidelity, sentence-wrap gate, unbreakable-wrap gate, autofit comparison, complex-script fonts, mixed-script single-run segmentation, CJK autofit wrap gate, Indic and Thai complex-script fonts |
 | shapes       | 5     | Rectangles, ellipses, arrows, stars      |
 | theme_colors | 5     | 12 theme colors, tint, shade, dark bg    |
 | tables       | 5     | Headers, merge, colors, alignment, large |

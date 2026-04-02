@@ -438,6 +438,30 @@ def _create_basic_text(output_dir: Path) -> list[Path]:
     prs.save(str(path))
     files.append(path)
 
+    prs = _new_presentation()
+    slide = _add_blank_slide(prs)
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.0), Inches(8.2), Inches(2.4))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = "नमस्ते दुनिया"
+    run.font.name = "Nirmala UI"
+    run.font.size = Pt(24)
+    run2 = p.add_run()
+    run2.text = " / สวัสดีชาวโลก"
+    run2.font.name = "Leelawadee UI"
+    run2.font.size = Pt(24)
+
+    p2 = tf.add_paragraph()
+    run3 = p2.add_run()
+    run3.text = "Indic and Thai runs should keep complex-script typefaces instead of latin fallbacks."
+    run3.font.size = Pt(18)
+
+    path = output_dir / "basic_text_17_indic_complex_script_fonts.pptx"
+    prs.save(str(path))
+    files.append(path)
+
     return files
 
 

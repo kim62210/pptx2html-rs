@@ -2499,6 +2499,34 @@ fn test_font_resolution_ledger_tracks_complex_script_paragraph_default_font() {
 }
 
 #[test]
+fn test_font_resolution_ledger_prefers_complex_script_font_for_devanagari() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="IndicBox"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/><a:cs typeface="Nirmala UI"/></a:rPr><a:t>नमस्ते दुनिया</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let result = pptx2html_core::convert_bytes_with_metadata(&pptx).expect("conversion");
+    let entry = result
+        .font_resolution_entries
+        .iter()
+        .find(|entry| entry.run_text == "नमस्ते दुनिया")
+        .expect("font ledger entry");
+
+    assert_eq!(entry.requested_typeface.as_deref(), Some("Nirmala UI"));
+    assert_eq!(entry.resolved_typeface.as_deref(), Some("Nirmala UI"));
+    assert!(result.html.contains("font-family: 'Nirmala UI'"));
+}
+
+#[test]
 fn test_font_resolution_ledger_tracks_theme_complex_script_font_fallback() {
     let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
