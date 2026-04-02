@@ -30,6 +30,7 @@ class SummarizePowerPointGoldenBatchTests(unittest.TestCase):
             self.assertEqual(summary["captured_deck_count"], 1)
             self.assertEqual(summary["missing_decks"], ["sample_b"])
             self.assertEqual(summary["missing_metadata"], ["sample_a"])
+            self.assertEqual(summary["invalid_metadata"], [])
             self.assertEqual(summary["incomplete_slide_exports"], ["sample_a"])
             self.assertFalse(summary["manifest_present"])
             self.assertFalse(summary["manifest_deck_count_matches"])
@@ -93,6 +94,7 @@ class SummarizePowerPointGoldenBatchTests(unittest.TestCase):
             self.assertEqual(summary["captured_deck_count"], 1)
             self.assertEqual(summary["missing_decks"], [])
             self.assertEqual(summary["missing_metadata"], [])
+            self.assertEqual(summary["invalid_metadata"], [])
             self.assertEqual(summary["incomplete_slide_exports"], [])
             self.assertTrue(summary["manifest_present"])
             self.assertTrue(summary["manifest_deck_count_matches"])
@@ -158,6 +160,44 @@ class SummarizePowerPointGoldenBatchTests(unittest.TestCase):
             self.assertTrue(summary["manifest_present"])
             self.assertFalse(summary["manifest_deck_count_matches"])
             self.assertFalse(summary["manifest_slide_count_matches"])
+            self.assertFalse(summary["evidence_ready_for_exact_promotion"])
+
+    def test_reports_invalid_metadata_fields_and_bad_slide_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            golden_set = root / "golden_set"
+            output_dir = root / "powerpoint_golden"
+            golden_set.mkdir()
+            output_dir.mkdir()
+
+            deck_path = golden_set / "sample.pptx"
+            self._create_pptx(deck_path, slide_count=2)
+
+            deck_output = output_dir / "sample"
+            deck_output.mkdir()
+            (deck_output / "Slide1.PNG").write_bytes(b"png1")
+            (deck_output / "Slide3.PNG").write_bytes(b"png3")
+            (deck_output / "metadata.json").write_text(
+                json.dumps(
+                    {
+                        "powerpoint_version": "",
+                        "powerpoint_channel": "Current Channel",
+                        "windows_version": "Windows 11 23H2",
+                        "export_command": "pwsh -File ./reference_render_powerpoint.ps1 -InputDir ./golden_set -OutputDir ./powerpoint_golden",
+                        "output_resolution": "960x540",
+                        "golden_set_revision": "abc1234",
+                        "capture_date": "2026-04-02",
+                        "deck_name": "sample",
+                        "slide_count": 2,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            summary = summarize_powerpoint_golden_batch(golden_set, output_dir)
+
+            self.assertEqual(summary["invalid_metadata"], ["sample"])
+            self.assertEqual(summary["incomplete_slide_exports"], ["sample"])
             self.assertFalse(summary["evidence_ready_for_exact_promotion"])
 
     def _create_pptx(self, path: Path, slide_count: int) -> None:

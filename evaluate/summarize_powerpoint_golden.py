@@ -6,6 +6,11 @@ from pathlib import Path
 
 from pptx import Presentation
 
+try:
+    from evaluate.validate_powerpoint_golden import REQUIRED_METADATA_FIELDS
+except ModuleNotFoundError:
+    from validate_powerpoint_golden import REQUIRED_METADATA_FIELDS
+
 
 def summarize_powerpoint_golden_batch(
     golden_set_dir: Path, output_dir: Path
@@ -16,6 +21,7 @@ def summarize_powerpoint_golden_batch(
     golden_decks = sorted(deck.stem for deck in golden_set_dir.glob("*.pptx"))
     missing_decks: list[str] = []
     missing_metadata: list[str] = []
+    invalid_metadata: list[str] = []
     incomplete_slide_exports: list[str] = []
     deck_details: list[dict[str, object]] = []
 
@@ -41,9 +47,21 @@ def summarize_powerpoint_golden_batch(
         has_metadata = metadata_path.is_file()
         if not has_metadata:
             missing_metadata.append(deck_name)
+            metadata = {}
+        else:
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            missing_fields = [
+                field for field in REQUIRED_METADATA_FIELDS if not metadata.get(field)
+            ]
+            if missing_fields:
+                invalid_metadata.append(deck_name)
 
-        captured_slide_count = sum(1 for _ in deck_output.glob("Slide*.PNG"))
-        if captured_slide_count != expected_slide_count:
+        slide_pngs = sorted(path.name for path in deck_output.glob("Slide*.PNG"))
+        expected_slide_names = [
+            f"Slide{idx}.PNG" for idx in range(1, expected_slide_count + 1)
+        ]
+        captured_slide_count = len(slide_pngs)
+        if slide_pngs != expected_slide_names:
             incomplete_slide_exports.append(deck_name)
 
         deck_details.append(
@@ -85,6 +103,7 @@ def summarize_powerpoint_golden_batch(
     evidence_ready_for_exact_promotion = (
         not missing_decks
         and not missing_metadata
+        and not invalid_metadata
         and not incomplete_slide_exports
         and manifest_present
         and manifest_deck_count_matches
@@ -96,6 +115,7 @@ def summarize_powerpoint_golden_batch(
         "captured_deck_count": len(golden_decks) - len(missing_decks),
         "missing_decks": missing_decks,
         "missing_metadata": missing_metadata,
+        "invalid_metadata": invalid_metadata,
         "incomplete_slide_exports": incomplete_slide_exports,
         "manifest_present": manifest_present,
         "manifest_deck_names": manifest_deck_names,
