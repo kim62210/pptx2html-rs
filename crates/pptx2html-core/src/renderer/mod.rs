@@ -745,6 +745,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             }
                         })
                     };
+                    let resolve_bar_label_position = || {
+                        spec.data_labels
+                            .as_ref()
+                            .and_then(|labels| labels.position)
+                            .unwrap_or(ChartDataLabelPosition::OutEnd)
+                    };
 
                     let _ = writeln!(html, "<div class=\"chart-direct\">");
                     html.push_str("<div class=\"chart-legend\">\n");
@@ -830,9 +836,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 *value,
                                                 matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
                                             ) && *value > 0.0 {
+                                                let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
-                                                let label_y = (y - 6.0).max(10.0);
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let label_y = match label_position {
+                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
+                                                };
+                                                let label_position_attr = match label_position {
+                                                    ChartDataLabelPosition::Center => "ctr",
+                                                    ChartDataLabelPosition::InEnd => "inEnd",
+                                                    ChartDataLabelPosition::OutEnd => "outEnd",
+                                                };
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -857,9 +872,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 *value,
                                                 None,
                                             ) && *value > 0.0 {
+                                                let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
-                                                let label_y = (y - 6.0).max(10.0);
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let label_y = match label_position {
+                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
+                                                };
+                                                let label_position_attr = match label_position {
+                                                    ChartDataLabelPosition::Center => "ctr",
+                                                    ChartDataLabelPosition::InEnd => "inEnd",
+                                                    ChartDataLabelPosition::OutEnd => "outEnd",
+                                                };
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -902,9 +926,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 *value,
                                                 matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
                                             ) && *value > 0.0 {
-                                                let label_x = (x + width + 10.0).min(w - 6.0);
+                                                let label_position = resolve_bar_label_position();
+                                                let label_x = match label_position {
+                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => x + width / 2.0,
+                                                    ChartDataLabelPosition::OutEnd => (x + width + 10.0).min(w - 6.0),
+                                                };
                                                 let label_y = y + bar_height / 2.0;
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let label_position_attr = match label_position {
+                                                    ChartDataLabelPosition::Center => "ctr",
+                                                    ChartDataLabelPosition::InEnd => "inEnd",
+                                                    ChartDataLabelPosition::OutEnd => "outEnd",
+                                                };
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -928,9 +961,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 *value,
                                                 None,
                                             ) && *value > 0.0 {
-                                                let label_x = (width + 10.0).min(w - 6.0);
+                                                let label_position = resolve_bar_label_position();
+                                                let label_x = match label_position {
+                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => width / 2.0,
+                                                    ChartDataLabelPosition::OutEnd => (width + 10.0).min(w - 6.0),
+                                                };
                                                 let label_y = y + bar_height / 2.0;
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let label_position_attr = match label_position {
+                                                    ChartDataLabelPosition::Center => "ctr",
+                                                    ChartDataLabelPosition::InEnd => "inEnd",
+                                                    ChartDataLabelPosition::OutEnd => "outEnd",
+                                                };
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }

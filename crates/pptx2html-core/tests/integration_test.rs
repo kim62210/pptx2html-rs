@@ -1983,6 +1983,16 @@ fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
 }
 
 fn build_chart_with_value_labels_pptx(bar_dir: &str, show_value: bool, show_category_name: bool) -> Vec<u8> {
+    build_chart_with_label_flags_pptx(bar_dir, show_value, show_category_name, false, None)
+}
+
+fn build_chart_with_label_flags_pptx(
+    bar_dir: &str,
+    show_value: bool,
+    show_category_name: bool,
+    show_percent: bool,
+    label_position: Option<&str>,
+) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -2016,6 +2026,10 @@ fn build_chart_with_value_labels_pptx(bar_dir: &str, show_value: bool, show_cate
 
     let show_value = if show_value { 1 } else { 0 };
     let show_category_name = if show_category_name { 1 } else { 0 };
+    let show_percent = if show_percent { 1 } else { 0 };
+    let label_position_xml = label_position
+        .map(|pos| format!("<c:dLblPos val=\"{pos}\"/>"))
+        .unwrap_or_default();
     let chart_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -2030,6 +2044,8 @@ fn build_chart_with_value_labels_pptx(bar_dir: &str, show_value: bool, show_cate
         <c:dLbls>
           <c:showVal val="{show_value}"/>
           <c:showCatName val="{show_category_name}"/>
+          <c:showPercent val="{show_percent}"/>
+          {label_position_xml}
         </c:dLbls>
         <c:ser>
           <c:idx val="0"/>
@@ -3405,6 +3421,39 @@ fn test_horizontal_bar_chart_renders_category_and_value_labels() {
     let html = render_html(&pptx);
 
     assert!(html.contains(">Q2: 20<"), "Horizontal bar chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+}
+
+#[test]
+fn test_bar_chart_parses_label_position() {
+    let pptx = build_chart_with_label_flags_pptx("col", true, false, false, Some("ctr"));
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            let labels = spec.data_labels.as_ref().expect("data label settings");
+            assert_eq!(labels.position, Some(ChartDataLabelPosition::Center));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_column_chart_renders_centered_value_labels() {
+    let pptx = build_chart_with_label_flags_pptx("col", true, false, false, Some("ctr"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"ctr\""), "Centered column labels should expose ctr label position: {html}");
+    assert!(html.contains("y=\"220.5\">10</text>"), "Centered column label should move into the bar center: {html}");
+}
+
+#[test]
+fn test_horizontal_bar_chart_renders_explicit_out_end_labels() {
+    let pptx = build_chart_with_label_flags_pptx("bar", true, false, false, Some("outEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"outEnd\""), "Explicit outEnd bar labels should expose outEnd label position: {html}");
 }
 
 #[test]

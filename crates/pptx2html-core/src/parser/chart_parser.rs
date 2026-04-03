@@ -4,8 +4,8 @@ use quick_xml::events::Event;
 use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::{
-    ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec, ChartScatterStyle, ChartSeries,
-    ChartSpec, ChartType,
+    ChartDataLabelPosition, ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec,
+    ChartScatterStyle, ChartSeries, ChartSpec, ChartType,
 };
 
 #[derive(Default)]
@@ -142,6 +142,14 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         data_labels.show_percent = xml_utils::attr_str(e, "val")
                             .map(|val| val != "0")
                             .unwrap_or(true);
+                    }
+                    "dLblPos" if in_dlbls => {
+                        data_labels.position = match xml_utils::attr_str(e, "val").as_deref() {
+                            Some("ctr") => Some(ChartDataLabelPosition::Center),
+                            Some("inEnd") => Some(ChartDataLabelPosition::InEnd),
+                            Some("outEnd") => Some(ChartDataLabelPosition::OutEnd),
+                            _ => None,
+                        };
                     }
                     "catAx" => in_cat_ax = true,
                     "valAx" => in_val_ax = true,
