@@ -235,6 +235,8 @@ pub struct ChartSpec {
     pub gap_width: Option<i32>,
     pub overlap: Option<i32>,
     pub hole_size: Option<i32>,
+    pub category_axis_title: Option<String>,
+    pub value_axis_title: Option<String>,
     pub series: Vec<ChartSeries>,
 }
 

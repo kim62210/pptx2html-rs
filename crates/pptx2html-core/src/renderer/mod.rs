@@ -270,8 +270,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-placeholder {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
 .chart-direct {{ width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: stretch; gap: 8px; color: #333; }}
 .chart-series-label {{ font-size: 12px; font-weight: 600; color: #555; }}
+.chart-plot-area {{ display: flex; flex: 1 1 auto; align-items: stretch; gap: 8px; min-height: 0; }}
+.chart-plot-main {{ display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }}
 .chart-svg {{ width: 100%; height: 100%; }}
 .chart-axis-labels {{ display: flex; justify-content: space-between; font-size: 11px; color: #666; gap: 8px; }}
+.chart-axis-title {{ font-size: 11px; color: #666; }}
+.chart-axis-title-y {{ writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: center; justify-content: center; min-width: 18px; text-align: center; }}
+.chart-axis-title-x {{ text-align: center; padding-top: 2px; }}
 .chart-legend {{ display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #555; }}
 .chart-legend-item {{ display: inline-flex; align-items: center; gap: 4px; }}
 .chart-legend-swatch {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
@@ -727,6 +732,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         }
                     }
                     html.push_str("</div>\n");
+                    html.push_str("<div class=\"chart-plot-area\">\n");
+                    if let Some(title) = spec.value_axis_title.as_deref() {
+                        let _ = writeln!(
+                            html,
+                            "<div class=\"chart-axis-title chart-axis-title-y\">{}</div>",
+                            escape_html(title)
+                        );
+                    }
+                    html.push_str("<div class=\"chart-plot-main\">\n");
                     let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
                     let grouping_attr = match spec.grouping {
                         ChartGrouping::Clustered => "clustered",
@@ -948,6 +962,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     html.push_str("</svg>\n<div class=\"chart-axis-labels\">");
                     for category in &first_series.categories {
                         let _ = writeln!(html, "<span>{}</span>", escape_html(category));
+                    }
+                    html.push_str("</div>\n");
+                    if let Some(title) = spec.category_axis_title.as_deref() {
+                        let _ = writeln!(
+                            html,
+                            "<div class=\"chart-axis-title chart-axis-title-x\">{}</div>",
+                            escape_html(title)
+                        );
                     }
                     html.push_str("</div>\n</div>\n</div>\n");
                     return;

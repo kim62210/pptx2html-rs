@@ -26,12 +26,18 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut hole_size = None;
     let mut current_series: Option<SeriesBuilder> = None;
     let mut series = Vec::new();
+    let mut category_axis_title = String::new();
+    let mut value_axis_title = String::new();
     let mut in_tx = false;
     let mut in_cat = false;
     let mut in_val = false;
     let mut in_pt = false;
     let mut in_v = false;
     let mut in_marker = false;
+    let mut in_cat_ax = false;
+    let mut in_val_ax = false;
+    let mut in_title = false;
+    let mut in_title_text = false;
 
     loop {
         match reader.read_event() {
@@ -85,6 +91,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(10, 90));
                     }
+                    "catAx" => in_cat_ax = true,
+                    "valAx" => in_val_ax = true,
+                    "title" if in_cat_ax || in_val_ax => in_title = true,
+                    "t" if in_title => in_title_text = true,
                     "ser" if in_bar_chart || in_line_chart || in_pie_chart || in_doughnut_chart => {
                         current_series = Some(SeriesBuilder::default())
                     }
@@ -133,14 +143,28 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     }
                 }
             }
+            Ok(Event::Text(ref e)) if in_title_text => {
+                let text = e.unescape().unwrap_or_default().to_string();
+                if !text.trim().is_empty() {
+                    if in_cat_ax {
+                        category_axis_title.push_str(&text);
+                    } else if in_val_ax {
+                        value_axis_title.push_str(&text);
+                    }
+                }
+            }
             Ok(Event::End(ref e)) => {
                 let local = xml_utils::local_name(e.name().as_ref()).to_string();
                 match local.as_str() {
                     "v" => in_v = false,
+                    "t" => in_title_text = false,
                     "pt" => in_pt = false,
                     "tx" => in_tx = false,
                     "cat" => in_cat = false,
                     "val" => in_val = false,
+                    "title" => in_title = false,
+                    "catAx" => in_cat_ax = false,
+                    "valAx" => in_val_ax = false,
                     "ser" => {
                         if let Some(series_builder) = current_series.take()
                             && !series_builder.categories.is_empty()
@@ -177,6 +201,9 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
             gap_width,
             overlap,
             hole_size,
+            category_axis_title: (!category_axis_title.trim().is_empty())
+                .then_some(category_axis_title),
+            value_axis_title: (!value_axis_title.trim().is_empty()).then_some(value_axis_title),
             series,
         }))
     }
