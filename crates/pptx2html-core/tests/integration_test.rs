@@ -4003,11 +4003,29 @@ fn test_line_chart_renders_centered_value_labels() {
 }
 
 #[test]
+fn test_line_chart_renders_in_end_value_labels() {
+    let pptx = build_line_chart_with_label_flags_pptx(true, false, false, Some("inEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"inEnd\""), "Line inEnd labels should expose inEnd label position: {html}");
+    assert!(html.contains("y=\"103.0\">20</text>"), "Line inEnd label should move below the point: {html}");
+}
+
+#[test]
 fn test_area_chart_renders_explicit_out_end_labels() {
     let pptx = build_area_chart_with_label_flags_pptx(true, false, false, Some("outEnd"));
     let html = render_html(&pptx);
 
     assert!(html.contains("data-label-position=\"outEnd\""), "Area outEnd labels should expose outEnd label position: {html}");
+}
+
+#[test]
+fn test_area_chart_renders_in_end_value_labels() {
+    let pptx = build_area_chart_with_label_flags_pptx(true, false, false, Some("inEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"inEnd\""), "Area inEnd labels should expose inEnd label position: {html}");
+    assert!(html.contains("y=\"103.0\">20</text>"), "Area inEnd label should move below the point: {html}");
 }
 
 #[test]
@@ -4098,6 +4116,15 @@ fn test_scatter_chart_renders_explicit_out_end_labels() {
     let html = render_html(&pptx);
 
     assert!(html.contains("data-label-position=\"outEnd\""), "Scatter outEnd labels should expose outEnd label position: {html}");
+}
+
+#[test]
+fn test_scatter_chart_renders_in_end_value_labels() {
+    let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("inEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"inEnd\""), "Scatter inEnd labels should expose inEnd label position: {html}");
+    assert!(html.contains("y=\"18.0\">20</text>"), "Scatter inEnd label should move below the point: {html}");
 }
 
 #[test]

@@ -1068,7 +1068,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         );
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = match point_label_position {
-                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::Center => y,
+                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
                                                 ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
                                             };
                                             let label_text = build_point_data_label(
@@ -1088,7 +1089,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
                                             let label_y = match point_label_position {
-                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::Center => y,
+                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
                                                 ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
                                             };
                                             let label_text = build_point_data_label(
@@ -1198,7 +1200,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         );
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = match scatter_label_position {
-                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::Center => y,
+                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
                                                 ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
                                             };
                                             let category_text = series.x_values.get(idx).map(|value| value.to_string());
@@ -1219,7 +1222,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
                                             let label_y = match scatter_label_position {
-                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::Center => y,
+                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
                                                 ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
                                             };
                                             let category_text = series.x_values.get(idx).map(|value| value.to_string());
@@ -1294,7 +1298,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                             if *value > 0.0 {
                                                 let label_y = match point_label_position {
-                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                    ChartDataLabelPosition::Center => y,
+                                                    ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
                                                     ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
                                                 };
                                                 let label_text = build_point_data_label(
