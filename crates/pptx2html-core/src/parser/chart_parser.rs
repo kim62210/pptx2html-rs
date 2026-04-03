@@ -138,6 +138,11 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .map(|val| val != "0")
                             .unwrap_or(true);
                     }
+                    "showPercent" if in_dlbls => {
+                        data_labels.show_percent = xml_utils::attr_str(e, "val")
+                            .map(|val| val != "0")
+                            .unwrap_or(true);
+                    }
                     "catAx" => in_cat_ax = true,
                     "valAx" => in_val_ax = true,
                     "title" if in_cat_ax || in_val_ax => in_title = true,

@@ -1180,7 +1180,7 @@ fn build_pie_chart_pptx() -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
-fn build_pie_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -> Vec<u8> {
+fn build_pie_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool, show_percent: bool) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -1214,6 +1214,7 @@ fn build_pie_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -> Vec
 
     let show_val = if show_val { 1 } else { 0 };
     let show_cat_name = if show_cat_name { 1 } else { 0 };
+    let show_percent = if show_percent { 1 } else { 0 };
     let chart_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -1227,6 +1228,7 @@ fn build_pie_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -> Vec
         <c:dLbls>
           <c:showVal val="{show_val}"/>
           <c:showCatName val="{show_cat_name}"/>
+          <c:showPercent val="{show_percent}"/>
         </c:dLbls>
         <c:ser>
           <c:idx val="0"/>
@@ -1324,7 +1326,7 @@ fn build_pie_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -> Vec
     zip.finish().unwrap().into_inner()
 }
 
-fn build_doughnut_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -> Vec<u8> {
+fn build_doughnut_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool, show_percent: bool) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -1358,6 +1360,7 @@ fn build_doughnut_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -
 
     let show_val = if show_val { 1 } else { 0 };
     let show_cat_name = if show_cat_name { 1 } else { 0 };
+    let show_percent = if show_percent { 1 } else { 0 };
     let chart_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -1371,6 +1374,7 @@ fn build_doughnut_chart_with_dlabels_pptx(show_val: bool, show_cat_name: bool) -
         <c:dLbls>
           <c:showVal val="{show_val}"/>
           <c:showCatName val="{show_cat_name}"/>
+          <c:showPercent val="{show_percent}"/>
         </c:dLbls>
         <c:ser>
           <c:idx val="0"/>
@@ -3471,7 +3475,7 @@ fn test_doughnut_chart_parses_direct_spec() {
 
 #[test]
 fn test_pie_chart_parses_data_label_flags() {
-    let pptx = build_pie_chart_with_dlabels_pptx(true, true);
+    let pptx = build_pie_chart_with_dlabels_pptx(true, true, false);
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
 
@@ -3488,7 +3492,7 @@ fn test_pie_chart_parses_data_label_flags() {
 
 #[test]
 fn test_pie_chart_renders_value_and_category_labels() {
-    let pptx = build_pie_chart_with_dlabels_pptx(true, true);
+    let pptx = build_pie_chart_with_dlabels_pptx(true, true, false);
     let html = render_html(&pptx);
 
     assert!(html.contains("chart-data-label"), "Pie chart should render data labels when enabled: {html}");
@@ -3497,12 +3501,48 @@ fn test_pie_chart_renders_value_and_category_labels() {
 
 #[test]
 fn test_doughnut_chart_renders_value_only_labels() {
-    let pptx = build_doughnut_chart_with_dlabels_pptx(true, false);
+    let pptx = build_doughnut_chart_with_dlabels_pptx(true, false, false);
     let html = render_html(&pptx);
 
     assert!(html.contains("chart-data-label"), "Doughnut chart should render data labels when enabled: {html}");
     assert!(html.contains(">30<"), "Doughnut chart should render value-only label text: {html}");
     assert!(!html.contains("North: 30"), "Value-only doughnut labels should not include category text: {html}");
+}
+
+#[test]
+fn test_pie_chart_parses_percent_data_label_flag() {
+    let pptx = build_pie_chart_with_dlabels_pptx(false, false, true);
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            let labels = spec.data_labels.as_ref().expect("data label settings");
+            assert!(labels.show_percent);
+            assert!(!labels.show_value);
+            assert!(!labels.show_category_name);
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_pie_chart_renders_percent_only_labels() {
+    let pptx = build_pie_chart_with_dlabels_pptx(false, false, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("30%"), "Pie chart should render percent-only label text: {html}");
+    assert!(!html.contains(">30<"), "Percent-only labels should not render raw values: {html}");
+    assert!(!html.contains("North: 30"), "Percent-only labels should not render category/value text: {html}");
+}
+
+#[test]
+fn test_doughnut_chart_renders_value_and_percent_labels() {
+    let pptx = build_doughnut_chart_with_dlabels_pptx(true, false, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("30: 30%"), "Doughnut labels should combine value and percent when both are enabled: {html}");
 }
 
 #[test]

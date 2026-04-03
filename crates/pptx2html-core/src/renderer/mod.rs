@@ -1110,6 +1110,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         if data_labels.show_value {
                                             label_parts.push(format!("{}", value));
                                         }
+                                        if data_labels.show_percent {
+                                            label_parts.push(format!("{:.0}%", (*value / total) * 100.0));
+                                        }
                                         if !label_parts.is_empty() {
                                             let mid_angle = start_angle + sweep / 2.0;
                                             let label_radius = if inner_radius > 0.0 {

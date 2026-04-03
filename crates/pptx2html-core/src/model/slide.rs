@@ -237,6 +237,7 @@ pub struct ChartMarkerSpec {
 pub struct ChartDataLabelSettings {
     pub show_value: bool,
     pub show_category_name: bool,
+    pub show_percent: bool,
 }
 
 #[derive(Debug, Clone, Default)]
