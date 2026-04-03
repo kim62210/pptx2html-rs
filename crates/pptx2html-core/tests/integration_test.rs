@@ -2299,7 +2299,7 @@ fn build_chart_spacing_pptx(
 }
 
 fn build_stacked_chart_pptx(bar_dir: &str, grouping: &str, series_count: usize) -> Vec<u8> {
-    build_stacked_chart_with_value_labels_pptx(bar_dir, grouping, series_count, false)
+    build_stacked_chart_with_label_flags_pptx(bar_dir, grouping, series_count, false, false, false)
 }
 
 fn build_stacked_chart_with_value_labels_pptx(
@@ -2307,6 +2307,17 @@ fn build_stacked_chart_with_value_labels_pptx(
     grouping: &str,
     series_count: usize,
     show_value_labels: bool,
+) -> Vec<u8> {
+    build_stacked_chart_with_label_flags_pptx(bar_dir, grouping, series_count, show_value_labels, false, false)
+}
+
+fn build_stacked_chart_with_label_flags_pptx(
+    bar_dir: &str,
+    grouping: &str,
+    series_count: usize,
+    show_value_labels: bool,
+    show_category_name: bool,
+    show_percent: bool,
 ) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -2370,10 +2381,15 @@ fn build_stacked_chart_with_value_labels_pptx(
         ));
     }
 
-    let dlabels_xml = if show_value_labels {
-        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    let dlabels_xml = if show_value_labels || show_category_name || show_percent {
+        let show_value = if show_value_labels { 1 } else { 0 };
+        let show_category_name = if show_category_name { 1 } else { 0 };
+        let show_percent = if show_percent { 1 } else { 0 };
+        format!(
+            "<c:dLbls><c:showVal val=\"{show_value}\"/><c:showCatName val=\"{show_category_name}\"/><c:showPercent val=\"{show_percent}\"/></c:dLbls>"
+        )
     } else {
-        ""
+        String::new()
     };
 
     let chart_xml = format!(
@@ -3668,6 +3684,24 @@ fn test_percent_stacked_bar_chart_renders_value_labels() {
 
     assert!(html.contains("<text class=\"chart-data-label\""), "Percent-stacked bar chart should render value labels: {html}");
     assert!(html.contains(">5<") || html.contains(">10<"), "Percent-stacked bar chart should keep raw point values in labels: {html}");
+}
+
+#[test]
+fn test_percent_stacked_column_renders_percent_labels() {
+    let pptx = build_stacked_chart_with_label_flags_pptx("col", "percentStacked", 2, false, false, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<text class=\"chart-data-label\""), "Percent-stacked column chart should render percent labels: {html}");
+    assert!(html.contains("67%") || html.contains("57%"), "Percent-stacked column chart should render rounded percentage labels: {html}");
+    assert!(!html.contains(">10<"), "Percent-only labels should not render raw values: {html}");
+}
+
+#[test]
+fn test_percent_stacked_bar_renders_category_and_percent_labels() {
+    let pptx = build_stacked_chart_with_label_flags_pptx("bar", "percentStacked", 2, false, true, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("Q1: 67%") || html.contains("Q2: 57%"), "Percent-stacked bar chart should combine category and percent labels: {html}");
 }
 
 #[test]

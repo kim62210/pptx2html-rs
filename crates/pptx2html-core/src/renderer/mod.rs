@@ -726,7 +726,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     let gap_width = spec.gap_width.unwrap_or(150).clamp(0, 500);
                     let overlap = spec.overlap.unwrap_or(0).clamp(-100, 100);
                     let overlap_ratio = (overlap as f64 + 100.0) / 200.0;
-                    let build_bar_data_label = |category: Option<&str>, value: f64| {
+                    let build_bar_data_label = |category: Option<&str>, value: f64, percent: Option<f64>| {
                         spec.data_labels.as_ref().and_then(|labels| {
                             let mut parts = Vec::new();
                             if labels.show_category_name && let Some(category) = category {
@@ -734,6 +734,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             }
                             if labels.show_value {
                                 parts.push(format!("{value}"));
+                            }
+                            if labels.show_percent && let Some(percent) = percent {
+                                parts.push(format!("{:.0}%", percent * 100.0));
                             }
                             if parts.is_empty() {
                                 None
@@ -825,6 +828,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             if let Some(label_text) = build_bar_data_label(
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
+                                                matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
                                             ) && *value > 0.0 {
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = (y - 6.0).max(10.0);
@@ -851,6 +855,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             if let Some(label_text) = build_bar_data_label(
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
+                                                None,
                                             ) && *value > 0.0 {
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = (y - 6.0).max(10.0);
@@ -895,6 +900,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             if let Some(label_text) = build_bar_data_label(
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
+                                                matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
                                             ) && *value > 0.0 {
                                                 let label_x = (x + width + 10.0).min(w - 6.0);
                                                 let label_y = y + bar_height / 2.0;
@@ -920,6 +926,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             if let Some(label_text) = build_bar_data_label(
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
+                                                None,
                                             ) && *value > 0.0 {
                                                 let label_x = (width + 10.0).min(w - 6.0);
                                                 let label_y = y + bar_height / 2.0;
