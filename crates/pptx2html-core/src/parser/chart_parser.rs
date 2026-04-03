@@ -124,7 +124,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(10, 90));
                     }
-                    "dLbls" if in_bar_chart || in_line_chart || in_area_chart || in_pie_chart || in_doughnut_chart => {
+                    "dLbls" if in_bar_chart || in_line_chart || in_scatter_chart || in_area_chart || in_pie_chart || in_doughnut_chart => {
                         in_dlbls = true;
                         saw_dlbls = true;
                     }

@@ -1137,6 +1137,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .and_then(|marker| marker.size)
                                     .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
                                     .unwrap_or(3.0);
+                                let render_value_labels = spec
+                                    .data_labels
+                                    .as_ref()
+                                    .map(|labels| labels.show_value)
+                                    .unwrap_or(false);
                                 let render_markers = marker_symbol != "none"
                                     && matches!(
                                         scatter_style,
@@ -1159,12 +1164,23 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
                                 }
                                 if render_markers {
-                                    for (x, y) in points {
+                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
                                         let _ = writeln!(
                                             html,
                                             "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
                                             escape_html(marker_symbol)
                                         );
+                                        if render_value_labels && *value > 0.0 {
+                                            let label_y = (y - 10.0).max(10.0);
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                        }
+                                    }
+                                } else if render_value_labels {
+                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                        if *value > 0.0 {
+                                            let label_y = (y - 10.0).max(10.0);
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                        }
                                     }
                                 }
                             }
