@@ -9,13 +9,15 @@ All notable changes to this project will be documented in this file.
 - Honor OOXML `gapWidth` and `overlap` spacing for direct bar/column chart rendering
 - Render simple line charts directly
 - Honor explicit line-series marker settings, including `symbol="none"`
+- Render direct chart axis titles for category and value axes
+- Render simple standard area charts directly
 - Render simple single-series pie charts directly
 - Render simple single-series doughnut charts directly
 - Keep multi-series pie, 3D pie, and unsupported chart families on stable preview/placeholder fallback paths
 
 ### Tests
 - Add chart integration coverage for clustered, stacked, percent-stacked, line, and pie direct-rendering paths
-- Add regression coverage for bar/column spacing controls, line marker handling, and doughnut direct rendering
+- Add regression coverage for bar/column spacing controls, line marker handling, axis titles, area charts, and doughnut direct rendering
 - Add regression coverage for chart fallback behavior when direct rendering is not supported
 
 ### CI / Evaluation

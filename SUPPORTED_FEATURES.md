@@ -193,6 +193,8 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Bar/column spacing controls | `<c:gapWidth>`, `<c:overlap>` | Approximate |
 | Direct line charts | `<c:lineChart>` | Approximate |
 | Line series markers | `<c:marker>` | Approximate |
+| Chart axis titles | `<c:catAx>/<c:valAx> <c:title>` | Approximate |
+| Direct area charts (standard) | `<c:areaChart>` | Approximate |
 | Direct pie charts (single-series) | `<c:pieChart>` | Approximate |
 | Direct doughnut charts (single-series) | `<c:doughnutChart>` | Approximate |
 | Chart preview image | embedded preview | Fallback |
