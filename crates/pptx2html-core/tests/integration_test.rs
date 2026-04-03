@@ -936,7 +936,7 @@ fn build_scatter_chart_pptx() -> Vec<u8> {
 }
 
 fn build_scatter_chart_with_style_pptx(scatter_style: &str) -> Vec<u8> {
-    build_scatter_chart_with_flags_pptx(scatter_style, false, false, false)
+    build_scatter_chart_with_label_flags_pptx(scatter_style, false, false, false, None)
 }
 
 fn build_scatter_chart_with_flags_pptx(
@@ -944,6 +944,22 @@ fn build_scatter_chart_with_flags_pptx(
     show_value_labels: bool,
     show_category_name: bool,
     show_series_name: bool,
+) -> Vec<u8> {
+    build_scatter_chart_with_label_flags_pptx(
+        scatter_style,
+        show_value_labels,
+        show_category_name,
+        show_series_name,
+        None,
+    )
+}
+
+fn build_scatter_chart_with_label_flags_pptx(
+    scatter_style: &str,
+    show_value_labels: bool,
+    show_category_name: bool,
+    show_series_name: bool,
+    label_position: Option<&str>,
 ) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -980,8 +996,11 @@ fn build_scatter_chart_with_flags_pptx(
         let show_value = if show_value_labels { 1 } else { 0 };
         let show_category_name = if show_category_name { 1 } else { 0 };
         let show_series_name = if show_series_name { 1 } else { 0 };
+        let label_position_xml = label_position
+            .map(|value| format!("<c:dLblPos val=\"{value}\"/>"))
+            .unwrap_or_default();
         format!(
-            "<c:dLbls><c:showVal val=\"{show_value}\"/><c:showCatName val=\"{show_category_name}\"/><c:showSerName val=\"{show_series_name}\"/></c:dLbls>"
+            "<c:dLbls><c:showVal val=\"{show_value}\"/><c:showCatName val=\"{show_category_name}\"/><c:showSerName val=\"{show_series_name}\"/>{label_position_xml}</c:dLbls>"
         )
     } else {
         String::new()
@@ -4037,6 +4056,23 @@ fn test_scatter_chart_renders_series_and_value_labels() {
     let html = render_html(&pptx);
 
     assert!(html.contains(">Revenue: 20<"), "Scatter chart should combine series name and value labels: {html}");
+}
+
+#[test]
+fn test_scatter_chart_renders_centered_value_labels() {
+    let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("ctr"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"ctr\""), "Centered scatter labels should expose ctr label position: {html}");
+    assert!(html.contains("y=\"8.0\">20</text>"), "Centered scatter label should sit on the point center: {html}");
+}
+
+#[test]
+fn test_scatter_chart_renders_explicit_out_end_labels() {
+    let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("outEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"outEnd\""), "Scatter outEnd labels should expose outEnd label position: {html}");
 }
 
 #[test]

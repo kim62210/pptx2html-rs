@@ -1091,6 +1091,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let right_pad = 8.0;
                             let top_pad = 8.0;
                             let bottom_pad = 8.0;
+                            let scatter_label_position = spec
+                                .data_labels
+                                .as_ref()
+                                .and_then(|labels| labels.position)
+                                .unwrap_or(ChartDataLabelPosition::OutEnd);
                             let scatter_style = spec.scatter_style.unwrap_or_default();
                             let render_line = matches!(
                                 scatter_style,
@@ -1171,27 +1176,43 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             escape_html(marker_symbol)
                                         );
                                         if render_value_labels && *value > 0.0 {
-                                            let label_y = (y - 10.0).max(10.0);
+                                            let label_y = match scatter_label_position {
+                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                            };
                                             let category_text = series.x_values.get(idx).map(|value| value.to_string());
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 category_text.as_deref(),
                                                 *value,
                                             ).unwrap_or_else(|| value.to_string());
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let label_position_attr = match scatter_label_position {
+                                                ChartDataLabelPosition::Center => "ctr",
+                                                ChartDataLabelPosition::InEnd => "inEnd",
+                                                ChartDataLabelPosition::OutEnd => "outEnd",
+                                            };
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 } else if render_value_labels {
                                     for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
-                                            let label_y = (y - 10.0).max(10.0);
+                                            let label_y = match scatter_label_position {
+                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                            };
                                             let category_text = series.x_values.get(idx).map(|value| value.to_string());
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 category_text.as_deref(),
                                                 *value,
                                             ).unwrap_or_else(|| value.to_string());
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let label_position_attr = match scatter_label_position {
+                                                ChartDataLabelPosition::Center => "ctr",
+                                                ChartDataLabelPosition::InEnd => "inEnd",
+                                                ChartDataLabelPosition::OutEnd => "outEnd",
+                                            };
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 }
