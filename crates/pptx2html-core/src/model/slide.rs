@@ -214,10 +214,17 @@ pub enum ChartGrouping {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct ChartMarkerSpec {
+    pub symbol: Option<String>,
+    pub size: Option<i32>,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct ChartSeries {
     pub name: Option<String>,
     pub categories: Vec<String>,
     pub values: Vec<f64>,
+    pub marker: Option<ChartMarkerSpec>,
 }
 
 #[derive(Debug, Clone, Default)]

@@ -858,6 +858,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             for (series_idx, series) in spec.series.iter().enumerate() {
                                 let color = palette[series_idx % palette.len()];
                                 let mut points = Vec::new();
+                                let marker_symbol = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.symbol.as_deref())
+                                    .unwrap_or("circle");
+                                let marker_radius = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.size)
+                                    .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
+                                    .unwrap_or(3.0);
                                 for (idx, value) in series.values.iter().enumerate() {
                                     let x = left_pad + idx as f64 * step_x;
                                     let y = chart_height
@@ -874,8 +885,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .collect::<Vec<_>>()
                                     .join(" ");
                                 let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
-                                for (x, y) in points {
-                                    let _ = writeln!(html, "<circle class=\"chart-point\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"3\" />");
+                                if marker_symbol != "none" {
+                                    for (x, y) in points {
+                                        let _ = writeln!(
+                                            html,
+                                            "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
+                                            escape_html(marker_symbol)
+                                        );
+                                    }
                                 }
                             }
                         }

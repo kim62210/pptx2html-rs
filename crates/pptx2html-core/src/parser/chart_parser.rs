@@ -3,13 +3,14 @@ use quick_xml::events::Event;
 
 use super::xml_utils;
 use crate::error::PptxResult;
-use crate::model::{ChartGrouping, ChartSeries, ChartSpec, ChartType};
+use crate::model::{ChartGrouping, ChartMarkerSpec, ChartSeries, ChartSpec, ChartType};
 
 #[derive(Default)]
 struct SeriesBuilder {
     name: Option<String>,
     categories: Vec<String>,
     values: Vec<f64>,
+    marker: Option<ChartMarkerSpec>,
 }
 
 pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
@@ -28,6 +29,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_val = false;
     let mut in_pt = false;
     let mut in_v = false;
+    let mut in_marker = false;
 
     loop {
         match reader.read_event() {
@@ -75,6 +77,29 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "ser" if in_bar_chart || in_line_chart || in_pie_chart => {
                         current_series = Some(SeriesBuilder::default())
                     }
+                    "marker" if current_series.is_some() && in_line_chart => in_marker = true,
+                    "symbol" if current_series.is_some() && in_marker => {
+                        if let Some(symbol) = xml_utils::attr_str(e, "val")
+                            && let Some(series_builder) = current_series.as_mut()
+                        {
+                            let marker = series_builder
+                                .marker
+                                .get_or_insert_with(ChartMarkerSpec::default);
+                            marker.symbol = Some(symbol);
+                        }
+                    }
+                    "size" if current_series.is_some() && in_marker => {
+                        if let Some(size) = xml_utils::attr_str(e, "val")
+                            .and_then(|val| val.parse::<i32>().ok())
+                            .map(|val| val.clamp(2, 72))
+                            && let Some(series_builder) = current_series.as_mut()
+                        {
+                            let marker = series_builder
+                                .marker
+                                .get_or_insert_with(ChartMarkerSpec::default);
+                            marker.size = Some(size);
+                        }
+                    }
                     "tx" if current_series.is_some() => in_tx = true,
                     "cat" if current_series.is_some() => in_cat = true,
                     "val" if current_series.is_some() => in_val = true,
@@ -114,9 +139,11 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                                 name: series_builder.name,
                                 categories: series_builder.categories,
                                 values: series_builder.values,
+                                marker: series_builder.marker,
                             });
                         }
                     }
+                    "marker" => in_marker = false,
                     "barChart" | "bar3DChart" => in_bar_chart = false,
                     "lineChart" | "line3DChart" => in_line_chart = false,
                     "pieChart" => in_pie_chart = false,
