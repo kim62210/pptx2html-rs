@@ -201,6 +201,7 @@ pub enum ChartType {
     Column,
     Bar,
     Line,
+    Area,
     Pie,
     Doughnut,
 }

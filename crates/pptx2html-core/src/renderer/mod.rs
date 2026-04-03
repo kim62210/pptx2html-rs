@@ -284,6 +284,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-bar-horizontal {{ fill: #4472C4; }}
 .chart-bar-stacked {{ fill: #4472C4; }}
 .chart-line {{ fill: none; stroke-width: 2; }}
+.chart-area {{ stroke: none; opacity: 0.35; }}
 .chart-point {{ stroke: none; }}
 .chart-pie-slice {{ stroke: #fff; stroke-width: 1; }}
 .unresolved-element {{ display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f8f8f8; border: 1px dashed #ccc; color: #888; font-size: 14px; }}
@@ -691,6 +692,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     });
                     let direct_chart_supported = all_series_compatible
                         && match spec.chart_type {
+                            ChartType::Area => !matches!(
+                                spec.grouping,
+                                ChartGrouping::Stacked | ChartGrouping::PercentStacked
+                            ),
                             ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
                             _ => true,
                         };
@@ -911,6 +916,50 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             escape_html(marker_symbol)
                                         );
                                     }
+                                }
+                            }
+                        }
+                        ChartType::Area => {
+                            let left_pad = 8.0;
+                            let right_pad = 8.0;
+                            let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let step_x = if category_count > 1 {
+                                usable_width / (category_count as f64 - 1.0)
+                            } else {
+                                0.0
+                            };
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                let mut points = Vec::new();
+                                for (idx, value) in series.values.iter().enumerate() {
+                                    let x = left_pad + idx as f64 * step_x;
+                                    let y = chart_height
+                                        - if *value <= 0.0 {
+                                            0.0
+                                        } else {
+                                            (*value / max_value) * (chart_height - 8.0)
+                                        };
+                                    points.push((x, y));
+                                }
+                                if let (Some((first_x, _)), Some((last_x, _))) =
+                                    (points.first().copied(), points.last().copied())
+                                {
+                                    let area_points = points
+                                        .iter()
+                                        .map(|(x, y)| format!("{x:.1},{y:.1}"))
+                                        .chain([
+                                            format!("{last_x:.1},{chart_height:.1}"),
+                                            format!("{first_x:.1},{chart_height:.1}"),
+                                        ])
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
+                                    let line_points = points
+                                        .iter()
+                                        .map(|(x, y)| format!("{x:.1},{y:.1}"))
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
+                                    let _ = writeln!(html, "<polygon class=\"chart-area\" style=\"fill:{color}\" points=\"{area_points}\" />");
+                                    let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{line_points}\" />");
                                 }
                             }
                         }

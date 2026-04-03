@@ -17,6 +17,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut reader = Reader::from_str(xml);
     let mut in_bar_chart = false;
     let mut in_line_chart = false;
+    let mut in_area_chart = false;
     let mut in_pie_chart = false;
     let mut in_doughnut_chart = false;
     let mut chart_type = ChartType::Column;
@@ -49,6 +50,11 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         in_line_chart = true;
                         chart_type = ChartType::Line;
                     }
+                    "areaChart" => {
+                        in_area_chart = true;
+                        chart_type = ChartType::Area;
+                        grouping = ChartGrouping::Standard;
+                    }
                     "pieChart" => {
                         in_pie_chart = true;
                         chart_type = ChartType::Pie;
@@ -66,7 +72,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             };
                         }
                     }
-                    "grouping" if in_bar_chart || in_line_chart => {
+                    "grouping" if in_bar_chart || in_line_chart || in_area_chart => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
                             grouping = match val.as_str() {
                                 "stacked" => ChartGrouping::Stacked,
@@ -95,7 +101,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "valAx" => in_val_ax = true,
                     "title" if in_cat_ax || in_val_ax => in_title = true,
                     "t" if in_title => in_title_text = true,
-                    "ser" if in_bar_chart || in_line_chart || in_pie_chart || in_doughnut_chart => {
+                    "ser" if in_bar_chart || in_line_chart || in_area_chart || in_pie_chart || in_doughnut_chart => {
                         current_series = Some(SeriesBuilder::default())
                     }
                     "marker" if current_series.is_some() && in_line_chart => in_marker = true,
@@ -181,6 +187,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "marker" => in_marker = false,
                     "barChart" | "bar3DChart" => in_bar_chart = false,
                     "lineChart" | "line3DChart" => in_line_chart = false,
+                    "areaChart" => in_area_chart = false,
                     "pieChart" => in_pie_chart = false,
                     "doughnutChart" => in_doughnut_chart = false,
                     _ => {}
