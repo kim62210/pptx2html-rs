@@ -202,6 +202,7 @@ pub enum ChartType {
     Bar,
     Line,
     Pie,
+    Doughnut,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -233,6 +234,7 @@ pub struct ChartSpec {
     pub grouping: ChartGrouping,
     pub gap_width: Option<i32>,
     pub overlap: Option<i32>,
+    pub hole_size: Option<i32>,
     pub series: Vec<ChartSeries>,
 }
 

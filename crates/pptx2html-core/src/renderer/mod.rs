@@ -684,11 +684,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             && series.values.len() == category_count
                             && series.categories == first_series.categories
                     });
-                let direct_chart_supported = all_series_compatible
-                    && match spec.chart_type {
-                        ChartType::Pie => spec.series.len() == 1,
-                        _ => true,
-                    };
+                    let direct_chart_supported = all_series_compatible
+                        && match spec.chart_type {
+                            ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
+                            _ => true,
+                        };
 
                 if direct_chart_supported {
                     let palette = ["#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47"];
@@ -706,7 +706,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 
                     let _ = writeln!(html, "<div class=\"chart-direct\">");
                     html.push_str("<div class=\"chart-legend\">\n");
-                    if matches!(spec.chart_type, ChartType::Pie) {
+                    if matches!(spec.chart_type, ChartType::Pie | ChartType::Doughnut) {
                         for (idx, category) in first_series.categories.iter().enumerate() {
                             let color = palette[idx % palette.len()];
                             let _ = writeln!(
@@ -734,9 +734,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         ChartGrouping::PercentStacked => "percent-stacked",
                         ChartGrouping::Standard => "standard",
                     };
+                    let hole_attr = spec
+                        .hole_size
+                        .map(|hole_size| format!(" data-chart-hole-size=\"{hole_size}\""))
+                        .unwrap_or_default();
                     let _ = writeln!(
                         html,
-                        "<g data-chart-grouping=\"{grouping_attr}\" data-chart-gap-width=\"{gap_width}\" data-chart-overlap=\"{overlap}\">"
+                        "<g data-chart-grouping=\"{grouping_attr}\" data-chart-gap-width=\"{gap_width}\" data-chart-overlap=\"{overlap}\"{hole_attr}>"
                     );
                     match spec.chart_type {
                         ChartType::Column => {
@@ -896,10 +900,16 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                 }
                             }
                         }
-                        ChartType::Pie => {
+                        ChartType::Pie | ChartType::Doughnut => {
                             let radius = (chart_height.min(w) / 2.0 - 8.0).max(12.0);
                             let center_x = w / 2.0;
                             let center_y = chart_height / 2.0;
+                            let hole_ratio = if matches!(spec.chart_type, ChartType::Doughnut) {
+                                spec.hole_size.unwrap_or(50) as f64 / 100.0
+                            } else {
+                                0.0
+                            };
+                            let inner_radius = radius * hole_ratio;
                             let values = &first_series.values;
                             let total = values.iter().copied().filter(|v| *v > 0.0).sum::<f64>();
                             if total > 0.0 {
@@ -916,9 +926,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let x2 = center_x + radius * end_angle.cos();
                                     let y2 = center_y + radius * end_angle.sin();
                                     let large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 };
-                                    let path = format!(
-                                        "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
-                                    );
+                                    let path = if inner_radius > 0.0 {
+                                        let ix2 = center_x + inner_radius * end_angle.cos();
+                                        let iy2 = center_y + inner_radius * end_angle.sin();
+                                        let ix1 = center_x + inner_radius * start_angle.cos();
+                                        let iy1 = center_y + inner_radius * start_angle.sin();
+                                        format!(
+                                            "M {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} L {ix2:.1} {iy2:.1} A {inner_radius:.1} {inner_radius:.1} 0 {large_arc} 0 {ix1:.1} {iy1:.1} Z"
+                                        )
+                                    } else {
+                                        format!(
+                                            "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
+                                        )
+                                    };
                                     let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
                                     start_angle = end_angle;
                                 }

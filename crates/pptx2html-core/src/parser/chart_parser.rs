@@ -18,10 +18,12 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_bar_chart = false;
     let mut in_line_chart = false;
     let mut in_pie_chart = false;
+    let mut in_doughnut_chart = false;
     let mut chart_type = ChartType::Column;
     let mut grouping = ChartGrouping::Clustered;
     let mut gap_width = None;
     let mut overlap = None;
+    let mut hole_size = None;
     let mut current_series: Option<SeriesBuilder> = None;
     let mut series = Vec::new();
     let mut in_tx = false;
@@ -44,6 +46,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "pieChart" => {
                         in_pie_chart = true;
                         chart_type = ChartType::Pie;
+                    }
+                    "doughnutChart" => {
+                        in_doughnut_chart = true;
+                        chart_type = ChartType::Doughnut;
                     }
                     "barDir" if in_bar_chart => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
@@ -74,7 +80,12 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(-100, 100));
                     }
-                    "ser" if in_bar_chart || in_line_chart || in_pie_chart => {
+                    "holeSize" if in_doughnut_chart => {
+                        hole_size = xml_utils::attr_str(e, "val")
+                            .and_then(|val| val.parse::<i32>().ok())
+                            .map(|val| val.clamp(10, 90));
+                    }
+                    "ser" if in_bar_chart || in_line_chart || in_pie_chart || in_doughnut_chart => {
                         current_series = Some(SeriesBuilder::default())
                     }
                     "marker" if current_series.is_some() && in_line_chart => in_marker = true,
@@ -147,6 +158,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "barChart" | "bar3DChart" => in_bar_chart = false,
                     "lineChart" | "line3DChart" => in_line_chart = false,
                     "pieChart" => in_pie_chart = false,
+                    "doughnutChart" => in_doughnut_chart = false,
                     _ => {}
                 }
             }
@@ -164,6 +176,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
             grouping,
             gap_width,
             overlap,
+            hole_size,
             series,
         }))
     }
