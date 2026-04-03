@@ -30,7 +30,7 @@ This document is the source of truth for implementation maturity and fidelity ex
 | Tables | `approximate` | `rendered` | `exact` | Chunk 2 | Core table rendering exists; advanced table styling remains limited |
 | Images | `approximate` | `rendered` | `exact` | Chunk 1 | Crop/render paths exist; external asset contract is still being hardened |
 | Layout and inheritance | `approximate` | `resolved` | `exact` | Chunk 1 | Placeholder matching and ClrMap work, but layout `lstStyle` and template-style carry-over still need closing work; exact promotion requires the text/layout gate in `evaluate/README.md` |
-| Charts | `approximate` | `rendered` | `approximate` | Chunk 3 | Clustered, stacked, and percent-stacked bar/column charts plus simple line and single-series pie charts now render directly; multi-series/3D pie and other chart families still fall back to preview image or placeholder |
+| Charts | `approximate` | `rendered` | `approximate` | Chunk 3 | Clustered, stacked, and percent-stacked bar/column charts now honor gap/overlap spacing; simple line charts honor explicit marker settings; single-series pie and doughnut charts render directly; multi-series/3D pie and other chart families still fall back to preview image or placeholder |
 | SmartArt / OLE / Math | `fallback` | `rendered` | `fallback` | Chunk 3 | Deterministic unresolved placeholders + metadata sideband are emitted |
 | Notes / comments / media / animation | `unparsed` | - | `fallback` | Chunk 3 | Domain-specific parsing and fallback contracts still need to be introduced |
 
