@@ -277,6 +277,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
 .chart-axis-title {{ font-size: 11px; color: #666; }}
 .chart-axis-title-y {{ writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: center; justify-content: center; min-width: 18px; text-align: center; }}
 .chart-axis-title-x {{ text-align: center; padding-top: 2px; }}
+.chart-data-label {{ font-size: 10px; fill: #444; text-anchor: middle; dominant-baseline: middle; }}
 .chart-legend {{ display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #555; }}
 .chart-legend-item {{ display: inline-flex; align-items: center; gap: 4px; }}
 .chart-legend-swatch {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
@@ -1003,6 +1004,33 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         )
                                     };
                                     let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
+                                    if let Some(data_labels) = spec.data_labels.as_ref() {
+                                        let mut label_parts = Vec::new();
+                                        if data_labels.show_category_name
+                                            && let Some(category) = first_series.categories.get(idx)
+                                        {
+                                            label_parts.push(escape_html(category));
+                                        }
+                                        if data_labels.show_value {
+                                            label_parts.push(format!("{}", value));
+                                        }
+                                        if !label_parts.is_empty() {
+                                            let mid_angle = start_angle + sweep / 2.0;
+                                            let label_radius = if inner_radius > 0.0 {
+                                                inner_radius + (radius - inner_radius) * 0.5
+                                            } else {
+                                                radius * 0.62
+                                            };
+                                            let label_x = center_x + label_radius * mid_angle.cos();
+                                            let label_y = center_y + label_radius * mid_angle.sin();
+                                            let label_text = label_parts.join(": ");
+                                            let _ = writeln!(
+                                                html,
+                                                "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                label_text
+                                            );
+                                        }
+                                    }
                                     start_angle = end_angle;
                                 }
                             }

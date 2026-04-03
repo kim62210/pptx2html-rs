@@ -3,7 +3,9 @@ use quick_xml::events::Event;
 
 use super::xml_utils;
 use crate::error::PptxResult;
-use crate::model::{ChartGrouping, ChartMarkerSpec, ChartSeries, ChartSpec, ChartType};
+use crate::model::{
+    ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec, ChartSeries, ChartSpec, ChartType,
+};
 
 #[derive(Default)]
 struct SeriesBuilder {
@@ -29,6 +31,8 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut series = Vec::new();
     let mut category_axis_title = String::new();
     let mut value_axis_title = String::new();
+    let mut data_labels = ChartDataLabelSettings::default();
+    let mut saw_dlbls = false;
     let mut in_tx = false;
     let mut in_cat = false;
     let mut in_val = false;
@@ -39,6 +43,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_val_ax = false;
     let mut in_title = false;
     let mut in_title_text = false;
+    let mut in_dlbls = false;
 
     loop {
         match reader.read_event() {
@@ -96,6 +101,20 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         hole_size = xml_utils::attr_str(e, "val")
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(10, 90));
+                    }
+                    "dLbls" if in_pie_chart || in_doughnut_chart => {
+                        in_dlbls = true;
+                        saw_dlbls = true;
+                    }
+                    "showVal" if in_dlbls => {
+                        data_labels.show_value = xml_utils::attr_str(e, "val")
+                            .map(|val| val != "0")
+                            .unwrap_or(true);
+                    }
+                    "showCatName" if in_dlbls => {
+                        data_labels.show_category_name = xml_utils::attr_str(e, "val")
+                            .map(|val| val != "0")
+                            .unwrap_or(true);
                     }
                     "catAx" => in_cat_ax = true,
                     "valAx" => in_val_ax = true,
@@ -169,6 +188,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "cat" => in_cat = false,
                     "val" => in_val = false,
                     "title" => in_title = false,
+                    "dLbls" => in_dlbls = false,
                     "catAx" => in_cat_ax = false,
                     "valAx" => in_val_ax = false,
                     "ser" => {
@@ -211,6 +231,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
             category_axis_title: (!category_axis_title.trim().is_empty())
                 .then_some(category_axis_title),
             value_axis_title: (!value_axis_title.trim().is_empty()).then_some(value_axis_title),
+            data_labels: saw_dlbls.then_some(data_labels),
             series,
         }))
     }

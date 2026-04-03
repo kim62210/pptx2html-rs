@@ -222,6 +222,12 @@ pub struct ChartMarkerSpec {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct ChartDataLabelSettings {
+    pub show_value: bool,
+    pub show_category_name: bool,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct ChartSeries {
     pub name: Option<String>,
     pub categories: Vec<String>,
@@ -238,6 +244,7 @@ pub struct ChartSpec {
     pub hole_size: Option<i32>,
     pub category_axis_title: Option<String>,
     pub value_axis_title: Option<String>,
+    pub data_labels: Option<ChartDataLabelSettings>,
     pub series: Vec<ChartSeries>,
 }
 
