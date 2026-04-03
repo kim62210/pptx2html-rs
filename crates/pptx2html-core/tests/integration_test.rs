@@ -606,13 +606,14 @@ fn build_line_chart_pptx(series_count: usize) -> Vec<u8> {
 }
 
 fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
-    build_line_chart_with_label_flags_pptx(true, false, false)
+    build_line_chart_with_label_flags_pptx(true, false, false, None)
 }
 
 fn build_line_chart_with_label_flags_pptx(
     show_value: bool,
     show_category_name: bool,
     show_series_name: bool,
+    label_position: Option<&str>,
 ) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -648,6 +649,9 @@ fn build_line_chart_with_label_flags_pptx(
     let show_value = if show_value { 1 } else { 0 };
     let show_category_name = if show_category_name { 1 } else { 0 };
     let show_series_name = if show_series_name { 1 } else { 0 };
+    let label_position_xml = label_position
+        .map(|value| format!("<c:dLblPos val=\"{value}\"/>"))
+        .unwrap_or_default();
     let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -657,7 +661,7 @@ fn build_line_chart_with_label_flags_pptx(
       <c:layout/>
       <c:lineChart>
         <c:grouping val="standard"/>
-        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/></c:dLbls>
+        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/>{label_position_xml}</c:dLbls>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
@@ -699,13 +703,14 @@ fn build_line_chart_with_label_flags_pptx(
 }
 
 fn build_area_chart_with_value_labels_pptx() -> Vec<u8> {
-    build_area_chart_with_label_flags_pptx(true, false, false)
+    build_area_chart_with_label_flags_pptx(true, false, false, None)
 }
 
 fn build_area_chart_with_label_flags_pptx(
     show_value: bool,
     show_category_name: bool,
     show_series_name: bool,
+    label_position: Option<&str>,
 ) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -741,6 +746,9 @@ fn build_area_chart_with_label_flags_pptx(
     let show_value = if show_value { 1 } else { 0 };
     let show_category_name = if show_category_name { 1 } else { 0 };
     let show_series_name = if show_series_name { 1 } else { 0 };
+    let label_position_xml = label_position
+        .map(|value| format!("<c:dLblPos val=\"{value}\"/>"))
+        .unwrap_or_default();
     let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -750,7 +758,7 @@ fn build_area_chart_with_label_flags_pptx(
       <c:layout/>
       <c:areaChart>
         <c:grouping val="standard"/>
-        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/></c:dLbls>
+        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/>{label_position_xml}</c:dLbls>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
@@ -3971,7 +3979,7 @@ fn test_area_chart_renders_value_labels() {
 
 #[test]
 fn test_line_chart_renders_category_and_value_labels() {
-    let pptx = build_line_chart_with_label_flags_pptx(true, true, false);
+    let pptx = build_line_chart_with_label_flags_pptx(true, true, false, None);
     let html = render_html(&pptx);
 
     assert!(html.contains(">Q2: 20<"), "Line chart should combine category and value label text when showCatName and showVal are enabled: {html}");
@@ -3979,10 +3987,27 @@ fn test_line_chart_renders_category_and_value_labels() {
 
 #[test]
 fn test_area_chart_renders_series_and_value_labels() {
-    let pptx = build_area_chart_with_label_flags_pptx(true, false, true);
+    let pptx = build_area_chart_with_label_flags_pptx(true, false, true, None);
     let html = render_html(&pptx);
 
     assert!(html.contains(">Revenue: 30<"), "Area chart should combine series name and value label text when showSerName and showVal are enabled: {html}");
+}
+
+#[test]
+fn test_line_chart_renders_centered_value_labels() {
+    let pptx = build_line_chart_with_label_flags_pptx(true, false, false, Some("ctr"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"ctr\""), "Centered line labels should expose ctr label position: {html}");
+    assert!(html.contains("y=\"93.0\">20</text>"), "Centered line label should sit on the point center: {html}");
+}
+
+#[test]
+fn test_area_chart_renders_explicit_out_end_labels() {
+    let pptx = build_area_chart_with_label_flags_pptx(true, false, false, Some("outEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"outEnd\""), "Area outEnd labels should expose outEnd label position: {html}");
 }
 
 #[test]

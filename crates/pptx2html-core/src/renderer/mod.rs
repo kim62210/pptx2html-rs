@@ -1013,6 +1013,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let left_pad = 8.0;
                             let right_pad = 8.0;
                             let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let point_label_position = spec
+                                .data_labels
+                                .as_ref()
+                                .and_then(|labels| labels.position)
+                                .unwrap_or(ChartDataLabelPosition::OutEnd);
                             let point_count = first_series.values.len().max(1);
                             let step_x = if point_count > 1 {
                                 usable_width / (point_count as f64 - 1.0)
@@ -1062,25 +1067,41 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             escape_html(marker_symbol)
                                         );
                                         if render_value_labels && *value > 0.0 {
-                                            let label_y = (y - 10.0).max(10.0);
+                                            let label_y = match point_label_position {
+                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                            };
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                             ).unwrap_or_else(|| value.to_string());
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let label_position_attr = match point_label_position {
+                                                ChartDataLabelPosition::Center => "ctr",
+                                                ChartDataLabelPosition::InEnd => "inEnd",
+                                                ChartDataLabelPosition::OutEnd => "outEnd",
+                                            };
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 } else if render_value_labels {
                                     for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
-                                            let label_y = (y - 10.0).max(10.0);
+                                            let label_y = match point_label_position {
+                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                            };
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                             ).unwrap_or_else(|| value.to_string());
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let label_position_attr = match point_label_position {
+                                                ChartDataLabelPosition::Center => "ctr",
+                                                ChartDataLabelPosition::InEnd => "inEnd",
+                                                ChartDataLabelPosition::OutEnd => "outEnd",
+                                            };
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 }
@@ -1222,6 +1243,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let left_pad = 8.0;
                             let right_pad = 8.0;
                             let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let point_label_position = spec
+                                .data_labels
+                                .as_ref()
+                                .and_then(|labels| labels.position)
+                                .unwrap_or(ChartDataLabelPosition::OutEnd);
                             let step_x = if category_count > 1 {
                                 usable_width / (category_count as f64 - 1.0)
                             } else {
@@ -1267,13 +1293,21 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     if render_value_labels {
                                         for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                             if *value > 0.0 {
-                                                let label_y = (y - 10.0).max(10.0);
+                                                let label_y = match point_label_position {
+                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y,
+                                                    ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                };
                                                 let label_text = build_point_data_label(
                                                     series.name.as_deref(),
                                                     series.categories.get(idx).map(|s| s.as_str()),
                                                     *value,
                                                 ).unwrap_or_else(|| value.to_string());
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let label_position_attr = match point_label_position {
+                                                    ChartDataLabelPosition::Center => "ctr",
+                                                    ChartDataLabelPosition::InEnd => "inEnd",
+                                                    ChartDataLabelPosition::OutEnd => "outEnd",
+                                                };
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
