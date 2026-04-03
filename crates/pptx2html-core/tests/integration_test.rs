@@ -936,10 +936,15 @@ fn build_scatter_chart_pptx() -> Vec<u8> {
 }
 
 fn build_scatter_chart_with_style_pptx(scatter_style: &str) -> Vec<u8> {
-    build_scatter_chart_with_flags_pptx(scatter_style, false)
+    build_scatter_chart_with_flags_pptx(scatter_style, false, false, false)
 }
 
-fn build_scatter_chart_with_flags_pptx(scatter_style: &str, show_value_labels: bool) -> Vec<u8> {
+fn build_scatter_chart_with_flags_pptx(
+    scatter_style: &str,
+    show_value_labels: bool,
+    show_category_name: bool,
+    show_series_name: bool,
+) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -971,10 +976,15 @@ fn build_scatter_chart_with_flags_pptx(scatter_style: &str, show_value_labels: b
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let dlabels_xml = if show_value_labels {
-        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    let dlabels_xml = if show_value_labels || show_category_name || show_series_name {
+        let show_value = if show_value_labels { 1 } else { 0 };
+        let show_category_name = if show_category_name { 1 } else { 0 };
+        let show_series_name = if show_series_name { 1 } else { 0 };
+        format!(
+            "<c:dLbls><c:showVal val=\"{show_value}\"/><c:showCatName val=\"{show_category_name}\"/><c:showSerName val=\"{show_series_name}\"/></c:dLbls>"
+        )
     } else {
-        ""
+        String::new()
     };
     let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -3990,7 +4000,7 @@ fn test_scatter_chart_renders_directly() {
 
 #[test]
 fn test_scatter_chart_parses_value_label_flag() {
-    let pptx = build_scatter_chart_with_flags_pptx("marker", true);
+    let pptx = build_scatter_chart_with_flags_pptx("marker", true, false, false);
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
 
@@ -4006,11 +4016,27 @@ fn test_scatter_chart_parses_value_label_flag() {
 
 #[test]
 fn test_scatter_chart_renders_value_labels() {
-    let pptx = build_scatter_chart_with_flags_pptx("marker", true);
+    let pptx = build_scatter_chart_with_flags_pptx("marker", true, false, false);
     let html = render_html(&pptx);
 
     assert!(html.contains("<text class=\"chart-data-label\""), "Scatter chart should render value labels: {html}");
     assert!(html.contains(">20<"), "Scatter chart should render point values as labels: {html}");
+}
+
+#[test]
+fn test_scatter_chart_renders_category_and_value_labels() {
+    let pptx = build_scatter_chart_with_flags_pptx("marker", true, true, false);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">2: 20<"), "Scatter chart should combine x-value category text and point value labels: {html}");
+}
+
+#[test]
+fn test_scatter_chart_renders_series_and_value_labels() {
+    let pptx = build_scatter_chart_with_flags_pptx("marker", true, false, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">Revenue: 20<"), "Scatter chart should combine series name and value labels: {html}");
 }
 
 #[test]

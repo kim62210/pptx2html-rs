@@ -1164,7 +1164,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
                                 }
                                 if render_markers {
-                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         let _ = writeln!(
                                             html,
                                             "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
@@ -1172,14 +1172,26 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         );
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = (y - 10.0).max(10.0);
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                            let category_text = series.x_values.get(idx).map(|value| value.to_string());
+                                            let label_text = build_point_data_label(
+                                                series.name.as_deref(),
+                                                category_text.as_deref(),
+                                                *value,
+                                            ).unwrap_or_else(|| value.to_string());
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 } else if render_value_labels {
-                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
                                             let label_y = (y - 10.0).max(10.0);
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                            let category_text = series.x_values.get(idx).map(|value| value.to_string());
+                                            let label_text = build_point_data_label(
+                                                series.name.as_deref(),
+                                                category_text.as_deref(),
+                                                *value,
+                                            ).unwrap_or_else(|| value.to_string());
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 }
