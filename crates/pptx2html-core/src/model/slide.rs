@@ -201,6 +201,7 @@ pub enum ChartType {
     Column,
     Bar,
     Line,
+    Scatter,
     Area,
     Pie,
     Doughnut,
@@ -231,6 +232,7 @@ pub struct ChartDataLabelSettings {
 pub struct ChartSeries {
     pub name: Option<String>,
     pub categories: Vec<String>,
+    pub x_values: Vec<f64>,
     pub values: Vec<f64>,
     pub marker: Option<ChartMarkerSpec>,
 }

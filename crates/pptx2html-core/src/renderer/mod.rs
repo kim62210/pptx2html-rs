@@ -685,21 +685,33 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 && let Some(first_series) = spec.series.first()
             {
                 let category_count = first_series.categories.len();
-                let all_series_compatible = category_count > 0
-                    && spec.series.iter().all(|series| {
-                        series.categories.len() == category_count
-                            && series.values.len() == category_count
-                            && series.categories == first_series.categories
-                    });
-                    let direct_chart_supported = all_series_compatible
-                        && match spec.chart_type {
-                            ChartType::Area => !matches!(
-                                spec.grouping,
-                                ChartGrouping::Stacked | ChartGrouping::PercentStacked
-                            ),
-                            ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
-                            _ => true,
-                        };
+                let all_series_compatible = match spec.chart_type {
+                    ChartType::Scatter => {
+                        let point_count = first_series.x_values.len();
+                        point_count > 0
+                            && spec.series.iter().all(|series| {
+                                series.x_values.len() == point_count
+                                    && series.values.len() == point_count
+                            })
+                    }
+                    _ => {
+                        category_count > 0
+                            && spec.series.iter().all(|series| {
+                                series.categories.len() == category_count
+                                    && series.values.len() == category_count
+                                    && series.categories == first_series.categories
+                            })
+                    }
+                };
+                let direct_chart_supported = all_series_compatible
+                    && match spec.chart_type {
+                        ChartType::Area => !matches!(
+                            spec.grouping,
+                            ChartGrouping::Stacked | ChartGrouping::PercentStacked
+                        ),
+                        ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
+                        _ => true,
+                    };
 
                 if direct_chart_supported {
                     let palette = ["#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47"];
@@ -874,8 +886,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let left_pad = 8.0;
                             let right_pad = 8.0;
                             let usable_width = (w - left_pad - right_pad).max(1.0);
-                            let step_x = if category_count > 1 {
-                                usable_width / (category_count as f64 - 1.0)
+                            let point_count = first_series.values.len().max(1);
+                            let step_x = if point_count > 1 {
+                                usable_width / (point_count as f64 - 1.0)
                             } else {
                                 0.0
                             };
@@ -917,6 +930,60 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             escape_html(marker_symbol)
                                         );
                                     }
+                                }
+                            }
+                        }
+                        ChartType::Scatter => {
+                            let left_pad = 8.0;
+                            let right_pad = 8.0;
+                            let top_pad = 8.0;
+                            let bottom_pad = 8.0;
+                            let all_x_values = spec
+                                .series
+                                .iter()
+                                .flat_map(|series| series.x_values.iter().copied());
+                            let all_y_values = spec
+                                .series
+                                .iter()
+                                .flat_map(|series| series.values.iter().copied());
+                            let min_x = all_x_values.clone().fold(f64::INFINITY, f64::min);
+                            let max_x = all_x_values.fold(f64::NEG_INFINITY, f64::max);
+                            let min_y = all_y_values.clone().fold(f64::INFINITY, f64::min);
+                            let max_y = all_y_values.fold(f64::NEG_INFINITY, f64::max);
+                            let x_span = if min_x.is_finite() && max_x.is_finite() {
+                                (max_x - min_x).abs().max(1.0)
+                            } else {
+                                1.0
+                            };
+                            let y_span = if min_y.is_finite() && max_y.is_finite() {
+                                (max_y - min_y).abs().max(1.0)
+                            } else {
+                                1.0
+                            };
+                            let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let usable_height = (chart_height - top_pad - bottom_pad).max(1.0);
+
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                let marker_symbol = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.symbol.as_deref())
+                                    .unwrap_or("circle");
+                                let marker_radius = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.size)
+                                    .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
+                                    .unwrap_or(3.0);
+                                for (x_value, y_value) in series.x_values.iter().zip(series.values.iter()) {
+                                    let x = left_pad + ((*x_value - min_x) / x_span) * usable_width;
+                                    let y = chart_height - bottom_pad - ((*y_value - min_y) / y_span) * usable_height;
+                                    let _ = writeln!(
+                                        html,
+                                        "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
+                                        escape_html(marker_symbol)
+                                    );
                                 }
                             }
                         }
@@ -1037,8 +1104,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         }
                     }
                     html.push_str("</svg>\n<div class=\"chart-axis-labels\">");
-                    for category in &first_series.categories {
-                        let _ = writeln!(html, "<span>{}</span>", escape_html(category));
+                    if !matches!(spec.chart_type, ChartType::Scatter) {
+                        for category in &first_series.categories {
+                            let _ = writeln!(html, "<span>{}</span>", escape_html(category));
+                        }
                     }
                     html.push_str("</div>\n");
                     if let Some(title) = spec.category_axis_title.as_deref() {
