@@ -4,7 +4,8 @@ use quick_xml::events::Event;
 use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::{
-    ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec, ChartSeries, ChartSpec, ChartType,
+    ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec, ChartScatterStyle, ChartSeries,
+    ChartSpec, ChartType,
 };
 
 #[derive(Default)]
@@ -26,6 +27,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_doughnut_chart = false;
     let mut chart_type = ChartType::Column;
     let mut grouping = ChartGrouping::Clustered;
+    let mut scatter_style = None;
     let mut gap_width = None;
     let mut overlap = None;
     let mut hole_size = None;
@@ -63,6 +65,17 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         in_scatter_chart = true;
                         chart_type = ChartType::Scatter;
                         grouping = ChartGrouping::Standard;
+                        scatter_style = Some(ChartScatterStyle::Marker);
+                    }
+                    "scatterStyle" if in_scatter_chart => {
+                        scatter_style = Some(match xml_utils::attr_str(e, "val").as_deref() {
+                            Some("none") => ChartScatterStyle::None,
+                            Some("line") => ChartScatterStyle::Line,
+                            Some("lineMarker") => ChartScatterStyle::LineMarker,
+                            Some("smooth") => ChartScatterStyle::Smooth,
+                            Some("smoothMarker") => ChartScatterStyle::SmoothMarker,
+                            _ => ChartScatterStyle::Marker,
+                        });
                     }
                     "areaChart" => {
                         in_area_chart = true;
@@ -244,6 +257,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
         Ok(Some(ChartSpec {
             chart_type,
             grouping,
+            scatter_style,
             gap_width,
             overlap,
             hole_size,

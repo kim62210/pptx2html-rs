@@ -216,6 +216,17 @@ pub enum ChartGrouping {
     Standard,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartScatterStyle {
+    None,
+    Line,
+    LineMarker,
+    Smooth,
+    SmoothMarker,
+    #[default]
+    Marker,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ChartMarkerSpec {
     pub symbol: Option<String>,
@@ -241,6 +252,7 @@ pub struct ChartSeries {
 pub struct ChartSpec {
     pub chart_type: ChartType,
     pub grouping: ChartGrouping,
+    pub scatter_style: Option<ChartScatterStyle>,
     pub gap_width: Option<i32>,
     pub overlap: Option<i32>,
     pub hole_size: Option<i32>,

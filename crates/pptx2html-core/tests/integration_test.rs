@@ -158,7 +158,7 @@ fn build_column_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -202,7 +202,7 @@ fn build_column_chart_pptx() -> Vec<u8> {
       </c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -305,7 +305,7 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -367,7 +367,7 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
       </c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -637,7 +637,7 @@ fn build_area_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -674,7 +674,7 @@ fn build_area_chart_pptx() -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -746,6 +746,10 @@ fn build_area_chart_pptx() -> Vec<u8> {
 }
 
 fn build_scatter_chart_pptx() -> Vec<u8> {
+    build_scatter_chart_with_style_pptx("marker")
+}
+
+fn build_scatter_chart_with_style_pptx(scatter_style: &str) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -777,7 +781,7 @@ fn build_scatter_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -785,7 +789,7 @@ fn build_scatter_chart_pptx() -> Vec<u8> {
     <c:plotArea>
       <c:layout/>
       <c:scatterChart>
-        <c:scatterStyle val="marker"/>
+        <c:scatterStyle val="{scatter_style}"/>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
@@ -818,7 +822,7 @@ fn build_scatter_chart_pptx() -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -1070,7 +1074,7 @@ fn build_pie_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1105,7 +1109,7 @@ fn build_pie_chart_pptx() -> Vec<u8> {
     </c:plotArea>
     <c:legend><c:legendPos val="r"/></c:legend>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -3301,6 +3305,39 @@ fn test_scatter_chart_renders_directly() {
     assert!(html.contains("<circle class=\"chart-point\""), "Scatter chart should render points: {html}");
     assert!(!html.contains("<polyline class=\"chart-line\""), "Scatter chart should not render a line path in marker-only mode: {html}");
     assert!(!html.contains("<div class=\"chart-placeholder\">"), "Scatter chart should not use placeholder: {html}");
+}
+
+#[test]
+fn test_scatter_chart_parses_scatter_style() {
+    let pptx = build_scatter_chart_with_style_pptx("lineMarker");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.scatter_style, Some(ChartScatterStyle::LineMarker));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_scatter_line_marker_renders_line_and_points() {
+    let pptx = build_scatter_chart_with_style_pptx("lineMarker");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<polyline class=\"chart-line\""), "Scatter lineMarker should render a line path: {html}");
+    assert!(html.contains("<circle class=\"chart-point\""), "Scatter lineMarker should render points: {html}");
+}
+
+#[test]
+fn test_scatter_line_style_suppresses_points() {
+    let pptx = build_scatter_chart_with_style_pptx("line");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<polyline class=\"chart-line\""), "Scatter line style should render a line path: {html}");
+    assert!(!html.contains("<circle class=\"chart-point\""), "Scatter line style should suppress point markers: {html}");
 }
 
 #[test]

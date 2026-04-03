@@ -938,6 +938,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let right_pad = 8.0;
                             let top_pad = 8.0;
                             let bottom_pad = 8.0;
+                            let scatter_style = spec.scatter_style.unwrap_or_default();
+                            let render_line = matches!(
+                                scatter_style,
+                                ChartScatterStyle::Line
+                                    | ChartScatterStyle::LineMarker
+                                    | ChartScatterStyle::Smooth
+                                    | ChartScatterStyle::SmoothMarker
+                            );
                             let all_x_values = spec
                                 .series
                                 .iter()
@@ -976,14 +984,35 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .and_then(|marker| marker.size)
                                     .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
                                     .unwrap_or(3.0);
+                                let render_markers = marker_symbol != "none"
+                                    && matches!(
+                                        scatter_style,
+                                        ChartScatterStyle::Marker
+                                            | ChartScatterStyle::LineMarker
+                                            | ChartScatterStyle::SmoothMarker
+                                    );
+                                let mut points = Vec::new();
                                 for (x_value, y_value) in series.x_values.iter().zip(series.values.iter()) {
                                     let x = left_pad + ((*x_value - min_x) / x_span) * usable_width;
                                     let y = chart_height - bottom_pad - ((*y_value - min_y) / y_span) * usable_height;
-                                    let _ = writeln!(
-                                        html,
-                                        "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
-                                        escape_html(marker_symbol)
-                                    );
+                                    points.push((x, y));
+                                }
+                                if render_line {
+                                    let polyline_points = points
+                                        .iter()
+                                        .map(|(x, y)| format!("{x:.1},{y:.1}"))
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
+                                    let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
+                                }
+                                if render_markers {
+                                    for (x, y) in points {
+                                        let _ = writeln!(
+                                            html,
+                                            "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
+                                            escape_html(marker_symbol)
+                                        );
+                                    }
                                 }
                             }
                         }

@@ -25,7 +25,7 @@ pub use hierarchy::{
 pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
     AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, ChartDataLabelSettings,
-    ChartGrouping, ChartMarkerSpec, ChartSeries, ChartSpec, ChartType, ConnectionRef,
+    ChartGrouping, ChartMarkerSpec, ChartScatterStyle, ChartSeries, ChartSpec, ChartType, ConnectionRef,
     CropRect, GroupData, ParagraphDefRPr, PictureData, Shape, ShapeType, Slide, TableCell,
     TableData, TableRow, TextBody, TextMargins, TextParagraph, TextRun, UnresolvedElement,
     UnresolvedType, UnsupportedData, VerticalAlign,
