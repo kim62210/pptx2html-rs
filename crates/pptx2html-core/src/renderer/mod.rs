@@ -726,6 +726,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     let gap_width = spec.gap_width.unwrap_or(150).clamp(0, 500);
                     let overlap = spec.overlap.unwrap_or(0).clamp(-100, 100);
                     let overlap_ratio = (overlap as f64 + 100.0) / 200.0;
+                    let build_bar_data_label = |category: Option<&str>, value: f64| {
+                        spec.data_labels.as_ref().and_then(|labels| {
+                            let mut parts = Vec::new();
+                            if labels.show_category_name && let Some(category) = category {
+                                parts.push(escape_html(category));
+                            }
+                            if labels.show_value {
+                                parts.push(format!("{value}"));
+                            }
+                            if parts.is_empty() {
+                                None
+                            } else {
+                                Some(parts.join(": "))
+                            }
+                        })
+                    };
 
                     let _ = writeln!(html, "<div class=\"chart-direct\">");
                     html.push_str("<div class=\"chart-legend\">\n");
@@ -776,11 +792,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     );
                     match spec.chart_type {
                         ChartType::Column => {
-                            let render_value_labels = spec
-                                .data_labels
-                                .as_ref()
-                                .map(|labels| labels.show_value)
-                                .unwrap_or(false);
                             let slot_width = (w / category_count as f64).max(24.0);
                             let group_width = (slot_width * (100.0 / (100.0 + gap_width as f64))).max(8.0);
                             let outer_gap = ((slot_width - group_width) / 2.0).max(2.0);
@@ -811,10 +822,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let y = chart_height - accumulated[idx] - bar_height;
                                             accumulated[idx] += bar_height;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-stacked\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
-                                            if render_value_labels && *value > 0.0 {
+                                            if let Some(label_text) = build_bar_data_label(
+                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ) && *value > 0.0 {
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = (y - 6.0).max(10.0);
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -834,10 +848,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let x = idx as f64 * slot_width + outer_gap + series_idx as f64 * step;
                                             let y = chart_height - bar_height;
                                             let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
-                                            if render_value_labels && *value > 0.0 {
+                                            if let Some(label_text) = build_bar_data_label(
+                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ) && *value > 0.0 {
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = (y - 6.0).max(10.0);
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -845,11 +862,6 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             }
                         }
                         ChartType::Bar => {
-                            let render_value_labels = spec
-                                .data_labels
-                                .as_ref()
-                                .map(|labels| labels.show_value)
-                                .unwrap_or(false);
                             let slot_height = (chart_height / category_count as f64).max(24.0);
                             let group_height = (slot_height * (100.0 / (100.0 + gap_width as f64))).max(8.0);
                             let outer_gap = ((slot_height - group_height) / 2.0).max(2.0);
@@ -880,10 +892,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let y = idx as f64 * slot_height + outer_gap;
                                             accumulated[idx] += width;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
-                                            if render_value_labels && *value > 0.0 {
+                                            if let Some(label_text) = build_bar_data_label(
+                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ) && *value > 0.0 {
                                                 let label_x = (x + width + 10.0).min(w - 6.0);
                                                 let label_y = y + bar_height / 2.0;
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }
@@ -902,10 +917,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
                                             let y = idx as f64 * slot_height + outer_gap + series_idx as f64 * step;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
-                                            if render_value_labels && *value > 0.0 {
+                                            if let Some(label_text) = build_bar_data_label(
+                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ) && *value > 0.0 {
                                                 let label_x = (width + 10.0).min(w - 6.0);
                                                 let label_y = y + bar_height / 2.0;
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }

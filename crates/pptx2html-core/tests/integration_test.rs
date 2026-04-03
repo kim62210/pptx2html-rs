@@ -1982,7 +1982,7 @@ fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
-fn build_chart_with_value_labels_pptx(bar_dir: &str) -> Vec<u8> {
+fn build_chart_with_value_labels_pptx(bar_dir: &str, show_value: bool, show_category_name: bool) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -2014,6 +2014,8 @@ fn build_chart_with_value_labels_pptx(bar_dir: &str) -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
+    let show_value = if show_value { 1 } else { 0 };
+    let show_category_name = if show_category_name { 1 } else { 0 };
     let chart_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -2026,7 +2028,8 @@ fn build_chart_with_value_labels_pptx(bar_dir: &str) -> Vec<u8> {
         <c:barDir val="{bar_dir}"/>
         <c:grouping val="clustered"/>
         <c:dLbls>
-          <c:showVal val="1"/>
+          <c:showVal val="{show_value}"/>
+          <c:showCatName val="{show_category_name}"/>
         </c:dLbls>
         <c:ser>
           <c:idx val="0"/>
@@ -2296,6 +2299,15 @@ fn build_chart_spacing_pptx(
 }
 
 fn build_stacked_chart_pptx(bar_dir: &str, grouping: &str, series_count: usize) -> Vec<u8> {
+    build_stacked_chart_with_value_labels_pptx(bar_dir, grouping, series_count, false)
+}
+
+fn build_stacked_chart_with_value_labels_pptx(
+    bar_dir: &str,
+    grouping: &str,
+    series_count: usize,
+    show_value_labels: bool,
+) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -2358,6 +2370,12 @@ fn build_stacked_chart_pptx(bar_dir: &str, grouping: &str, series_count: usize) 
         ));
     }
 
+    let dlabels_xml = if show_value_labels {
+        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    } else {
+        ""
+    };
+
     let chart_xml = format!(
         r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
@@ -2369,6 +2387,7 @@ fn build_stacked_chart_pptx(bar_dir: &str, grouping: &str, series_count: usize) 
       <c:barChart>
         <c:barDir val="{bar_dir}"/>
         <c:grouping val="{grouping}"/>
+        {dlabels_xml}
         {series_xml}
         <c:axId val="123"/>
         <c:axId val="456"/>
@@ -3324,7 +3343,7 @@ fn test_chart_parses_gap_width_and_overlap() {
 
 #[test]
 fn test_bar_chart_parses_value_label_flag() {
-    let pptx = build_chart_with_value_labels_pptx("col");
+    let pptx = build_chart_with_value_labels_pptx("col", true, false);
     let pres = parse_pptx(&pptx);
     let shape = &pres.slides[0].shapes[0];
 
@@ -3340,7 +3359,7 @@ fn test_bar_chart_parses_value_label_flag() {
 
 #[test]
 fn test_column_chart_renders_value_labels() {
-    let pptx = build_chart_with_value_labels_pptx("col");
+    let pptx = build_chart_with_value_labels_pptx("col", true, false);
     let html = render_html(&pptx);
 
     assert!(html.contains("<text class=\"chart-data-label\""), "Column chart should render value labels: {html}");
@@ -3349,11 +3368,27 @@ fn test_column_chart_renders_value_labels() {
 
 #[test]
 fn test_horizontal_bar_chart_renders_value_labels() {
-    let pptx = build_chart_with_value_labels_pptx("bar");
+    let pptx = build_chart_with_value_labels_pptx("bar", true, false);
     let html = render_html(&pptx);
 
     assert!(html.contains("<text class=\"chart-data-label\""), "Horizontal bar chart should render value labels: {html}");
     assert!(html.contains(">20<"), "Horizontal bar chart value label should include bar values: {html}");
+}
+
+#[test]
+fn test_column_chart_renders_category_and_value_labels() {
+    let pptx = build_chart_with_value_labels_pptx("col", true, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">Q1: 10<"), "Column chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+}
+
+#[test]
+fn test_horizontal_bar_chart_renders_category_and_value_labels() {
+    let pptx = build_chart_with_value_labels_pptx("bar", true, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">Q2: 20<"), "Horizontal bar chart should combine category and value label text when showCatName and showVal are enabled: {html}");
 }
 
 #[test]
@@ -3615,6 +3650,24 @@ fn test_percent_stacked_bar_chart_normalizes_to_full_width() {
     assert!(html.contains("chart-bar-horizontal"), "100% stacked bar chart should render horizontal bar segments: {html}");
     assert!(html.contains("data-chart-grouping=\"percent-stacked\""), "100% stacked bar chart should expose percent-stacked grouping marker: {html}");
     assert!(!html.contains("<div class=\"chart-placeholder\">"), "100% stacked bar chart should not use placeholder: {html}");
+}
+
+#[test]
+fn test_stacked_column_chart_renders_value_labels() {
+    let pptx = build_stacked_chart_with_value_labels_pptx("col", "stacked", 2, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<text class=\"chart-data-label\""), "Stacked column chart should render value labels: {html}");
+    assert!(html.contains(">15<") || html.contains(">20<"), "Stacked column chart should expose stacked segment values as labels: {html}");
+}
+
+#[test]
+fn test_percent_stacked_bar_chart_renders_value_labels() {
+    let pptx = build_stacked_chart_with_value_labels_pptx("bar", "percentStacked", 2, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<text class=\"chart-data-label\""), "Percent-stacked bar chart should render value labels: {html}");
+    assert!(html.contains(">5<") || html.contains(">10<"), "Percent-stacked bar chart should keep raw point values in labels: {html}");
 }
 
 #[test]
