@@ -3457,6 +3457,24 @@ fn test_horizontal_bar_chart_renders_explicit_out_end_labels() {
 }
 
 #[test]
+fn test_column_chart_renders_in_end_value_labels() {
+    let pptx = build_chart_with_label_flags_pptx("col", true, false, false, Some("inEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"inEnd\""), "In-end column labels should expose inEnd label position: {html}");
+    assert!(html.contains("y=\"190.0\">10</text>"), "In-end column label should move inside the bar near its end: {html}");
+}
+
+#[test]
+fn test_horizontal_bar_chart_renders_in_end_value_labels() {
+    let pptx = build_chart_with_label_flags_pptx("bar", true, false, false, Some("inEnd"));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("data-label-position=\"inEnd\""), "In-end horizontal bar labels should expose inEnd label position: {html}");
+    assert!(html.contains("x=\"162.3\"") || html.contains("x=\"162.2\""), "In-end horizontal bar label should move inside the bar near its end: {html}");
+}
+
+#[test]
 fn test_chart_parses_axis_titles() {
     let pptx = build_chart_with_axis_titles_pptx();
     let pres = parse_pptx(&pptx);

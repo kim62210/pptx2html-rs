@@ -839,7 +839,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = match label_position {
-                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::Center => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::InEnd => (y + 12.0).min(y + bar_height - 6.0),
                                                     ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
                                                 };
                                                 let label_position_attr = match label_position {
@@ -875,7 +876,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = match label_position {
-                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::Center => y + bar_height / 2.0,
+                                                    ChartDataLabelPosition::InEnd => (y + 12.0).min(y + bar_height - 6.0),
                                                     ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
                                                 };
                                                 let label_position_attr = match label_position {
@@ -928,7 +930,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             ) && *value > 0.0 {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = match label_position {
-                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => x + width / 2.0,
+                                                    ChartDataLabelPosition::Center => x + width / 2.0,
+                                                    ChartDataLabelPosition::InEnd => (x + width - 10.0).max(x + 6.0),
                                                     ChartDataLabelPosition::OutEnd => (x + width + 10.0).min(w - 6.0),
                                                 };
                                                 let label_y = y + bar_height / 2.0;
@@ -963,7 +966,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             ) && *value > 0.0 {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = match label_position {
-                                                    ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => width / 2.0,
+                                                    ChartDataLabelPosition::Center => width / 2.0,
+                                                    ChartDataLabelPosition::InEnd => (width - 10.0).max(6.0),
                                                     ChartDataLabelPosition::OutEnd => (width + 10.0).min(w - 6.0),
                                                 };
                                                 let label_y = y + bar_height / 2.0;
