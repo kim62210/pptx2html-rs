@@ -1323,6 +1323,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let radius = (chart_height.min(w) / 2.0 - 8.0).max(12.0);
                             let center_x = w / 2.0;
                             let center_y = chart_height / 2.0;
+                            let pie_label_position = spec
+                                .data_labels
+                                .as_ref()
+                                .and_then(|labels| labels.position)
+                                .unwrap_or(ChartDataLabelPosition::Center);
                             let hole_ratio = if matches!(spec.chart_type, ChartType::Doughnut) {
                                 spec.hole_size.unwrap_or(50) as f64 / 100.0
                             } else {
@@ -1374,17 +1379,27 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         }
                                         if !label_parts.is_empty() {
                                             let mid_angle = start_angle + sweep / 2.0;
-                                            let label_radius = if inner_radius > 0.0 {
-                                                inner_radius + (radius - inner_radius) * 0.5
-                                            } else {
-                                                radius * 0.62
+                                            let label_radius = match pie_label_position {
+                                                ChartDataLabelPosition::OutEnd => radius + 16.0,
+                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => {
+                                                    if inner_radius > 0.0 {
+                                                        inner_radius + (radius - inner_radius) * 0.5
+                                                    } else {
+                                                        radius * 0.62
+                                                    }
+                                                }
                                             };
                                             let label_x = center_x + label_radius * mid_angle.cos();
                                             let label_y = center_y + label_radius * mid_angle.sin();
                                             let label_text = label_parts.join(": ");
+                                            let label_position_attr = match pie_label_position {
+                                                ChartDataLabelPosition::Center => "ctr",
+                                                ChartDataLabelPosition::InEnd => "inEnd",
+                                                ChartDataLabelPosition::OutEnd => "outEnd",
+                                            };
                                             let _ = writeln!(
                                                 html,
-                                                "<text class=\"chart-data-label\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
                                                 label_text
                                             );
                                         }
