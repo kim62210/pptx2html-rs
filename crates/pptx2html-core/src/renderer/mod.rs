@@ -726,9 +726,12 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     let gap_width = spec.gap_width.unwrap_or(150).clamp(0, 500);
                     let overlap = spec.overlap.unwrap_or(0).clamp(-100, 100);
                     let overlap_ratio = (overlap as f64 + 100.0) / 200.0;
-                    let build_bar_data_label = |category: Option<&str>, value: f64, percent: Option<f64>| {
+                    let build_bar_data_label = |series_name: Option<&str>, category: Option<&str>, value: f64, percent: Option<f64>| {
                         spec.data_labels.as_ref().and_then(|labels| {
                             let mut parts = Vec::new();
+                            if labels.show_series_name && let Some(series_name) = series_name {
+                                parts.push(escape_html(series_name));
+                            }
                             if labels.show_category_name && let Some(category) = category {
                                 parts.push(escape_html(category));
                             }
@@ -832,6 +835,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             accumulated[idx] += bar_height;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-stacked\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
                                             if let Some(label_text) = build_bar_data_label(
+                                                series.name.as_deref(),
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                                 matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
@@ -869,6 +873,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let y = chart_height - bar_height;
                                             let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
                                             if let Some(label_text) = build_bar_data_label(
+                                                series.name.as_deref(),
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                                 None,
@@ -924,6 +929,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             accumulated[idx] += width;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
                                             if let Some(label_text) = build_bar_data_label(
+                                                series.name.as_deref(),
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                                 matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
@@ -960,6 +966,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let y = idx as f64 * slot_height + outer_gap + series_idx as f64 * step;
                                             let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
                                             if let Some(label_text) = build_bar_data_label(
+                                                series.name.as_deref(),
                                                 first_series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
                                                 None,
