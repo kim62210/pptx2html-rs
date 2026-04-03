@@ -7,8 +7,11 @@ All notable changes to this project will be documented in this file.
 ### Rendering — Charts
 - Render clustered, stacked, and percent-stacked bar/column charts directly
 - Honor OOXML `gapWidth` and `overlap` spacing for direct bar/column chart rendering
+- Render first-pass bar/column chart data labels for value, category, series name, percent-stacked percentages, and basic label positions
 - Render simple line charts directly
 - Honor explicit line-series marker settings, including `symbol="none"`
+- Render first-pass line and area point labels, including basic label positions
+- Render simple scatter charts directly, including marker/line style variants and first-pass point labels with basic label positions
 - Render direct chart axis titles for category and value axes
 - Render simple standard area charts directly
 - Render simple single-series pie charts directly
@@ -17,7 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 - Add chart integration coverage for clustered, stacked, percent-stacked, line, and pie direct-rendering paths
-- Add regression coverage for bar/column spacing controls, line marker handling, axis titles, area charts, and doughnut direct rendering
+- Add regression coverage for bar/column spacing controls, direct chart data labels and positions, scatter rendering, line marker handling, axis titles, area charts, and doughnut direct rendering
 - Add regression coverage for chart fallback behavior when direct rendering is not supported
 
 ### CI / Evaluation

@@ -191,10 +191,14 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Chart detection | `<c:chart>` URI | Supported |
 | Direct bar/column charts | `<c:barChart>` | Approximate |
 | Bar/column spacing controls | `<c:gapWidth>`, `<c:overlap>` | Approximate |
+| Bar/column data labels | `<c:dLbls>` | Approximate |
 | Direct line charts | `<c:lineChart>` | Approximate |
 | Line series markers | `<c:marker>` | Approximate |
+| Line/area point labels | `<c:dLbls>` | Approximate |
 | Chart axis titles | `<c:catAx>/<c:valAx> <c:title>` | Approximate |
 | Direct area charts (standard) | `<c:areaChart>` | Approximate |
+| Direct scatter charts | `<c:scatterChart>` | Approximate |
+| Scatter point labels | `<c:scatterChart> <c:dLbls>` | Approximate |
 | Direct pie charts (single-series) | `<c:pieChart>` | Approximate |
 | Direct doughnut charts (single-series) | `<c:doughnutChart>` | Approximate |
 | Chart preview image | embedded preview | Fallback |
