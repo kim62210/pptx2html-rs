@@ -748,6 +748,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             }
                         })
                     };
+                    let build_point_data_label = |series_name: Option<&str>, category: Option<&str>, value: f64| {
+                        spec.data_labels.as_ref().and_then(|labels| {
+                            let mut parts = Vec::new();
+                            if labels.show_series_name && let Some(series_name) = series_name {
+                                parts.push(escape_html(series_name));
+                            }
+                            if labels.show_category_name && let Some(category) = category {
+                                parts.push(escape_html(category));
+                            }
+                            if labels.show_value {
+                                parts.push(format!("{value}"));
+                            }
+                            if parts.is_empty() {
+                                None
+                            } else {
+                                Some(parts.join(": "))
+                            }
+                        })
+                    };
                     let resolve_bar_label_position = || {
                         spec.data_labels
                             .as_ref()
@@ -1036,7 +1055,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .join(" ");
                                 let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
                                 if marker_symbol != "none" {
-                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         let _ = writeln!(
                                             html,
                                             "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
@@ -1044,14 +1063,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         );
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = (y - 10.0).max(10.0);
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                            let label_text = build_point_data_label(
+                                                series.name.as_deref(),
+                                                series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ).unwrap_or_else(|| value.to_string());
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 } else if render_value_labels {
-                                    for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                         if *value > 0.0 {
                                             let label_y = (y - 10.0).max(10.0);
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                            let label_text = build_point_data_label(
+                                                series.name.as_deref(),
+                                                series.categories.get(idx).map(|s| s.as_str()),
+                                                *value,
+                                            ).unwrap_or_else(|| value.to_string());
+                                            let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
                                 }
@@ -1187,10 +1216,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let _ = writeln!(html, "<polygon class=\"chart-area\" style=\"fill:{color}\" points=\"{area_points}\" />");
                                     let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{line_points}\" />");
                                     if render_value_labels {
-                                        for ((x, y), value) in points.iter().copied().zip(series.values.iter()) {
+                                        for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
                                             if *value > 0.0 {
                                                 let label_y = (y - 10.0).max(10.0);
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", value);
+                                                let label_text = build_point_data_label(
+                                                    series.name.as_deref(),
+                                                    series.categories.get(idx).map(|s| s.as_str()),
+                                                    *value,
+                                                ).unwrap_or_else(|| value.to_string());
+                                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                             }
                                         }
                                     }

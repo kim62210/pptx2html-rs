@@ -606,6 +606,14 @@ fn build_line_chart_pptx(series_count: usize) -> Vec<u8> {
 }
 
 fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
+    build_line_chart_with_label_flags_pptx(true, false, false)
+}
+
+fn build_line_chart_with_label_flags_pptx(
+    show_value: bool,
+    show_category_name: bool,
+    show_series_name: bool,
+) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -637,7 +645,10 @@ fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let show_value = if show_value { 1 } else { 0 };
+    let show_category_name = if show_category_name { 1 } else { 0 };
+    let show_series_name = if show_series_name { 1 } else { 0 };
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -646,7 +657,7 @@ fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
       <c:layout/>
       <c:lineChart>
         <c:grouping val="standard"/>
-        <c:dLbls><c:showVal val="1"/></c:dLbls>
+        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/></c:dLbls>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
@@ -661,7 +672,7 @@ fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -688,6 +699,14 @@ fn build_line_chart_with_value_labels_pptx() -> Vec<u8> {
 }
 
 fn build_area_chart_with_value_labels_pptx() -> Vec<u8> {
+    build_area_chart_with_label_flags_pptx(true, false, false)
+}
+
+fn build_area_chart_with_label_flags_pptx(
+    show_value: bool,
+    show_category_name: bool,
+    show_series_name: bool,
+) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -719,7 +738,10 @@ fn build_area_chart_with_value_labels_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let show_value = if show_value { 1 } else { 0 };
+    let show_category_name = if show_category_name { 1 } else { 0 };
+    let show_series_name = if show_series_name { 1 } else { 0 };
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -728,7 +750,7 @@ fn build_area_chart_with_value_labels_pptx() -> Vec<u8> {
       <c:layout/>
       <c:areaChart>
         <c:grouping val="standard"/>
-        <c:dLbls><c:showVal val="1"/></c:dLbls>
+        <c:dLbls><c:showVal val="{show_value}"/><c:showCatName val="{show_category_name}"/><c:showSerName val="{show_series_name}"/></c:dLbls>
         <c:ser>
           <c:idx val="0"/>
           <c:order val="0"/>
@@ -743,7 +765,7 @@ fn build_area_chart_with_value_labels_pptx() -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#;
+</c:chartSpace>"#);
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -3906,6 +3928,22 @@ fn test_area_chart_renders_value_labels() {
 
     assert!(html.contains("<text class=\"chart-data-label\""), "Area chart should render value labels: {html}");
     assert!(html.contains(">30<"), "Area chart should render point values as labels: {html}");
+}
+
+#[test]
+fn test_line_chart_renders_category_and_value_labels() {
+    let pptx = build_line_chart_with_label_flags_pptx(true, true, false);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">Q2: 20<"), "Line chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+}
+
+#[test]
+fn test_area_chart_renders_series_and_value_labels() {
+    let pptx = build_area_chart_with_label_flags_pptx(true, false, true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains(">Revenue: 30<"), "Area chart should combine series name and value label text when showSerName and showVal are enabled: {html}");
 }
 
 #[test]
