@@ -40,6 +40,10 @@ class PythonBindingRuntimeTests(unittest.TestCase):
             "Issues, https://github.com/kim62210/pptx2html-turbo/issues",
             project_urls,
         )
+        self.assertIn(
+            "Homepage, https://github.com/kim62210/pptx2html-turbo",
+            project_urls,
+        )
 
     def _write_minimal_pptx(self, path: Path) -> None:
         with zipfile.ZipFile(path, "w") as archive:

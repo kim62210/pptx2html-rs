@@ -16,6 +16,7 @@ classifiers = [
 ]
 
 [project.urls]
+Homepage = "https://github.com/kim62210/pptx2html-turbo"
 Repository = "https://github.com/kim62210/pptx2html-turbo"
 Issues = "https://github.com/kim62210/pptx2html-turbo/issues"
 
