@@ -167,7 +167,7 @@ A drag-and-drop demo page is included at `crates/pptx2html-wasm/demo/index.html`
 
 ## Supported Features
 
-See [docs/architecture/SUPPORTED_FEATURES.md](docs/architecture/SUPPORTED_FEATURES.md) for the full ECMA-376 element mapping.
+See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element inventory and [docs/architecture/CAPABILITY_MATRIX.md](docs/architecture/CAPABILITY_MATRIX.md) for the authoritative support-stage matrix.
 
 | Category | Highlights |
 |----------|-----------|
@@ -245,6 +245,11 @@ cargo bench --package pptx2html-core
 - **Rust (296):** 109 unit tests + 178 integration tests + 7 CLI tests + 2 doc-tests
 - **Python (32):** Enhancer pipeline, SmartArt/Math/Effects handlers, HTML patching (mock LLM provider)
 
+Tag-based CI and release validation also now replays:
+- installed-wheel Python runtime smoke for the published binding surface
+- WASM package contract + package-root/runtime smoke for the npm/browser distribution
+- exactness contract checks plus exported evaluation artifacts (`powerpoint-evidence-summary.json`, `powerpoint-evidence-text-layout-gate.json`, `exactness-contract-report.json`)
+
 ## Autoresearch
 
 Automated experiment loop inspired by the [Karpathy autoresearch](https://x.com/karpathy/status/1886192184808149383) pattern. An LLM agent modifies source code, runs build/test/evaluation, and keeps the change only if the fidelity score improves — otherwise it reverts.
@@ -292,7 +297,7 @@ Composite score: `0.40*SSIM + 0.25*TextMatch + 0.25*TestPassRate + 0.10*Performa
 
 Use the composite score for regression control, but require a PowerPoint-reference check before labeling a feature `exact`.
 
-See [`evaluate/README.md`](evaluate/README.md) for details.
+See [`evaluate/README.md`](evaluate/README.md) for details, including the exactness contract checker and the shared Python 3.11+ floor used by the CI/release evaluation workflows.
 
 ## pptx2html-enhance (LLM Post-Processing)
 
