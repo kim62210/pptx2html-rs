@@ -13,6 +13,11 @@ on:
         options:
           - 'true'
           - 'false'
+      version_tag:
+        description: 'Release tag to validate against the package version (for manual publish, e.g. v1.0.4)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -47,6 +52,19 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
+      - name: Read package version
+        run: |
+          VERSION=$(grep '^version' crates/pptx2html-wasm/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node crates/pptx2html-wasm/tests/check-tag-version.mjs "${{ github.ref_name }}" "$PACKAGE_VERSION"
+
+      - name: Check manual publish version tag
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'false'
+        run: node crates/pptx2html-wasm/tests/check-tag-version.mjs "${{ github.event.inputs.version_tag }}" "$PACKAGE_VERSION"
+
       - name: Build WASM package
         run: wasm-pack build crates/pptx2html-wasm --target web --release --scope pptx2html
 
@@ -58,14 +76,11 @@ jobs:
       - name: Enhance package.json
         working-directory: crates/pptx2html-wasm/pkg
         run: |
-          # Read version from Cargo.toml
-          VERSION=$(grep '^version' ../Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-
           # Create enhanced package.json using node
            node -e "
            const pkg = require('./package.json');
            pkg.name = process.env.PACKAGE_NAME;
-           pkg.version = '${VERSION}';
+           pkg.version = process.env.PACKAGE_VERSION;
            pkg.description = process.env.PACKAGE_DESCRIPTION;
            pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
            pkg.author = process.env.PACKAGE_AUTHOR;
@@ -77,8 +92,17 @@ jobs:
               types: './pptx2html_wasm.d.ts'
             }
           };
-          require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
+           require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+           "
+
+      - name: Run WASM runtime smoke test
+        run: node crates/pptx2html-wasm/tests/node-smoke.mjs
+
+      - name: Run package-root smoke test
+        run: node crates/pptx2html-wasm/tests/package-root-smoke.mjs
+
+      - name: Check publish package contract
+        run: node crates/pptx2html-wasm/tests/check-package-contract.mjs crates/pptx2html-wasm/pkg "$PACKAGE_VERSION"
 
       - name: Show package contents
         working-directory: crates/pptx2html-wasm/pkg

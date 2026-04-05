@@ -50,7 +50,7 @@ pub fn get_info(data: &[u8]) -> Result<String, JsError> {
         info.width_px,
         info.height_px,
         match &info.title {
-            Some(t) => format!("\"{}\"", t.replace('\\', "\\\\").replace('"', "\\\"")),
+            Some(t) => format!("\"{}\"", escape_json_string(t)),
             None => "null".to_string(),
         }
     ))
@@ -245,30 +245,18 @@ fn serialize_unresolved(elements: &[pptx2html_core::model::UnresolvedElement]) -
             pptx2html_core::model::UnresolvedType::CustomGeometry => "CustomGeometry",
         };
         let raw_xml = match &elem.raw_xml {
-            Some(xml) => format!(
-                "\"{}\"",
-                xml.replace('\\', "\\\\")
-                    .replace('"', "\\\"")
-                    .replace('\n', "\\n")
-                    .replace('\r', "\\r")
-            ),
+            Some(xml) => format!("\"{}\"", escape_json_string(xml)),
             None => "null".to_string(),
         };
         let data_model = match &elem.data_model {
-            Some(dm) => format!(
-                "\"{}\"",
-                dm.replace('\\', "\\\\")
-                    .replace('"', "\\\"")
-                    .replace('\n', "\\n")
-                    .replace('\r', "\\r")
-            ),
+            Some(dm) => format!("\"{}\"", escape_json_string(dm)),
             None => "null".to_string(),
         };
         json.push_str(&format!(
             r#"{{"slideIndex":{},"elementType":"{}","placeholderId":"{}","rawXml":{},"dataModel":{}}}"#,
             elem.slide_index,
             element_type,
-            elem.placeholder_id.replace('\\', "\\\\").replace('"', "\\\""),
+            escape_json_string(&elem.placeholder_id),
             raw_xml,
             data_model,
         ));
@@ -277,14 +265,35 @@ fn serialize_unresolved(elements: &[pptx2html_core::model::UnresolvedElement]) -
     json
 }
 
+fn escape_json_string(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '"' => escaped.push_str("\\\""),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\u{08}' => escaped.push_str("\\b"),
+            '\u{0C}' => escaped.push_str("\\f"),
+            control if control < '\u{20}' => {
+                escaped.push_str(&format!("\\u{:04x}", control as u32));
+            }
+            other => escaped.push(other),
+        }
+    }
+    escaped
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::{Cursor, Write};
 
-    use zip::ZipWriter;
+    use pptx2html_core::model::{UnresolvedElement, UnresolvedType};
     use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
 
-    use super::{convert_slides, convert_with_options};
+    use super::{convert_slides, convert_with_options, serialize_unresolved};
 
     #[test]
     fn convert_slides_uses_zero_based_indices() {
@@ -292,7 +301,10 @@ mod tests {
 
         let html = convert_slides(&data, &[0]).expect("convert_slides should succeed");
 
-        assert!(html.contains("Slide One"), "expected first slide text in HTML");
+        assert!(
+            html.contains("Slide One"),
+            "expected first slide text in HTML"
+        );
         assert!(
             !html.contains("Slide Two"),
             "expected second slide to be filtered out"
@@ -306,11 +318,32 @@ mod tests {
         let html =
             convert_with_options(&data, true, false, &[1]).expect("convert_with_options works");
 
-        assert!(html.contains("Slide One"), "expected first slide text in HTML");
+        assert!(
+            html.contains("Slide One"),
+            "expected first slide text in HTML"
+        );
         assert!(
             !html.contains("Slide Two"),
             "expected second slide to be filtered out"
         );
+    }
+
+    #[test]
+    fn serialize_unresolved_escapes_placeholder_id_control_characters() {
+        let json = serialize_unresolved(&[UnresolvedElement {
+            slide_index: 0,
+            element_type: UnresolvedType::SmartArt,
+            placeholder_id: "placeholder\n\t\u{8}\"\\id".to_string(),
+            position: None,
+            size: None,
+            raw_xml: Some("<node>line\nvalue</node>".to_string()),
+            data_model: Some("{\"line\":\"value\r\"}".to_string()),
+        }]);
+
+        assert!(json.contains("placeholder\\n\\t\\b\\\"\\\\id"));
+        assert!(!json.contains("placeholder\n\t\u{8}\"\\id"));
+        assert!(json.contains("<node>line\\nvalue</node>"));
+        assert!(json.contains("{\\\"line\\\":\\\"value\\r\\\"}"));
     }
 
     fn build_two_slide_pptx() -> Vec<u8> {

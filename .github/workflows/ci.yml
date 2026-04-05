@@ -53,6 +53,8 @@ jobs:
           test -f crates/pptx2html-wasm/pkg/pptx2html_wasm.d.ts
           test -f crates/pptx2html-wasm/pkg/pptx2html_wasm_bg.wasm
           echo "All WASM artifacts present"
+      - name: Run WASM runtime smoke test
+        run: node crates/pptx2html-wasm/tests/node-smoke.mjs
   python-bindings:
     name: Python Bindings Build
     runs-on: ubuntu-latest
