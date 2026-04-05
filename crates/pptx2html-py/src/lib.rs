@@ -2,8 +2,8 @@ use std::path::Path;
 
 use pyo3::prelude::*;
 
-use pptx2html_core::ConversionOptions;
 use pptx2html_core::model::slide::UnresolvedType;
+use pptx2html_core::ConversionOptions;
 
 /// Convert a PPTX file to HTML string
 #[pyfunction]
@@ -184,7 +184,7 @@ impl PresentationInfo {
 }
 
 /// Result of PPTX conversion with metadata
-#[pyclass]
+#[pyclass(name = "ConversionResult")]
 #[derive(Debug, Clone)]
 struct PyConversionResult {
     #[pyo3(get)]
@@ -207,7 +207,7 @@ impl PyConversionResult {
 }
 
 /// Metadata about an unresolved element
-#[pyclass]
+#[pyclass(name = "UnresolvedElement")]
 #[derive(Debug, Clone)]
 struct PyUnresolvedElement {
     #[pyo3(get)]
@@ -254,8 +254,8 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
-    use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
 
     use super::{convert, convert_bytes_with_metadata, convert_with_metadata, get_info};
 
@@ -268,7 +268,10 @@ mod tests {
         let html = convert(path.to_str().unwrap(), true, false, Some(vec![1]))
             .expect("convert should succeed");
 
-        assert!(html.contains("Slide One"), "expected first slide text in HTML");
+        assert!(
+            html.contains("Slide One"),
+            "expected first slide text in HTML"
+        );
         assert!(
             !html.contains("Slide Two"),
             "expected second slide to be filtered out"
