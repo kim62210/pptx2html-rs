@@ -9,7 +9,7 @@ Provide a sequenced backlog for the remaining pptx2html-rs work, grounded in the
 ## Source of Truth
 
 - `docs/architecture/CAPABILITY_MATRIX.md`
-- `docs/architecture/SUPPORTED_FEATURES.md`
+- `SUPPORTED_FEATURES.md`
 - `README.md`
 - `CHANGELOG.md`
 - `evaluate/README.md`
@@ -205,4 +205,4 @@ These remain intentionally lower priority unless product direction changes.
 - [ ] `cargo test --workspace`
 - [ ] `evaluate/create_golden_set.py` stays runnable
 - [ ] PowerPoint-reference capture path documented for any `exact` promotion
-- [ ] `CAPABILITY_MATRIX.md` and `SUPPORTED_FEATURES.md` kept in sync with implementation state
+- [ ] `CAPABILITY_MATRIX.md` and the repository-root `SUPPORTED_FEATURES.md` kept in sync with implementation state

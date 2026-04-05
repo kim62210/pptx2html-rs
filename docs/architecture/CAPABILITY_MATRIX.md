@@ -38,5 +38,5 @@ This document is the source of truth for implementation maturity and fidelity ex
 
 1. A feature must not be marked `exact` until it has a PowerPoint-reference verification path.
 2. Unsupported domains must never silently disappear; they must land in `fallback` or `unparsed` with stable metadata.
-3. `SUPPORTED_FEATURES.md` remains the detailed element inventory, but this matrix defines the authoritative support contract.
+3. The repository-root `SUPPORTED_FEATURES.md` remains the detailed element inventory, but this matrix defines the authoritative support contract.
 4. Text and layout families must cite the fixture bundle and capture metadata defined in `evaluate/README.md` and `evaluate/powerpoint_golden/README.md` before promotion to `exact`.
