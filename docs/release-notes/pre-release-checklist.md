@@ -2,6 +2,8 @@
 
 Use this checklist before creating a release tag or publishing release artifacts.
 
+See [`README.md`](./README.md) for the intended release-note workflow and how this checklist relates to `unreleased-draft.md`.
+
 ## 1. Workspace Health
 
 - [ ] `cargo check --workspace`

@@ -2,6 +2,7 @@
 
 > Draft only. Do not publish or tag from this file without a final release decision.
 
+See [`README.md`](./README.md) for the release-note workflow in this directory.
 See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this draft into a tagged release.
 
 ## Suggested Title
