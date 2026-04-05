@@ -103,38 +103,8 @@ jobs:
         run: |
           python -m pip install dist/*.whl
           python -m unittest discover -s crates/pptx2html-py/tests -v
-      - name: Build WASM package
-        run: wasm-pack build crates/pptx2html-wasm --target web --release --scope pptx2html
-      - name: Copy README and LICENSE
-        run: |
-          cp crates/pptx2html-wasm/README.md crates/pptx2html-wasm/pkg/
-          cp LICENSE crates/pptx2html-wasm/pkg/
-      - name: Enhance package.json
-        working-directory: crates/pptx2html-wasm/pkg
-        run: |
-          node -e "
-          const pkg = require('./package.json');
-          pkg.name = process.env.PACKAGE_NAME;
-          pkg.version = process.env.PACKAGE_VERSION;
-          pkg.description = process.env.PACKAGE_DESCRIPTION;
-          pkg.keywords = ['pptx', 'powerpoint', 'html', 'converter', 'wasm', 'presentation', 'ooxml', 'ecma-376'];
-          pkg.author = process.env.PACKAGE_AUTHOR;
-          pkg.homepage = process.env.PACKAGE_HOMEPAGE;
-          pkg.bugs = { url: process.env.PACKAGE_BUGS_URL };
-          pkg.exports = {
-            '.': {
-              import: './pptx2html_wasm.js',
-              types: './pptx2html_wasm.d.ts'
-            }
-          };
-          require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-      - name: Run WASM runtime smoke test
-        run: node crates/pptx2html-wasm/tests/node-smoke.mjs
-      - name: Run package-root smoke test
-        run: node crates/pptx2html-wasm/tests/package-root-smoke.mjs
-      - name: Check publish package contract
-        run: node crates/pptx2html-wasm/tests/check-package-contract.mjs crates/pptx2html-wasm/pkg "$PACKAGE_VERSION"
+      - name: Prepare validated WASM package
+        run: bash scripts/prepare_wasm_release_package.sh "$PACKAGE_VERSION"
 
   release:
     name: Create Release
