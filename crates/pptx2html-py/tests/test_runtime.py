@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 import zipfile
+from importlib import metadata
 from pathlib import Path
 
 import pptx2html
@@ -27,6 +28,18 @@ class PythonBindingRuntimeTests(unittest.TestCase):
     def test_missing_file_raises_runtime_error(self) -> None:
         with self.assertRaises(RuntimeError):
             pptx2html.convert_file("missing-file-does-not-exist.pptx")
+
+    def test_installed_metadata_exposes_repository_urls(self) -> None:
+        project_urls = metadata.metadata("pptx2html").get_all("Project-URL") or []
+
+        self.assertIn(
+            "Repository, https://github.com/kim62210/pptx2html-turbo",
+            project_urls,
+        )
+        self.assertIn(
+            "Issues, https://github.com/kim62210/pptx2html-turbo/issues",
+            project_urls,
+        )
 
     def _write_minimal_pptx(self, path: Path) -> None:
         with zipfile.ZipFile(path, "w") as archive:
