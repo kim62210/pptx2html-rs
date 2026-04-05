@@ -63,29 +63,58 @@ class PythonBindingRuntimeTests(unittest.TestCase):
             self.assertEqual(metadata_result.slide_count, 1)
             self.assertEqual(len(metadata_result.unresolved_elements), 0)
 
-    def _write_minimal_pptx(self, path: Path) -> None:
+    def test_bytes_apis_raise_runtime_error_for_invalid_input(self) -> None:
+        with self.assertRaises(RuntimeError):
+            pptx2html.convert_bytes(b"not-a-pptx")
+
+        with self.assertRaises(RuntimeError):
+            pptx2html.convert_bytes_with_metadata(b"not-a-pptx")
+
+    def test_one_based_slide_filtering_is_preserved_for_bytes_api(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "sample.pptx"
+            self._write_minimal_pptx(path, ["Slide One", "Slide Two"])
+            data = path.read_bytes()
+
+            html = pptx2html.convert_bytes_with_metadata(data, slides=[2]).html
+
+            self.assertIn("Slide Two", html)
+            self.assertNotIn("Slide One", html)
+
+    def _write_minimal_pptx(self, path: Path, slides: list[str] | None = None) -> None:
+        slide_texts = slides or ["Slide One"]
         with zipfile.ZipFile(path, "w") as archive:
-            archive.writestr("[Content_Types].xml", self._content_types())
+            archive.writestr(
+                "[Content_Types].xml", self._content_types(len(slide_texts))
+            )
             archive.writestr("_rels/.rels", self._root_rels())
-            archive.writestr("ppt/presentation.xml", self._presentation_xml())
+            archive.writestr(
+                "ppt/presentation.xml",
+                self._presentation_xml(len(slide_texts)),
+            )
             archive.writestr(
                 "ppt/_rels/presentation.xml.rels",
-                self._presentation_rels(),
+                self._presentation_rels(len(slide_texts)),
             )
-            archive.writestr("ppt/slides/slide1.xml", self._slide_xml("Slide One"))
-            archive.writestr(
-                "ppt/slides/_rels/slide1.xml.rels",
-                self._empty_relationships(),
-            )
+            for index, text in enumerate(slide_texts, start=1):
+                archive.writestr(f"ppt/slides/slide{index}.xml", self._slide_xml(text))
+                archive.writestr(
+                    f"ppt/slides/_rels/slide{index}.xml.rels",
+                    self._empty_relationships(),
+                )
             archive.writestr("ppt/theme/theme1.xml", self._theme_xml())
 
-    def _content_types(self) -> str:
-        return """<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
+    def _content_types(self, slide_count: int) -> str:
+        slide_overrides = "\n".join(
+            f'  <Override PartName="/ppt/slides/slide{index}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>'
+            for index in range(1, slide_count + 1)
+        )
+        return f"""<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
 <Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">
   <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>
   <Default Extension=\"xml\" ContentType=\"application/xml\"/>
   <Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/>
-  <Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>
+{slide_overrides}
   <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>
 </Types>"""
 
@@ -95,24 +124,32 @@ class PythonBindingRuntimeTests(unittest.TestCase):
   <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>
 </Relationships>"""
 
-    def _presentation_xml(self) -> str:
-        return """<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
+    def _presentation_xml(self, slide_count: int) -> str:
+        slide_ids = "\n".join(
+            f'    <p:sldId id="{255 + index}" r:id="rId{index}"/>'
+            for index in range(1, slide_count + 1)
+        )
+        return f"""<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
 <p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"
                 xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"
                 xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\">
   <p:sldMasterIdLst/>
   <p:sldIdLst>
-    <p:sldId id=\"256\" r:id=\"rId1\"/>
+{slide_ids}
   </p:sldIdLst>
   <p:sldSz cx=\"9144000\" cy=\"6858000\"/>
   <p:notesSz cx=\"6858000\" cy=\"9144000\"/>
 </p:presentation>"""
 
-    def _presentation_rels(self) -> str:
-        return """<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
+    def _presentation_rels(self, slide_count: int) -> str:
+        slide_relationships = "\n".join(
+            f'  <Relationship Id="rId{index}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide{index}.xml"/>'
+            for index in range(1, slide_count + 1)
+        )
+        return f"""<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
 <Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">
-  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide1.xml\"/>
-  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>
+{slide_relationships}
+  <Relationship Id=\"rId{slide_count + 1}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>
 </Relationships>"""
 
     def _slide_xml(self, text: str) -> str:
