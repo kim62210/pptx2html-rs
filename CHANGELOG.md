@@ -22,9 +22,14 @@ All notable changes to this project will be documented in this file.
 - Add chart integration coverage for clustered, stacked, percent-stacked, line, and pie direct-rendering paths
 - Add regression coverage for bar/column spacing controls, direct chart data labels and positions, scatter rendering, line marker handling, axis titles, area charts, and doughnut direct rendering
 - Add regression coverage for chart fallback behavior when direct rendering is not supported
+- Add installed-wheel Python smoke coverage for public conversion APIs, metadata URLs, bytes error paths, and one-based slide filtering
+- Add WASM regression coverage for JSON escaping, package-root import smoke, publish contract checks, and tag/version validation
 
 ### CI / Evaluation
 - Attach `powerpoint-evidence-summary.json` to tag-based GitHub Release artifacts
+- Attach `powerpoint-evidence-text-layout-gate.json` and `exactness-contract-report.json` to CI/release evaluation artifacts
+- Fail fast when exactness documentation drifts from CI/release workflow expectations, including the shared Python version floor for evaluate tooling
+- Run Python wheel runtime smoke and WASM package validation before tag-based release publication
 
 ## [1.0.4] - 2026-04-01
 
