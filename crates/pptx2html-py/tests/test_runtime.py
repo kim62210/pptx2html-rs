@@ -45,6 +45,24 @@ class PythonBindingRuntimeTests(unittest.TestCase):
             project_urls,
         )
 
+    def test_public_conversion_apis_work_from_installed_wheel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "sample.pptx"
+            self._write_minimal_pptx(path)
+            data = path.read_bytes()
+
+            html_from_file = pptx2html.convert_file(str(path))
+            html_from_bytes = pptx2html.convert_bytes(data)
+            html_from_options = pptx2html.convert(str(path), slides=[1])
+            metadata_result = pptx2html.convert_bytes_with_metadata(data, slides=[1])
+
+            self.assertIn("Slide One", html_from_file)
+            self.assertIn("Slide One", html_from_bytes)
+            self.assertIn("Slide One", html_from_options)
+            self.assertEqual(type(metadata_result).__name__, "ConversionResult")
+            self.assertEqual(metadata_result.slide_count, 1)
+            self.assertEqual(len(metadata_result.unresolved_elements), 0)
+
     def _write_minimal_pptx(self, path: Path) -> None:
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("[Content_Types].xml", self._content_types())
