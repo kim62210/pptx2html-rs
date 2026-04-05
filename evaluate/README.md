@@ -136,6 +136,8 @@ The CI `evaluate-tools` job also runs `evaluate/check_exactness_contract.py` and
 
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 
+For release preparation, pair these artifact checks with [`docs/release-notes/pre-release-checklist.md`](../docs/release-notes/pre-release-checklist.md) so exactness evidence is reviewed as part of the pre-tag checklist.
+
 ### 3. Run fidelity evaluation
 
 ```bash

@@ -1,0 +1,40 @@
+# Pre-Release Checklist
+
+Use this checklist before creating a release tag or publishing release artifacts.
+
+## 1. Workspace Health
+
+- [ ] `cargo check --workspace`
+- [ ] `cargo test --workspace`
+- [ ] Local working tree is clean
+
+## 2. Packaging Validation
+
+- [ ] Python wheel builds successfully via `maturin`
+- [ ] Installed-wheel smoke tests pass for the published `pptx2html` API surface
+- [ ] WASM package preparation passes via `scripts/prepare_wasm_release_package.sh <version>`
+- [ ] WASM package contract, package-root import smoke, and runtime smoke all pass
+
+## 3. Evaluation Artifacts
+
+- [ ] `python3 evaluate/check_exactness_contract.py --repo-root .` returns `ok: true`
+- [ ] `powerpoint-evidence-summary.json` is present or reproducible from the current tree
+- [ ] `powerpoint-evidence-text-layout-gate.json` is present or reproducible from the current tree
+- [ ] `exactness-contract-report.json` is present or reproducible from the current tree
+
+## 4. Exactness Claims
+
+- [ ] No capability is labeled `exact` without a documented PowerPoint-reference verification path
+- [ ] Text/layout promotions cite the text/layout gate defined in `evaluate/README.md`
+- [ ] `CAPABILITY_MATRIX.md` and the repository-root `SUPPORTED_FEATURES.md` still describe the same current state
+
+## 5. Release Notes and Docs
+
+- [ ] `CHANGELOG.md` `Unreleased` section reflects the actual shipped scope
+- [ ] `docs/release-notes/unreleased-draft.md` is updated or intentionally superseded
+- [ ] Root `README.md` reflects any new validation or packaging expectations introduced since the last release
+
+## 6. Tagging Decision
+
+- [ ] The intended release tag matches the package version(s) that will be published
+- [ ] Release artifacts are ready, but no deployment/publish step is triggered until a human approves the tag/publish action

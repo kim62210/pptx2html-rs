@@ -201,6 +201,8 @@ These remain intentionally lower priority unless product direction changes.
 
 ## Release-readiness Checklist
 
+See also [`../release-notes/pre-release-checklist.md`](../release-notes/pre-release-checklist.md) for the operator-facing checklist used before tagging a release.
+
 - [ ] `cargo check --workspace`
 - [ ] `cargo test --workspace`
 - [ ] `evaluate/create_golden_set.py` stays runnable

@@ -2,6 +2,8 @@
 
 > Draft only. Do not publish or tag from this file without a final release decision.
 
+See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this draft into a tagged release.
+
 ## Highlights
 
 - Expanded direct chart rendering coverage across bar/column, line, area, scatter, pie, and doughnut paths, while keeping complex chart families on stable fallback behavior.
