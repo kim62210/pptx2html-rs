@@ -130,7 +130,9 @@ python powerpoint_evidence.py gate --family text-layout --golden-set-dir golden_
 
 The CI `evaluate-tools` job exports `powerpoint-evidence-summary.json` and `powerpoint-evidence-text-layout-gate.json` as artifacts so exact-evidence status stays visible even when the gate is advisory.
 
-The tag-based `release.yml` workflow also attaches `powerpoint-evidence-summary.json` to GitHub Release artifacts so release consumers can inspect the current exact-evidence state.
+The tag-based `release.yml` workflow also attaches `powerpoint-evidence-summary.json` and `powerpoint-evidence-text-layout-gate.json` to GitHub Release artifacts so release consumers can inspect both the current exact-evidence summary and the text/layout promotion gate state.
+
+The CI `evaluate-tools` job also runs `evaluate/check_exactness_contract.py` and exports `exactness-contract-report.json` so contract drift between docs and workflows fails fast.
 
 If that environment is not available, keep the contract files in place and treat PowerPoint capture as a required external verification step.
 

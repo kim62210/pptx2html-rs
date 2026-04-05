@@ -83,10 +83,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Generate PowerPoint evidence summary
+      - name: Check exactness contract
         run: |
           mkdir -p artifacts/evaluate
+          python evaluate/check_exactness_contract.py --repo-root . --output-json artifacts/evaluate/exactness-contract-report.json
+      - name: Generate PowerPoint evidence summary
+        run: |
           python evaluate/powerpoint_evidence.py summary --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-summary.json
+          python evaluate/powerpoint_evidence.py gate --family text-layout --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-text-layout-gate.json || true
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
