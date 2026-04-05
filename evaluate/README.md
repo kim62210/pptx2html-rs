@@ -24,7 +24,7 @@ fidelity_score = 0.40 * ssim + 0.25 * text_match + 0.25 * test_pass + 0.10 * per
 
 ## Prerequisites
 
-- Python 3.12+
+- Python 3.11+ (matches the CI and release workflows)
 - LibreOffice (for reference rendering)
 - Poppler (`pdftoimage` — `brew install poppler` on macOS)
 - Chromium (installed automatically by Playwright)

@@ -28,9 +28,15 @@ def check_exactness_contract(repo_root: str | Path) -> dict[str, object]:
             ],
         ),
         (
+            "evaluate/README.md: Python version matches CI/release evaluate workflows",
+            root / "evaluate/README.md",
+            ["Python 3.11+"],
+        ),
+        (
             ".github/workflows/ci.yml: emits summary and text-layout gate JSON artifacts",
             root / ".github/workflows/ci.yml",
             [
+                'python-version: "3.11"',
                 "powerpoint-evidence-summary.json",
                 "powerpoint-evidence-text-layout-gate.json",
                 "python evaluate/powerpoint_evidence.py summary",
@@ -41,6 +47,7 @@ def check_exactness_contract(repo_root: str | Path) -> dict[str, object]:
             ".github/workflows/release.yml: emits summary and text-layout gate JSON artifacts",
             root / ".github/workflows/release.yml",
             [
+                'python-version: "3.11"',
                 "powerpoint-evidence-summary.json",
                 "powerpoint-evidence-text-layout-gate.json",
                 "python evaluate/powerpoint_evidence.py summary",
