@@ -41,12 +41,20 @@ pub struct ScriptSegment {
 
 pub fn classify_wrap_policy(
     paragraphs: &[TextParagraph],
+    inherited_font_sizes: &[Option<f64>],
     available_width_px: f64,
     font_scale: Option<f64>,
 ) -> TextWrapPolicy {
     let max_token_width_px = paragraphs
         .iter()
-        .map(|para| longest_unbreakable_span_width_px(para, font_scale))
+        .enumerate()
+        .map(|(index, para)| {
+            longest_unbreakable_span_width_px(
+                para,
+                inherited_font_sizes.get(index).copied().flatten(),
+                font_scale,
+            )
+        })
         .fold(0.0, f64::max);
 
     if max_token_width_px > available_width_px.max(1.0) {
@@ -56,7 +64,11 @@ pub fn classify_wrap_policy(
     }
 }
 
-fn longest_unbreakable_span_width_px(paragraph: &TextParagraph, font_scale: Option<f64>) -> f64 {
+fn longest_unbreakable_span_width_px(
+    paragraph: &TextParagraph,
+    inherited_font_size: Option<f64>,
+    font_scale: Option<f64>,
+) -> f64 {
     let mut max_width_px: f64 = 0.0;
     let mut current_width_px: f64 = 0.0;
 
@@ -76,6 +88,7 @@ fn longest_unbreakable_span_width_px(paragraph: &TextParagraph, font_scale: Opti
                     .as_ref()
                     .and_then(|def_rpr| def_rpr.font_size)
             })
+            .or(inherited_font_size)
             .unwrap_or(18.0)
             * font_scale.unwrap_or(1.0);
         let font_size_px = font_size_pt * (96.0 / 72.0);
@@ -289,7 +302,7 @@ mod tests {
         }];
 
         assert_eq!(
-            classify_wrap_policy(&paragraphs, 220.0, None),
+            classify_wrap_policy(&paragraphs, &[None], 220.0, None),
             TextWrapPolicy::Normal
         );
     }
@@ -311,7 +324,7 @@ mod tests {
         }];
 
         assert_eq!(
-            classify_wrap_policy(&paragraphs, 120.0, None),
+            classify_wrap_policy(&paragraphs, &[None], 120.0, None),
             TextWrapPolicy::Emergency
         );
     }
@@ -345,7 +358,7 @@ mod tests {
         }];
 
         assert_eq!(
-            classify_wrap_policy(&paragraphs, 160.0, None),
+            classify_wrap_policy(&paragraphs, &[None], 160.0, None),
             TextWrapPolicy::Emergency
         );
     }
@@ -377,7 +390,35 @@ mod tests {
         }];
 
         assert_eq!(
-            classify_wrap_policy(&paragraphs, 180.0, Some(0.7)),
+            classify_wrap_policy(&paragraphs, &[None], 180.0, Some(0.7)),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_uses_inherited_run_default_font_size() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![
+                TextRun {
+                    text: "overflow".into(),
+                    style: TextStyle::default(),
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+                TextRun {
+                    text: "detector".into(),
+                    style: TextStyle::default(),
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+            ],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[Some(28.0)], 180.0, Some(0.7)),
             TextWrapPolicy::Emergency
         );
     }
@@ -467,7 +508,7 @@ mod tests {
         }];
 
         assert_eq!(
-            classify_wrap_policy(&paragraphs, 90.0, Some(0.7)),
+            classify_wrap_policy(&paragraphs, &[None], 90.0, Some(0.7)),
             TextWrapPolicy::Normal
         );
     }

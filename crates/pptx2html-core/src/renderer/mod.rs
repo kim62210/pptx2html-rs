@@ -1859,7 +1859,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     * (96.0 / 72.0)))
                 .max(1.0);
             let wrap_policy = if effective_word_wrap {
-                classify_wrap_policy(&text_body.paragraphs, content_width_px, font_scale)
+                let inherited_font_sizes: Vec<Option<f64>> = text_body
+                    .paragraphs
+                    .iter()
+                    .map(|para| {
+                        text_style_ctx
+                            .get_level_defaults(para.level as usize)
+                            .and_then(|defaults| defaults.def_run_props.as_ref())
+                            .and_then(|run_defaults| run_defaults.font_size)
+                    })
+                    .collect();
+                classify_wrap_policy(
+                    &text_body.paragraphs,
+                    &inherited_font_sizes,
+                    content_width_px,
+                    font_scale,
+                )
             } else {
                 TextWrapPolicy::Normal
             };
