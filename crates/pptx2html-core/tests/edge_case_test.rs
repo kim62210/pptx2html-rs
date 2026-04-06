@@ -3102,6 +3102,35 @@ fn test_nbsp_separated_text_body_marks_emergency_wrap() {
 }
 
 #[test]
+fn test_soft_hyphen_text_body_does_not_mark_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="SoftHyphenWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1700000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Alpha&#173;Beta&#173;Gamma</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "Soft-hyphenated text should use ordinary break opportunities instead of emergency wrapping: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "Soft-hyphenated text should not carry an emergency-wrap marker when normal break opportunities exist: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_run_without_any_size_uses_hardcoded_default_font_size() {
     let slide = r#"
     <p:sp>
