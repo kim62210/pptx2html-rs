@@ -8,11 +8,13 @@ All notable changes to this project will be documented in this file.
 - Detect unbreakable tokens that span adjacent text runs before opting into emergency wrapping
 - Honor paragraph-level default font sizes when classifying narrow autofit text for emergency wrapping
 - Honor inherited text-style font sizes when classifying narrow autofit text for emergency wrapping
+- Keep `spAutoFit` text bodies on the grow-to-fit path instead of forcing emergency wrapping for long unbreakable tokens
 
 ### Tests
 - Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
 - Add regressions for paragraph-default font sizes affecting mixed-font autofit wrap decisions
 - Add regressions for inherited text-style font sizes affecting mixed-font autofit wrap decisions
+- Add regressions for `spAutoFit` long-token growth semantics versus emergency wrap fallback
 
 ### Docs / Exactness Contract
 - Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations

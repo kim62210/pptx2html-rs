@@ -15,6 +15,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Tighten text-wrap fidelity so unbreakable narrow-box tokens that span adjacent text runs still trigger the emergency-wrap path when needed.
 - Respect paragraph-level default font sizes in the same narrow-wrap/autofit path so measurement uses the rendered text size even when runs omit `sz`.
 - Respect inherited `txStyles` / `defaultTextStyle` font sizes in the same narrow-wrap/autofit path so placeholder text uses the same effective size for rendering and wrap classification.
+- Keep `spAutoFit` text bodies on the grow-to-fit path for long unbreakable tokens instead of forcing emergency word breaking.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -25,6 +26,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Narrow-box text now detects unbreakable tokens even when the token spans adjacent runs with different fonts, so emergency wrapping is triggered from the combined token width instead of per-run fragments.
 - Narrow-box autofit text now also respects paragraph-level default run sizes when measuring those combined tokens.
 - Narrow-box autofit text now also respects inherited text-style font sizes from placeholder/default style chains when measuring those combined tokens.
+- `spAutoFit` text bodies now keep their growth-oriented sizing semantics even when the content is a long unbreakable token.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging

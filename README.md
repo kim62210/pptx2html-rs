@@ -251,6 +251,7 @@ Tag-based CI and release validation also now replays:
 - exactness contract checks plus exported evaluation artifacts (`powerpoint-evidence-summary.json`, `powerpoint-evidence-text-layout-gate.json`, `exactness-contract-report.json`)
 - text/layout fixture-bundle drift checks so the gate documented in `evaluate/README.md` stays aligned with `evaluate/powerpoint_evidence.py`
 - text-wrap fidelity checks that now cover explicit runs, paragraph defaults, and inherited text-style font sizes under autofit
+- `spAutoFit` growth semantics that keep long unbreakable tokens on the grow-to-fit path instead of forcing emergency word breaking
 
 ## Autoresearch
 
