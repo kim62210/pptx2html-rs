@@ -28,6 +28,7 @@ See [`README.md`](./README.md) for the intended release-note workflow and how th
 
 - [ ] No capability is labeled `exact` without a documented PowerPoint-reference verification path
 - [ ] Text/layout promotions cite the text/layout gate defined in `evaluate/README.md`
+- [ ] The text/layout gate wording in `evaluate/README.md` still matches the current narrow-wrap, mixed-font, and autofit behavior covered by tests
 - [ ] `CAPABILITY_MATRIX.md` and the repository-root `SUPPORTED_FEATURES.md` still describe the same current state
 
 ## 5. Release Notes and Docs

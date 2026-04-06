@@ -7,11 +7,12 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 
 ## Suggested Title
 
-`vNEXT - chart coverage expansion and release-validation hardening`
+`vNEXT - chart coverage expansion, text wrap fidelity, and release-validation hardening`
 
 ## Suggested Summary
 
 - Expand direct chart rendering coverage across bar/column, line, area, scatter, pie, and doughnut paths while keeping unsupported chart families on stable fallback behavior.
+- Tighten text-wrap fidelity so unbreakable narrow-box tokens that span adjacent text runs still trigger the emergency-wrap path when needed.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -19,11 +20,13 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 
 - Direct clustered, stacked, and percent-stacked bar/column chart rendering now covers spacing controls (`gapWidth`, `overlap`) and first-pass data-label positioning.
 - Simple line, area, scatter, pie, and doughnut charts now render directly in more cases, including explicit marker settings, point labels, and axis titles where supported.
+- Narrow-box text now detects unbreakable tokens even when the token spans adjacent runs with different fonts, so emergency wrapping is triggered from the combined token width instead of per-run fragments.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging
 
 - CI now checks exactness-contract drift between docs and workflows before publishing evaluation artifacts.
+- The text/layout exactness gate now spells out narrow-wrap, mixed-font, and autofit expectations alongside the required evidence bundle.
 - Tag-based release validation now replays Python wheel runtime smoke and WASM package/runtime smoke before creating release artifacts.
 - The npm publish workflow now validates tag-to-version alignment, package metadata shaping, package-root imports, and runtime initialization before publish.
 - Python package metadata now exposes homepage, repository, and issues URLs in installed wheel metadata.

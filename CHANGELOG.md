@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Rendering — Text Fidelity
+- Detect unbreakable tokens that span adjacent text runs before opting into emergency wrapping
+
+### Tests
+- Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
+
+### Docs / Exactness Contract
+- Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations
+
 ### Rendering — Charts
 - Render clustered, stacked, and percent-stacked bar/column charts directly
 - Honor OOXML `gapWidth` and `overlap` spacing for direct bar/column chart rendering
