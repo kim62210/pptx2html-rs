@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Treat non-breaking spaces as unbreakable during wrap classification
 - Treat soft hyphen as a discretionary break opportunity during wrap classification
 - Treat fullwidth and ideographic forms as East Asian break opportunities during wrap classification
+- Treat mixed East Asian/Latin script boundaries as natural break opportunities during wrap classification
 - Keep CJK non-starter punctuation attached to the preceding glyph during wrap classification
 - Treat slash-separated text as having ordinary break opportunities during wrap classification
 - Treat hyphen-separated text as having ordinary break opportunities during wrap classification
@@ -31,6 +32,7 @@ All notable changes to this project will be documented in this file.
 - Add regressions for NBSP-separated text in text metrics and rendered HTML wrap behavior
 - Add regressions for soft-hyphenated text in text metrics and rendered HTML wrap behavior
 - Add regressions for fullwidth text in text metrics and rendered HTML wrap behavior
+- Add regressions for mixed East Asian/Latin text in text metrics, rendered HTML wrap behavior, and inherited autofit placeholder paths
 - Add regressions for CJK non-starter punctuation clusters in text metrics and rendered HTML wrap behavior
 - Add regressions for slash-separated text in text metrics and rendered HTML wrap behavior
 - Add regressions for hyphen-separated text in text metrics and rendered HTML wrap behavior
