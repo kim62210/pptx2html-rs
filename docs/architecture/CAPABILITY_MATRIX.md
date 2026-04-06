@@ -25,7 +25,7 @@ This document is the source of truth for implementation maturity and fidelity ex
 | Family | Current Tier | Highest Stage | Target Tier | Owner Chunk | Notes |
 |--------|--------------|---------------|-------------|-------------|-------|
 | Shapes | `approximate` | `rendered` | `exact` | Chunk 2 | Broad preset/custom SVG coverage exists; PowerPoint-reference validation still needs expansion |
-| Text | `approximate` | `rendered` | `exact` | Chunk 2 | Text layout works, and adjacent-run unbreakable tokens now participate in emergency-wrap detection, but font metrics, broader line breaking, and autofit still need a dedicated fidelity pass; exact promotion requires the text/layout gate in `evaluate/README.md` |
+| Text | `approximate` | `rendered` | `exact` | Chunk 2 | Text layout works, and both adjacent-run unbreakable tokens and paragraph-level default font sizes now participate in emergency-wrap detection, but font metrics, broader line breaking, and autofit still need a dedicated fidelity pass; exact promotion requires the text/layout gate in `evaluate/README.md` |
 | Colors and fills | `approximate` | `rendered` | `exact` | Chunk 2 | Theme/styleRef/color modifier stack is implemented, but needs stronger fidelity-test coverage |
 | Tables | `approximate` | `rendered` | `exact` | Chunk 2 | Core table rendering exists; advanced table styling remains limited |
 | Images | `approximate` | `rendered` | `exact` | Chunk 1 | Crop/render paths exist; external asset contract is still being hardened |
