@@ -107,6 +107,13 @@ fn longest_unbreakable_span_width_px(
                 continue;
             }
 
+            if is_visible_wrap_break(ch) {
+                let break_width_px = estimated_glyph_em_width(ch) * font_size_px;
+                max_width_px = max_width_px.max(current_width_px + break_width_px);
+                current_width_px = 0.0;
+                continue;
+            }
+
             let glyph_width_px = estimated_glyph_em_width(ch) * font_size_px;
 
             if is_east_asian_char(ch) {
@@ -135,6 +142,10 @@ fn is_breaking_whitespace(ch: char) -> bool {
 
 fn is_soft_hyphen(ch: char) -> bool {
     ch == '\u{00AD}'
+}
+
+fn is_visible_wrap_break(ch: char) -> bool {
+    ch == '/'
 }
 
 fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
@@ -557,6 +568,28 @@ mod tests {
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 30.0, None),
             TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_treats_slash_as_break_opportunity() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "Alpha/Beta/Gamma".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 80.0, None),
+            TextWrapPolicy::Normal
         );
     }
 
