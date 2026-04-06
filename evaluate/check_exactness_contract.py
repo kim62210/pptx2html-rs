@@ -28,9 +28,25 @@ def check_exactness_contract(repo_root: str | Path) -> dict[str, object]:
             ],
         ),
         (
+            "evaluate/README.md: documents text-layout gate behavior expectations",
+            root / "evaluate/README.md",
+            [
+                "narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered",
+                "mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate",
+                "`normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion",
+            ],
+        ),
+        (
             "evaluate/README.md: Python version matches CI/release evaluate workflows",
             root / "evaluate/README.md",
             ["Python 3.11+"],
+        ),
+        (
+            "evaluate/powerpoint_golden/README.md: requires capture metadata and matching fixture bundle for text/layout promotions",
+            root / "evaluate/powerpoint_golden/README.md",
+            [
+                "capture batch metadata together with the matching fixture bundle from `evaluate/README.md`",
+            ],
         ),
         (
             ".github/workflows/ci.yml: emits summary and text-layout gate JSON artifacts",

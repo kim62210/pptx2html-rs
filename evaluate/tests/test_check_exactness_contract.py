@@ -21,7 +21,14 @@ class CheckExactnessContractTests(unittest.TestCase):
                 root / "evaluate/README.md",
                 "`powerpoint-evidence-summary.json`\n"
                 "`powerpoint-evidence-text-layout-gate.json`\n"
+                "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
+                "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
                 "- Python 3.11+\n",
+            )
+            self._write_file(
+                root / "evaluate/powerpoint_golden/README.md",
+                "text/layout promotions must cite the capture batch metadata together with the matching fixture bundle from `evaluate/README.md`\n",
             )
             self._write_file(
                 root / ".github/workflows/ci.yml",
@@ -70,6 +77,14 @@ class CheckExactnessContractTests(unittest.TestCase):
                 payload["missing_checks"],
             )
             self.assertIn(
+                "evaluate/README.md: documents text-layout gate behavior expectations",
+                payload["missing_checks"],
+            )
+            self.assertIn(
+                "evaluate/powerpoint_golden/README.md: requires capture metadata and matching fixture bundle for text/layout promotions",
+                payload["missing_checks"],
+            )
+            self.assertIn(
                 ".github/workflows/ci.yml: emits summary and text-layout gate JSON artifacts",
                 payload["missing_checks"],
             )
@@ -95,7 +110,14 @@ class CheckExactnessContractTests(unittest.TestCase):
                 root / "evaluate/README.md",
                 "`powerpoint-evidence-summary.json`\n"
                 "`powerpoint-evidence-text-layout-gate.json`\n"
+                "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
+                "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
                 "- Python 3.12+\n",
+            )
+            self._write_file(
+                root / "evaluate/powerpoint_golden/README.md",
+                "text/layout promotions must cite the capture batch metadata together with the matching fixture bundle from `evaluate/README.md`\n",
             )
             self._write_file(
                 root / ".github/workflows/ci.yml",
