@@ -1848,7 +1848,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 AutoFit::Normal {
                     font_scale,
                     line_spacing_reduction,
-                } => (*font_scale, *line_spacing_reduction),
+                } => (font_scale, line_spacing_reduction),
                 _ => (None, None),
             };
             let content_width_px = (w
@@ -2012,29 +2012,51 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
     }
 
-    fn resolve_text_auto_fit<'a>(
-        text_body: &'a TextBody,
-        layout_match: Option<&'a Shape>,
-        master_match: Option<&'a Shape>,
-    ) -> &'a AutoFit {
+    fn resolve_text_auto_fit(
+        text_body: &TextBody,
+        layout_match: Option<&Shape>,
+        master_match: Option<&Shape>,
+    ) -> AutoFit {
+        fn merge_same_mode_norm_autofit(child: &AutoFit, parent: &AutoFit) -> AutoFit {
+            match (child, parent) {
+                (
+                    AutoFit::Normal {
+                        font_scale: child_font_scale,
+                        line_spacing_reduction: child_line_spacing_reduction,
+                    },
+                    AutoFit::Normal {
+                        font_scale: parent_font_scale,
+                        line_spacing_reduction: parent_line_spacing_reduction,
+                    },
+                ) => AutoFit::Normal {
+                    font_scale: child_font_scale.or(*parent_font_scale),
+                    line_spacing_reduction: child_line_spacing_reduction
+                        .or(*parent_line_spacing_reduction),
+                },
+                _ => child.clone(),
+            }
+        }
+
+        let master_auto_fit = master_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.auto_fit.clone())
+            .unwrap_or_default();
+
+        let inherited_auto_fit = if let Some(layout_auto_fit) = layout_match
+            .and_then(|shape| shape.text_body.as_ref())
+            .map(|tb| tb.auto_fit.clone())
+            && !matches!(layout_auto_fit, AutoFit::None)
+        {
+            merge_same_mode_norm_autofit(&layout_auto_fit, &master_auto_fit)
+        } else {
+            master_auto_fit
+        };
+
         if !matches!(text_body.auto_fit, AutoFit::None) {
-            return &text_body.auto_fit;
+            merge_same_mode_norm_autofit(&text_body.auto_fit, &inherited_auto_fit)
+        } else {
+            inherited_auto_fit
         }
-        if let Some(auto_fit) = layout_match
-            .and_then(|shape| shape.text_body.as_ref())
-            .map(|tb| &tb.auto_fit)
-            && !matches!(auto_fit, AutoFit::None)
-        {
-            return auto_fit;
-        }
-        if let Some(auto_fit) = master_match
-            .and_then(|shape| shape.text_body.as_ref())
-            .map(|tb| &tb.auto_fit)
-            && !matches!(auto_fit, AutoFit::None)
-        {
-            return auto_fit;
-        }
-        &text_body.auto_fit
     }
 
     fn resolve_text_vertical_align(
