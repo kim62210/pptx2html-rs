@@ -24,6 +24,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Treat slash-separated text as having ordinary visible break opportunities during wrap classification so it does not fall back to emergency wrapping.
 - Treat hyphen-separated text as having ordinary visible break opportunities during wrap classification so it does not fall back to emergency wrapping.
 - Keep CJK opening punctuation attached to the following glyph during wrap classification so opener+glyph clusters do not undercount line width.
+- Keep CJK closing angle-bracket punctuation attached to the preceding glyph during wrap classification so closer+glyph clusters do not undercount line width.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -43,6 +44,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Slash-separated text like `Alpha/Beta/Gamma` now stays on the normal break path instead of being treated as one long unbreakable token.
 - Hyphen-separated text like `Alpha-Beta-Gamma` now stays on the normal break path instead of being treated as one long unbreakable token.
 - CJK opening punctuation clusters like `（漢` now stay on the same non-breaking cluster for emergency-wrap decisions.
+- CJK closing angle-bracket clusters like `漢》` now stay on the same non-breaking cluster for emergency-wrap decisions.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging
