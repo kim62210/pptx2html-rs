@@ -26,6 +26,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Keep CJK opening punctuation attached to the following glyph during wrap classification so opener+glyph clusters do not undercount line width.
 - Keep CJK closing angle-bracket punctuation attached to the preceding glyph during wrap classification so closer+glyph clusters do not undercount line width.
 - Keep CJK white square bracket pairs on the same East Asian punctuation cluster during wrap classification so bracketed glyphs do not undercount line width.
+- Keep CJK tortoise-shell bracket pairs on the same East Asian punctuation cluster during wrap classification so bracketed glyphs do not undercount line width.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -47,6 +48,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - CJK opening punctuation clusters like `（漢` now stay on the same non-breaking cluster for emergency-wrap decisions.
 - CJK closing angle-bracket clusters like `漢》` now stay on the same non-breaking cluster for emergency-wrap decisions.
 - White square bracket clusters like `〚漢〛` now stay on the same East Asian punctuation cluster for emergency-wrap decisions.
+- Tortoise-shell bracket clusters like `〔漢〕` now stay on the same East Asian punctuation cluster for emergency-wrap decisions.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging

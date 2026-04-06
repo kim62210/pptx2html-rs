@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Keep CJK opening punctuation attached to the following glyph during wrap classification
 - Keep CJK closing angle-bracket punctuation attached to the preceding glyph during wrap classification
 - Keep CJK white square brackets on the same East Asian punctuation cluster during wrap classification
+- Keep CJK tortoise-shell brackets on the same East Asian punctuation cluster during wrap classification
 
 ### Tests
 - Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
@@ -35,6 +36,7 @@ All notable changes to this project will be documented in this file.
 - Add regressions for CJK opening punctuation clusters in text metrics and rendered HTML wrap behavior
 - Add regressions for CJK angle-bracket punctuation clusters in text metrics and rendered HTML wrap behavior
 - Add regressions for CJK white square bracket clusters in text metrics and rendered HTML wrap behavior
+- Add regressions for CJK tortoise-shell bracket clusters in text metrics and rendered HTML wrap behavior
 
 ### Docs / Exactness Contract
 - Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations

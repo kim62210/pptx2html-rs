@@ -262,6 +262,7 @@ Tag-based CI and release validation also now replays:
 - CJK opening-punctuation clustering so characters like `（` stay attached to the following glyph during emergency-wrap classification
 - CJK closing angle-bracket clustering so characters like `》` stay attached to the preceding glyph during emergency-wrap classification
 - CJK white square bracket clustering so bracket pairs like `〚漢〛` stay on a single East Asian punctuation cluster during emergency-wrap classification
+- CJK tortoise-shell bracket clustering so bracket pairs like `〔漢〕` stay on a single East Asian punctuation cluster during emergency-wrap classification
 
 ## Autoresearch
 
