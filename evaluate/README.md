@@ -69,6 +69,12 @@ Before upgrading **Text** or **Layout / inheritance** to `exact`, keep the follo
 3. **Local converter verification** with `cargo test --workspace` on the same revision.
 4. **Capability-doc update** that records which fixture set and PowerPoint capture batch justified the tier change.
 
+Behavior expectations for this gate:
+
+- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered,
+- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate,
+- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion.
+
 If any item above is missing, keep the family at `approximate`.
 
 ### 1. Generate golden PPTX test set

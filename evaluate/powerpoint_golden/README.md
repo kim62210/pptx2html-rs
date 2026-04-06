@@ -66,4 +66,4 @@ Validate the batch locally with:
 python validate_powerpoint_golden.py --golden-set-dir golden_set --output-dir powerpoint_golden
 ```
 
-Text/layout `exact` promotions should cite this metadata together with the matching fixture list from `evaluate/README.md`.
+Text/layout `exact` promotions should cite this capture batch metadata together with the matching fixture bundle from `evaluate/README.md`.
