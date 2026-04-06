@@ -136,7 +136,10 @@ fn estimated_glyph_em_width(ch: char) -> f64 {
         '\u{4E00}'..='\u{9FFF}'
         | '\u{3400}'..='\u{4DBF}'
         | '\u{3040}'..='\u{30FF}'
-        | '\u{AC00}'..='\u{D7A3}' => 1.0,
+        | '\u{3000}'..='\u{303F}'
+        | '\u{AC00}'..='\u{D7A3}'
+        | '\u{FF01}'..='\u{FF60}'
+        | '\u{FFE0}'..='\u{FFE6}' => 1.0,
         '\u{0590}'..='\u{05FF}' | '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' => 0.75,
         '\u{00A0}' => 0.33,
         '\u{00AD}' => 0.0,
@@ -262,7 +265,10 @@ fn is_east_asian_char(ch: char) -> bool {
         '\u{4E00}'..='\u{9FFF}'
             | '\u{3400}'..='\u{4DBF}'
             | '\u{3040}'..='\u{30FF}'
+            | '\u{3000}'..='\u{303F}'
             | '\u{AC00}'..='\u{D7A3}'
+            | '\u{FF01}'..='\u{FF60}'
+            | '\u{FFE0}'..='\u{FFE6}'
     )
 }
 
@@ -480,6 +486,28 @@ mod tests {
 
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 100.0, None),
+            TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_keeps_fullwidth_sentence_normal() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "ＡＢＣＤＥＦＧＨＩＪ".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 90.0, Some(0.7)),
             TextWrapPolicy::Normal
         );
     }

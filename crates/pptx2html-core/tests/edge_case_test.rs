@@ -2331,7 +2331,7 @@ fn test_norm_autofit_cjk_sentence_does_not_force_emergency_wrap() {
     <p:sp>
       <p:nvSpPr><p:cNvPr id="2" name="CjkAutofit"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
       <p:spPr>
-        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
         <a:prstGeom prst="rect"/>
       </p:spPr>
       <p:txBody>
@@ -2353,6 +2353,37 @@ fn test_norm_autofit_cjk_sentence_does_not_force_emergency_wrap() {
     assert!(
         !tb_chunk.contains("overflow-wrap: anywhere"),
         "CJK autofit text should rely on natural line breaking, not emergency wrap: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_norm_autofit_fullwidth_sentence_does_not_force_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthAutofit"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="70000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>ＡＢＣＤＥＦＧＨＩＪ</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "Fullwidth autofit text should not opt into emergency wrapping by default: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth autofit text should rely on natural line breaking, not emergency wrap: {tb_chunk}"
     );
 }
 
