@@ -14,6 +14,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Expand direct chart rendering coverage across bar/column, line, area, scatter, pie, and doughnut paths while keeping unsupported chart families on stable fallback behavior.
 - Tighten text-wrap fidelity so unbreakable narrow-box tokens that span adjacent text runs still trigger the emergency-wrap path when needed.
 - Respect paragraph-level default font sizes in the same narrow-wrap/autofit path so measurement uses the rendered text size even when runs omit `sz`.
+- Respect inherited `txStyles` / `defaultTextStyle` font sizes in the same narrow-wrap/autofit path so placeholder text uses the same effective size for rendering and wrap classification.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -23,6 +24,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Simple line, area, scatter, pie, and doughnut charts now render directly in more cases, including explicit marker settings, point labels, and axis titles where supported.
 - Narrow-box text now detects unbreakable tokens even when the token spans adjacent runs with different fonts, so emergency wrapping is triggered from the combined token width instead of per-run fragments.
 - Narrow-box autofit text now also respects paragraph-level default run sizes when measuring those combined tokens.
+- Narrow-box autofit text now also respects inherited text-style font sizes from placeholder/default style chains when measuring those combined tokens.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging
