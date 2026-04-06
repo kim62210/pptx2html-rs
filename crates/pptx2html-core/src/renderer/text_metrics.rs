@@ -145,7 +145,7 @@ fn is_soft_hyphen(ch: char) -> bool {
 }
 
 fn is_visible_wrap_break(ch: char) -> bool {
-    ch == '/'
+    matches!(ch, '/' | '-')
 }
 
 fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
@@ -576,6 +576,28 @@ mod tests {
         let paragraphs = vec![TextParagraph {
             runs: vec![TextRun {
                 text: "Alpha/Beta/Gamma".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 80.0, None),
+            TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_treats_hyphen_as_break_opportunity() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "Alpha-Beta-Gamma".into(),
                 style: TextStyle {
                     font_size: Some(18.0),
                     ..Default::default()
