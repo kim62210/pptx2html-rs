@@ -2355,6 +2355,41 @@ fn test_mixed_font_unbreakable_token_spanning_runs_marks_emergency_wrap() {
 }
 
 #[test]
+fn test_norm_autofit_inherited_paragraph_size_marks_mixed_font_token_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="InheritedParaSizeWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1800000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="70000"/>
+        </a:bodyPr>
+        <a:p>
+          <a:pPr><a:defRPr sz="2800"/></a:pPr>
+          <a:r><a:rPr><a:latin typeface="Calibri"/></a:rPr><a:t>overflow</a:t></a:r>
+          <a:r><a:rPr><a:latin typeface="Aptos"/></a:rPr><a:t>detector</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Paragraph default font size should influence mixed-font emergency wrapping under autofit: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Inherited paragraph font size should still produce overflow-wrap:anywhere when the combined token is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_norm_autofit_no_font_scale_no_overflow() {
     let slide = r#"
     <p:sp>

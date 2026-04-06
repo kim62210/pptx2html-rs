@@ -1,4 +1,4 @@
-use crate::model::{TextParagraph, TextRun};
+use crate::model::TextParagraph;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontResolutionSource {
@@ -46,7 +46,7 @@ pub fn classify_wrap_policy(
 ) -> TextWrapPolicy {
     let max_token_width_px = paragraphs
         .iter()
-        .map(|para| longest_unbreakable_span_width_px(&para.runs, font_scale))
+        .map(|para| longest_unbreakable_span_width_px(para, font_scale))
         .fold(0.0, f64::max);
 
     if max_token_width_px > available_width_px.max(1.0) {
@@ -56,18 +56,28 @@ pub fn classify_wrap_policy(
     }
 }
 
-fn longest_unbreakable_span_width_px(runs: &[TextRun], font_scale: Option<f64>) -> f64 {
+fn longest_unbreakable_span_width_px(paragraph: &TextParagraph, font_scale: Option<f64>) -> f64 {
     let mut max_width_px: f64 = 0.0;
     let mut current_width_px: f64 = 0.0;
 
-    for run in runs {
+    for run in &paragraph.runs {
         if run.is_break {
             max_width_px = max_width_px.max(current_width_px);
             current_width_px = 0.0;
             continue;
         }
 
-        let font_size_pt = run.style.font_size.unwrap_or(18.0) * font_scale.unwrap_or(1.0);
+        let font_size_pt = run
+            .style
+            .font_size
+            .or_else(|| {
+                paragraph
+                    .def_rpr
+                    .as_ref()
+                    .and_then(|def_rpr| def_rpr.font_size)
+            })
+            .unwrap_or(18.0)
+            * font_scale.unwrap_or(1.0);
         let font_size_px = font_size_pt * (96.0 / 72.0);
 
         for ch in run.text.chars() {
@@ -255,7 +265,7 @@ fn is_complex_script_char(ch: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{FontStyle, TextParagraph, TextRun, TextStyle};
+    use crate::model::{FontStyle, ParagraphDefRPr, TextParagraph, TextRun, TextStyle};
 
     use super::{
         classify_script_category, classify_wrap_policy, segment_by_script, ScriptCategory,
@@ -336,6 +346,38 @@ mod tests {
 
         assert_eq!(
             classify_wrap_policy(&paragraphs, 160.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_uses_paragraph_default_font_size() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![
+                TextRun {
+                    text: "overflow".into(),
+                    style: TextStyle::default(),
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+                TextRun {
+                    text: "detector".into(),
+                    style: TextStyle::default(),
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+            ],
+            def_rpr: Some(ParagraphDefRPr {
+                font_size: Some(28.0),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, 180.0, Some(0.7)),
             TextWrapPolicy::Emergency
         );
     }
