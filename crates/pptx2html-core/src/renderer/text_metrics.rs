@@ -71,11 +71,13 @@ fn longest_unbreakable_span_width_px(
 ) -> f64 {
     let mut max_width_px: f64 = 0.0;
     let mut current_width_px: f64 = 0.0;
+    let mut pending_east_asian_opening = false;
 
     for run in &paragraph.runs {
         if run.is_break {
             max_width_px = max_width_px.max(current_width_px);
             current_width_px = 0.0;
+            pending_east_asian_opening = false;
             continue;
         }
 
@@ -97,6 +99,7 @@ fn longest_unbreakable_span_width_px(
             if is_breaking_whitespace(ch) {
                 max_width_px = max_width_px.max(current_width_px);
                 current_width_px = 0.0;
+                pending_east_asian_opening = false;
                 continue;
             }
 
@@ -104,6 +107,7 @@ fn longest_unbreakable_span_width_px(
                 let hyphen_width_px = estimated_glyph_em_width('-') * font_size_px;
                 max_width_px = max_width_px.max(current_width_px + hyphen_width_px);
                 current_width_px = 0.0;
+                pending_east_asian_opening = false;
                 continue;
             }
 
@@ -111,16 +115,38 @@ fn longest_unbreakable_span_width_px(
                 let break_width_px = estimated_glyph_em_width(ch) * font_size_px;
                 max_width_px = max_width_px.max(current_width_px + break_width_px);
                 current_width_px = 0.0;
+                pending_east_asian_opening = false;
                 continue;
             }
 
             let glyph_width_px = estimated_glyph_em_width(ch) * font_size_px;
+
+            if pending_east_asian_opening {
+                current_width_px += glyph_width_px;
+
+                if is_east_asian_opening_punctuation(ch) {
+                    continue;
+                }
+
+                max_width_px = max_width_px.max(current_width_px);
+                current_width_px = 0.0;
+                pending_east_asian_opening = false;
+                continue;
+            }
 
             if is_east_asian_char(ch) {
                 if is_east_asian_nonstarter_punctuation(ch) {
                     current_width_px += glyph_width_px;
                     max_width_px = max_width_px.max(current_width_px);
                     current_width_px = 0.0;
+                    pending_east_asian_opening = false;
+                    continue;
+                }
+
+                if is_east_asian_opening_punctuation(ch) {
+                    max_width_px = max_width_px.max(current_width_px);
+                    current_width_px = glyph_width_px;
+                    pending_east_asian_opening = true;
                     continue;
                 }
 
@@ -165,6 +191,22 @@ fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
             | '\u{FF09}'
             | '\u{FF3D}'
             | '\u{FF5D}'
+    )
+}
+
+fn is_east_asian_opening_punctuation(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{3008}'
+            | '\u{300A}'
+            | '\u{300C}'
+            | '\u{300E}'
+            | '\u{3010}'
+            | '\u{3014}'
+            | '\u{3016}'
+            | '\u{FF08}'
+            | '\u{FF3B}'
+            | '\u{FF5B}'
     )
 }
 
@@ -612,6 +654,28 @@ mod tests {
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 80.0, None),
             TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_cjk_opening_punctuation_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "（漢（漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
         );
     }
 
