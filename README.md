@@ -258,6 +258,7 @@ Tag-based CI and release validation also now replays:
 - fullwidth and ideographic-form-aware wrap classification so East Asian-width forms stay on the natural break path instead of being measured like one Latin token
 - CJK non-starter punctuation clustering so characters like `、` stay attached to the preceding glyph during emergency-wrap classification
 - slash-aware wrap classification so `alpha/beta` style text stays on the normal break path instead of being treated as one unbreakable token
+- hyphen-aware wrap classification so `alpha-beta` style text also stays on the normal break path instead of falling back to emergency wrapping
 
 ## Autoresearch
 
