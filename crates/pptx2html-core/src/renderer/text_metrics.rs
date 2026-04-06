@@ -110,9 +110,15 @@ fn longest_unbreakable_span_width_px(
             let glyph_width_px = estimated_glyph_em_width(ch) * font_size_px;
 
             if is_east_asian_char(ch) {
+                if is_east_asian_nonstarter_punctuation(ch) {
+                    current_width_px += glyph_width_px;
+                    max_width_px = max_width_px.max(current_width_px);
+                    current_width_px = 0.0;
+                    continue;
+                }
+
                 max_width_px = max_width_px.max(current_width_px);
-                current_width_px = 0.0;
-                max_width_px = max_width_px.max(glyph_width_px);
+                current_width_px = glyph_width_px;
                 continue;
             }
 
@@ -129,6 +135,26 @@ fn is_breaking_whitespace(ch: char) -> bool {
 
 fn is_soft_hyphen(ch: char) -> bool {
     ch == '\u{00AD}'
+}
+
+fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{3001}'
+            | '\u{3002}'
+            | '\u{FF0C}'
+            | '\u{FF0E}'
+            | '\u{FF01}'
+            | '\u{FF1F}'
+            | '\u{FF1A}'
+            | '\u{FF1B}'
+            | '\u{300D}'
+            | '\u{300F}'
+            | '\u{3011}'
+            | '\u{FF09}'
+            | '\u{FF3D}'
+            | '\u{FF5D}'
+    )
 }
 
 fn estimated_glyph_em_width(ch: char) -> f64 {
@@ -509,6 +535,28 @@ mod tests {
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 90.0, Some(0.7)),
             TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_cjk_nonstarter_punctuation_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢、漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
         );
     }
 

@@ -2388,6 +2388,35 @@ fn test_norm_autofit_fullwidth_sentence_does_not_force_emergency_wrap() {
 }
 
 #[test]
+fn test_cjk_nonstarter_punctuation_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CjkPunctuationWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢、漢、漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "CJK non-starter punctuation clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "CJK non-starter punctuation clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_mixed_font_unbreakable_token_spanning_runs_marks_emergency_wrap() {
     let slide = r#"
     <p:sp>
