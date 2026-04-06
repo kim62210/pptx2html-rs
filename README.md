@@ -254,6 +254,7 @@ Tag-based CI and release validation also now replays:
 - `spAutoFit` growth semantics that keep long unbreakable tokens on the grow-to-fit path instead of forcing emergency word breaking
 - partial `normAutofit` inheritance that preserves inherited line-spacing reduction when a child placeholder only overrides `fontScale`
 - non-breaking-space-aware wrap classification so NBSP-separated text follows browser non-breaking behavior during emergency-wrap decisions
+- soft-hyphen-aware wrap classification so discretionary hyphenation stays on the normal line-breaking path instead of forcing emergency wrapping
 
 ## Autoresearch
 

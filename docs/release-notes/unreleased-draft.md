@@ -18,6 +18,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Keep `spAutoFit` text bodies on the grow-to-fit path for long unbreakable tokens instead of forcing emergency word breaking.
 - Preserve inherited `lnSpcReduction` when a child `normAutofit` override only changes `fontScale`, so partial overrides keep the same shrink semantics.
 - Treat NBSP-separated text as non-breaking during wrap classification so emergency-wrap decisions match browser layout more closely.
+- Treat soft hyphen as a discretionary break opportunity during wrap classification so normal hyphenation does not fall back to emergency wrapping.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -31,6 +32,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - `spAutoFit` text bodies now keep their growth-oriented sizing semantics even when the content is a long unbreakable token.
 - Child `normAutofit` overrides now keep inherited line-spacing reduction instead of dropping it when they only override `fontScale`.
 - NBSP-separated text now enters the same emergency-wrap path as other non-breaking tokens when it no longer fits the box.
+- Soft-hyphenated text now stays on the normal break path instead of being treated as one long unbreakable token.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging
