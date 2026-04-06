@@ -16,7 +16,7 @@ Provide a sequenced backlog for the remaining pptx2html-rs work, grounded in the
 
 ## Current Summary
 
-- **Text**: rendered and significantly improved, with adjacent-run unbreakable token detection plus paragraph-level and inherited text-style font sizes now feeding emergency-wrap decisions, `spAutoFit` growth paths no longer forcing emergency word breaking for long tokens, partial `normAutofit` overrides now preserving inherited line-spacing reduction, NBSP-separated text now participating in non-breaking wrap classification, soft-hyphenated text now staying on the normal discretionary-break path, fullwidth/ideographic forms now participating in East Asian-style break classification, CJK non-starter punctuation now staying attached to the preceding glyph during wrap classification, slash-/hyphen-separated text now using ordinary break opportunities, CJK opening punctuation now staying attached to the following glyph during wrap classification, and CJK closing angle-bracket punctuation now staying attached to the preceding glyph during wrap classification, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
+- **Text**: rendered and significantly improved, with adjacent-run unbreakable token detection plus paragraph-level and inherited text-style font sizes now feeding emergency-wrap decisions, `spAutoFit` growth paths no longer forcing emergency word breaking for long tokens, partial `normAutofit` overrides now preserving inherited line-spacing reduction, NBSP-separated text now participating in non-breaking wrap classification, soft-hyphenated text now staying on the normal discretionary-break path, fullwidth/ideographic forms now participating in East Asian-style break classification, CJK non-starter punctuation now staying attached to the preceding glyph during wrap classification, slash-/hyphen-separated text now using ordinary break opportunities, CJK opening punctuation now staying attached to the following glyph during wrap classification, CJK closing angle-bracket punctuation now staying attached to the preceding glyph during wrap classification, and white square bracket pairs now staying on a single East Asian punctuation cluster, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
 - **Layout / inheritance**: most placeholder and bodyPr carry-over behavior is implemented, but exactness depends on broader verification and a few remaining metadata/template-style items.
 - **Charts**: approximate direct rendering now covers clustered, stacked, and percent-stacked bar/column charts plus simple line and single-series pie charts, but richer labels, axes, and additional chart families remain.
 - **Verification**: PowerPoint-first evaluation infrastructure exists, but the golden/reference workflow still needs to be turned into a routine release gate for exact claims.
@@ -33,7 +33,7 @@ These items directly block promotion from `approximate` to `exact`.
 
 **Key gaps:**
 - Replace browser-default behavior with more deterministic text measurement where feasible.
-- Improve line breaking beyond the newly covered adjacent-run, paragraph-default-size, inherited-style-size, `spAutoFit` long-token, partial `normAutofit` inheritance, NBSP non-breaking, soft-hyphen discretionary-break, fullwidth East Asian-form, CJK non-starter punctuation, slash-/hyphen-separated token, CJK opening-punctuation, and CJK closing angle-bracket cases, especially in harder mixed-font, mixed-script, and autofit scenarios.
+- Improve line breaking beyond the newly covered adjacent-run, paragraph-default-size, inherited-style-size, `spAutoFit` long-token, partial `normAutofit` inheritance, NBSP non-breaking, soft-hyphen discretionary-break, fullwidth East Asian-form, CJK non-starter punctuation, slash-/hyphen-separated token, CJK opening-punctuation, CJK closing angle-bracket, and white square bracket cases, especially in harder mixed-font, mixed-script, and autofit scenarios.
 - Revisit `normAutofit`/`spAutoFit` precision once measurement hooks are in place.
 
 **Files likely involved:**
@@ -44,7 +44,7 @@ These items directly block promotion from `approximate` to `exact`.
 - `evaluate/create_golden_set.py`
 
 **Suggested slices:**
-1. Add another deterministic line-breaking regression beyond the adjacent-run, paragraph-default-size, inherited-style-size, `spAutoFit` long-token, partial `normAutofit` inheritance, NBSP non-breaking, soft-hyphen discretionary-break, fullwidth East Asian-form, CJK non-starter punctuation, slash-/hyphen-separated token, CJK opening-punctuation, and CJK closing angle-bracket cases.
+1. Add another deterministic line-breaking regression beyond the adjacent-run, paragraph-default-size, inherited-style-size, `spAutoFit` long-token, partial `normAutofit` inheritance, NBSP non-breaking, soft-hyphen discretionary-break, fullwidth East Asian-form, CJK non-starter punctuation, slash-/hyphen-separated token, CJK opening-punctuation, CJK closing angle-bracket, and white square bracket cases.
 2. Integrate a small measurement helper into autofit-related rendering decisions.
 3. Expand golden fixtures to include mixed-font, narrow-box, and autoshrink reference cases.
 
