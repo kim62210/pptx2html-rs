@@ -252,6 +252,7 @@ Tag-based CI and release validation also now replays:
 - text/layout fixture-bundle drift checks so the gate documented in `evaluate/README.md` stays aligned with `evaluate/powerpoint_evidence.py`
 - text-wrap fidelity checks that now cover explicit runs, paragraph defaults, and inherited text-style font sizes under autofit
 - `spAutoFit` growth semantics that keep long unbreakable tokens on the grow-to-fit path instead of forcing emergency word breaking
+- partial `normAutofit` inheritance that preserves inherited line-spacing reduction when a child placeholder only overrides `fontScale`
 
 ## Autoresearch
 
