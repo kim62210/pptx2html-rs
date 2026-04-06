@@ -2,7 +2,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
+
+try:
+    from evaluate.powerpoint_evidence import EXACT_PROMOTION_FAMILIES
+except ModuleNotFoundError:
+    from powerpoint_evidence import EXACT_PROMOTION_FAMILIES
+
+
+def extract_text_layout_gate_fixtures(readme_content: str) -> list[str]:
+    section_match = re.search(
+        r"### Text/Layout exact-promotion gate(?P<section>.*?)(?:\n### |\Z)",
+        readme_content,
+        flags=re.DOTALL,
+    )
+    if section_match is None:
+        return []
+
+    return re.findall(r"- `([^`]+)\.pptx`", section_match.group("section"))
 
 
 def check_exactness_contract(repo_root: str | Path) -> dict[str, object]:
@@ -84,6 +102,22 @@ def check_exactness_contract(repo_root: str | Path) -> dict[str, object]:
         content = path.read_text(encoding="utf-8")
         if any(snippet not in content for snippet in snippets):
             missing_checks.append(label)
+
+    evaluate_readme = root / "evaluate/README.md"
+    if evaluate_readme.is_file():
+        checked_files.append(str(evaluate_readme.relative_to(root)))
+        documented_fixtures = extract_text_layout_gate_fixtures(
+            evaluate_readme.read_text(encoding="utf-8")
+        )
+        expected_fixtures = EXACT_PROMOTION_FAMILIES.get("text-layout", [])
+        if sorted(documented_fixtures) != sorted(expected_fixtures):
+            missing_checks.append(
+                "evaluate/README.md: text-layout fixture bundle matches powerpoint_evidence.py"
+            )
+    else:
+        missing_checks.append(
+            "evaluate/README.md: text-layout fixture bundle matches powerpoint_evidence.py"
+        )
 
     return {
         "ok": not missing_checks,
