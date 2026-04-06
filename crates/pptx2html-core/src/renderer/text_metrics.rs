@@ -192,6 +192,7 @@ fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
             | '\u{3011}'
             | '\u{3015}'
             | '\u{3017}'
+            | '\u{301B}'
             | '\u{FF09}'
             | '\u{FF3D}'
             | '\u{FF5D}'
@@ -208,6 +209,7 @@ fn is_east_asian_opening_punctuation(ch: char) -> bool {
             | '\u{3010}'
             | '\u{3014}'
             | '\u{3016}'
+            | '\u{301A}'
             | '\u{FF08}'
             | '\u{FF3B}'
             | '\u{FF5B}'
@@ -688,6 +690,28 @@ mod tests {
         let paragraphs = vec![TextParagraph {
             runs: vec![TextRun {
                 text: "漢》漢》漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_white_square_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〚漢〛〚漢〛".into(),
                 style: TextStyle {
                     font_size: Some(18.0),
                     ..Default::default()
