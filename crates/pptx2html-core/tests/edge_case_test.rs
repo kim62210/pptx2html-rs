@@ -332,8 +332,8 @@ fn test_invalid_zip_returns_error() {
 fn test_password_protected_detection() {
     // Build a fake "encrypted" package with EncryptedPackage entry
     use std::io::{Cursor, Write};
-    use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -2323,6 +2323,38 @@ fn test_norm_autofit_cjk_sentence_does_not_force_emergency_wrap() {
 }
 
 #[test]
+fn test_mixed_font_unbreakable_token_spanning_runs_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="MixedFontWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1600000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p>
+          <a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>overflow</a:t></a:r>
+          <a:r><a:rPr sz="1800"><a:latin typeface="Aptos"/></a:rPr><a:t>detector</a:t></a:r>
+        </a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Unbreakable mixed-font tokens that span runs should opt into emergency wrapping: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Emergency wrapping should emit overflow-wrap:anywhere for mixed-font split tokens: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_norm_autofit_no_font_scale_no_overflow() {
     let slide = r#"
     <p:sp>
@@ -2492,9 +2524,15 @@ fn test_font_resolution_ledger_tracks_complex_script_paragraph_default_font() {
         .find(|entry| entry.run_text == "السلام عليكم")
         .expect("font ledger entry");
 
-    assert_eq!(entry.requested_typeface.as_deref(), Some("Scheherazade New"));
+    assert_eq!(
+        entry.requested_typeface.as_deref(),
+        Some("Scheherazade New")
+    );
     assert_eq!(entry.resolved_typeface.as_deref(), Some("Scheherazade New"));
-    assert_eq!(entry.source, Some(pptx2html_core::FontResolutionSource::ParagraphDefaults));
+    assert_eq!(
+        entry.source,
+        Some(pptx2html_core::FontResolutionSource::ParagraphDefaults)
+    );
     assert!(result.html.contains("font-family: 'Scheherazade New'"));
 }
 
@@ -2607,9 +2645,18 @@ fn test_mixed_script_single_run_splits_font_family_segments() {
 
     assert!(html.contains("font-family: 'Calibri'"));
     assert!(html.contains("font-family: 'Amiri'"));
-    assert!(html.contains("Hello"), "latin content should survive as its own segment: {html}");
-    assert!(html.contains("مرحبا"), "arabic content should survive as its own segment: {html}");
-    assert!(html.contains("world"), "trailing latin content should survive as its own segment: {html}");
+    assert!(
+        html.contains("Hello"),
+        "latin content should survive as its own segment: {html}"
+    );
+    assert!(
+        html.contains("مرحبا"),
+        "arabic content should survive as its own segment: {html}"
+    );
+    assert!(
+        html.contains("world"),
+        "trailing latin content should survive as its own segment: {html}"
+    );
 }
 
 #[test]
@@ -2664,8 +2711,14 @@ fn test_mixed_script_single_run_splits_theme_complex_script_segments() {
 
     assert!(html.contains("font-family: 'Aptos'"));
     assert!(html.contains("font-family: 'Amiri'"));
-    assert!(html.contains("Hello"), "latin themed segment should survive: {html}");
-    assert!(html.contains("مرحبا"), "arabic themed segment should survive: {html}");
+    assert!(
+        html.contains("Hello"),
+        "latin themed segment should survive: {html}"
+    );
+    assert!(
+        html.contains("مرحبا"),
+        "arabic themed segment should survive: {html}"
+    );
 }
 
 #[test]
@@ -2686,9 +2739,18 @@ fn test_mixed_script_single_run_keeps_emoji_zwj_cluster_in_single_segment() {
     let pptx = fixtures::MinimalPptx::new(slide).build();
     let html = render_html(&pptx);
 
-    assert!(html.contains("👩‍💻"), "emoji cluster text should survive intact: {html}");
-    assert!(html.contains("font-family: 'Segoe UI Emoji'"), "emoji cluster should use complex-script/emoji font path: {html}");
-    assert!(!html.contains("👩</span><span class=\"run-segment\""), "emoji cluster must not split at ZWJ boundaries: {html}");
+    assert!(
+        html.contains("👩‍💻"),
+        "emoji cluster text should survive intact: {html}"
+    );
+    assert!(
+        html.contains("font-family: 'Segoe UI Emoji'"),
+        "emoji cluster should use complex-script/emoji font path: {html}"
+    );
+    assert!(
+        !html.contains("👩</span><span class=\"run-segment\""),
+        "emoji cluster must not split at ZWJ boundaries: {html}"
+    );
 }
 
 #[test]
@@ -2711,15 +2773,24 @@ fn test_mixed_script_single_run_uses_emoji_font_for_emoji_segment() {
 
     let emoji_segment_idx = html.find("👩‍💻</span>").expect("emoji cluster segment");
     let emoji_window = &html[emoji_segment_idx.saturating_sub(120)..emoji_segment_idx + 24];
-    assert!(emoji_window.contains("Segoe UI Emoji"), "emoji cluster should resolve to emoji font, not latin fallback: {emoji_window}");
+    assert!(
+        emoji_window.contains("Segoe UI Emoji"),
+        "emoji cluster should resolve to emoji font, not latin fallback: {emoji_window}"
+    );
 
     let leading_a_idx = html.find(">A</span>").expect("leading latin segment");
     let leading_window = &html[leading_a_idx.saturating_sub(120)..leading_a_idx + 10];
-    assert!(leading_window.contains("Calibri"), "leading latin segment should keep latin font: {leading_window}");
+    assert!(
+        leading_window.contains("Calibri"),
+        "leading latin segment should keep latin font: {leading_window}"
+    );
 
     let trailing_b_idx = html.find(">B</span>").expect("trailing latin segment");
     let trailing_window = &html[trailing_b_idx.saturating_sub(120)..trailing_b_idx + 10];
-    assert!(trailing_window.contains("Calibri"), "trailing latin segment should keep latin font: {trailing_window}");
+    assert!(
+        trailing_window.contains("Calibri"),
+        "trailing latin segment should keep latin font: {trailing_window}"
+    );
 }
 
 #[test]

@@ -19,7 +19,6 @@ pub struct FontResolutionEntry {
     pub fallback_used: bool,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextWrapPolicy {
     Normal,
@@ -47,9 +46,7 @@ pub fn classify_wrap_policy(
 ) -> TextWrapPolicy {
     let max_token_width_px = paragraphs
         .iter()
-        .flat_map(|para| para.runs.iter())
-        .filter(|run| !run.is_break)
-        .map(|run| longest_token_width_px(run, font_scale))
+        .map(|para| longest_unbreakable_span_width_px(&para.runs, font_scale))
         .fold(0.0, f64::max);
 
     if max_token_width_px > available_width_px.max(1.0) {
@@ -59,30 +56,41 @@ pub fn classify_wrap_policy(
     }
 }
 
-fn longest_token_width_px(run: &TextRun, font_scale: Option<f64>) -> f64 {
-    let font_size_pt = run.style.font_size.unwrap_or(18.0) * font_scale.unwrap_or(1.0);
-    let font_size_px = font_size_pt * (96.0 / 72.0);
+fn longest_unbreakable_span_width_px(runs: &[TextRun], font_scale: Option<f64>) -> f64 {
+    let mut max_width_px: f64 = 0.0;
+    let mut current_width_px: f64 = 0.0;
 
-    run.text
-        .split_whitespace()
-        .map(|token| estimate_unbreakable_token_width_px(token, font_size_px))
-        .fold(0.0, f64::max)
-}
+    for run in runs {
+        if run.is_break {
+            max_width_px = max_width_px.max(current_width_px);
+            current_width_px = 0.0;
+            continue;
+        }
 
-fn estimate_unbreakable_token_width_px(token: &str, font_size_px: f64) -> f64 {
-    if token.is_empty() {
-        return 0.0;
+        let font_size_pt = run.style.font_size.unwrap_or(18.0) * font_scale.unwrap_or(1.0);
+        let font_size_px = font_size_pt * (96.0 / 72.0);
+
+        for ch in run.text.chars() {
+            if ch.is_whitespace() {
+                max_width_px = max_width_px.max(current_width_px);
+                current_width_px = 0.0;
+                continue;
+            }
+
+            let glyph_width_px = estimated_glyph_em_width(ch) * font_size_px;
+
+            if is_east_asian_char(ch) {
+                max_width_px = max_width_px.max(current_width_px);
+                current_width_px = 0.0;
+                max_width_px = max_width_px.max(glyph_width_px);
+                continue;
+            }
+
+            current_width_px += glyph_width_px;
+        }
     }
 
-    if token.chars().all(is_east_asian_char) {
-        return token
-            .chars()
-            .map(estimated_glyph_em_width)
-            .fold(0.0, f64::max)
-            * font_size_px;
-    }
-
-    token.chars().map(estimated_glyph_em_width).sum::<f64>() * font_size_px
+    max_width_px.max(current_width_px)
 }
 
 fn estimated_glyph_em_width(ch: char) -> f64 {
@@ -91,9 +99,7 @@ fn estimated_glyph_em_width(ch: char) -> f64 {
         | '\u{3400}'..='\u{4DBF}'
         | '\u{3040}'..='\u{30FF}'
         | '\u{AC00}'..='\u{D7A3}' => 1.0,
-        '\u{0590}'..='\u{05FF}' | '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' => {
-            0.75
-        }
+        '\u{0590}'..='\u{05FF}' | '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' => 0.75,
         'A'..='Z' | '0'..='9' => 0.62,
         'a'..='z' => 0.56,
         '-' | '_' | '/' | '\\' | '.' | ',' | ':' | ';' => 0.35,
@@ -252,8 +258,8 @@ mod tests {
     use crate::model::{FontStyle, TextParagraph, TextRun, TextStyle};
 
     use super::{
-        ScriptCategory, TextWrapPolicy, classify_script_category, classify_wrap_policy,
-        segment_by_script,
+        classify_script_category, classify_wrap_policy, segment_by_script, ScriptCategory,
+        TextWrapPolicy,
     };
 
     #[test]
@@ -301,6 +307,40 @@ mod tests {
     }
 
     #[test]
+    fn classify_wrap_policy_marks_split_mixed_font_token_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![
+                TextRun {
+                    text: "overflow".into(),
+                    style: TextStyle {
+                        font_size: Some(18.0),
+                        ..Default::default()
+                    },
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+                TextRun {
+                    text: "detector".into(),
+                    style: TextStyle {
+                        font_size: Some(18.0),
+                        ..Default::default()
+                    },
+                    font: FontStyle::default(),
+                    hyperlink: None,
+                    is_break: false,
+                },
+            ],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, 160.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
     fn classify_script_category_detects_complex_script_text() {
         assert_eq!(
             classify_script_category("مرحبا بالعالم"),
@@ -310,7 +350,10 @@ mod tests {
 
     #[test]
     fn classify_script_category_detects_indic_text_as_complex() {
-        assert_eq!(classify_script_category("नमस्ते दुनिया"), ScriptCategory::Complex);
+        assert_eq!(
+            classify_script_category("नमस्ते दुनिया"),
+            ScriptCategory::Complex
+        );
     }
 
     #[test]
