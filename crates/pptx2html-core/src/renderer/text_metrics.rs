@@ -94,7 +94,7 @@ fn longest_unbreakable_span_width_px(
         let font_size_px = font_size_pt * (96.0 / 72.0);
 
         for ch in run.text.chars() {
-            if ch.is_whitespace() {
+            if is_breaking_whitespace(ch) {
                 max_width_px = max_width_px.max(current_width_px);
                 current_width_px = 0.0;
                 continue;
@@ -116,6 +116,10 @@ fn longest_unbreakable_span_width_px(
     max_width_px.max(current_width_px)
 }
 
+fn is_breaking_whitespace(ch: char) -> bool {
+    ch.is_whitespace() && ch != '\u{00A0}'
+}
+
 fn estimated_glyph_em_width(ch: char) -> f64 {
     match ch {
         '\u{4E00}'..='\u{9FFF}'
@@ -123,6 +127,7 @@ fn estimated_glyph_em_width(ch: char) -> f64 {
         | '\u{3040}'..='\u{30FF}'
         | '\u{AC00}'..='\u{D7A3}' => 1.0,
         '\u{0590}'..='\u{05FF}' | '\u{0600}'..='\u{06FF}' | '\u{0750}'..='\u{077F}' => 0.75,
+        '\u{00A0}' => 0.33,
         'A'..='Z' | '0'..='9' => 0.62,
         'a'..='z' => 0.56,
         '-' | '_' | '/' | '\\' | '.' | ',' | ':' | ';' => 0.35,
@@ -419,6 +424,28 @@ mod tests {
 
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[Some(28.0)], 180.0, Some(0.7)),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_treats_nbsp_as_non_breaking() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "Alpha\u{00A0}Beta\u{00A0}Gamma".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 100.0, None),
             TextWrapPolicy::Emergency
         );
     }

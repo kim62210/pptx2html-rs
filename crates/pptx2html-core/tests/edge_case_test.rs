@@ -3073,6 +3073,35 @@ fn test_unbreakable_text_body_marks_emergency_wrap() {
 }
 
 #[test]
+fn test_nbsp_separated_text_body_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="NbspWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1700000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>Alpha&#160;Beta&#160;Gamma</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "NBSP-separated text should still opt into emergency wrapping when the non-breaking token is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "NBSP-separated text should carry an emergency-wrap marker when the non-breaking token is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_run_without_any_size_uses_hardcoded_default_font_size() {
     let slide = r#"
     <p:sp>
