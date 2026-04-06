@@ -72,12 +72,14 @@ fn longest_unbreakable_span_width_px(
     let mut max_width_px: f64 = 0.0;
     let mut current_width_px: f64 = 0.0;
     let mut pending_east_asian_opening = false;
+    let mut previous_char: Option<char> = None;
 
     for run in &paragraph.runs {
         if run.is_break {
             max_width_px = max_width_px.max(current_width_px);
             current_width_px = 0.0;
             pending_east_asian_opening = false;
+            previous_char = None;
             continue;
         }
 
@@ -100,6 +102,7 @@ fn longest_unbreakable_span_width_px(
                 max_width_px = max_width_px.max(current_width_px);
                 current_width_px = 0.0;
                 pending_east_asian_opening = false;
+                previous_char = None;
                 continue;
             }
 
@@ -108,6 +111,7 @@ fn longest_unbreakable_span_width_px(
                 max_width_px = max_width_px.max(current_width_px + hyphen_width_px);
                 current_width_px = 0.0;
                 pending_east_asian_opening = false;
+                previous_char = None;
                 continue;
             }
 
@@ -116,6 +120,7 @@ fn longest_unbreakable_span_width_px(
                 max_width_px = max_width_px.max(current_width_px + break_width_px);
                 current_width_px = 0.0;
                 pending_east_asian_opening = false;
+                previous_char = None;
                 continue;
             }
 
@@ -123,6 +128,7 @@ fn longest_unbreakable_span_width_px(
 
             if pending_east_asian_opening {
                 current_width_px += glyph_width_px;
+                previous_char = Some(ch);
 
                 if is_east_asian_opening_punctuation(ch) {
                     continue;
@@ -140,6 +146,7 @@ fn longest_unbreakable_span_width_px(
                     max_width_px = max_width_px.max(current_width_px);
                     current_width_px = 0.0;
                     pending_east_asian_opening = false;
+                    previous_char = Some(ch);
                     continue;
                 }
 
@@ -147,15 +154,23 @@ fn longest_unbreakable_span_width_px(
                     max_width_px = max_width_px.max(current_width_px);
                     current_width_px = glyph_width_px;
                     pending_east_asian_opening = true;
+                    previous_char = Some(ch);
                     continue;
                 }
 
                 max_width_px = max_width_px.max(current_width_px);
                 current_width_px = glyph_width_px;
+                previous_char = Some(ch);
                 continue;
             }
 
+            if previous_char.is_some_and(is_east_asian_char) {
+                max_width_px = max_width_px.max(current_width_px);
+                current_width_px = 0.0;
+            }
+
             current_width_px += glyph_width_px;
+            previous_char = Some(ch);
         }
     }
 
@@ -595,6 +610,28 @@ mod tests {
 
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 90.0, Some(0.7)),
+            TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_keeps_mixed_script_sentence_normal() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢Alpha漢Beta".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 55.0, Some(0.7)),
             TextWrapPolicy::Normal
         );
     }

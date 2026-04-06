@@ -2388,6 +2388,37 @@ fn test_norm_autofit_fullwidth_sentence_does_not_force_emergency_wrap() {
 }
 
 #[test]
+fn test_norm_autofit_mixed_script_sentence_does_not_force_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="MixedScriptAutofit"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="700000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="70000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢Alpha漢Beta</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "Mixed-script autofit text should use natural script-boundary line breaking before emergency wrapping: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "Mixed-script autofit text should not emit overflow-wrap:anywhere when script boundaries already provide breaks: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_cjk_nonstarter_punctuation_cluster_marks_emergency_wrap() {
     let slide = r#"
     <p:sp>
