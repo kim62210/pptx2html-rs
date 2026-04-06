@@ -259,6 +259,7 @@ Tag-based CI and release validation also now replays:
 - CJK non-starter punctuation clustering so characters like `、` stay attached to the preceding glyph during emergency-wrap classification
 - slash-aware wrap classification so `alpha/beta` style text stays on the normal break path instead of being treated as one unbreakable token
 - hyphen-aware wrap classification so `alpha-beta` style text also stays on the normal break path instead of falling back to emergency wrapping
+- CJK opening-punctuation clustering so characters like `（` stay attached to the following glyph during emergency-wrap classification
 
 ## Autoresearch
 

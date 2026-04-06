@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Keep CJK non-starter punctuation attached to the preceding glyph during wrap classification
 - Treat slash-separated text as having ordinary break opportunities during wrap classification
 - Treat hyphen-separated text as having ordinary break opportunities during wrap classification
+- Keep CJK opening punctuation attached to the following glyph during wrap classification
 
 ### Tests
 - Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
@@ -29,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - Add regressions for CJK non-starter punctuation clusters in text metrics and rendered HTML wrap behavior
 - Add regressions for slash-separated text in text metrics and rendered HTML wrap behavior
 - Add regressions for hyphen-separated text in text metrics and rendered HTML wrap behavior
+- Add regressions for CJK opening punctuation clusters in text metrics and rendered HTML wrap behavior
 
 ### Docs / Exactness Contract
 - Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations
