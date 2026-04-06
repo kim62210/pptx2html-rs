@@ -1859,6 +1859,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     * (96.0 / 72.0)))
                 .max(1.0);
             let wrap_policy = if effective_word_wrap {
+                if matches!(effective_auto_fit, AutoFit::Shrink) {
+                    TextWrapPolicy::Normal
+                } else {
                 let inherited_font_sizes: Vec<Option<f64>> = text_body
                     .paragraphs
                     .iter()
@@ -1875,6 +1878,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     content_width_px,
                     font_scale,
                 )
+                }
             } else {
                 TextWrapPolicy::Normal
             };

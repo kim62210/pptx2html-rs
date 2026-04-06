@@ -2128,6 +2128,40 @@ fn test_sp_auto_fit_allows_text_body_to_grow() {
 }
 
 #[test]
+fn test_sp_auto_fit_does_not_force_emergency_wrap_for_unbreakable_token() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="GrowLongToken"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1600000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr><a:spAutoFit/></a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>SupercalifragilisticexpialidociousWithoutSpaces</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk = &html[tb_start..tb_start + 360.min(html.len() - tb_start)];
+
+    assert!(
+        tb_chunk.contains("height: auto") && tb_chunk.contains("min-height: 100%"),
+        "spAutoFit should keep growth-oriented sizing for long tokens: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "spAutoFit should grow instead of forcing overflow-wrap:anywhere: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "spAutoFit should not opt into the emergency-wrap class for long tokens: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_no_autofit_is_distinct_from_unspecified_autofit() {
     let slide = r#"
     <p:sp>
