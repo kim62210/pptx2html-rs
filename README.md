@@ -249,6 +249,7 @@ Tag-based CI and release validation also now replays:
 - installed-wheel Python runtime smoke for the published binding surface
 - WASM package contract + package-root/runtime smoke for the npm/browser distribution
 - exactness contract checks plus exported evaluation artifacts (`powerpoint-evidence-summary.json`, `powerpoint-evidence-text-layout-gate.json`, `exactness-contract-report.json`)
+- text/layout fixture-bundle drift checks so the gate documented in `evaluate/README.md` stays aligned with `evaluate/powerpoint_evidence.py`
 
 ## Autoresearch
 

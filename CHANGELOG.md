@@ -6,12 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Rendering — Text Fidelity
 - Detect unbreakable tokens that span adjacent text runs before opting into emergency wrapping
+- Honor paragraph-level default font sizes when classifying narrow autofit text for emergency wrapping
 
 ### Tests
 - Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
+- Add regressions for paragraph-default font sizes affecting mixed-font autofit wrap decisions
 
 ### Docs / Exactness Contract
 - Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations
+- Guard the documented text-layout fixture bundle against drift from `evaluate/powerpoint_evidence.py`
 
 ### Rendering — Charts
 - Render clustered, stacked, and percent-stacked bar/column charts directly
