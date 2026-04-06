@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Preserve inherited `lnSpcReduction` when child `normAutofit` overrides only change `fontScale`
 - Treat non-breaking spaces as unbreakable during wrap classification
 - Treat soft hyphen as a discretionary break opportunity during wrap classification
+- Treat fullwidth and ideographic forms as East Asian break opportunities during wrap classification
 
 ### Tests
 - Add regressions for mixed-font split tokens in text metrics and rendered HTML wrap behavior
@@ -21,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - Add regressions for partial `normAutofit` inheritance when child placeholders override only `fontScale`
 - Add regressions for NBSP-separated text in text metrics and rendered HTML wrap behavior
 - Add regressions for soft-hyphenated text in text metrics and rendered HTML wrap behavior
+- Add regressions for fullwidth text in text metrics and rendered HTML wrap behavior
 
 ### Docs / Exactness Contract
 - Clarify the text/layout exactness gate around narrow-wrap, mixed-font, and autofit expectations

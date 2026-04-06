@@ -19,6 +19,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Preserve inherited `lnSpcReduction` when a child `normAutofit` override only changes `fontScale`, so partial overrides keep the same shrink semantics.
 - Treat NBSP-separated text as non-breaking during wrap classification so emergency-wrap decisions match browser layout more closely.
 - Treat soft hyphen as a discretionary break opportunity during wrap classification so normal hyphenation does not fall back to emergency wrapping.
+- Treat fullwidth and ideographic forms as East Asian breakable units during wrap classification so they do not collapse into one Latin-style token.
 - Harden release-readiness with exactness-contract validation, installed-wheel Python smoke coverage, and WASM package/runtime smoke checks.
 - Align the root README, evaluation guide, support-contract docs, and release-note workflow around the same exactness and packaging expectations.
 
@@ -33,6 +34,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - Child `normAutofit` overrides now keep inherited line-spacing reduction instead of dropping it when they only override `fontScale`.
 - NBSP-separated text now enters the same emergency-wrap path as other non-breaking tokens when it no longer fits the box.
 - Soft-hyphenated text now stays on the normal break path instead of being treated as one long unbreakable token.
+- Fullwidth and ideographic-width forms now stay on the natural East Asian break path instead of being measured like one Latin-style token.
 - Unsupported chart families and complex variants continue to use stable preview or placeholder fallback paths instead of partially rendered output.
 
 ## Validation and Packaging
