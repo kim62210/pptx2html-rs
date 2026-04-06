@@ -730,6 +730,28 @@ mod tests {
     }
 
     #[test]
+    fn classify_wrap_policy_marks_tortoise_shell_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〔漢〕〔漢〕".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
     fn classify_script_category_detects_complex_script_text() {
         assert_eq!(
             classify_script_category("مرحبا بالعالم"),
