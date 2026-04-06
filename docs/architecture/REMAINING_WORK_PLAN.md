@@ -16,7 +16,7 @@ Provide a sequenced backlog for the remaining pptx2html-rs work, grounded in the
 
 ## Current Summary
 
-- **Text**: rendered and significantly improved, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
+- **Text**: rendered and significantly improved, with adjacent-run unbreakable token detection now covered for emergency-wrap decisions, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
 - **Layout / inheritance**: most placeholder and bodyPr carry-over behavior is implemented, but exactness depends on broader verification and a few remaining metadata/template-style items.
 - **Charts**: approximate direct rendering now covers clustered, stacked, and percent-stacked bar/column charts plus simple line and single-series pie charts, but richer labels, axes, and additional chart families remain.
 - **Verification**: PowerPoint-first evaluation infrastructure exists, but the golden/reference workflow still needs to be turned into a routine release gate for exact claims.
@@ -33,7 +33,7 @@ These items directly block promotion from `approximate` to `exact`.
 
 **Key gaps:**
 - Replace browser-default behavior with more deterministic text measurement where feasible.
-- Improve line breaking in narrow boxes, mixed-font runs, and autofit scenarios.
+- Improve line breaking beyond the newly covered adjacent-run unbreakable-token case, especially in harder mixed-font, mixed-script, and autofit scenarios.
 - Revisit `normAutofit`/`spAutoFit` precision once measurement hooks are in place.
 
 **Files likely involved:**
@@ -44,7 +44,7 @@ These items directly block promotion from `approximate` to `exact`.
 - `evaluate/create_golden_set.py`
 
 **Suggested slices:**
-1. Add another deterministic line-breaking regression around narrow/mixed-font text.
+1. Add another deterministic line-breaking regression beyond the adjacent-run unbreakable-token case.
 2. Integrate a small measurement helper into autofit-related rendering decisions.
 3. Expand golden fixtures to include mixed-font, narrow-box, and autoshrink reference cases.
 
