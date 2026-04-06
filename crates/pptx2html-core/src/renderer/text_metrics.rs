@@ -190,6 +190,7 @@ fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
             | '\u{300D}'
             | '\u{300F}'
             | '\u{3011}'
+            | '\u{3019}'
             | '\u{3015}'
             | '\u{3017}'
             | '\u{301B}'
@@ -207,6 +208,7 @@ fn is_east_asian_opening_punctuation(ch: char) -> bool {
             | '\u{300C}'
             | '\u{300E}'
             | '\u{3010}'
+            | '\u{3018}'
             | '\u{3014}'
             | '\u{3016}'
             | '\u{301A}'
@@ -734,6 +736,28 @@ mod tests {
         let paragraphs = vec![TextParagraph {
             runs: vec![TextRun {
                 text: "〔漢〕〔漢〕".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_lenticular_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〘漢〙〘漢〙".into(),
                 style: TextStyle {
                     font_size: Some(18.0),
                     ..Default::default()
