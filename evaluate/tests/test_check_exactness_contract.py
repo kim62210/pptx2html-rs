@@ -46,6 +46,7 @@ class CheckExactnessContractTests(unittest.TestCase):
                     + text_layout_gate_fixture_lines()
                     + "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
                     + "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                    + "- mixed East Asian/Latin script boundaries should stay on natural wrap paths before emergency wrapping is considered\n"
                     + "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
                     + "- Python 3.11+\n"
                 ),
@@ -144,6 +145,7 @@ class CheckExactnessContractTests(unittest.TestCase):
                     + text_layout_gate_fixture_lines()
                     + "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
                     + "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                    + "- mixed East Asian/Latin script boundaries should stay on natural wrap paths before emergency wrapping is considered\n"
                     + "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
                     + "- Python 3.12+\n"
                 ),
@@ -197,6 +199,7 @@ class CheckExactnessContractTests(unittest.TestCase):
                 + drifted_fixture_lines
                 + "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
                 + "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                + "- mixed East Asian/Latin script boundaries should stay on natural wrap paths before emergency wrapping is considered\n"
                 + "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
                 + "- Python 3.11+\n",
             )
@@ -222,6 +225,56 @@ class CheckExactnessContractTests(unittest.TestCase):
             self.assertFalse(payload["ok"])
             self.assertIn(
                 "evaluate/README.md: text-layout fixture bundle matches powerpoint_evidence.py",
+                payload["missing_checks"],
+            )
+
+    def test_reports_missing_mixed_script_wrap_behavior_expectation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._write_file(
+                root / "README.md",
+                "require a PowerPoint-reference check before labeling a feature `exact`\n",
+            )
+            self._write_file(
+                root / "docs/architecture/CAPABILITY_MATRIX.md",
+                "evaluate/README.md\nevaluate/powerpoint_golden/README.md\n",
+            )
+            self._write_file(
+                root / "evaluate/README.md",
+                (
+                    "`powerpoint-evidence-summary.json`\n"
+                    "`powerpoint-evidence-text-layout-gate.json`\n"
+                    + "### Text/Layout exact-promotion gate\n"
+                    + "1. **Fixture coverage** from `create_golden_set.py` for all of these families:\n"
+                    + text_layout_gate_fixture_lines()
+                    + "- narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered\n"
+                    + "- mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate\n"
+                    + "- `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion\n"
+                    + "- Python 3.11+\n"
+                ),
+            )
+            self._write_file(
+                root / "evaluate/powerpoint_golden/README.md",
+                "text/layout promotions must cite the capture batch metadata together with the matching fixture bundle from `evaluate/README.md`\n",
+            )
+            self._write_file(
+                root / ".github/workflows/ci.yml",
+                'python-version: "3.11"\n'
+                "python evaluate/powerpoint_evidence.py summary --output-json artifacts/evaluate/powerpoint-evidence-summary.json\n"
+                "python evaluate/powerpoint_evidence.py gate --family text-layout --output-json artifacts/evaluate/powerpoint-evidence-text-layout-gate.json || true\n",
+            )
+            self._write_file(
+                root / ".github/workflows/release.yml",
+                'python-version: "3.11"\n'
+                "python evaluate/powerpoint_evidence.py summary --output-json artifacts/evaluate/powerpoint-evidence-summary.json\n"
+                "python evaluate/powerpoint_evidence.py gate --family text-layout --output-json artifacts/evaluate/powerpoint-evidence-text-layout-gate.json || true\n",
+            )
+
+            payload = check_exactness_contract(root)
+
+            self.assertFalse(payload["ok"])
+            self.assertIn(
+                "evaluate/README.md: documents text-layout gate behavior expectations",
                 payload["missing_checks"],
             )
 

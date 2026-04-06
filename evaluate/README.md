@@ -73,6 +73,7 @@ Behavior expectations for this gate:
 
 - narrow-box wrapping should stay on normal wrapping paths unless content remains effectively unbreakable after ordinary break opportunities are considered,
 - mixed-font and mixed-script segmentation should preserve intended run-level font resolution through the text/layout gate,
+- mixed East Asian/Latin script boundaries should stay on natural wrap paths before emergency wrapping is considered,
 - `normAutofit` / `spAutoFit` behavior should be evaluated together with wrapping decisions before exact promotion.
 
 If any item above is missing, keep the family at `approximate`.
