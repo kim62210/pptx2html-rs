@@ -197,6 +197,7 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Line/area point labels | `<c:dLbls>` | Approximate |
 | Chart axis titles | `<c:catAx>/<c:valAx> <c:title>` | Approximate |
 | Direct area charts (standard) | `<c:areaChart>` | Approximate |
+| Direct area3D charts (flat render) | `<c:area3DChart>` | Approximate |
 | Direct scatter charts | `<c:scatterChart>` | Approximate |
 | Direct bubble charts (single-series, no `<c:dLbls>`, non-negative sizes, area semantics, approximate bubbleScale support) | `<c:bubbleChart>` | Approximate |
 | Direct radar charts (single-series, no `<c:dLbls>`) | `<c:radarChart>` | Approximate |

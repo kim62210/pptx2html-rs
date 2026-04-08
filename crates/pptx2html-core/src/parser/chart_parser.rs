@@ -118,7 +118,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             _ => ChartScatterStyle::Marker,
                         });
                     }
-                    "areaChart" => {
+                    "areaChart" | "area3DChart" => {
                         in_area_chart = true;
                         chart_type = ChartType::Area;
                         grouping = ChartGrouping::Standard;
@@ -343,7 +343,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "lineChart" | "line3DChart" => in_line_chart = false,
                     "scatterChart" => in_scatter_chart = false,
                     "bubbleChart" => in_bubble_chart = false,
-                    "areaChart" => in_area_chart = false,
+                    "areaChart" | "area3DChart" => in_area_chart = false,
                     "radarChart" => in_radar_chart = false,
                     "ofPieChart" => in_of_pie_chart = false,
                     "pieChart" | "pie3DChart" => in_pie_chart = false,

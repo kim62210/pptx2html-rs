@@ -18,7 +18,7 @@ Provide a sequenced backlog for the remaining pptx2html-rs work, grounded in the
 
 - **Text**: rendered and significantly improved, with adjacent-run unbreakable token detection plus paragraph-level and inherited text-style font sizes now feeding emergency-wrap decisions, `spAutoFit` growth paths no longer forcing emergency word breaking for long tokens, partial `normAutofit` overrides now preserving inherited line-spacing reduction, NBSP-separated text now participating in non-breaking wrap classification, soft-hyphenated text now staying on the normal discretionary-break path, Devanagari combining-mark clusters now staying on the normal wrap path during emergency-wrap classification, fullwidth/ideographic forms now participating in East Asian-style break classification, mixed East Asian/Latin script boundaries now staying on the natural break path during wrap classification, CJK non-starter punctuation now staying attached to the preceding glyph during wrap classification, slash-/hyphen-separated text now using ordinary break opportunities, CJK opening punctuation now staying attached to the following glyph during wrap classification, CJK closing angle-bracket punctuation now staying attached to the preceding glyph during wrap classification, white square bracket pairs now staying on a single East Asian punctuation cluster, tortoise-shell bracket pairs now staying on the same East Asian punctuation cluster, and lenticular bracket pairs now staying on the same East Asian punctuation cluster, but still `approximate` until measurement-driven fidelity and PowerPoint-reference verification are expanded.
 - **Layout / inheritance**: most placeholder and bodyPr carry-over behavior is implemented, but exactness depends on broader verification and a few remaining metadata/template-style items.
-- **Charts**: approximate direct rendering now covers clustered, stacked, and percent-stacked bar/column charts plus simple line, single-series bubble with area semantics and bounded bubbleScale support, single-series radar, bounded single-series ofPie, single-series pie/doughnut, and flat-rendered single-series pie3D charts, but richer labels, axes, and additional chart families remain.
+- **Charts**: approximate direct rendering now covers clustered, stacked, and percent-stacked bar/column charts plus simple line, flat area3D, single-series bubble with area semantics and bounded bubbleScale support, single-series radar, bounded single-series ofPie, single-series pie/doughnut, and flat-rendered single-series pie3D charts, but richer labels, axes, and additional chart families remain.
 - **Verification**: PowerPoint-first evaluation infrastructure exists, but the golden/reference workflow still needs to be turned into a routine release gate for exact claims.
 
 ---
@@ -141,8 +141,8 @@ These items directly block promotion from `approximate` to `exact`.
 
 **Remaining focus areas:**
 - Polish the current direct renderer for bar/column/line/pie charts (axis titles, data labels, gap width, overlap, markers, legend/layout details).
-- Add additional direct-rendered chart families such as doughnut, area, and scatter.
-- Preserve preview-image or placeholder fallback for unsupported chart spaces and incompatible series structures, while keeping semantic-only flattening for simple single-series pie3D charts.
+- Add additional bounded direct-rendered chart families beyond the landed doughnut, area, scatter, bubble, radar, ofPie, and flat area3D/pie3D slices.
+- Preserve preview-image or placeholder fallback for unsupported chart spaces and incompatible series structures, while keeping semantic-only flattening for bounded flat area3D and simple single-series pie3D charts.
 
 **Files likely involved:**
 - `crates/pptx2html-core/src/model/slide.rs`

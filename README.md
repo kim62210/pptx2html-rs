@@ -17,7 +17,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
 - Text styling: bold, italic, underline, strikethrough, super/subscript, bullets, vertical text, shadows, highlights, letter spacing
-- Approximate direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line, single-series/no-dLbls bubble (non-negative sizes, area semantics, bubbleScale support), single-series/no-dLbls radar (approximate marker handling), single-series/no-dLbls ofPie (`ofPieType=pie`, `splitType=pos`), pie, doughnut, and flat pie3D charts
+- Approximate direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line, flat area3D, single-series/no-dLbls bubble (non-negative sizes, area semantics, bubbleScale support), single-series/no-dLbls radar (approximate marker handling), single-series/no-dLbls ofPie (`ofPieType=pie`, `splitType=pos`), pie, doughnut, and flat pie3D charts
 - Graceful placeholders for unsupported content (SmartArt, OLE, Math)
 - Self-contained HTML output (single file, no external dependencies)
 
@@ -179,7 +179,7 @@ See [SUPPORTED_FEATURES.md](SUPPORTED_FEATURES.md) for the full ECMA-376 element
 | Images | Base64 embedding, deterministic external assets under `images/slide-N/`, cropping, MIME auto-detection |
 | Layout | Master/layout inheritance, ClrMap overrides, placeholder matching, TxStyles, and bodyPr property carry-over (wrap, margins, vertical anchor, vertical text, autofit) |
 | Bullets | Character and auto-numbered bullets with font, size, color |
-| Charts | Direct clustered, stacked, and percent-stacked bar/column rendering with gap/overlap and first-pass data labels, simple line/standard area/scatter rendering with point labels and explicit marker handling, simple single-series radar rendering, axis titles, and single-series pie/doughnut plus flat-rendered single-series pie3D rendering, with chart-part preview-image fallback when available and placeholder fallback for unsupported chart families and complex variants |
+| Charts | Direct clustered, stacked, and percent-stacked bar/column rendering with gap/overlap and first-pass data labels, simple line/standard area/scatter rendering with point labels and explicit marker handling, simple single-series radar rendering, axis titles, and single-series pie/doughnut plus flat-rendered single-series pie3D and area3D rendering, with chart-part preview-image fallback when available and placeholder fallback for unsupported chart families and complex variants |
 | Unsupported | SmartArt, OLE, Math — structured placeholders with metadata sideband (raw XML, type, position) |
 | LLM Enhance | Post-processing layer: SmartArt→HTML/CSS, OMML→MathML, DrawingML→CSS via LLM (pptx2html-enhance) |
 

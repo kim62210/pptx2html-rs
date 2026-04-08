@@ -56,6 +56,7 @@ All notable changes to this project will be documented in this file.
 - Render simple scatter charts directly, including marker/line style variants and first-pass point labels with basic label positions
 - Render direct chart axis titles for category and value axes
 - Render simple standard area charts directly
+- Render flat area3D charts through the existing area renderer
 - Render simple single-series bubble charts directly with bounded bubbleScale support, while keeping width semantics on fallback
 - Render simple single-series radar charts directly
 - Render bounded single-series ofPie charts directly for `ofPieType=pie` and `splitType=pos`
@@ -65,7 +66,7 @@ All notable changes to this project will be documented in this file.
 - Load chart-part preview images when unsupported chart families expose image relationships, so fallback rendering can use images before dropping to placeholders
 
 ### Tests
-- Add chart integration coverage for clustered, stacked, percent-stacked, line, bubble, radar, ofPie, and pie direct-rendering paths
+- Add chart integration coverage for clustered, stacked, percent-stacked, line, area3D, bubble, radar, ofPie, and pie direct-rendering paths
 - Add regression coverage for bar/column spacing controls, direct chart data labels and positions, scatter rendering, line marker handling, axis titles, area charts, and doughnut direct rendering
 - Add regression coverage for chart fallback behavior when direct rendering is not supported
 - Add regression coverage for chart-part preview-image fallback before placeholder fallback
