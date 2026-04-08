@@ -2419,6 +2419,37 @@ fn test_norm_autofit_mixed_script_sentence_does_not_force_emergency_wrap() {
 }
 
 #[test]
+fn test_norm_autofit_devanagari_combining_clusters_do_not_force_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="IndicAutofit"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="700000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr>
+          <a:normAutofit fontScale="70000"/>
+        </a:bodyPr>
+        <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/><a:cs typeface="Nirmala UI"/></a:rPr><a:t>क़क़क़</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        !tb_chunk.contains("emergency-wrap"),
+        "Indic combining clusters should stay on normal wrap paths before emergency wrapping: {tb_chunk}"
+    );
+    assert!(
+        !tb_chunk.contains("overflow-wrap: anywhere"),
+        "Indic combining clusters should not emit overflow-wrap:anywhere when only combining marks inflate the measured width: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_cjk_nonstarter_punctuation_cluster_marks_emergency_wrap() {
     let slide = r#"
     <p:sp>

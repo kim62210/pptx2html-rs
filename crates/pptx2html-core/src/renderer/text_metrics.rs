@@ -106,6 +106,11 @@ fn longest_unbreakable_span_width_px(
                 continue;
             }
 
+            if is_cluster_joiner(ch) {
+                previous_char = Some(ch);
+                continue;
+            }
+
             if is_soft_hyphen(ch) {
                 let hyphen_width_px = estimated_glyph_em_width('-') * font_size_px;
                 max_width_px = max_width_px.max(current_width_px + hyphen_width_px);
@@ -632,6 +637,28 @@ mod tests {
 
         assert_eq!(
             classify_wrap_policy(&paragraphs, &[None], 55.0, Some(0.7)),
+            TextWrapPolicy::Normal
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_keeps_devanagari_combining_clusters_normal() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "क़क़क़".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 45.0, Some(0.7)),
             TextWrapPolicy::Normal
         );
     }
