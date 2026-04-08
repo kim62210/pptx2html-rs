@@ -202,9 +202,19 @@ pub enum ChartType {
     Bar,
     Line,
     Scatter,
+    Bubble,
     Area,
+    Radar,
     Pie,
     Doughnut,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartRadarStyle {
+    #[default]
+    Standard,
+    Marker,
+    Filled,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -225,6 +235,13 @@ pub enum ChartScatterStyle {
     SmoothMarker,
     #[default]
     Marker,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartBubbleSizeRepresents {
+    #[default]
+    Area,
+    Width,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -256,6 +273,7 @@ pub struct ChartSeries {
     pub categories: Vec<String>,
     pub x_values: Vec<f64>,
     pub values: Vec<f64>,
+    pub bubble_sizes: Vec<f64>,
     pub marker: Option<ChartMarkerSpec>,
 }
 
@@ -264,6 +282,10 @@ pub struct ChartSpec {
     pub chart_type: ChartType,
     pub grouping: ChartGrouping,
     pub scatter_style: Option<ChartScatterStyle>,
+    pub bubble_scale: Option<f64>,
+    pub bubble_size_represents: Option<ChartBubbleSizeRepresents>,
+    pub show_neg_bubbles: Option<bool>,
+    pub radar_style: Option<ChartRadarStyle>,
     pub gap_width: Option<i32>,
     pub overlap: Option<i32>,
     pub hole_size: Option<i32>,

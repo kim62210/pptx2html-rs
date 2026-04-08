@@ -2073,6 +2073,459 @@ fn build_pie3d_chart_pptx() -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
+fn build_chart_preview_fallback_pptx() -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="RadarChart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart r:id="rId2"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>"#;
+
+    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:radarChart>
+        <c:radarStyle val="standard"/>
+      </c:radarChart>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#;
+
+    let chart_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdPreview" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/chart-preview.png"/>
+</Relationships>"#;
+
+    let png_data: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00,
+        0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08,
+        0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/_rels/chart1.xml.rels", opts).unwrap();
+    zip.write_all(chart_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/media/chart-preview.png", opts).unwrap();
+    zip.write_all(&png_data).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
+fn build_radar_chart_pptx(style: &str) -> Vec<u8> {
+    build_radar_chart_variant_pptx(style, 1, false, None, None)
+}
+
+fn build_multi_series_radar_chart_pptx(style: &str) -> Vec<u8> {
+    build_radar_chart_variant_pptx(style, 2, false, None, None)
+}
+
+fn build_radar_chart_with_value_labels_pptx(style: &str) -> Vec<u8> {
+    build_radar_chart_variant_pptx(style, 1, true, None, None)
+}
+
+fn build_radar_chart_with_marker_pptx(symbol: &str, size: Option<i32>) -> Vec<u8> {
+    build_radar_chart_variant_pptx("marker", 1, false, Some(symbol), size)
+}
+
+fn build_radar_chart_variant_pptx(
+    style: &str,
+    series_count: usize,
+    show_value_labels: bool,
+    marker_symbol: Option<&str>,
+    marker_size: Option<i32>,
+) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="RadarChart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart r:id="rId2"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>"#;
+
+    let mut series_xml = String::new();
+    for idx in 0..series_count {
+        let (name, values) = if idx == 0 {
+            ("Coverage", [10, 25, 15, 30])
+        } else {
+            ("Forecast", [20, 15, 28, 18])
+        };
+        let marker_xml = marker_symbol
+            .map(|symbol| {
+                let marker_size_xml = marker_size
+                    .map(|value| format!("<c:size val=\"{value}\"/>"))
+                    .unwrap_or_default();
+                format!(
+                    "<c:marker><c:symbol val=\"{symbol}\"/>{marker_size_xml}</c:marker>"
+                )
+            })
+            .unwrap_or_default();
+        series_xml.push_str(&format!(r#"
+        <c:ser>
+          <c:idx val="{idx}"/>
+          <c:order val="{idx}"/>
+          <c:tx><c:v>{name}</c:v></c:tx>
+          {marker_xml}
+          <c:cat>
+            <c:strLit>
+              <c:ptCount val="4"/>
+              <c:pt idx="0"><c:v>Q1</c:v></c:pt>
+              <c:pt idx="1"><c:v>Q2</c:v></c:pt>
+              <c:pt idx="2"><c:v>Q3</c:v></c:pt>
+              <c:pt idx="3"><c:v>Q4</c:v></c:pt>
+            </c:strLit>
+          </c:cat>
+          <c:val>
+            <c:numLit>
+              <c:ptCount val="4"/>
+              <c:pt idx="0"><c:v>{}</c:v></c:pt>
+              <c:pt idx="1"><c:v>{}</c:v></c:pt>
+              <c:pt idx="2"><c:v>{}</c:v></c:pt>
+              <c:pt idx="3"><c:v>{}</c:v></c:pt>
+            </c:numLit>
+          </c:val>
+        </c:ser>"#, values[0], values[1], values[2], values[3]));
+    }
+    let d_lbls_xml = if show_value_labels {
+        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    } else {
+        ""
+    };
+
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:radarChart>
+        <c:radarStyle val="{style}"/>
+        {series_xml}
+        {d_lbls_xml}
+        <c:axId val="123"/>
+        <c:axId val="456"/>
+      </c:radarChart>
+      <c:catAx>
+        <c:axId val="123"/>
+        <c:crossAx val="456"/>
+      </c:catAx>
+      <c:valAx>
+        <c:axId val="456"/>
+        <c:crossAx val="123"/>
+      </c:valAx>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#);
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
+fn build_bubble_chart_pptx() -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("area"), Some("0"), None)
+}
+
+fn build_multi_series_bubble_chart_pptx() -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(2, false, Some("100"), Some("area"), Some("0"), None)
+}
+
+fn build_bubble_chart_with_value_labels_pptx() -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, true, Some("100"), Some("area"), Some("0"), None)
+}
+
+fn build_bubble_chart_with_scale_pptx(scale: &str) -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, false, Some(scale), Some("area"), Some("0"), None)
+}
+
+fn build_bubble_chart_with_width_semantics_pptx() -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("w"), Some("0"), None)
+}
+
+fn build_bubble_chart_with_negative_sizes_pptx() -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("area"), Some("0"), Some(&[[-6.0, 14.0, 10.0]]))
+}
+
+fn build_bubble_chart_with_show_neg_bubbles_pptx(show_neg_bubbles: &str) -> Vec<u8> {
+    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("area"), Some(show_neg_bubbles), None)
+}
+
+fn build_bubble_chart_semantics_pptx(
+    series_count: usize,
+    show_value_labels: bool,
+    bubble_scale: Option<&str>,
+    size_represents: Option<&str>,
+    show_neg_bubbles: Option<&str>,
+    bubble_size_sets: Option<&[[f64; 3]]>,
+) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="BubbleChart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart r:id="rId2"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>"#;
+
+    let mut series_xml = String::new();
+    for idx in 0..series_count {
+        let bubble_sizes = bubble_size_sets
+            .and_then(|sets| sets.get(idx).copied())
+            .unwrap_or(if idx == 0 { [6.0, 14.0, 10.0] } else { [8.0, 12.0, 9.0] });
+        let (name, x_values, y_values) = if idx == 0 {
+            ("Pipeline", [10, 20, 35], [15, 28, 12])
+        } else {
+            ("Forecast", [14, 26, 32], [18, 20, 26])
+        };
+        series_xml.push_str(&format!(r#"
+        <c:ser>
+          <c:idx val="{idx}"/>
+          <c:order val="{idx}"/>
+          <c:tx><c:v>{name}</c:v></c:tx>
+          <c:xVal>
+            <c:numLit>
+              <c:ptCount val="3"/>
+              <c:pt idx="0"><c:v>{}</c:v></c:pt>
+              <c:pt idx="1"><c:v>{}</c:v></c:pt>
+              <c:pt idx="2"><c:v>{}</c:v></c:pt>
+            </c:numLit>
+          </c:xVal>
+          <c:yVal>
+            <c:numLit>
+              <c:ptCount val="3"/>
+              <c:pt idx="0"><c:v>{}</c:v></c:pt>
+              <c:pt idx="1"><c:v>{}</c:v></c:pt>
+              <c:pt idx="2"><c:v>{}</c:v></c:pt>
+            </c:numLit>
+          </c:yVal>
+          <c:bubbleSize>
+            <c:numLit>
+              <c:ptCount val="3"/>
+              <c:pt idx="0"><c:v>{}</c:v></c:pt>
+              <c:pt idx="1"><c:v>{}</c:v></c:pt>
+              <c:pt idx="2"><c:v>{}</c:v></c:pt>
+            </c:numLit>
+          </c:bubbleSize>
+        </c:ser>"#, x_values[0], x_values[1], x_values[2], y_values[0], y_values[1], y_values[2], bubble_sizes[0], bubble_sizes[1], bubble_sizes[2]));
+    }
+    let d_lbls_xml = if show_value_labels {
+        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    } else {
+        ""
+    };
+    let bubble_scale_xml = bubble_scale
+        .map(|value| format!("<c:bubbleScale val=\"{value}\"/>"))
+        .unwrap_or_default();
+    let size_represents_xml = size_represents
+        .map(|value| format!("<c:sizeRepresents val=\"{value}\"/>"))
+        .unwrap_or_default();
+    let show_neg_bubbles_xml = show_neg_bubbles
+        .map(|value| format!("<c:showNegBubbles val=\"{value}\"/>"))
+        .unwrap_or_default();
+
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:bubbleChart>
+        <c:varyColors val="0"/>
+        {bubble_scale_xml}
+        {show_neg_bubbles_xml}
+        {size_represents_xml}
+        {series_xml}
+        {d_lbls_xml}
+        <c:axId val="123"/>
+        <c:axId val="456"/>
+      </c:bubbleChart>
+      <c:catAx><c:axId val="123"/><c:crossAx val="456"/></c:catAx>
+      <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#);
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
 fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -3649,6 +4102,26 @@ fn test_chart_renders_placeholder() {
 }
 
 #[test]
+fn test_chart_uses_preview_image_fallback_when_chart_part_exposes_image() {
+    let pptx = build_chart_preview_fallback_pptx();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            assert!(chart.direct_spec.is_none(), "Unsupported radar chart fixture should stay off the direct renderer path");
+            assert!(chart.preview_image.as_ref().is_some_and(|bytes| !bytes.is_empty()), "Chart preview image bytes should be captured from chart part relationships");
+            assert_eq!(chart.preview_mime.as_deref(), Some("image/png"));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+
+    let html = render_html(&pptx);
+    assert!(html.contains("<img class=\"shape-image\""), "Chart preview fallback should render as an image when available: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Chart preview fallback should replace the generic placeholder when preview bytes exist: {html}");
+}
+
+#[test]
 fn test_chart_parses_direct_column_spec() {
     let pptx = build_column_chart_pptx();
     let pres = parse_pptx(&pptx);
@@ -4196,6 +4669,202 @@ fn test_area_chart_parses_direct_spec() {
 }
 
 #[test]
+fn test_bubble_chart_parses_direct_spec() {
+    let pptx = build_bubble_chart_pptx();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.series.len(), 1);
+            assert_eq!(spec.series[0].x_values, vec![10.0, 20.0, 35.0]);
+            assert_eq!(spec.series[0].values, vec![15.0, 28.0, 12.0]);
+            assert_eq!(spec.series[0].bubble_sizes, vec![6.0, 14.0, 10.0]);
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_parses_percent_bubble_scale() {
+    let pptx = build_bubble_chart_with_scale_pptx("200%");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.bubble_scale, Some(200.0));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_parses_show_neg_bubbles_true() {
+    let pptx = build_bubble_chart_with_show_neg_bubbles_pptx("1");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.show_neg_bubbles, Some(true));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_parses_show_neg_bubbles_true_literal() {
+    let pptx = build_bubble_chart_with_show_neg_bubbles_pptx("true");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.show_neg_bubbles, Some(true));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_parses_show_neg_bubbles_false() {
+    let pptx = build_bubble_chart_with_show_neg_bubbles_pptx("0");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.show_neg_bubbles, Some(false));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_parses_show_neg_bubbles_false_literal() {
+    let pptx = build_bubble_chart_with_show_neg_bubbles_pptx("false");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.show_neg_bubbles, Some(false));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_clamps_bubble_scale_to_upper_bound() {
+    let pptx = build_bubble_chart_with_scale_pptx("500");
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Bubble);
+            assert_eq!(spec.bubble_scale, Some(300.0));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_bubble_chart_renders_directly() {
+    let pptx = build_bubble_chart_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Bubble chart should render directly once bubble support is available: {html}");
+    assert!(html.contains("class=\"chart-bubble\""), "Bubble chart should emit bubble circles rather than fallback markers: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Bubble chart should not use the generic placeholder once supported: {html}");
+}
+
+#[test]
+fn test_positive_bubble_chart_with_show_neg_bubbles_true_still_renders_directly() {
+    let html = render_html(&build_bubble_chart_with_show_neg_bubbles_pptx("1"));
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "showNegBubbles on positive-only bubble data should not disable direct rendering: {html}");
+    assert!(html.contains("class=\"chart-bubble\""), "showNegBubbles on positive-only bubble data should still render bubbles directly: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "showNegBubbles on positive-only bubble data should not force fallback: {html}");
+}
+
+#[test]
+fn test_negative_bubble_chart_with_show_neg_bubbles_true_still_falls_back() {
+    let html = render_html(&build_bubble_chart_semantics_pptx(
+        1,
+        false,
+        Some("100"),
+        Some("area"),
+        Some("1"),
+        Some(&[[-6.0, 14.0, 10.0]]),
+    ));
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "showNegBubbles should not bypass the current negative-size fallback contract: {html}");
+    assert!(!html.contains("class=\"chart-bubble\""), "negative-size bubbles should remain off the direct renderer even when showNegBubbles is true: {html}");
+}
+
+#[test]
+fn test_bubble_scale_changes_rendered_radius() {
+    let default_html = render_html(&build_bubble_chart_with_scale_pptx("100"));
+    let scaled_html = render_html(&build_bubble_chart_with_scale_pptx("200"));
+
+    assert!(default_html.contains("class=\"chart-bubble\""), "Default-scale bubble chart should render directly: {default_html}");
+    assert!(scaled_html.contains("class=\"chart-bubble\""), "Scaled bubble chart should render directly: {scaled_html}");
+    assert!(default_html.contains("r=\"10.0\""), "Default bubble scale should preserve the baseline radius for the smallest bubble: {default_html}");
+    assert!(scaled_html.contains("r=\"20.0\""), "bubbleScale=200 should enlarge the same bubble radius relative to the baseline chart: {scaled_html}");
+}
+
+#[test]
+fn test_bubble_chart_with_width_semantics_falls_back_to_placeholder() {
+    let pptx = build_bubble_chart_with_width_semantics_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Width-semantics bubble charts should stay on fallback until width-based sizing is implemented: {html}");
+    assert!(!html.contains("class=\"chart-bubble\""), "Width-semantics bubble charts should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_bubble_chart_with_negative_sizes_falls_back_to_placeholder() {
+    let pptx = build_bubble_chart_with_negative_sizes_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Negative-size bubble charts should stay on fallback until negative-bubble semantics are implemented: {html}");
+    assert!(!html.contains("class=\"chart-bubble\""), "Negative-size bubble charts should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_multi_series_bubble_chart_falls_back_to_placeholder() {
+    let pptx = build_multi_series_bubble_chart_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series bubble should stay on the safe fallback path for now: {html}");
+    assert!(!html.contains("class=\"chart-bubble\""), "Multi-series bubble should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_bubble_chart_with_value_labels_falls_back_to_placeholder() {
+    let pptx = build_bubble_chart_with_value_labels_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Bubble charts with data labels should stay on fallback until label rendering is implemented: {html}");
+    assert!(!html.contains("class=\"chart-bubble\""), "Bubble charts with data labels should not partially direct render yet: {html}");
+}
+
+#[test]
 fn test_area_chart_renders_directly() {
     let pptx = build_area_chart_pptx();
     let html = render_html(&pptx);
@@ -4204,6 +4873,81 @@ fn test_area_chart_renders_directly() {
     assert!(html.contains("chart-area"), "Area chart should render a filled area path: {html}");
     assert!(html.contains("chart-line"), "Area chart should render an outline line path: {html}");
     assert!(!html.contains("<div class=\"chart-placeholder\">"), "Area chart should not use placeholder: {html}");
+}
+
+#[test]
+fn test_radar_chart_renders_directly() {
+    let pptx = build_radar_chart_pptx("standard");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Radar chart should render directly once radar support is available: {html}");
+    assert!(html.contains("chart-radar-line"), "Radar chart should emit a radar line path: {html}");
+    assert!(html.contains("Q1") && html.contains("Q2") && html.contains("Q3") && html.contains("Q4"), "Radar chart should render category labels: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Radar chart should no longer use the generic placeholder: {html}");
+}
+
+#[test]
+fn test_radar_chart_parses_marker_spec() {
+    let pptx = build_radar_chart_with_marker_pptx("diamond", Some(12));
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::Radar);
+            let marker = spec.series[0].marker.as_ref().expect("marker spec");
+            assert_eq!(marker.symbol.as_deref(), Some("diamond"));
+            assert_eq!(marker.size, Some(12));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_radar_marker_style_uses_series_marker_symbol_and_size() {
+    let pptx = build_radar_chart_with_marker_pptx("diamond", Some(12));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Marker-style radar should still render directly: {html}");
+    assert!(html.contains("data-marker-symbol=\"diamond\""), "Radar marker style should expose the parsed marker symbol on rendered points: {html}");
+    assert!(html.contains("r=\"6.0\""), "Radar marker style should scale point radius from the parsed marker size: {html}");
+}
+
+#[test]
+fn test_radar_marker_symbol_none_suppresses_points() {
+    let pptx = build_radar_chart_with_marker_pptx("none", None);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("chart-radar-line"), "Radar marker style with symbol none should still render the radar path: {html}");
+    assert!(!html.contains("<circle class=\"chart-point\""), "Radar marker symbol none should suppress point rendering: {html}");
+}
+
+#[test]
+fn test_radar_filled_style_renders_fill_without_markers() {
+    let pptx = build_radar_chart_pptx("filled");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("chart-radar-fill"), "Filled radar should emit a filled radar polygon: {html}");
+    assert!(!html.contains("<circle class=\"chart-point\""), "Filled radar should not render marker points: {html}");
+}
+
+#[test]
+fn test_multi_series_radar_chart_falls_back_to_placeholder() {
+    let pptx = build_multi_series_radar_chart_pptx("standard");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar should stay on the safe fallback path for now: {html}");
+    assert!(!html.contains("chart-radar-line"), "Multi-series radar should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_radar_chart_with_value_labels_falls_back_to_placeholder() {
+    let pptx = build_radar_chart_with_value_labels_pptx("standard");
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Radar charts with data labels should stay on fallback until label rendering is implemented: {html}");
+    assert!(!html.contains("chart-radar-line"), "Radar charts with data labels should not partially direct render yet: {html}");
 }
 
 #[test]
@@ -4481,12 +5225,14 @@ fn test_multi_series_pie_chart_falls_back_to_placeholder() {
 }
 
 #[test]
-fn test_pie3d_chart_falls_back_to_placeholder() {
+fn test_pie3d_chart_renders_directly_as_flat_pie() {
     let pptx = build_pie3d_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "3D pie chart should stay on safe fallback path: {html}");
-    assert!(!html.contains("<path class=\"chart-pie-slice\""), "3D pie chart should not partially direct-render slices: {html}");
+    assert!(html.contains("<div class=\"chart-direct\">"), "3D pie chart should reuse the direct chart renderer when the series shape matches a flat pie: {html}");
+    assert!(html.contains("<path class=\"chart-pie-slice\""), "3D pie chart should emit pie slices through the existing flat pie renderer: {html}");
+    assert!(html.contains("North") && html.contains("South"), "3D pie chart should preserve category labels in the flat direct render path: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "3D pie chart should no longer fall back to the generic chart placeholder when a flat pie render is possible: {html}");
 }
 
 // ── Shape effect tests (outerShdw / glow) ──

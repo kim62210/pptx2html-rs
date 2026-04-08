@@ -56,14 +56,18 @@ All notable changes to this project will be documented in this file.
 - Render simple scatter charts directly, including marker/line style variants and first-pass point labels with basic label positions
 - Render direct chart axis titles for category and value axes
 - Render simple standard area charts directly
+- Render simple single-series bubble charts directly with bounded bubbleScale support, while keeping width semantics on fallback
+- Render simple single-series radar charts directly
 - Render simple single-series pie charts directly
 - Render simple single-series doughnut charts directly
-- Keep multi-series pie, 3D pie, and unsupported chart families on stable preview/placeholder fallback paths
+- Keep multi-series pie and unsupported chart families on stable preview/placeholder fallback paths, while flattening simple single-series 3D pie charts through the existing pie renderer
+- Load chart-part preview images when unsupported chart families expose image relationships, so fallback rendering can use images before dropping to placeholders
 
 ### Tests
-- Add chart integration coverage for clustered, stacked, percent-stacked, line, and pie direct-rendering paths
+- Add chart integration coverage for clustered, stacked, percent-stacked, line, bubble, radar, and pie direct-rendering paths
 - Add regression coverage for bar/column spacing controls, direct chart data labels and positions, scatter rendering, line marker handling, axis titles, area charts, and doughnut direct rendering
 - Add regression coverage for chart fallback behavior when direct rendering is not supported
+- Add regression coverage for chart-part preview-image fallback before placeholder fallback
 - Add installed-wheel Python smoke coverage for public conversion APIs, metadata URLs, bytes error paths, and one-based slide filtering
 - Add WASM regression coverage for JSON escaping, package-root import smoke, publish contract checks, and tag/version validation
 

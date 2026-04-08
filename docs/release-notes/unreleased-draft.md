@@ -11,7 +11,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 
 ## Suggested Summary
 
-- Expand direct chart rendering coverage across bar/column, line, area, scatter, pie, and doughnut paths while keeping unsupported chart families on stable fallback behavior.
+- Expand direct chart rendering coverage across bar/column, line, area, scatter, single-series bubble (area semantics only), single-series radar, pie, doughnut, and flat-rendered single-series pie3D paths while letting unsupported chart parts use preview-image fallback before placeholders.
 - Tighten text-wrap fidelity so unbreakable narrow-box tokens that span adjacent text runs still trigger the emergency-wrap path when needed.
 - Respect paragraph-level default font sizes in the same narrow-wrap/autofit path so measurement uses the rendered text size even when runs omit `sz`.
 - Respect inherited `txStyles` / `defaultTextStyle` font sizes in the same narrow-wrap/autofit path so placeholder text uses the same effective size for rendering and wrap classification.
@@ -77,7 +77,7 @@ The evaluation guide and contract checker now share the same Python 3.11+ floor 
 ## Known Limits
 
 - PowerPoint-reference checks remain required before promoting any capability to `exact`.
-- Multi-series pie, 3D pie, and unsupported chart families still remain on preview-image or placeholder fallback paths.
+- Multi-series pie and unsupported chart families still remain on preview-image or placeholder fallback paths; simple single-series 3D pie charts now flatten through the direct pie renderer.
 - Notes, comments, media, and animation domains are still outside the current direct-rendering scope.
 
 ## Validation Notes

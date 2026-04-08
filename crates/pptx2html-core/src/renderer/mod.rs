@@ -694,6 +694,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     && series.values.len() == point_count
                             })
                     }
+                    ChartType::Bubble => {
+                        let point_count = first_series.x_values.len();
+                        point_count > 0
+                            && spec.series.iter().all(|series| {
+                                series.x_values.len() == point_count
+                                    && series.values.len() == point_count
+                                    && series.bubble_sizes.len() == point_count
+                            })
+                    }
                     _ => {
                         category_count > 0
                             && spec.series.iter().all(|series| {
@@ -709,6 +718,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             spec.grouping,
                             ChartGrouping::Stacked | ChartGrouping::PercentStacked
                         ),
+                        ChartType::Bubble => {
+                            spec.series.len() == 1
+                                && spec.data_labels.is_none()
+                                && spec.series.iter().all(|series| {
+                                    series.bubble_sizes.iter().all(|size| *size >= 0.0)
+                                })
+                                && !matches!(
+                                    spec.bubble_size_represents,
+                                    Some(crate::model::ChartBubbleSizeRepresents::Width)
+                                )
+                        }
+                        ChartType::Radar => {
+                            spec.series.len() == 1 && spec.data_labels.is_none()
+                        }
                         ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
                         _ => true,
                     };
@@ -1009,6 +1032,83 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                 }
                             }
                         }
+                        ChartType::Radar => {
+                            let center_x = w / 2.0;
+                            let center_y = chart_height / 2.0;
+                            let radius = (chart_height.min(w) / 2.0 - 18.0).max(24.0);
+                            let radar_style = spec.radar_style.unwrap_or_default();
+                            let filled = matches!(radar_style, crate::model::ChartRadarStyle::Filled);
+
+                            for ring in [0.25_f64, 0.5, 0.75, 1.0] {
+                                let ring_points = (0..category_count)
+                                    .map(|idx| {
+                                        let angle = -std::f64::consts::FRAC_PI_2
+                                            + idx as f64 * std::f64::consts::TAU / category_count as f64;
+                                        let x = center_x + radius * ring * angle.cos();
+                                        let y = center_y + radius * ring * angle.sin();
+                                        format!("{x:.1},{y:.1}")
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join(" ");
+                                let _ = writeln!(html, "<polygon class=\"chart-radar-grid\" points=\"{ring_points}\" fill=\"none\" stroke=\"#ddd\" stroke-width=\"1\" />");
+                            }
+
+                            for idx in 0..category_count {
+                                let angle = -std::f64::consts::FRAC_PI_2
+                                    + idx as f64 * std::f64::consts::TAU / category_count as f64;
+                                let x = center_x + radius * angle.cos();
+                                let y = center_y + radius * angle.sin();
+                                let _ = writeln!(html, "<line class=\"chart-radar-spoke\" x1=\"{center_x:.1}\" y1=\"{center_y:.1}\" x2=\"{x:.1}\" y2=\"{y:.1}\" stroke=\"#e2e2e2\" stroke-width=\"1\" />");
+                            }
+
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                let marker_symbol = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.symbol.as_deref())
+                                    .unwrap_or("circle");
+                                let marker_radius = series
+                                    .marker
+                                    .as_ref()
+                                    .and_then(|marker| marker.size)
+                                    .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
+                                    .unwrap_or(3.0);
+                                let render_markers = matches!(radar_style, crate::model::ChartRadarStyle::Marker)
+                                    && marker_symbol != "none";
+                                let points = series
+                                    .values
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, value)| {
+                                        let angle = -std::f64::consts::FRAC_PI_2
+                                            + idx as f64 * std::f64::consts::TAU / category_count as f64;
+                                        let scaled_radius = if *value <= 0.0 {
+                                            0.0
+                                        } else {
+                                            (*value / max_value) * radius
+                                        };
+                                        let x = center_x + scaled_radius * angle.cos();
+                                        let y = center_y + scaled_radius * angle.sin();
+                                        (x, y)
+                                    })
+                                    .collect::<Vec<_>>();
+                                let polygon_points = points
+                                    .iter()
+                                    .map(|(x, y)| format!("{x:.1},{y:.1}"))
+                                    .collect::<Vec<_>>()
+                                    .join(" ");
+                                if filled {
+                                    let _ = writeln!(html, "<polygon class=\"chart-radar-fill\" style=\"fill:{color};opacity:0.30\" points=\"{polygon_points}\" />");
+                                }
+                                let _ = writeln!(html, "<polygon class=\"chart-radar-line\" style=\"fill:none;stroke:{color};stroke-width:2\" points=\"{polygon_points}\" />");
+                                if render_markers {
+                                    for (x, y) in &points {
+                                        let _ = writeln!(html, "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />", escape_html(marker_symbol));
+                                    }
+                                }
+                            }
+                        }
                         ChartType::Line => {
                             let left_pad = 8.0;
                             let right_pad = 8.0;
@@ -1240,6 +1340,58 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
                                         }
                                     }
+                                }
+                            }
+                        }
+                        ChartType::Bubble => {
+                            let left_pad = 8.0;
+                            let right_pad = 8.0;
+                            let top_pad = 8.0;
+                            let bottom_pad = 8.0;
+                            let all_x_values = spec
+                                .series
+                                .iter()
+                                .flat_map(|series| series.x_values.iter().copied());
+                            let all_y_values = spec
+                                .series
+                                .iter()
+                                .flat_map(|series| series.values.iter().copied());
+                            let all_bubble_sizes = spec
+                                .series
+                                .iter()
+                                .flat_map(|series| series.bubble_sizes.iter().copied());
+                            let min_x = all_x_values.clone().fold(f64::INFINITY, f64::min);
+                            let max_x = all_x_values.fold(f64::NEG_INFINITY, f64::max);
+                            let min_y = all_y_values.clone().fold(f64::INFINITY, f64::min);
+                            let max_y = all_y_values.fold(f64::NEG_INFINITY, f64::max);
+                            let max_bubble = all_bubble_sizes.fold(0.0_f64, f64::max).max(1.0);
+                            let bubble_scale = (spec.bubble_scale.unwrap_or(100.0) / 100.0).clamp(0.0, 3.0);
+                            let x_span = if min_x.is_finite() && max_x.is_finite() {
+                                (max_x - min_x).abs().max(1.0)
+                            } else {
+                                1.0
+                            };
+                            let y_span = if min_y.is_finite() && max_y.is_finite() {
+                                (max_y - min_y).abs().max(1.0)
+                            } else {
+                                1.0
+                            };
+                            let usable_width = (w - left_pad - right_pad).max(1.0);
+                            let usable_height = (chart_height - top_pad - bottom_pad).max(1.0);
+
+                            for (series_idx, series) in spec.series.iter().enumerate() {
+                                let color = palette[series_idx % palette.len()];
+                                for ((x_value, y_value), bubble_size) in series
+                                    .x_values
+                                    .iter()
+                                    .zip(series.values.iter())
+                                    .zip(series.bubble_sizes.iter())
+                                {
+                                    let x = left_pad + ((*x_value - min_x) / x_span) * usable_width;
+                                    let y = chart_height - bottom_pad - ((*y_value - min_y) / y_span) * usable_height;
+                                    let radius = ((4.0 + (*bubble_size / max_bubble) * 14.0) * bubble_scale)
+                                        .clamp(4.0, 24.0);
+                                    let _ = writeln!(html, "<circle class=\"chart-bubble\" style=\"fill:{color};opacity:0.45;stroke:{color};stroke-width:1\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{radius:.1}\" />");
                                 }
                             }
                         }

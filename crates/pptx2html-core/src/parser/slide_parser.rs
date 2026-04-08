@@ -8,6 +8,7 @@ use zip::ZipArchive;
 
 use super::chart_parser;
 use super::master_parser::{is_lvl_ppr, parse_def_rpr_attrs, parse_lvl_index, parse_lvl_ppr_attrs};
+use super::relationships;
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::*;
@@ -2216,6 +2217,26 @@ pub fn parse_slide<R: Read + Seek>(
                                     if let Ok(chart_xml) = read_archive_entry(archive, &path) {
                                         sb.chart_direct_spec =
                                             chart_parser::parse_chart(&chart_xml).ok().flatten();
+
+                                        let chart_rels_path = rels_path_for(&path);
+                                        if let Ok(chart_rels_xml) = read_archive_entry(archive, &chart_rels_path)
+                                            && let Ok(chart_rels) = relationships::parse_relationships(&chart_rels_xml)
+                                        {
+                                            for preview_target in chart_rels.values() {
+                                                let preview_path = resolve_relative_file_path(&path, preview_target);
+                                                let preview_mime = mime_from_extension(&preview_path);
+                                                if !preview_mime.starts_with("image/") {
+                                                    continue;
+                                                }
+                                                if let Ok(preview_bytes) = read_archive_bytes(archive, &preview_path)
+                                                    && !preview_bytes.is_empty()
+                                                {
+                                                    sb.chart_preview_mime = Some(preview_mime);
+                                                    sb.chart_preview_image = Some(preview_bytes);
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 let shape = sb.build();
@@ -3282,6 +3303,8 @@ struct ShapeBuilder {
     is_chart: bool,
     chart_rel_id: Option<String>,
     chart_direct_spec: Option<ChartSpec>,
+    chart_preview_image: Option<Vec<u8>>,
+    chart_preview_mime: Option<String>,
     // Unsupported content type (SmartArt, OLE, Math)
     unsupported_content: Option<String>,
     // Typed classification for unresolved element
@@ -3312,8 +3335,8 @@ impl ShapeBuilder {
         } else if self.is_chart {
             ShapeType::Chart(ChartData {
                 rel_id: self.chart_rel_id.unwrap_or_default(),
-                preview_image: None,
-                preview_mime: None,
+                preview_image: self.chart_preview_image,
+                preview_mime: self.chart_preview_mime,
                 direct_spec: self.chart_direct_spec,
             })
         } else if self.is_picture {
@@ -3430,6 +3453,29 @@ fn read_archive_entry<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     Ok(contents)
+}
+
+fn read_archive_bytes<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> PptxResult<Vec<u8>> {
+    let mut file = archive
+        .by_name(name)
+        .map_err(|_| PptxError::MissingFile(name.to_string()))?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents)?;
+    Ok(contents)
+}
+
+fn rels_path_for(part_path: &str) -> String {
+    let (dir, file) = part_path.rsplit_once('/').unwrap_or(("", part_path));
+    if dir.is_empty() {
+        format!("_rels/{file}.rels")
+    } else {
+        format!("{dir}/_rels/{file}.rels")
+    }
+}
+
+fn resolve_relative_file_path(base_file: &str, target: &str) -> String {
+    let base_dir = base_file.rsplit_once('/').map(|(dir, _)| dir).unwrap_or("");
+    resolve_rel_path(base_dir, target)
 }
 
 fn store_shape_level_defaults(shape: &mut Option<ShapeBuilder>, lvl: usize, pd: ParagraphDefaults) {

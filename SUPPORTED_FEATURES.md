@@ -198,9 +198,12 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Chart axis titles | `<c:catAx>/<c:valAx> <c:title>` | Approximate |
 | Direct area charts (standard) | `<c:areaChart>` | Approximate |
 | Direct scatter charts | `<c:scatterChart>` | Approximate |
+| Direct bubble charts (single-series, no `<c:dLbls>`, non-negative sizes, area semantics, approximate bubbleScale support) | `<c:bubbleChart>` | Approximate |
+| Direct radar charts (single-series, no `<c:dLbls>`) | `<c:radarChart>` | Approximate |
 | Scatter point labels | `<c:scatterChart> <c:dLbls>` | Approximate |
 | Direct pie charts (single-series) | `<c:pieChart>` | Approximate |
 | Direct doughnut charts (single-series) | `<c:doughnutChart>` | Approximate |
+| Direct pie3D charts (single-series, flat render) | `<c:pie3DChart>` | Approximate |
 | Chart preview image | embedded preview | Fallback |
 | Unsupported / complex chart families | other chart spaces | Fallback |
 | Chart placeholder | — | Fallback |

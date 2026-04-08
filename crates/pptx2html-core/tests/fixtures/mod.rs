@@ -1,8 +1,8 @@
 //! Test helper for generating minimal PPTX files
 
 use std::io::{Cursor, Write};
-use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
+use zip::ZipWriter;
 
 /// Minimal PPTX builder -- generates various test cases by swapping slide XML
 pub struct MinimalPptx {
