@@ -205,8 +205,26 @@ pub enum ChartType {
     Bubble,
     Area,
     Radar,
+    OfPie,
     Pie,
     Doughnut,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartOfPieType {
+    #[default]
+    Pie,
+    Bar,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ChartSplitType {
+    #[default]
+    Auto,
+    Pos,
+    Percent,
+    Value,
+    Custom,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -281,6 +299,10 @@ pub struct ChartSeries {
 pub struct ChartSpec {
     pub chart_type: ChartType,
     pub grouping: ChartGrouping,
+    pub of_pie_type: Option<ChartOfPieType>,
+    pub split_type: Option<ChartSplitType>,
+    pub split_pos: Option<f64>,
+    pub second_pie_size: Option<i32>,
     pub scatter_style: Option<ChartScatterStyle>,
     pub bubble_scale: Option<f64>,
     pub bubble_size_represents: Option<ChartBubbleSizeRepresents>,

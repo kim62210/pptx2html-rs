@@ -5,7 +5,8 @@ use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::{
     ChartBubbleSizeRepresents, ChartDataLabelPosition, ChartDataLabelSettings, ChartGrouping,
-    ChartMarkerSpec, ChartRadarStyle, ChartScatterStyle, ChartSeries, ChartSpec, ChartType,
+    ChartMarkerSpec, ChartOfPieType, ChartRadarStyle, ChartScatterStyle, ChartSeries,
+    ChartSpec, ChartSplitType, ChartType,
 };
 
 #[derive(Default)]
@@ -26,10 +27,15 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
     let mut in_bubble_chart = false;
     let mut in_area_chart = false;
     let mut in_radar_chart = false;
+    let mut in_of_pie_chart = false;
     let mut in_pie_chart = false;
     let mut in_doughnut_chart = false;
     let mut chart_type = ChartType::Column;
     let mut grouping = ChartGrouping::Clustered;
+    let mut of_pie_type = None;
+    let mut split_type = None;
+    let mut split_pos = None;
+    let mut second_pie_size = None;
     let mut scatter_style = None;
     let mut bubble_scale = None;
     let mut bubble_size_represents = None;
@@ -129,6 +135,34 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             _ => ChartRadarStyle::Standard,
                         });
                     }
+                    "ofPieChart" => {
+                        in_of_pie_chart = true;
+                        chart_type = ChartType::OfPie;
+                        grouping = ChartGrouping::Standard;
+                    }
+                    "ofPieType" if in_of_pie_chart => {
+                        of_pie_type = Some(match xml_utils::attr_str(e, "val").as_deref() {
+                            Some("bar") => ChartOfPieType::Bar,
+                            _ => ChartOfPieType::Pie,
+                        });
+                    }
+                    "splitType" if in_of_pie_chart => {
+                        split_type = Some(match xml_utils::attr_str(e, "val").as_deref() {
+                            Some("pos") => ChartSplitType::Pos,
+                            Some("percent") => ChartSplitType::Percent,
+                            Some("val") => ChartSplitType::Value,
+                            Some("cust") => ChartSplitType::Custom,
+                            _ => ChartSplitType::Auto,
+                        });
+                    }
+                    "splitPos" if in_of_pie_chart => {
+                        split_pos = xml_utils::attr_str(e, "val").and_then(|val| val.parse::<f64>().ok());
+                    }
+                    "secondPieSize" if in_of_pie_chart => {
+                        second_pie_size = xml_utils::attr_str(e, "val")
+                            .and_then(|val| val.parse::<i32>().ok())
+                            .map(|val| val.clamp(5, 200));
+                    }
                     "pieChart" | "pie3DChart" => {
                         in_pie_chart = true;
                         chart_type = ChartType::Pie;
@@ -156,7 +190,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             };
                         }
                     }
-                    "gapWidth" if in_bar_chart => {
+                    "gapWidth" if in_bar_chart || in_of_pie_chart => {
                         gap_width = xml_utils::attr_str(e, "val")
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(0, 500));
@@ -171,7 +205,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(10, 90));
                     }
-                    "dLbls" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_pie_chart || in_doughnut_chart => {
+                    "dLbls" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_of_pie_chart || in_pie_chart || in_doughnut_chart => {
                         in_dlbls = true;
                         saw_dlbls = true;
                     }
@@ -207,7 +241,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "valAx" => in_val_ax = true,
                     "title" if in_cat_ax || in_val_ax => in_title = true,
                     "t" if in_title => in_title_text = true,
-                    "ser" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_pie_chart || in_doughnut_chart => {
+                    "ser" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_of_pie_chart || in_pie_chart || in_doughnut_chart => {
                         current_series = Some(SeriesBuilder::default())
                     }
                     "marker" if current_series.is_some() && (in_line_chart || in_scatter_chart || in_radar_chart) => in_marker = true,
@@ -311,6 +345,7 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "bubbleChart" => in_bubble_chart = false,
                     "areaChart" => in_area_chart = false,
                     "radarChart" => in_radar_chart = false,
+                    "ofPieChart" => in_of_pie_chart = false,
                     "pieChart" | "pie3DChart" => in_pie_chart = false,
                     "doughnutChart" => in_doughnut_chart = false,
                     "bubbleSize" => in_bubble_size = false,
@@ -329,6 +364,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
         Ok(Some(ChartSpec {
             chart_type,
             grouping,
+            of_pie_type,
+            split_type,
+            split_pos,
+            second_pie_size,
             scatter_style,
             bubble_scale,
             bubble_size_represents,

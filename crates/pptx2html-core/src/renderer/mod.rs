@@ -729,6 +729,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     Some(crate::model::ChartBubbleSizeRepresents::Width)
                                 )
                         }
+                        ChartType::OfPie => {
+                            spec.series.len() == 1
+                                && spec.data_labels.is_none()
+                                && matches!(spec.of_pie_type, Some(crate::model::ChartOfPieType::Pie))
+                                && matches!(spec.split_type, Some(crate::model::ChartSplitType::Pos))
+                                && spec.split_pos.is_some_and(|value| value >= 1.0)
+                        }
                         ChartType::Radar => {
                             spec.series.len() == 1 && spec.data_labels.is_none()
                         }
@@ -1469,6 +1476,81 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         }
                                     }
                                 }
+                            }
+                        }
+                        ChartType::OfPie => {
+                            let values = &first_series.values;
+                            let split_count = spec
+                                .split_pos
+                                .map(|value| value.round() as usize)
+                                .unwrap_or(0)
+                                .min(values.len().saturating_sub(1));
+                            let primary_len = values.len().saturating_sub(split_count);
+                            let (primary_values, secondary_values) = values.split_at(primary_len);
+                            let (primary_categories, secondary_categories) = first_series.categories.split_at(primary_len.min(first_series.categories.len()));
+                            let primary_radius = (chart_height.min(w * 0.58) / 2.0 - 10.0).max(12.0);
+                            let secondary_radius = (primary_radius * (spec.second_pie_size.unwrap_or(75) as f64 / 100.0)).clamp(10.0, primary_radius);
+                            let primary_center_x = w * 0.33;
+                            let secondary_center_x = w * 0.77;
+                            let center_y = chart_height / 2.0;
+
+                            let render_cluster = |html: &mut String,
+                                                  class_name: &str,
+                                                  center_x: f64,
+                                                  center_y: f64,
+                                                  radius: f64,
+                                                  values: &[f64],
+                                                  color_offset: usize| {
+                                let total = values.iter().copied().filter(|v| *v > 0.0).sum::<f64>();
+                                if total <= 0.0 {
+                                    return;
+                                }
+                                let _ = writeln!(html, "<g class=\"{class_name}\">");
+                                let mut start_angle = -std::f64::consts::FRAC_PI_2;
+                                for (idx, value) in values.iter().enumerate() {
+                                    if *value <= 0.0 {
+                                        continue;
+                                    }
+                                    let color = palette[(color_offset + idx) % palette.len()];
+                                    let sweep = (*value / total) * std::f64::consts::TAU;
+                                    let end_angle = start_angle + sweep;
+                                    let x1 = center_x + radius * start_angle.cos();
+                                    let y1 = center_y + radius * start_angle.sin();
+                                    let x2 = center_x + radius * end_angle.cos();
+                                    let y2 = center_y + radius * end_angle.sin();
+                                    let large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 };
+                                    let path = format!(
+                                        "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
+                                    );
+                                    let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
+                                    start_angle = end_angle;
+                                }
+                                let _ = writeln!(html, "</g>");
+                            };
+
+                            render_cluster(
+                                html,
+                                "chart-of-pie-primary",
+                                primary_center_x,
+                                center_y,
+                                primary_radius,
+                                primary_values,
+                                0,
+                            );
+                            render_cluster(
+                                html,
+                                "chart-of-pie-secondary",
+                                secondary_center_x,
+                                center_y,
+                                secondary_radius,
+                                secondary_values,
+                                primary_len,
+                            );
+
+                            let mut label_y = chart_height - 10.0;
+                            for category in primary_categories.iter().chain(secondary_categories.iter()) {
+                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{:.1}\" y=\"{label_y:.1}\">{}</text>", w / 2.0, escape_html(category));
+                                label_y -= 12.0;
                             }
                         }
                         ChartType::Pie | ChartType::Doughnut => {

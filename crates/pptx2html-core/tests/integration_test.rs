@@ -2073,6 +2073,137 @@ fn build_pie3d_chart_pptx() -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
+fn build_of_pie_chart_pptx() -> Vec<u8> {
+    build_of_pie_chart_variant_pptx("pie", "pos", Some("2"), false)
+}
+
+fn build_of_pie_chart_variant_pptx(
+    of_pie_type: &str,
+    split_type: &str,
+    split_pos: Option<&str>,
+    with_data_labels: bool,
+) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="OfPieChart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="100000" y="100000"/><a:ext cx="5000000" cy="3000000"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart r:id="rId2"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>"#;
+
+    let split_pos_xml = split_pos
+        .map(|val| format!("<c:splitPos val=\"{val}\"/>"))
+        .unwrap_or_default();
+    let d_lbls_xml = if with_data_labels {
+        "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
+    } else {
+        ""
+    };
+
+    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:ofPieChart>
+        <c:ofPieType val="{of_pie_type}"/>
+        <c:varyColors val="1"/>
+        <c:ser>
+          <c:idx val="0"/>
+          <c:order val="0"/>
+          <c:tx><c:v>Revenue Share</c:v></c:tx>
+          <c:cat>
+            <c:strLit>
+              <c:ptCount val="4"/>
+              <c:pt idx="0"><c:v>North</c:v></c:pt>
+              <c:pt idx="1"><c:v>South</c:v></c:pt>
+              <c:pt idx="2"><c:v>East</c:v></c:pt>
+              <c:pt idx="3"><c:v>West</c:v></c:pt>
+            </c:strLit>
+          </c:cat>
+          <c:val>
+            <c:numLit>
+              <c:ptCount val="4"/>
+              <c:pt idx="0"><c:v>40</c:v></c:pt>
+              <c:pt idx="1"><c:v>30</c:v></c:pt>
+              <c:pt idx="2"><c:v>20</c:v></c:pt>
+              <c:pt idx="3"><c:v>10</c:v></c:pt>
+            </c:numLit>
+          </c:val>
+        </c:ser>
+        <c:gapWidth val="120"/>
+        <c:splitType val="{split_type}"/>
+        {split_pos_xml}
+        {d_lbls_xml}
+        <c:secondPieSize val="70"/>
+      </c:ofPieChart>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#);
+
+    let buf = Vec::new();
+    let cursor = Cursor::new(buf);
+    let mut zip = ZipWriter::new(cursor);
+    let opts = SimpleFileOptions::default();
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#;
+
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
 fn build_chart_preview_fallback_pptx() -> Vec<u8> {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -5233,6 +5364,64 @@ fn test_pie3d_chart_renders_directly_as_flat_pie() {
     assert!(html.contains("<path class=\"chart-pie-slice\""), "3D pie chart should emit pie slices through the existing flat pie renderer: {html}");
     assert!(html.contains("North") && html.contains("South"), "3D pie chart should preserve category labels in the flat direct render path: {html}");
     assert!(!html.contains("<div class=\"chart-placeholder\">"), "3D pie chart should no longer fall back to the generic chart placeholder when a flat pie render is possible: {html}");
+}
+
+#[test]
+fn test_of_pie_chart_renders_directly() {
+    let pptx = build_of_pie_chart_pptx();
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "ofPie chart should render directly once bounded ofPie support is available: {html}");
+    assert!(html.contains("chart-of-pie-primary"), "ofPie chart should render a primary pie cluster: {html}");
+    assert!(html.contains("chart-of-pie-secondary"), "ofPie chart should render a secondary pie cluster: {html}");
+    assert!(html.contains("North") && html.contains("West"), "ofPie chart should preserve category labels across both clusters: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "ofPie chart should not use the generic placeholder once the bounded slice is supported: {html}");
+}
+
+#[test]
+fn test_of_pie_chart_parses_direct_spec() {
+    let pptx = build_of_pie_chart_pptx();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    match &shape.shape_type {
+        ShapeType::Chart(chart) => {
+            let spec = chart.direct_spec.as_ref().expect("direct chart spec");
+            assert_eq!(spec.chart_type, ChartType::OfPie);
+            assert_eq!(spec.of_pie_type, Some(ChartOfPieType::Pie));
+            assert_eq!(spec.split_type, Some(ChartSplitType::Pos));
+            assert_eq!(spec.split_pos, Some(2.0));
+            assert_eq!(spec.second_pie_size, Some(70));
+        }
+        _ => panic!("Expected Chart shape type"),
+    }
+}
+
+#[test]
+fn test_of_pie_chart_with_bar_type_falls_back_to_placeholder() {
+    let pptx = build_of_pie_chart_variant_pptx("bar", "pos", Some("2"), false);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Bar-of-pie should stay on fallback until bar secondary rendering is implemented: {html}");
+    assert!(!html.contains("chart-of-pie-primary"), "Bar-of-pie should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_of_pie_chart_with_value_split_falls_back_to_placeholder() {
+    let pptx = build_of_pie_chart_variant_pptx("pie", "val", Some("15"), false);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Value-split ofPie should stay on fallback until value-based partitioning is implemented: {html}");
+    assert!(!html.contains("chart-of-pie-primary"), "Value-split ofPie should not partially direct render yet: {html}");
+}
+
+#[test]
+fn test_of_pie_chart_with_data_labels_falls_back_to_placeholder() {
+    let pptx = build_of_pie_chart_variant_pptx("pie", "pos", Some("2"), true);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "ofPie with data labels should stay on fallback until bounded label support is implemented: {html}");
+    assert!(!html.contains("chart-of-pie-primary"), "ofPie with data labels should not partially direct render yet: {html}");
 }
 
 // ── Shape effect tests (outerShdw / glow) ──

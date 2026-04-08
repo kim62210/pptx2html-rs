@@ -25,7 +25,8 @@ pub use hierarchy::{
 pub use presentation::{ClrMap, FontScheme, Presentation};
 pub use slide::{
     AutoFit, Bullet, BulletAutoNum, BulletChar, ChartData, ChartDataLabelPosition,
-    ChartBubbleSizeRepresents, ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec, ChartRadarStyle, ChartScatterStyle, ChartSeries,
+    ChartBubbleSizeRepresents, ChartDataLabelSettings, ChartGrouping, ChartMarkerSpec,
+    ChartOfPieType, ChartRadarStyle, ChartScatterStyle, ChartSeries, ChartSplitType,
     ChartSpec, ChartType, ConnectionRef,
     CropRect, GroupData, ParagraphDefRPr, PictureData, Shape, ShapeType, Slide, TableCell,
     TableData, TableRow, TextBody, TextMargins, TextParagraph, TextRun, UnresolvedElement,
