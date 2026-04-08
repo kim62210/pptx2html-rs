@@ -5217,12 +5217,42 @@ fn test_radar_filled_style_renders_fill_without_markers() {
 }
 
 #[test]
-fn test_multi_series_radar_chart_falls_back_to_placeholder() {
+fn test_multi_series_radar_chart_renders_directly() {
     let pptx = build_multi_series_radar_chart_pptx("standard");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar should stay on the safe fallback path for now: {html}");
-    assert!(!html.contains("chart-radar-line"), "Multi-series radar should not partially direct render yet: {html}");
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series radar should render directly once bounded multi-series radar support is enabled: {html}");
+    assert!(html.matches("chart-radar-line").count() >= 2, "Multi-series radar should emit one radar line per series: {html}");
+    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar should no longer use the generic placeholder when the bounded multi-series slice is supported: {html}");
+}
+
+#[test]
+fn test_multi_series_radar_chart_with_value_labels_falls_back_to_placeholder() {
+    let pptx = build_radar_chart_variant_pptx("standard", 2, true, None, None);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar with data labels should stay on fallback until bounded radar label support is implemented: {html}");
+    assert!(!html.contains("<div class=\"chart-direct\">"), "Multi-series radar with data labels should not enter the direct chart path yet: {html}");
+}
+
+#[test]
+fn test_multi_series_radar_marker_style_renders_markers_for_each_series() {
+    let pptx = build_radar_chart_variant_pptx("marker", 2, false, Some("diamond"), Some(12));
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series marker radar should render directly: {html}");
+    assert!(html.matches("chart-radar-line").count() >= 2, "Multi-series marker radar should emit one radar line per series: {html}");
+    assert!(html.matches("data-marker-symbol=\"diamond\"").count() >= 8, "Multi-series marker radar should render markers for each point in each series: {html}");
+}
+
+#[test]
+fn test_multi_series_radar_filled_style_renders_fill_for_each_series() {
+    let pptx = build_radar_chart_variant_pptx("filled", 2, false, None, None);
+    let html = render_html(&pptx);
+
+    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series filled radar should render directly: {html}");
+    assert!(html.matches("chart-radar-fill").count() >= 2, "Multi-series filled radar should emit one fill polygon per series: {html}");
+    assert!(!html.contains("<circle class=\"chart-point\""), "Filled multi-series radar should not render marker points: {html}");
 }
 
 #[test]

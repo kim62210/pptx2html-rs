@@ -737,7 +737,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                 && spec.split_pos.is_some_and(|value| value >= 1.0)
                         }
                         ChartType::Radar => {
-                            spec.series.len() == 1 && spec.data_labels.is_none()
+                            !spec.series.is_empty() && spec.data_labels.is_none()
                         }
                         ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
                         _ => true,

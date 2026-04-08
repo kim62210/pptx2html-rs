@@ -200,7 +200,7 @@ Capability stages such as `parsed` and `rendered` belong in `docs/architecture/C
 | Direct area3D charts (flat render) | `<c:area3DChart>` | Approximate |
 | Direct scatter charts | `<c:scatterChart>` | Approximate |
 | Direct bubble charts (single-series, no `<c:dLbls>`, non-negative sizes, area semantics, approximate bubbleScale support) | `<c:bubbleChart>` | Approximate |
-| Direct radar charts (single-series, no `<c:dLbls>`) | `<c:radarChart>` | Approximate |
+| Direct radar charts (multi-series, no `<c:dLbls>`, approximate marker handling) | `<c:radarChart>` | Approximate |
 | Direct ofPie charts (single-series, no `<c:dLbls>`, `ofPieType=pie`, `splitType=pos`) | `<c:ofPieChart>` | Approximate |
 | Scatter point labels | `<c:scatterChart> <c:dLbls>` | Approximate |
 | Direct pie charts (single-series) | `<c:pieChart>` | Approximate |

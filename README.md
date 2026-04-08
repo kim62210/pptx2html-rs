@@ -17,7 +17,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
 - Text styling: bold, italic, underline, strikethrough, super/subscript, bullets, vertical text, shadows, highlights, letter spacing
-- Approximate direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line, flat area3D, single-series/no-dLbls bubble (non-negative sizes, area semantics, bubbleScale support), single-series/no-dLbls radar (approximate marker handling), single-series/no-dLbls ofPie (`ofPieType=pie`, `splitType=pos`), pie, doughnut, and flat pie3D charts
+- Approximate direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line, flat area3D, single-series/no-dLbls bubble (non-negative sizes, area semantics, bubbleScale support), multi-series/no-dLbls radar (approximate marker handling), single-series/no-dLbls ofPie (`ofPieType=pie`, `splitType=pos`), pie, doughnut, and flat pie3D charts
 - Graceful placeholders for unsupported content (SmartArt, OLE, Math)
 - Self-contained HTML output (single file, no external dependencies)
 

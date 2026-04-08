@@ -58,7 +58,7 @@ All notable changes to this project will be documented in this file.
 - Render simple standard area charts directly
 - Render flat area3D charts through the existing area renderer
 - Render simple single-series bubble charts directly with bounded bubbleScale support, while keeping width semantics on fallback
-- Render simple single-series radar charts directly
+- Render bounded multi-series radar charts directly when data labels are absent
 - Render bounded single-series ofPie charts directly for `ofPieType=pie` and `splitType=pos`
 - Render simple single-series pie charts directly
 - Render simple single-series doughnut charts directly
