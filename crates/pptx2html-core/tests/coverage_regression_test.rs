@@ -2465,6 +2465,256 @@ fn parses_start_tag_color_context_matrix_through_public_parser() {
 }
 
 #[test]
+fn parses_empty_tag_color_context_matrix_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:schemeClr val="accent2"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="80" name="Empty Tag Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"/></a:outerShdw>
+            <a:glow rad="6350"><a:prstClr val="orange"/></a:glow>
+          </a:effectLst>
+          <a:custGeom><a:pathLst><a:path w="100000" h="100000"/></a:pathLst></a:custGeom>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"><a:srgbClr val="111111"/></a:lnRef>
+          <a:fillRef idx="2"><a:schemeClr val="accent2"/></a:fillRef>
+          <a:effectRef idx="3"><a:prstClr val="orange"/></a:effectRef>
+          <a:fontRef idx="minor"><a:sysClr lastClr="123456"/></a:fontRef>
+        </p:style>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:lstStyle>
+            <a:lvl1pPr>
+              <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+              <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p>
+            <a:pPr>
+              <a:spcAft><a:spcPts val="1400"/></a:spcAft>
+              <a:buFont typeface="Wingdings"/>
+              <a:buSzPts val="1800"/>
+              <a:buClr><a:prstClr val="orange"/></a:buClr>
+              <a:buAutoNum type="arabicParenR" startAt="3"/>
+            </a:pPr>
+            <a:r>
+              <a:rPr>
+                <a:effectLst><a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"/></a:outerShdw></a:effectLst>
+                <a:hlinkClick r:id="rIdRun"/>
+                <a:highlight><a:srgbClr val="FFA500"/></a:highlight>
+                <a:sysClr/>
+                <a:srgbClr val="445566"/>
+              </a:rPr>
+              <a:t>Empty Auto</a:t>
+            </a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="81" name="Empty Tag Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:buFont typeface="Symbol"/>
+                        <a:buSzPct val="125000"/>
+                        <a:buClr><a:srgbClr val="334455"/></a:buClr>
+                        <a:buAutoNum type="alphaLcParenR" startAt="2"/>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr>
+                          <a:highlight><a:srgbClr val="FFFF00"/></a:highlight>
+                          <a:schemeClr val="accent2"/></a:rPr>
+                        <a:t>Cell One</a:t>
+                      </a:r>
+                      <a:r>
+                        <a:rPr><a:sysClr val="windowText"/></a:rPr>
+                        <a:t>Cell Two</a:t>
+                      </a:r>
+                    </a:p>
+                    <a:p>
+                      <a:pPr><a:buNone/></a:pPr>
+                      <a:r><a:t>No Bullet</a:t></a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr">
+                    <a:solidFill><a:sysClr lastClr="ABCDEF"/></a:solidFill>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdRun" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/empty-tag" TargetMode="External"/>
+</Relationships>"#,
+        )
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#ED7D31")
+    ));
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Empty Tag Shape")
+        .expect("empty-tag shape");
+    let style_ref = shape.style_ref.as_ref().expect("shape style ref");
+    assert!(matches!(
+        style_ref.ln_ref.as_ref().map(|style| style.color.to_css()),
+        Some(Some(color)) if color == "#111111"
+    ));
+    assert!(matches!(
+        style_ref.fill_ref.as_ref().map(|style| style.color.to_css()),
+        Some(Some(color)) if color == "#ED7D31"
+    ));
+    assert!(matches!(
+        style_ref.effect_ref.as_ref().map(|style| style.color.to_css()),
+        Some(Some(color)) if color == "#FFA500"
+    ));
+    assert!(matches!(
+        style_ref.font_ref.as_ref().map(|style| style.color.to_css()),
+        Some(Some(color)) if color == "#123456"
+    ));
+    assert!(shape.effects.outer_shadow.is_some());
+    assert!(shape.effects.glow.is_some());
+    let custom_geom = match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.paths.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::Norm));
+    let list_level = shape
+        .text_body
+        .as_ref()
+        .expect("shape text body")
+        .list_style
+        .as_ref()
+        .and_then(|style| style.levels[0].as_ref())
+        .expect("shape list level");
+    assert!(matches!(
+        list_level.space_before,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    assert!(matches!(
+        list_level.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 9.0).abs() < 1e-6
+    ));
+    let para = &shape
+        .text_body
+        .as_ref()
+        .expect("shape text body")
+        .paragraphs[0];
+    assert!(matches!(
+        para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 14.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "arabicParenR"
+                && bullet.start_at == Some(3)
+                && bullet.font.as_deref() == Some("Wingdings")
+                && bullet.size_pct.is_some_and(|v| (v + 18.0).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#FFA500")
+    ));
+    let run = &para.runs[0];
+    assert_eq!(
+        run.hyperlink.as_deref(),
+        Some("https://example.com/empty-tag")
+    );
+    assert_eq!(run.style.color.to_css().as_deref(), Some("#445566"));
+    assert_eq!(
+        run.style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFA500")
+    );
+    assert_eq!(
+        run.style
+            .shadow
+            .as_ref()
+            .and_then(|s| s.color.to_css())
+            .as_deref(),
+        Some("#4472C4")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let cell = &table.rows[0].cells[0];
+    assert!(matches!(
+        &cell.fill,
+        Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#ABCDEF")
+    ));
+    let cell_para = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
+    assert!(matches!(
+        &cell_para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "alphaLcParenR"
+                && bullet.start_at == Some(2)
+                && bullet.font.as_deref() == Some("Symbol")
+                && bullet.size_pct.is_some_and(|v| (v - 1.25).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#334455")
+    ));
+    assert_eq!(
+        cell_para.runs[0].style.color.to_css().as_deref(),
+        Some("#ED7D31")
+    );
+    assert_eq!(
+        cell_para.runs[0]
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+    assert_eq!(
+        cell_para.runs[1].style.color.to_css().as_deref(),
+        Some("#000000")
+    );
+    assert!(matches!(
+        &cell.text_body.as_ref().expect("cell text body").paragraphs[1].bullet,
+        Some(Bullet::None)
+    ));
+}
+
+#[test]
 fn parses_shape_text_autofit_connector_and_ole_branches() {
     let slide = r#"
       <p:graphicFrame>
