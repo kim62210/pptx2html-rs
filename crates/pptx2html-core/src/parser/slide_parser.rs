@@ -2078,12 +2078,8 @@ pub fn parse_slide<R: Read + Seek>(
                     // ── Chart reference inside graphicData ──
                     "chart" if in_graphic_data && graphic_data_is_chart => {
                         if let Some(sb) = current_shape.as_mut() {
-                            for attr in e.attributes().flatten() {
-                                let key = std::str::from_utf8(attr.key.as_ref()).unwrap_or("");
-                                if key.ends_with("id") && key.contains(':') {
-                                    sb.chart_rel_id =
-                                        Some(String::from_utf8_lossy(&attr.value).to_string());
-                                }
+                            if let Some(rel_id) = xml_utils::attr_str(e, "id") {
+                                sb.chart_rel_id = Some(rel_id);
                             }
                         }
                     }
@@ -4256,6 +4252,607 @@ mod tests {
         assert_eq!(table.rows.len(), 1);
         assert_eq!(table.col_widths, vec![120.0]);
         assert!(table.band_row);
+    }
+
+    #[test]
+    fn parse_slide_covers_regular_shape_text_and_style_ref_branches() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="7" name="Styled Shape"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="1800000" flipV="1">
+            <a:off x="12700" y="25400"/>
+            <a:ext cx="457200" cy="228600"/>
+          </a:xfrm>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:prstClr val="orange"/></a:gs>
+              <a:gs pos="100000"><a:sysClr lastClr="112233"/></a:gs>
+            </a:gsLst>
+            <a:path path="circle"/>
+          </a:gradFill>
+          <a:ln w="12700" cap="flat" cmpd="tri" algn="in"></a:ln>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>
+          <a:fillRef idx="2"><a:prstClr val="orange"/></a:fillRef>
+          <a:effectRef idx="1"><a:sysClr val="windowText"/></a:effectRef>
+          <a:fontRef idx="minor"><a:schemeClr val="accent2"/></a:fontRef>
+        </p:style>
+        <p:txBody>
+          <a:bodyPr wrap="none"></a:bodyPr>
+          <a:noAutofit></a:noAutofit>
+          <a:lstStyle>
+            <a:lvl1pPr algn="r">
+              <a:lnSpc><a:spcPct val="80000"/></a:lnSpc>
+              <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+              <a:spcAft><a:spcPct val="110000"/></a:spcAft>
+              <a:defRPr sz="1600" spc="100" baseline="20000" cap="small" u="dash" strike="dblStrike" b="1" i="1">
+                <a:schemeClr val="accent2"/>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p>
+            <a:pPr algn="ctr" rtl="1" lvl="1" indent="12700" marL="25400">
+              <a:defRPr sz="2400" spc="200" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="1" i="1"/>
+            </a:pPr>
+            <a:buClr><a:prstClr val="orange"/></a:buClr>
+            <a:r>
+              <a:rPr sz="1800">
+                <a:hlinkClick r:id="rIdHyper"/>
+              </a:rPr>
+              <a:t>First</a:t>
+            </a:r>
+            <a:br/>
+            <a:r><a:t>Second</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="8" name="Shrink Shape"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="228600" cy="114300"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr"></a:bodyPr>
+          <a:spAutoFit></a:spAutoFit>
+          <a:p/>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let rels = HashMap::from([(
+            "rIdHyper".to_string(),
+            "https://example.com".to_string(),
+        )]);
+        let mut archive = archive_with_entries(&[]);
+
+        let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
+        assert_eq!(slide.shapes.len(), 2);
+
+        let shape = &slide.shapes[0];
+        assert_eq!(shape.id, 7);
+        assert_eq!(shape.name, "Styled Shape");
+        assert!((shape.rotation - 30.0).abs() < 1e-6);
+        assert!(shape.flip_v);
+        assert!(matches!(shape.border.cap, LineCap::Flat));
+        assert!(matches!(shape.border.alignment, LineAlignment::Inset));
+        assert!(matches!(
+            shape.style_ref.as_ref().and_then(|style| style.effect_ref.as_ref()),
+            Some(effect_ref) if effect_ref.idx == 1
+        ));
+        assert!(matches!(
+            shape.fill,
+            Fill::Gradient(ref fill)
+                if fill.stops.len() == 2
+                    && matches!(fill.stops[0].color.kind, ColorKind::Preset(ref name) if name == "orange")
+                    && matches!(fill.stops[1].color.kind, ColorKind::Rgb(ref hex) if hex == "112233")
+        ));
+
+        let text_body = shape.text_body.as_ref().expect("text body");
+        assert!(!text_body.word_wrap);
+        assert!(matches!(text_body.auto_fit, AutoFit::NoAutoFit));
+        let list_style = text_body.list_style.as_ref().expect("list style");
+        let lvl1 = list_style.levels[0].as_ref().expect("level 1 defaults");
+        assert!(matches!(lvl1.alignment, Some(Alignment::Right)));
+        assert!(matches!(
+            lvl1.line_spacing,
+            Some(SpacingValue::Percent(v)) if (v - 0.8).abs() < 1e-6
+        ));
+        assert!(matches!(
+            lvl1.space_before,
+            Some(SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+        ));
+        assert!(matches!(
+            lvl1.space_after,
+            Some(SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6
+        ));
+
+        let paragraph = &text_body.paragraphs[0];
+        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert!(paragraph.rtl);
+        assert_eq!(paragraph.level, 1);
+        assert_eq!(paragraph.runs.len(), 3);
+        assert_eq!(paragraph.runs[0].hyperlink.as_deref(), Some("https://example.com"));
+        assert!(paragraph.runs[1].is_break);
+        let def_rpr = paragraph.def_rpr.as_ref().expect("paragraph defRPr");
+        assert_eq!(def_rpr.font_size, Some(24.0));
+        assert_eq!(def_rpr.letter_spacing, Some(2.0));
+        assert_eq!(def_rpr.baseline, Some(30000));
+        assert_eq!(def_rpr.bold, Some(true));
+        assert_eq!(def_rpr.italic, Some(true));
+        assert!(matches!(
+            def_rpr.capitalization,
+            Some(TextCapitalization::All)
+        ));
+        assert!(matches!(def_rpr.underline, Some(UnderlineType::Double)));
+        assert!(matches!(
+            def_rpr.strikethrough,
+            Some(StrikethroughType::Single)
+        ));
+
+        let shrink_shape = &slide.shapes[1];
+        assert!(matches!(
+            shrink_shape.text_body.as_ref().map(|tb| &tb.auto_fit),
+            Some(AutoFit::Shrink)
+        ));
+    }
+
+    #[test]
+    fn parse_slide_covers_ole_and_table_cell_variants() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="OLE"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/presentationml/2006/oleObject">
+            <p:oleObj progId="Excel.Sheet.12" name="Workbook"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="3" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1" bandCol="1" firstRow="1" lastRow="1" firstCol="1" lastCol="1"></a:tblPr>
+              <a:tblGrid>
+                <a:gridCol w="914400"/>
+                <a:gridCol w="457200"/>
+              </a:tblGrid>
+              <a:tr h="457200">
+                <a:tc gridSpan="2" rowSpan="2" vMerge="1">
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="ctr" lvl="1" indent="91440" marL="45720">
+                        <a:defRPr sz="2000" spc="100" baseline="10000" cap="small" u="dashLong" strike="dblStrike" b="1" i="1"/>
+                      </a:pPr>
+                      <a:buClr><a:schemeClr val="accent2"/></a:buClr>
+                      <a:r>
+                        <a:rPr sz="1800"><a:hlinkClick r:id="rIdHyper"/></a:rPr>
+                        <a:t>Cell</a:t>
+                      </a:r>
+                      <a:br/>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr marL="91440" marR="137160" marT="45720" marB="22860" anchor="b">
+                    <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                    <a:lnL w="12700"><a:prstDash val="sysDot"></a:prstDash><a:srgbClr val="FF0000"/></a:lnL>
+                    <a:lnR w="12700"><a:prstDash val="lgDashDot"></a:prstDash><a:srgbClr val="0000FF"/></a:lnR>
+                    <a:lnT w="12700"><a:prstDash val="lgDashDotDot"></a:prstDash><a:srgbClr val="123456"/></a:lnT>
+                    <a:lnB w="12700"><a:prstDash val="sysDash"></a:prstDash><a:srgbClr val="654321"/></a:lnB>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let rels = HashMap::from([(
+            "rIdHyper".to_string(),
+            "https://example.com/table".to_string(),
+        )]);
+        let mut archive = archive_with_entries(&[]);
+
+        let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
+        assert_eq!(slide.shapes.len(), 2);
+
+        assert!(matches!(
+            &slide.shapes[0].shape_type,
+            ShapeType::Unsupported(data)
+                if data.label == "OLE Object"
+                    && data.raw_xml.as_deref().is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
+        ));
+
+        let table = match &slide.shapes[1].shape_type {
+            ShapeType::Table(table) => table,
+            other => panic!("expected table shape, got {other:?}"),
+        };
+        assert!(table.band_row && table.band_col && table.first_row && table.last_row);
+        assert!(table.first_col && table.last_col);
+        assert_eq!(table.col_widths.len(), 2);
+
+        let cell = &table.rows[0].cells[0];
+        assert_eq!(cell.col_span, 2);
+        assert_eq!(cell.row_span, 2);
+        assert!(cell.v_merge);
+        assert!(matches!(cell.vertical_align, VerticalAlign::Bottom));
+        assert!(matches!(cell.border_left.style, BorderStyle::Dotted));
+        assert!(matches!(cell.border_left.dash_style, DashStyle::SystemDot));
+        assert!(matches!(cell.border_right.style, BorderStyle::Dotted));
+        assert!(matches!(cell.border_right.dash_style, DashStyle::LongDashDot));
+        assert!(matches!(cell.border_top.style, BorderStyle::Dotted));
+        assert!(matches!(
+            cell.border_top.dash_style,
+            DashStyle::LongDashDotDot
+        ));
+        assert!(matches!(cell.border_bottom.style, BorderStyle::Dashed));
+        assert!(matches!(cell.border_bottom.dash_style, DashStyle::SystemDash));
+
+        let paragraph = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
+        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert_eq!(paragraph.level, 1);
+        assert_eq!(paragraph.runs.len(), 2);
+        assert_eq!(
+            paragraph.runs[0].hyperlink.as_deref(),
+            Some("https://example.com/table")
+        );
+        assert!(paragraph.runs[1].is_break);
+        let def_rpr = paragraph.def_rpr.as_ref().expect("cell paragraph defRPr");
+        assert_eq!(def_rpr.font_size, Some(20.0));
+        assert_eq!(def_rpr.letter_spacing, Some(1.0));
+        assert_eq!(def_rpr.baseline, Some(10000));
+        assert_eq!(def_rpr.bold, Some(true));
+        assert_eq!(def_rpr.italic, Some(true));
+        assert!(matches!(
+            def_rpr.capitalization,
+            Some(TextCapitalization::Small)
+        ));
+        assert!(matches!(def_rpr.underline, Some(UnderlineType::DashLong)));
+        assert!(matches!(
+            def_rpr.strikethrough,
+            Some(StrikethroughType::Double)
+        ));
+    }
+
+    #[test]
+    fn parse_slide_loads_chart_preview_and_picture_crop_variants() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <chart r:id="rIdChart"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:pic>
+        <p:nvPicPr>
+          <p:cNvPr id="3" name="Picture"/>
+          <p:cNvPicPr/>
+          <p:nvPr/>
+        </p:nvPicPr>
+        <p:blipFill>
+          <a:blip r:embed="rIdImage"/>
+          <a:srcRect l="10000" t="20000" r="30000" b="40000"/>
+        </p:blipFill>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="1" flipV="true"/>
+          <a:prstGeom prst="rect"/>
+        </p:spPr>
+      </p:pic>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let slide_rels = HashMap::from([
+            ("rIdChart".to_string(), "../charts/chart1.xml".to_string()),
+            ("rIdImage".to_string(), "../media/image1.png".to_string()),
+        ]);
+        let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:pieChart>
+        <c:varyColors val="1"/>
+        <c:ser>
+          <c:idx val="0"/>
+          <c:order val="0"/>
+          <c:tx><c:v>Series</c:v></c:tx>
+          <c:cat>
+            <c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>Only</c:v></c:pt></c:strLit>
+          </c:cat>
+          <c:val>
+            <c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>42</c:v></c:pt></c:numLit>
+          </c:val>
+        </c:ser>
+      </c:pieChart>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#;
+        let chart_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdSkip" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/ignored.bin"/>
+  <Relationship Id="rIdPreview" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/chart-preview.png"/>
+</Relationships>"#;
+        let mut archive = archive_with_entries(&[
+            ("ppt/charts/chart1.xml", chart_xml.as_bytes()),
+            ("ppt/charts/_rels/chart1.xml.rels", chart_rels.as_bytes()),
+            ("ppt/media/chart-preview.png", b"preview".as_slice()),
+            ("ppt/media/image1.png", b"image-bytes".as_slice()),
+        ]);
+
+        let slide = parse_slide(slide_xml, &slide_rels, &mut archive).expect("slide should parse");
+        assert_eq!(slide.shapes.len(), 2);
+
+        let chart = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Chart(chart) => Some(chart),
+                _ => None,
+            })
+            .expect("chart shape");
+        assert_eq!(chart.rel_id, "rIdChart");
+        assert!(chart.direct_spec.is_some(), "expected parsed direct chart spec");
+        assert_eq!(chart.preview_image.as_deref(), Some(b"preview".as_slice()));
+        assert_eq!(chart.preview_mime.as_deref(), Some("image/png"));
+
+        let picture = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Picture(pic) => Some((shape, pic)),
+                _ => None,
+            })
+            .expect("picture shape");
+        assert!((picture.0.rotation - 90.0).abs() < 1e-6);
+        assert!(picture.0.flip_h);
+        assert!(picture.0.flip_v);
+        assert_eq!(picture.1.data, b"image-bytes");
+        let crop = picture.1.crop.as_ref().expect("picture crop");
+        assert!((crop.left - 0.1).abs() < 1e-6);
+        assert!((crop.top - 0.2).abs() < 1e-6);
+        assert!((crop.right - 0.3).abs() < 1e-6);
+        assert!((crop.bottom - 0.4).abs() < 1e-6);
+    }
+
+    #[test]
+    fn parse_slide_handles_background_blips_custom_geometry_and_start_tag_connectors() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:o="urn:schemas-microsoft-com:office:office"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill><a:blip r:embed="rIdBg"></a:blip></a:blipFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""></p:cNvPr><p:cNvGrpSpPr></p:cNvGrpSpPr><p:nvPr></p:nvPr></p:nvGrpSpPr>
+      <p:grpSpPr></p:grpSpPr>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="OLE"></p:cNvPr><p:cNvGraphicFramePr></p:cNvGraphicFramePr><p:nvPr></p:nvPr></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"></a:off><a:ext cx="914400" cy="457200"></a:ext></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/presentationml/2006/oleObject">
+            <o:OLEObject ProgID="Excel.Sheet.12"><o:Link></o:Link></o:OLEObject>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Custom Shape"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="1" flipV="true"><a:off x="12700" y="25400"></a:off><a:ext cx="914400" cy="457200"></a:ext></a:xfrm>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:prstClr val="orange"></a:prstClr></a:gs>
+              <a:gs pos="100000"><a:sysClr lastClr="ABCDEF"></a:sysClr></a:gs>
+            </a:gsLst>
+            <a:path path="shape"></a:path>
+          </a:gradFill>
+          <a:ln cap="flat" cmpd="tri" algn="in">
+            <a:prstDash val="sysDashDot"/>
+            <a:sysClr val="windowText"></a:sysClr>
+          </a:ln>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000">
+              <a:prstClr val="orange"></a:prstClr>
+              <a:alpha val="75000"></a:alpha>
+            </a:outerShdw>
+            <a:glow rad="6350">
+              <a:sysClr lastClr="123456"></a:sysClr>
+              <a:alpha val="60000"></a:alpha>
+            </a:glow>
+          </a:effectLst>
+          <a:custGeom>
+            <a:avLst><a:gd name="adj1" fmla="val 50000"></a:gd></a:avLst>
+            <a:gdLst><a:gd name="x1" fmla="val 100000"></a:gd></a:gdLst>
+            <a:ahLst>
+              <a:ahXY gdRefX="adj1" minX="0" maxX="100000" gdRefY="adj1" minY="0" maxY="100000">
+                <a:pos x="50000" y="50000"></a:pos>
+              </a:ahXY>
+            </a:ahLst>
+            <a:cxnLst><a:cxn ang="0"><a:pos x="0" y="0"></a:pos></a:cxn></a:cxnLst>
+            <a:rect l="0" t="0" r="100000" b="100000"></a:rect>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="darkenLess">
+                <a:moveTo><a:pt x="0" y="0"></a:pt></a:moveTo>
+                <a:lnTo><a:pt x="100000" y="0"></a:pt></a:lnTo>
+                <a:arcTo wR="50000" hR="50000" stAng="0" swAng="5400000"></a:arcTo>
+                <a:close></a:close>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="b" anchorCtr="1" rot="1800000" vert="vert" lIns="45720" tIns="91440" rIns="137160" bIns="182880" wrap="none"></a:bodyPr>
+          <a:spAutoFit></a:spAutoFit>
+          <a:p>
+            <a:pPr algn="r" rtl="1" lvl="1" indent="12700" marL="25400">
+              <a:lnSpc><a:spcPct val="120000"></a:spcPct></a:lnSpc>
+              <a:spcBef><a:spcPts val="1200"></a:spcPts></a:spcBef>
+              <a:spcAft><a:spcPct val="25000"></a:spcPct></a:spcAft>
+              <a:buClr><a:srgbClr val="334455"></a:srgbClr></a:buClr>
+              <a:defRPr sz="2000" spc="100" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="1" i="1"></a:defRPr>
+            </a:pPr>
+            <a:r>
+              <a:rPr sz="1800">
+                <a:highlight><a:prstClr val="orange"></a:prstClr></a:highlight>
+                <a:effectLst><a:outerShdw blurRad="12700" dist="25400" dir="2700000"><a:sysClr val="windowText"></a:sysClr></a:outerShdw></a:effectLst>
+                <a:hlinkClick r:id="rIdHyper"></a:hlinkClick>
+              </a:rPr>
+              <a:t>Rich Text</a:t>
+            </a:r>
+            <a:br></a:br>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="No AutoFit"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="457200"></a:ext></a:xfrm><a:prstGeom prst="rect"><a:avLst></a:avLst></a:prstGeom></p:spPr>
+        <p:txBody><a:bodyPr></a:bodyPr><a:noAutofit></a:noAutofit><a:p><a:r><a:t>None</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="5" name="Picture"></p:cNvPr><p:cNvPicPr></p:cNvPicPr><p:nvPr></p:nvPr></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="rIdPic"></a:blip></p:blipFill>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="457200"></a:ext></a:xfrm></p:spPr>
+      </p:pic>
+      <p:cxnSp>
+        <p:nvCxnSpPr><p:cNvPr id="6" name="Connector"></p:cNvPr><p:cNvCxnSpPr></p:cNvCxnSpPr><p:nvPr></p:nvPr></p:nvCxnSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="0" cy="914400"></a:ext></a:xfrm><a:ln><a:headEnd type="triangle" w="lg" len="sm"></a:headEnd><a:tailEnd type="oval" w="sm" len="lg"></a:tailEnd></a:ln></p:spPr>
+        <p:stCxn id="10" idx="1"></p:stCxn>
+        <p:endCxn id="11" idx="2"></p:endCxn>
+      </p:cxnSp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let rels = HashMap::from([
+            ("rIdBg".to_string(), "../media/background.png".to_string()),
+            ("rIdPic".to_string(), "../media/picture.png".to_string()),
+            ("rIdHyper".to_string(), "https://example.com".to_string()),
+        ]);
+        let mut archive = archive_with_entries(&[
+            ("ppt/media/background.png", b"bg-data"),
+            ("ppt/media/picture.png", b"pic-data"),
+        ]);
+
+        let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
+
+        assert!(matches!(
+            &slide.background,
+            Some(Fill::Image(fill)) if fill.rel_id == "rIdBg" && fill.data == b"bg-data"
+        ));
+        assert_eq!(slide.shapes.len(), 5);
+
+        assert!(slide.shapes.iter().any(|shape| matches!(
+            &shape.shape_type,
+            ShapeType::Unsupported(data)
+                if data.raw_xml.as_deref().is_some_and(|raw| raw.contains("OLEObject"))
+        )));
+
+        let custom_shape = slide
+            .shapes
+            .iter()
+            .find(|shape| matches!(shape.shape_type, ShapeType::CustomGeom(_)))
+            .expect("custom geometry shape");
+        assert!(custom_shape.flip_h);
+        assert!(custom_shape.flip_v);
+        assert!(matches!(custom_shape.border.cap, LineCap::Flat));
+        assert!(matches!(custom_shape.border.compound, CompoundLine::Triple));
+        assert!(matches!(custom_shape.border.alignment, LineAlignment::Inset));
+        let custom_text = custom_shape.text_body.as_ref().expect("custom text body");
+        assert!(matches!(custom_text.auto_fit, AutoFit::Shrink));
+        assert!(matches!(custom_text.vertical_align, VerticalAlign::Bottom));
+        assert_eq!(custom_shape.vertical_text.as_deref(), Some("vert"));
+        let custom_paragraph = &custom_text.paragraphs[0];
+        assert_eq!(
+            custom_paragraph.runs[0].hyperlink.as_deref(),
+            Some("https://example.com")
+        );
+        assert!(custom_paragraph.runs[1].is_break);
+        assert!(custom_paragraph.runs[0].style.highlight.is_some());
+        assert!(custom_paragraph.runs[0].style.shadow.is_some());
+
+        let no_autofit = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "No AutoFit")
+            .expect("no autofit shape");
+        assert!(matches!(
+            no_autofit.text_body.as_ref().map(|body| &body.auto_fit),
+            Some(AutoFit::NoAutoFit)
+        ));
+
+        let picture = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Picture(pic) => Some(pic),
+                _ => None,
+            })
+            .expect("picture shape");
+        assert_eq!(picture.rel_id, "rIdPic");
+        assert_eq!(picture.data, b"pic-data");
+
+        let connector = slide
+            .shapes
+            .iter()
+            .find(|shape| matches!(shape.shape_type, ShapeType::Custom(ref name) if name == "line"))
+            .expect("connector shape");
+        assert_eq!(
+            connector.start_connection.as_ref().map(|conn| conn.shape_id),
+            Some(10)
+        );
+        assert_eq!(
+            connector.end_connection.as_ref().map(|conn| conn.site_idx),
+            Some(2)
+        );
     }
 
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {

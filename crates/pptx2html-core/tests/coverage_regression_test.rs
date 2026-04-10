@@ -1,8 +1,8 @@
 mod fixtures;
 
 use pptx2html_core::model::{
-    Alignment, AutoFit, ClrMapOverride, CompoundLine, DashStyle, Fill, LineAlignment, LineCap,
-    LineJoin, PlaceholderType, ShapeType, VerticalAlign,
+    Alignment, AutoFit, Bullet, ClrMapOverride, CompoundLine, DashStyle, Fill, LineAlignment,
+    LineCap, LineJoin, PlaceholderType, ShapeType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 
@@ -425,5 +425,194 @@ fn parses_tables_and_unresolved_graphic_frames_and_renders_markers() {
             .as_deref()
             .is_some_and(|raw| raw.contains("oMath"))),
         "expected raw XML to survive into unresolved metadata"
+    );
+}
+
+#[test]
+fn parses_shape_text_autofit_connector_and_ole_branches() {
+    let slide = r#"
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="5" name="OLE"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/presentationml/2006/oleObject">
+            <oleObject progId="Excel.Sheet">
+              <oleData sheet="Budget"/>
+            </oleObject>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="6" name="Styled Shape"/>
+          <p:cNvSpPr/>
+          <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="1" flipV="true">
+            <a:off x="12700" y="25400"/>
+            <a:ext cx="381000" cy="254000"/>
+          </a:xfrm>
+          <a:ln w="12700" cap="flat" cmpd="tri" algn="in">
+            <a:prstDash val="sysDash"/>
+            <a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="1" rot="5400000" vert="vert270"
+                    lIns="91440" tIns="45720" rIns="182880" bIns="22860" wrap="none"/>
+          <a:noAutofit/>
+          <a:lstStyle>
+            <a:lvl1pPr algn="r">
+              <a:lnSpc><a:spcPct val="90000"/></a:lnSpc>
+              <a:spcBef><a:spcPts val="600"/></a:spcBef>
+              <a:spcAft><a:spcPts val="800"/></a:spcAft>
+              <a:defRPr sz="1800" spc="200" baseline="30000" cap="small" u="dbl"
+                        strike="sngStrike" b="1" i="1">
+                <a:latin typeface="Calibri"/>
+                <a:ea typeface="Yu Gothic"/>
+                <a:cs typeface="Noto Sans Arabic"/>
+                <a:schemeClr val="accent2"/>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p>
+            <a:pPr algn="just" lvl="1" indent="91440" marL="45720">
+              <a:lnSpc><a:spcPct val="110000"/></a:lnSpc>
+              <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+              <a:spcAft><a:spcPts val="2400"/></a:spcAft>
+              <a:buChar char="•"/>
+              <a:buClr><a:srgbClr val="00FF00"/></a:buClr>
+            </a:pPr>
+            <a:defRPr sz="2000" cap="all" b="1" i="1" u="sng" strike="dblStrike"
+                      baseline="20000" spc="100">
+              <a:latin typeface="Calibri"/>
+              <a:ea typeface="Meiryo"/>
+              <a:cs typeface="Noto Sans Devanagari"/>
+              <a:srgbClr val="123456"/>
+            </a:defRPr>
+            <a:r>
+              <a:rPr sz="1600" cap="all" b="1" i="1" u="sng" strike="dblStrike"
+                     baseline="10000" spc="50">
+                <a:hlinkClick r:id="rIdLink"/>
+                <a:srgbClr val="654321"/>
+              </a:rPr>
+              <a:t>Styled</a:t>
+            </a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="7" name="Shrink Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="25400" y="38100"/><a:ext cx="254000" cy="127000"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr wrap="none"/>
+          <a:spAutoFit/>
+          <a:p><a:r><a:t>Shrink</a:t></a:r></a:p>
+        </p:txBody>
+      </p:sp>
+      <p:cxnSp>
+        <p:nvCxnSpPr>
+          <p:cNvPr id="8" name="Connector"/>
+          <p:cNvCxnSpPr/>
+          <p:nvPr/>
+        </p:nvCxnSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="0"/></a:xfrm>
+          <a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">
+            <a:prstDash val="dashDot"/>
+            <a:headEnd type="triangle" w="lg" len="sm"/>
+            <a:tailEnd type="oval" w="sm" len="lg"/>
+            <a:schemeClr val="accent1"/>
+          </a:ln>
+        </p:spPr>
+        <p:stCxn id="10" idx="1"/>
+        <p:endCxn id="11" idx="2"/>
+      </p:cxnSp>
+    "#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/styled" TargetMode="External"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(slide_rels)
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    let ole = slide
+        .shapes
+        .iter()
+        .find(|shape| matches!(&shape.shape_type, ShapeType::Unsupported(_)))
+        .expect("ole placeholder shape");
+    assert!(matches!(
+        &ole.shape_type,
+        ShapeType::Unsupported(data)
+            if data.raw_xml.as_deref().is_some_and(|raw| raw.contains("oleData"))
+    ));
+
+    let styled = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Styled Shape")
+        .expect("styled shape");
+    assert!(styled.flip_h && styled.flip_v);
+    assert!(matches!(styled.border.cap, LineCap::Flat));
+    assert!(matches!(styled.border.compound, CompoundLine::Triple));
+    assert!(matches!(styled.border.alignment, LineAlignment::Inset));
+    let text_body = styled.text_body.as_ref().expect("styled text body");
+    assert!(matches!(text_body.vertical_align, VerticalAlign::Middle));
+    assert!(matches!(text_body.auto_fit, AutoFit::NoAutoFit));
+    assert_eq!(styled.vertical_text.as_deref(), Some("vert270"));
+    let defaults = text_body
+        .list_style
+        .as_ref()
+        .and_then(|ls| ls.levels[0].as_ref())
+        .and_then(|pd| pd.def_run_props.as_ref())
+        .expect("shape list-style defaults");
+    assert_eq!(defaults.font_size, Some(18.0));
+    assert_eq!(defaults.letter_spacing, Some(2.0));
+    assert_eq!(defaults.baseline, Some(30000));
+    assert_eq!(defaults.font_latin.as_deref(), Some("Calibri"));
+    let para = &text_body.paragraphs[0];
+    assert!(matches!(para.alignment, Alignment::Justify));
+    assert_eq!(para.level, 1);
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::Char(bullet)) if bullet.char == "•"
+    ));
+    let run = &para.runs[0];
+    assert_eq!(run.hyperlink.as_deref(), Some("https://example.com/styled"));
+    assert_eq!(run.style.color.to_css().as_deref(), Some("#654321"));
+
+    let shrink = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Shrink Shape")
+        .expect("shrink shape");
+    assert!(matches!(
+        shrink.text_body.as_ref().map(|body| &body.auto_fit),
+        Some(AutoFit::Shrink)
+    ));
+
+    let connector = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Connector")
+        .expect("connector");
+    assert!(matches!(&connector.shape_type, ShapeType::Custom(name) if name == "line"));
+    assert_eq!(
+        connector.start_connection.as_ref().map(|connection| connection.shape_id),
+        Some(10)
+    );
+    assert_eq!(
+        connector.end_connection.as_ref().map(|connection| connection.site_idx),
+        Some(2)
     );
 }

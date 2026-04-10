@@ -262,6 +262,12 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_invalid_missing_range_bounds() {
+        assert!(parse_slide_selection("-3").is_err());
+        assert!(parse_slide_selection("3-").is_err());
+    }
+
+    #[test]
     fn test_write_external_assets_creates_nested_files() {
         let tmpdir =
             std::env::temp_dir().join(format!("pptx2html-cli-test-{}", std::process::id()));
@@ -280,6 +286,54 @@ mod tests {
         let output = tmpdir.join("images/slide-1/image-0.png");
         assert!(output.exists(), "Expected asset file to be created");
         assert_eq!(std::fs::read(output).expect("read asset"), vec![1, 2, 3, 4]);
+        std::fs::remove_dir_all(&tmpdir).expect("remove tempdir");
+    }
+
+    #[test]
+    fn test_write_external_assets_reports_directory_creation_failure() {
+        let tmpdir = std::env::temp_dir().join(format!(
+            "pptx2html-cli-test-create-dir-error-{}",
+            std::process::id()
+        ));
+        if tmpdir.exists() {
+            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
+        }
+        std::fs::create_dir_all(&tmpdir).expect("create tempdir");
+        std::fs::write(tmpdir.join("images"), b"not a directory").expect("create blocking file");
+
+        let assets = vec![ExternalAsset {
+            relative_path: "images/slide-1/image-0.png".to_string(),
+            content_type: "image/png".to_string(),
+            data: vec![1, 2, 3, 4],
+        }];
+
+        let err = write_external_assets(&tmpdir, &assets).expect_err("directory creation fails");
+        assert!(err.contains("failed to create asset directory"));
+
+        std::fs::remove_file(tmpdir.join("images")).expect("remove blocking file");
+        std::fs::remove_dir_all(&tmpdir).expect("remove tempdir");
+    }
+
+    #[test]
+    fn test_write_external_assets_reports_file_write_failure() {
+        let tmpdir = std::env::temp_dir().join(format!(
+            "pptx2html-cli-test-write-error-{}",
+            std::process::id()
+        ));
+        if tmpdir.exists() {
+            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
+        }
+        std::fs::create_dir_all(tmpdir.join("images")).expect("create images dir");
+
+        let assets = vec![ExternalAsset {
+            relative_path: "images".to_string(),
+            content_type: "image/png".to_string(),
+            data: vec![1, 2, 3, 4],
+        }];
+
+        let err = write_external_assets(&tmpdir, &assets).expect_err("write should fail for dir");
+        assert!(err.contains("failed to write asset"));
+
         std::fs::remove_dir_all(&tmpdir).expect("remove tempdir");
     }
 }

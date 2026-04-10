@@ -4236,7 +4236,7 @@ fn emit_marker_def(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::presentation::{ColorScheme, Presentation, Theme};
+    use crate::model::presentation::{ClrMap, ColorScheme, Presentation, Theme};
 
     fn test_ctx(_embed_images: bool) -> (Presentation, RefCell<UnresolvedCollector>) {
         let mut pres = Presentation::default();
@@ -4541,5 +4541,375 @@ mod tests {
         assert!(html.contains("border-left: 1.0pt dashed #FF0000"));
         assert!(html.contains("border-right: 1.0pt dotted #0000FF"));
         assert!(html.contains("vertical-align: middle"));
+    }
+
+    #[test]
+    fn render_slide_covers_hidden_shapes_rotation_min_line_size_crop_and_unresolved_custom_geometry() {
+        let (mut pres, collector) = test_ctx(true);
+        pres.masters.push(SlideMaster {
+            theme_idx: 0,
+            shapes: vec![
+                Shape {
+                    name: "hidden-master".to_string(),
+                    hidden: true,
+                    ..Default::default()
+                },
+                Shape {
+                    name: "placeholder-master".to_string(),
+                    placeholder: Some(PlaceholderInfo::default()),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        });
+        pres.layouts.push(SlideLayout {
+            master_idx: 0,
+            show_master_sp: true,
+            ..Default::default()
+        });
+
+        let slide = Slide {
+            layout_idx: Some(0),
+            show_master_sp: true,
+            shapes: vec![
+                Shape {
+                    name: "hidden-slide".to_string(),
+                    hidden: true,
+                    ..Default::default()
+                },
+                Shape {
+                    name: "rotated-rect".to_string(),
+                    shape_type: ShapeType::Rectangle,
+                    size: Size {
+                        width: Emu(457_200),
+                        height: Emu(228_600),
+                    },
+                    rotation: 30.0,
+                    fill: Fill::Solid(SolidFill {
+                        color: Color::rgb("CCCCCC"),
+                    }),
+                    ..Default::default()
+                },
+                Shape {
+                    name: "rotated-line".to_string(),
+                    shape_type: ShapeType::Custom("line".to_string()),
+                    position: Position {
+                        x: Emu(9_144),
+                        y: Emu(18_288),
+                    },
+                    size: Size {
+                        width: Emu(0),
+                        height: Emu(914_400),
+                    },
+                    rotation: 30.0,
+                    border: Border {
+                        width: 1.0,
+                        color: Color::rgb("112233"),
+                        style: BorderStyle::Solid,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Shape {
+                    name: "cropped-picture".to_string(),
+                    shape_type: ShapeType::Picture(PictureData {
+                        rel_id: "rId1".to_string(),
+                        content_type: "image/png".to_string(),
+                        data: vec![1, 2, 3, 4],
+                        crop: Some(CropRect {
+                            left: 0.1,
+                            top: 0.0,
+                            right: 0.1,
+                            bottom: 0.0,
+                        }),
+                    }),
+                    position: Position {
+                        x: Emu(0),
+                        y: Emu(0),
+                    },
+                    size: Size {
+                        width: Emu(914_400),
+                        height: Emu(457_200),
+                    },
+                    ..Default::default()
+                },
+                Shape {
+                    name: "group".to_string(),
+                    shape_type: ShapeType::Group(
+                        vec![Shape {
+                            name: "group-child".to_string(),
+                            shape_type: ShapeType::Rectangle,
+                            size: Size {
+                                width: Emu(457_200),
+                                height: Emu(228_600),
+                            },
+                            fill: Fill::Solid(SolidFill {
+                                color: Color::rgb("00FF00"),
+                            }),
+                            ..Default::default()
+                        }],
+                        GroupData::default(),
+                    ),
+                    size: Size {
+                        width: Emu(914_400),
+                        height: Emu(457_200),
+                    },
+                    ..Default::default()
+                },
+                Shape {
+                    name: "custom-geometry-placeholder".to_string(),
+                    shape_type: ShapeType::Unsupported(UnsupportedData {
+                        label: "Custom Geometry".to_string(),
+                        element_type: UnresolvedType::CustomGeometry,
+                        raw_xml: Some("<custGeom/>".to_string()),
+                    }),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+        let mut html = String::new();
+        HtmlRenderer::render_slide(&slide, 1, 960.0, 540.0, &ctx, &mut html);
+
+        assert!(html.contains("transform: rotate(30.0deg)"));
+        assert!(html.contains("width: 2px"));
+        assert!(html.contains("overflow: hidden"));
+        assert!(html.contains("data-type=\"custom-geometry\""));
+        assert!(html.contains("background-color: #00FF00"));
+        assert!(!html.contains("hidden-master"));
+        assert!(!html.contains("hidden-slide"));
+        assert!(
+            collector
+                .borrow()
+                .elements
+                .iter()
+                .any(|elem| matches!(elem.element_type, UnresolvedType::CustomGeometry))
+        );
+    }
+
+    #[test]
+    fn render_shape_resolved_covers_outline_none_and_effect_ref_fallback() {
+        let (mut pres, collector) = test_ctx(true);
+        pres.themes[0].fmt_scheme.effect_style_lst.push(EffectStyle {
+            outer_shadow: Some(OuterShadow {
+                blur_radius: 2.0,
+                distance: 3.0,
+                direction: 45.0,
+                color: Color::theme("accent1"),
+                alpha: 1.0,
+            }),
+            glow: Some(GlowEffect {
+                radius: 1.5,
+                color: Color::rgb("ABCDEF"),
+                alpha: 1.0,
+            }),
+        });
+        let clr_map = ClrMap::default();
+
+        let shape = Shape {
+            name: "outlined-rect".to_string(),
+            shape_type: ShapeType::Rectangle,
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            border: Border {
+                width: 1.0,
+                style: BorderStyle::None,
+                ..Default::default()
+            },
+            style_ref: Some(ShapeStyleRef {
+                effect_ref: Some(StyleRef {
+                    idx: 1,
+                    color: Color::none(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: Some(&clr_map),
+            embed_images: true,
+            collector: &collector,
+        };
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("outline: 1.0pt none"));
+        assert!(html.contains("box-shadow:"));
+    }
+
+    #[test]
+    fn render_shape_resolved_covers_chart_preview_assets_and_label_positions() {
+        let (pres_external, collector_external) = test_ctx(false);
+        let ctx_external = RenderCtx {
+            pres: &pres_external,
+            slide: None,
+            scheme: pres_external.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: false,
+            collector: &collector_external,
+        };
+
+        let preview_shape = Shape {
+            shape_type: ShapeType::Chart(ChartData {
+                rel_id: "rIdChart".to_string(),
+                preview_image: Some(vec![1, 2, 3, 4]),
+                preview_mime: Some("image/png".to_string()),
+                direct_spec: None,
+            }),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            ..Default::default()
+        };
+        let mut preview_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &preview_shape,
+            None,
+            None,
+            &ctx_external,
+            &mut preview_html,
+        );
+        assert!(preview_html.contains("images/slide-1/chart-0.png"));
+        let assets = &collector_external.borrow().external_assets;
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].relative_path, "images/slide-1/chart-0.png");
+
+        let (pres_embed, collector_embed) = test_ctx(true);
+        let ctx_embed = RenderCtx {
+            pres: &pres_embed,
+            slide: None,
+            scheme: pres_embed.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector_embed,
+        };
+
+        let make_chart_shape = |spec: ChartSpec| Shape {
+            shape_type: ShapeType::Chart(ChartData {
+                rel_id: "rIdChart".to_string(),
+                preview_image: None,
+                preview_mime: None,
+                direct_spec: Some(spec),
+            }),
+            size: Size {
+                width: Emu(1_828_800),
+                height: Emu(914_400),
+            },
+            ..Default::default()
+        };
+
+        let mut bar_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Column,
+                grouping: ChartGrouping::Clustered,
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::Center),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Revenue".to_string()),
+                    categories: vec!["Q1".to_string()],
+                    values: vec![10.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx_embed,
+            &mut bar_html,
+        );
+        assert!(bar_html.contains("data-label-position=\"ctr\""));
+
+        let mut line_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Line,
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::InEnd),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Series".to_string()),
+                    categories: vec!["A".to_string()],
+                    values: vec![5.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx_embed,
+            &mut line_html,
+        );
+        assert!(line_html.contains("data-label-position=\"inEnd\""));
+
+        let mut scatter_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Scatter,
+                scatter_style: Some(ChartScatterStyle::Marker),
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::InEnd),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Points".to_string()),
+                    x_values: vec![1.0],
+                    values: vec![5.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx_embed,
+            &mut scatter_html,
+        );
+        assert!(scatter_html.contains("data-label-position=\"inEnd\""));
+
+        let mut pie_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Pie,
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::InEnd),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Series".to_string()),
+                    categories: vec!["Slice".to_string()],
+                    values: vec![20.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx_embed,
+            &mut pie_html,
+        );
+        assert!(pie_html.contains("data-label-position=\"inEnd\""));
     }
 }

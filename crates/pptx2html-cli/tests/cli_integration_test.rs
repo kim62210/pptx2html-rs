@@ -1,7 +1,11 @@
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 fn unique_temp_path(name: &str) -> PathBuf {
     let nanos = SystemTime::now()
@@ -115,4 +119,232 @@ fn missing_input_returns_nonzero_exit_code() {
     assert!(!output.status.success());
     let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
     assert!(stderr.contains("Failed to read presentation"));
+}
+
+#[test]
+fn info_command_escapes_title_strings() {
+    let input = write_temp_file("info-title", &build_titled_single_slide_pptx());
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&input)
+        .arg("--info")
+        .output()
+        .expect("run cli");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).expect("utf8 stdout");
+    assert!(stdout.contains("\"title\":\"Quarterly \\\\\\\"Deck\\\\\\\" \\\\\\\\ Notes\""));
+
+    fs::remove_file(input).ok();
+}
+
+#[test]
+fn multi_file_conversion_reports_output_directory_creation_failure() {
+    let input = write_temp_file("multi-dir-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let output_path = unique_temp_path("multi-dir-target");
+    fs::write(&output_path, b"not-a-directory").expect("seed output path as file");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&input)
+        .arg("--format")
+        .arg("multi")
+        .arg("--output")
+        .arg(&output_path)
+        .output()
+        .expect("run cli");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("Failed to create output directory"));
+
+    fs::remove_file(input).ok();
+    fs::remove_file(output_path).ok();
+}
+
+#[test]
+fn multi_file_conversion_reports_slide_write_failures() {
+    let input = write_temp_file("multi-write-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let output_dir = unique_temp_path("multi-write-target");
+    fs::create_dir_all(output_dir.join("slide-1.html")).expect("seed slide html path as dir");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&input)
+        .arg("--format")
+        .arg("multi")
+        .arg("--output")
+        .arg(&output_dir)
+        .output()
+        .expect("run cli");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("Failed to write"));
+
+    fs::remove_file(input).ok();
+    fs::remove_dir_all(output_dir).ok();
+}
+
+#[test]
+fn single_file_conversion_reports_output_write_failures() {
+    let input = write_temp_file("single-write-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let output_dir = unique_temp_path("single-output-dir");
+    fs::create_dir_all(&output_dir).expect("create output dir");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&input)
+        .arg("--output")
+        .arg(&output_dir)
+        .output()
+        .expect("run cli");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("Failed to write output file"));
+
+    fs::remove_file(input).ok();
+    fs::remove_dir_all(output_dir).ok();
+}
+
+#[test]
+fn multi_file_conversion_reports_info_failures_for_missing_input() {
+    let missing = unique_temp_path("missing-multi").with_extension("pptx");
+    let output_dir = unique_temp_path("missing-multi-output");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&missing)
+        .arg("--format")
+        .arg("multi")
+        .arg("--output")
+        .arg(&output_dir)
+        .output()
+        .expect("run cli");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("Failed to read presentation"));
+
+    fs::remove_dir_all(output_dir).ok();
+}
+
+fn build_titled_single_slide_pptx() -> Vec<u8> {
+    let cursor = std::io::Cursor::new(Vec::new());
+    let mut zip = ZipWriter::new(cursor);
+    let options = SimpleFileOptions::default();
+
+    zip.start_file("[Content_Types].xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>"#,
+    )
+    .unwrap();
+
+    zip.start_file("_rels/.rels", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+    )
+    .unwrap();
+
+    zip.start_file("ppt/presentation.xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst/>
+  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:notesSz cx="6858000" cy="9144000"/>
+</p:presentation>"#,
+    )
+    .unwrap();
+
+    zip.start_file("ppt/_rels/presentation.xml.rels", options)
+        .unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#,
+    )
+    .unwrap();
+
+    zip.start_file("ppt/slides/slide1.xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm></p:spPr>
+        <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Titled Slide</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#,
+    )
+    .unwrap();
+
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", options)
+        .unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>"#,
+    )
+    .unwrap();
+
+    zip.start_file("ppt/theme/theme1.xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TestTheme">
+  <a:themeElements>
+    <a:clrScheme name="TestColors">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="000000"/></a:dk2>
+      <a:lt2><a:srgbClr val="FFFFFF"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="TestFonts">
+      <a:majorFont><a:latin typeface="Calibri"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#,
+    )
+    .unwrap();
+
+    zip.start_file("docProps/core.xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <dc:title>Quarterly \"Deck\" \\ Notes</dc:title>
+</cp:coreProperties>"#,
+    )
+    .unwrap();
+
+    zip.finish().unwrap().into_inner()
 }
