@@ -2939,6 +2939,292 @@ fn parses_empty_event_cell_and_shape_dispatch_matrix_through_public_parser() {
 }
 
 #[test]
+fn parses_cell_run_end_handler_color_paths_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:srgbClr val="13579B"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="100" name="Effect Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst><a:glow rad="6350"><a:prstClr val="orange"/></a:glow></a:effectLst>
+        </p:spPr>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="101" name="End Handler Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:defRPr sz="1900"><a:schemeClr val="accent3"></a:schemeClr></a:defRPr>
+                        <a:buClr><a:sysClr val="windowText"/></a:buClr>
+                        <a:buFont typeface="Symbol"/>
+                        <a:buSzPct val="125000"/>
+                        <a:buAutoNum type="alphaLcParenR" startAt="2"/>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr>
+                          <a:highlight><a:srgbClr val="FFFF00"></a:srgbClr></a:highlight>
+                          <a:effectLst><a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"></a:schemeClr></a:outerShdw></a:effectLst>
+                          <a:srgbClr val="224466"/>
+                        </a:rPr>
+                        <a:t>First</a:t>
+                      </a:r>
+                      <a:r>
+                        <a:rPr><a:sysClr lastClr="ABCDEF"/></a:rPr>
+                        <a:t>Second</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr"/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#13579B")
+    ));
+
+    let effect_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Effect Shape")
+        .expect("effect shape");
+    assert!(effect_shape.effects.glow.is_some());
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text body")
+        .paragraphs[0];
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "alphaLcParenR"
+                && bullet.start_at == Some(2)
+                && bullet.font.as_deref() == Some("Symbol")
+                && bullet.size_pct.is_some_and(|v| (v - 1.25).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#000000")
+    ));
+    let first = &para.runs[0];
+    assert_eq!(first.style.color.to_css().as_deref(), Some("#224466"));
+    assert_eq!(
+        first
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+    assert_eq!(
+        first
+            .style
+            .shadow
+            .as_ref()
+            .and_then(|s| s.color.to_css())
+            .as_deref(),
+        Some("#4472C4")
+    );
+    let second = &para.runs[1];
+    assert_eq!(second.style.color.to_css().as_deref(), Some("#ABCDEF"));
+}
+
+#[test]
+fn parses_custom_geometry_invalid_formula_matrix_through_public_parser() {
+    let slide = r#"
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="120" name="Formula Matrix"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:custGeom>
+            <a:avLst>
+              <a:gd name="g0" fmla=""/>
+            </a:avLst>
+            <a:gdLst>
+              <a:gd name="g1" fmla="+- 1 2"/>
+              <a:gd name="g2" fmla="*/ 1 2 0"/>
+              <a:gd name="g3" fmla="+/ 1 2 0"/>
+              <a:gd name="g4" fmla="pin 1 2"/>
+              <a:gd name="g5" fmla="min 1"/>
+              <a:gd name="g6" fmla="max 1"/>
+              <a:gd name="g7" fmla="?: 1 2"/>
+              <a:gd name="g8" fmla="abs"/>
+              <a:gd name="g9" fmla="sqrt"/>
+              <a:gd name="g10" fmla="mod 1 2"/>
+              <a:gd name="g11" fmla="sin 1"/>
+              <a:gd name="g12" fmla="cos 1"/>
+              <a:gd name="g13" fmla="cat2 1 2"/>
+              <a:gd name="g14" fmla="sat2 1 2"/>
+              <a:gd name="g15" fmla="at2 1"/>
+              <a:gd name="g16" fmla="tan 1"/>
+              <a:gd name="g17" fmla="mystery 1 2 3"/>
+            </a:gdLst>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="none">
+                <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+                <a:lnTo><a:pt x="100000" y="0"/></a:lnTo>
+                <a:close/>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+      </p:sp>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let shape = presentation.slides[0]
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Formula Matrix")
+        .expect("formula matrix shape");
+    let custom_geom = match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.paths.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::None));
+}
+
+#[test]
+fn parses_self_closing_srgb_dispatch_matrix_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:srgbClr val="13579B"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="110" name="Self Closing Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst><a:glow rad="6350"><a:prstClr val="orange"/></a:glow></a:effectLst>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"><a:srgbClr val="111111"/></a:lnRef>
+        </p:style>
+        <p:txBody><a:bodyPr/><a:p><a:r><a:t>Shape</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="111" name="SRGB Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:buClr><a:srgbClr val="334455"/></a:buClr>
+                        <a:buChar char="•"/>
+                      </a:pPr>
+                      <a:r><a:rPr><a:srgbClr val="224466"/></a:rPr><a:t>Cell</a:t></a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr"/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#13579B")
+    ));
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Self Closing Shape")
+        .expect("self-closing shape");
+    assert!(matches!(
+        shape
+            .style_ref
+            .as_ref()
+            .and_then(|style| style.ln_ref.as_ref())
+            .and_then(|style| style.color.to_css())
+            .as_deref(),
+        Some("#111111")
+    ));
+    assert_eq!(
+        shape
+            .effects
+            .glow
+            .as_ref()
+            .and_then(|glow| glow.color.to_css())
+            .as_deref(),
+        Some("#FFA500")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text body")
+        .paragraphs[0];
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::Char(bullet))
+            if bullet.char == "•"
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#334455")
+    ));
+    assert_eq!(
+        para.runs[0].style.color.to_css().as_deref(),
+        Some("#224466")
+    );
+}
+
+#[test]
 fn parses_shape_text_autofit_connector_and_ole_branches() {
     let slide = r#"
       <p:graphicFrame>
