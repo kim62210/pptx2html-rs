@@ -405,10 +405,6 @@ pub fn parse_slide<R: Read + Seek>(
                             }
                         }
                     }
-                    // Text body inside table cell
-                    "txBody" if in_tc => {
-                        // Do NOT set current_shape.has_text_body; cell text is separate
-                    }
                     // Paragraph inside table cell
                     "p" if in_tc => {
                         cell_paragraph = Some(ParagraphBuilder::default());
@@ -543,10 +539,6 @@ pub fn parse_slide<R: Read + Seek>(
                                 _ => LineAlignment::Center,
                             };
                         }
-                    }
-                    // Line/border inside table cell border
-                    "ln" if tc_border_side.is_some() => {
-                        // Already handled width in lnL/lnR/lnT/lnB
                     }
                     // Text body (non-table)
                     "txBody" if !in_tc => {
@@ -705,13 +697,6 @@ pub fn parse_slide<R: Read + Seek>(
                     "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
                         p_style_current_ref = Some(local.clone());
                         p_style_idx = xml_utils::attr_str(e, "idx");
-                    }
-                    // Fill — solidFill (Start variant)
-                    "solidFill" if in_tc_pr && tc_border_side.is_none() => {
-                        // Cell fill — child color will be assigned
-                    }
-                    "solidFill" => {
-                        // solidFill has child color elements
                     }
                     // Gradient fill
                     "gradFill" if in_sp_pr && !in_ln => {
@@ -957,12 +942,6 @@ pub fn parse_slide<R: Read + Seek>(
                             swing_angle: sw_ang,
                         });
                     }
-                    "stCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
-                        parse_connector_ref(e, &mut current_shape, true)
-                    }
-                    "endCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
-                        parse_connector_ref(e, &mut current_shape, false)
-                    }
                     "rect" if in_cust_geom => {
                         let left = xml_utils::attr_str(e, "l")
                             .as_deref()
@@ -986,15 +965,6 @@ pub fn parse_slide<R: Read + Seek>(
                             right,
                             bottom,
                         });
-                    }
-                    "cNvPr" if current_shape.is_some() => {
-                        parse_shape_identity(e, &mut current_shape)
-                    }
-                    "stCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
-                        parse_connector_ref(e, &mut current_shape, true)
-                    }
-                    "endCxn" if current_shape.as_ref().is_some_and(|s| s.is_connector) => {
-                        parse_connector_ref(e, &mut current_shape, false)
                     }
                     "ahXY" if in_cust_geom => {
                         current_xy_handle = Some(XYAdjustHandle {
@@ -2633,14 +2603,6 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(sb) = current_shape.as_mut() {
                             sb.style_ref = p_style_builder.take();
                         }
-                    }
-                    // End of solidFill — assign fill based on context
-                    "solidFill" => {
-                        // Color already assigned in assign_color
-                    }
-                    // End of gradient stop
-                    "gs" => {
-                        // Color added to grad_stops in assign_color
                     }
                     // End of background gradient fill
                     "gradFill" if in_bg_grad_fill => {
