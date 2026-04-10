@@ -1,8 +1,8 @@
 mod fixtures;
 
 use pptx2html_core::model::{
-    Alignment, AutoFit, Bullet, ClrMapOverride, CompoundLine, DashStyle, Fill, LineAlignment,
-    LineCap, LineJoin, PlaceholderType, ShapeType, VerticalAlign,
+    Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, CompoundLine, DashStyle, Fill,
+    LineAlignment, LineCap, LineJoin, PlaceholderType, ShapeType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 
@@ -426,6 +426,126 @@ fn parses_tables_and_unresolved_graphic_frames_and_renders_markers() {
             .is_some_and(|raw| raw.contains("oMath"))),
         "expected raw XML to survive into unresolved metadata"
     );
+}
+
+#[test]
+fn parses_group_and_dash_empty_variants_through_public_parser() {
+    let slide = r#"
+      <p:grpSp>
+        <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+        <p:grpSpPr>
+          <a:xfrm>
+            <a:off x="100000" y="100000"/>
+            <a:ext cx="5000000" cy="3000000"/>
+            <a:chOff><a:off x="0" y="0"/></a:chOff>
+            <a:chExt><a:ext cx="5000000" cy="3000000"/></a:chExt>
+          </a:xfrm>
+        </p:grpSpPr>
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="11" name="InnerShape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="500000" y="500000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+            <a:prstGeom prst="rect"/>
+            <a:solidFill><a:srgbClr val="AABB00"/></a:solidFill>
+          </p:spPr>
+        </p:sp>
+      </p:grpSp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="20" name="SolidDash"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="500000"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:noFill/>
+          <a:ln w="12700"><a:prstDash val="solid"/><a:sysClr lastClr="111111"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="21" name="DotDash"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="500000"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:ln w="12700"><a:prstDash val="dot"/><a:sysClr val="windowText"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="22" name="LongDash"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="500000"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:ln w="12700"><a:prstDash val="lgDash"/><a:srgbClr val="223344"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="23" name="SystemDot"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="500000"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:ln w="12700"><a:prstDash val="sysDot"/><a:srgbClr val="445566"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="24" name="SystemDashDotDot"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="true" flipV="1"/>
+          <a:prstGeom prst="rect"/>
+          <a:ln w="12700"><a:prstDash val="sysDashDotDot"/><a:srgbClr val="778899"/></a:ln>
+        </p:spPr>
+      </p:sp>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shapes = &pres.slides[0].shapes;
+
+    let group = shapes
+        .iter()
+        .find(|shape| matches!(shape.shape_type, ShapeType::Group(_, _)))
+        .expect("group shape");
+    assert!(matches!(&group.shape_type, ShapeType::Group(children, _) if children.len() == 1));
+
+    let solid_dash = shapes
+        .iter()
+        .find(|shape| shape.name == "SolidDash")
+        .expect("solid dash shape");
+    assert!(matches!(solid_dash.fill, Fill::NoFill));
+    assert!(matches!(solid_dash.border.style, BorderStyle::Solid));
+    assert!(matches!(solid_dash.border.dash_style, DashStyle::Solid));
+
+    let dot_dash = shapes
+        .iter()
+        .find(|shape| shape.name == "DotDash")
+        .expect("dot dash shape");
+    assert!(matches!(dot_dash.border.style, BorderStyle::Dotted));
+    assert!(matches!(dot_dash.border.dash_style, DashStyle::Dot));
+
+    let long_dash = shapes
+        .iter()
+        .find(|shape| shape.name == "LongDash")
+        .expect("long dash shape");
+    assert!(matches!(long_dash.border.style, BorderStyle::Dashed));
+    assert!(matches!(long_dash.border.dash_style, DashStyle::LongDash));
+
+    let system_dot = shapes
+        .iter()
+        .find(|shape| shape.name == "SystemDot")
+        .expect("system dot shape");
+    assert!(matches!(system_dot.border.style, BorderStyle::Dotted));
+    assert!(matches!(system_dot.border.dash_style, DashStyle::SystemDot));
+
+    let system_dash_dot_dot = shapes
+        .iter()
+        .find(|shape| shape.name == "SystemDashDotDot")
+        .expect("system dash dot dot shape");
+    assert!(system_dash_dot_dot.flip_h);
+    assert!(system_dash_dot_dot.flip_v);
+    assert!(matches!(
+        system_dash_dot_dot.border.style,
+        BorderStyle::Dotted
+    ));
+    assert!(matches!(
+        system_dash_dot_dot.border.dash_style,
+        DashStyle::SystemDashDotDot
+    ));
 }
 
 #[test]

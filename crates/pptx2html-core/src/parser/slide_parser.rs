@@ -5050,6 +5050,185 @@ mod tests {
         assert!(matches!(custom_geom.paths[2].fill, PathFill::LightenLess));
     }
 
+    #[test]
+    fn parse_slide_covers_empty_variant_shape_and_table_branches() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1" bandCol="true" firstRow="1" lastRow="true" firstCol="1" lastCol="true"></a:tblPr>
+              <a:tblGrid>
+                <a:gridCol w="914400"/>
+                <a:gridCol w="457200"/>
+              </a:tblGrid>
+              <a:tr h="457200">
+                <a:tc gridSpan="2" rowSpan="1" vMerge="1">
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="ctr" lvl="1" indent="91440" marL="45720"/>
+                      <a:defRPr sz="2000" spc="100" baseline="10000" cap="small" u="dashLong" strike="dblStrike" b="1" i="true"/>
+                      <a:r>
+                        <a:rPr sz="1800"/>
+                        <a:t>Cell One</a:t>
+                      </a:r>
+                      <a:r>
+                        <a:rPr sz="1800"><a:hlinkClick r:id="rIdCell"/></a:rPr>
+                        <a:t>Cell Two</a:t>
+                      </a:r>
+                      <a:br/>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr marL="91440" marR="137160" marT="45720" marB="22860" anchor="ctr">
+                    <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                    <a:lnL w="12700"><a:prstDash val="solid"/><a:srgbClr val="FF0000"/></a:lnL>
+                    <a:lnR w="12700"><a:prstDash val="dash"/><a:srgbClr val="0000FF"/></a:lnR>
+                    <a:lnT w="12700"><a:prstDash val="dot"/><a:srgbClr val="123456"/></a:lnT>
+                    <a:lnB w="12700"><a:prstDash val="sysDash"/><a:srgbClr val="654321"/></a:lnB>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="3" name="Shape Empty Variants"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="1"><a:off x="12700" y="25400"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" wrap="none"/>
+          <a:normAutofit fontScale="80000" lnSpcReduction="10000"/>
+          <a:p>
+            <a:pPr algn="r" lvl="1" indent="12700" marL="25400"/>
+            <a:defRPr sz="2400" spc="200" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="true" i="1"/>
+            <a:r>
+              <a:rPr sz="1800"/>
+              <a:t>Shape One</a:t>
+            </a:r>
+            <a:r>
+              <a:rPr sz="1800"><a:hlinkClick r:id="rIdShape"/></a:rPr>
+              <a:t>Shape Two</a:t>
+            </a:r>
+            <a:br/>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="No Autofit"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="228600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+        <p:txBody><a:bodyPr/><a:noAutofit/><a:p><a:r><a:t>No Autofit</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="5" name="Shrink Autofit"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="228600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+        <p:txBody><a:bodyPr/><a:spAutoFit/><a:p><a:r><a:t>Shrink Autofit</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let rels = HashMap::from([
+            (
+                "rIdCell".to_string(),
+                "https://example.com/cell".to_string(),
+            ),
+            (
+                "rIdShape".to_string(),
+                "https://example.com/shape".to_string(),
+            ),
+        ]);
+        let mut archive = archive_with_entries(&[]);
+
+        let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide parses");
+        assert_eq!(slide.shapes.len(), 4);
+
+        let table = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Table(table) => Some(table),
+                _ => None,
+            })
+            .expect("table shape");
+        assert!(table.band_row && table.band_col && table.first_row && table.last_row);
+        assert!(table.first_col && table.last_col);
+        let cell = &table.rows[0].cells[0];
+        assert_eq!(cell.col_span, 2);
+        assert_eq!(
+            cell.text_body.as_ref().expect("cell text body").paragraphs[0]
+                .runs
+                .len(),
+            3
+        );
+        assert_eq!(
+            cell.text_body.as_ref().expect("cell text body").paragraphs[0].runs[1]
+                .hyperlink
+                .as_deref(),
+            Some("https://example.com/cell")
+        );
+
+        let shape = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "Shape Empty Variants")
+            .expect("shape with empty variants");
+        let paragraph = &shape
+            .text_body
+            .as_ref()
+            .expect("shape text body")
+            .paragraphs[0];
+        assert_eq!(paragraph.runs.len(), 3);
+        assert_eq!(
+            paragraph.runs[1].hyperlink.as_deref(),
+            Some("https://example.com/shape")
+        );
+        assert!(matches!(
+            shape.text_body.as_ref().map(|body| &body.auto_fit),
+            Some(AutoFit::Normal {
+                font_scale: Some(v),
+                line_spacing_reduction: Some(lsr)
+            }) if (*v - 0.8).abs() < 1e-6 && (*lsr - 0.1).abs() < 1e-6
+        ));
+
+        let no_autofit = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "No Autofit")
+            .expect("no autofit shape");
+        assert!(matches!(
+            no_autofit.text_body.as_ref().map(|body| &body.auto_fit),
+            Some(AutoFit::NoAutoFit)
+        ));
+
+        let shrink_autofit = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "Shrink Autofit")
+            .expect("shrink autofit shape");
+        assert!(matches!(
+            shrink_autofit.text_body.as_ref().map(|body| &body.auto_fit),
+            Some(AutoFit::Shrink)
+        ));
+    }
+
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
         let mut start = BytesStart::new(name);
         for (key, value) in attrs {
