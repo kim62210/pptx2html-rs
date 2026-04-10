@@ -295,6 +295,289 @@ fn parses_theme_master_and_layout_branches_through_public_parser() {
 }
 
 #[test]
+fn parses_theme_and_master_start_tag_variants_through_public_parser() {
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="StartTagTheme">
+  <a:themeElements>
+    <a:clrScheme name="StartTagColors">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="44546A"/></a:dk2>
+      <a:lt2><a:srgbClr val="E7E6E6"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="StartTagFonts">
+      <a:majorFont><a:latin typeface="Aptos"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Aptos Narrow"/></a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="StartTagFmt">
+      <a:fillStyleLst>
+        <a:solidFill><a:srgbClr val="AA0000"></a:srgbClr></a:solidFill>
+        <a:solidFill><a:schemeClr val="accent2"></a:schemeClr></a:solidFill>
+      </a:fillStyleLst>
+      <a:lnStyleLst>
+        <a:ln w="12700" cap="flat" cmpd="tri" algn="in">
+          <a:solidFill><a:schemeClr val="accent3"></a:schemeClr></a:solidFill>
+          <a:prstDash val="sysDashDotDot"/>
+          <a:bevel/>
+        </a:ln>
+        <a:ln w="6350" cmpd="thickThin">
+          <a:solidFill><a:srgbClr val="00FF00"></a:srgbClr></a:solidFill>
+          <a:prstDash val="lgDashDotDot"/>
+          <a:round/>
+        </a:ln>
+        <a:ln w="6350" cmpd="thinThick">
+          <a:solidFill><a:srgbClr val="0000FF"></a:srgbClr></a:solidFill>
+          <a:prstDash val="sysDash"/>
+        </a:ln>
+      </a:lnStyleLst>
+      <a:effectStyleLst>
+        <a:effectStyle>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000">
+              <a:srgbClr val="112233"></a:srgbClr>
+              <a:alpha val="40000"/>
+            </a:outerShdw>
+            <a:glow rad="6350">
+              <a:schemeClr val="accent6"></a:schemeClr>
+              <a:alpha val="50000"/>
+            </a:glow>
+          </a:effectLst>
+        </a:effectStyle>
+      </a:effectStyleLst>
+      <a:bgFillStyleLst>
+        <a:solidFill><a:schemeClr val="accent5"></a:schemeClr></a:solidFill>
+      </a:bgFillStyleLst>
+    </a:fmtScheme>
+  </a:themeElements>
+</a:theme>"#;
+
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="334455"></a:srgbClr></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent1"></a:schemeClr></a:gs>
+          </a:gsLst>
+          <a:path path="rect"></a:path>
+          <a:lin ang="1800000"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Master Normal"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cap="flat" cmpd="thinThick" algn="in">
+            <a:prstDash val="sysDashDotDot"/>
+            <a:bevel/>
+            <a:schemeClr val="accent3"></a:schemeClr>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="true" rot="60000" vert="horz" wrap="square"></a:bodyPr>
+          <a:normAutofit fontScale="65000" lnSpcReduction="12000"></a:normAutofit>
+          <a:lstStyle>
+            <a:lvl1pPr algn="ctr">
+              <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+              <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+              <a:defRPr sz="1800"><a:srgbClr val="112233"></a:srgbClr></a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Master NoAuto"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="25400" y="38100"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cmpd="thickThin"><a:prstDash val="dash"/></a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr></a:bodyPr>
+          <a:noAutofit></a:noAutofit>
+          <a:lstStyle>
+            <a:lvl1pPr>
+              <a:defRPr sz="1600"><a:schemeClr val="accent2"></a:schemeClr></a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="Master Shrink"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="38100" y="50800"/><a:ext cx="381000" cy="254000"/></a:xfrm></p:spPr>
+        <p:txBody>
+          <a:bodyPr></a:bodyPr>
+          <a:spAutoFit></a:spAutoFit>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="5" name="Implicit Solid"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="50800" y="63500"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700"></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+    <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr algn="ctr">
+        <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+        <a:defRPr sz="2000"><a:schemeClr val="accent2"></a:schemeClr></a:defRPr>
+      </a:lvl1pPr>
+    </p:titleStyle>
+    <p:bodyStyle>
+      <a:lvl1pPr>
+        <a:lnSpc><a:spcPts val="1200"/></a:lnSpc>
+      </a:lvl1pPr>
+    </p:bodyStyle>
+    <p:otherStyle>
+      <a:lvl1pPr>
+        <a:spcAft><a:spcPct val="50000"/></a:spcAft>
+      </a:lvl1pPr>
+    </p:otherStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_full_theme(theme_xml)
+        .with_full_master(master_xml)
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+
+    let theme = &presentation.themes[0];
+    assert_eq!(theme.fmt_scheme.ln_style_lst.len(), 3);
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[0].compound,
+        CompoundLine::Triple
+    ));
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[0].dash_style,
+        DashStyle::SystemDashDotDot
+    ));
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[1].compound,
+        CompoundLine::ThickThin
+    ));
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[1].dash_style,
+        DashStyle::LongDashDotDot
+    ));
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[2].compound,
+        CompoundLine::ThinThick
+    ));
+    assert!(matches!(
+        theme.fmt_scheme.ln_style_lst[2].dash_style,
+        DashStyle::SystemDash
+    ));
+    let effect = &theme.fmt_scheme.effect_style_lst[0];
+    assert!(matches!(
+        effect
+            .outer_shadow
+            .as_ref()
+            .map(|shadow| shadow.color.kind.clone()),
+        Some(ColorKind::Rgb(rgb)) if rgb == "112233"
+    ));
+    assert!(matches!(
+        effect.glow.as_ref().map(|glow| glow.color.kind.clone()),
+        Some(ColorKind::Theme(name)) if name == "accent6"
+    ));
+
+    let master = &presentation.masters[0];
+    assert!(matches!(
+        &master.background,
+        Some(Fill::Gradient(fill)) if fill.stops.len() == 2
+    ));
+    let title_style = master.tx_styles.title_style.as_ref().expect("title style");
+    assert!(matches!(
+        title_style.levels[0]
+            .as_ref()
+            .and_then(|lvl| lvl.space_before.clone()),
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    let body_style = master.tx_styles.body_style.as_ref().expect("body style");
+    assert!(matches!(
+        body_style.levels[0]
+            .as_ref()
+            .and_then(|lvl| lvl.line_spacing.clone()),
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+    ));
+    let other_style = master.tx_styles.other_style.as_ref().expect("other style");
+    assert!(matches!(
+        other_style.levels[0]
+            .as_ref()
+            .and_then(|lvl| lvl.space_after.clone()),
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.5).abs() < 1e-6
+    ));
+
+    assert_eq!(master.shapes.len(), 4);
+    let normal_shape = &master.shapes[0];
+    assert!(matches!(
+        normal_shape.border.compound,
+        CompoundLine::ThinThick
+    ));
+    assert!(matches!(
+        normal_shape.border.dash_style,
+        DashStyle::SystemDashDotDot
+    ));
+    assert!(matches!(normal_shape.border.join, LineJoin::Bevel));
+    assert!(matches!(
+        normal_shape
+            .text_body
+            .as_ref()
+            .expect("master normal text")
+            .auto_fit,
+        AutoFit::Normal {
+            font_scale: Some(v),
+            line_spacing_reduction: Some(lsr)
+        } if (v - 0.65).abs() < 1e-6 && (lsr - 0.12).abs() < 1e-6
+    ));
+    let no_auto_shape = &master.shapes[1];
+    assert!(matches!(
+        no_auto_shape.border.compound,
+        CompoundLine::ThickThin
+    ));
+    assert!(matches!(
+        no_auto_shape
+            .text_body
+            .as_ref()
+            .expect("master no-auto text")
+            .auto_fit,
+        AutoFit::NoAutoFit
+    ));
+    let shrink_shape = &master.shapes[2];
+    assert!(matches!(
+        shrink_shape
+            .text_body
+            .as_ref()
+            .expect("master shrink text")
+            .auto_fit,
+        AutoFit::Shrink
+    ));
+    let implicit_line_shape = &master.shapes[3];
+    assert!(matches!(
+        implicit_line_shape.border.style,
+        BorderStyle::Solid
+    ));
+}
+
+#[test]
 fn parses_start_tag_layout_defaults_and_background_relations_through_public_parser() {
     let presentation_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -618,6 +901,148 @@ fn parses_layout_background_image_start_tags_through_public_parser() {
         Some(Fill::Image(image))
             if image.content_type == "image/png" && image.data == b"layout-background"
     ));
+}
+
+#[test]
+fn parses_master_solid_background_and_dashdot_start_variants_through_public_parser() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:solidFill><a:srgbClr val="334455"></a:srgbClr></a:solidFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="DashDot"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700"><a:prstDash val="dashDot"/></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sldMaster>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_full_master(master_xml)
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let master = &presentation.masters[0];
+    assert!(matches!(
+        &master.background,
+        Some(Fill::Solid(fill)) if matches!(fill.color.kind, ColorKind::Rgb(ref rgb) if rgb == "334455")
+    ));
+    let shape = &master.shapes[0];
+    assert!(matches!(shape.border.style, BorderStyle::Solid));
+    assert!(matches!(shape.border.dash_style, DashStyle::DashDot));
+
+    let empty_master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:solidFill><a:schemeClr val="accent2"/></a:solidFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sldMaster>"#;
+
+    let empty_pptx = fixtures::MinimalPptx::new("")
+        .with_full_master(empty_master_xml)
+        .build();
+    let empty_presentation = parse_pptx(&empty_pptx);
+    assert!(matches!(
+        &empty_presentation.masters[0].background,
+        Some(Fill::Solid(fill))
+            if matches!(fill.color.kind, ColorKind::Theme(ref name) if name == "accent2")
+    ));
+}
+
+#[test]
+fn parse_slide_master_directly_covers_solid_background_and_dashdot_branches() {
+    use std::collections::HashMap;
+    use std::io::{Cursor, Write};
+
+    use pptx2html_core::parser::master_parser::parse_slide_master;
+    use zip::write::SimpleFileOptions;
+    use zip::{ZipArchive, ZipWriter};
+
+    fn empty_archive() -> ZipArchive<Cursor<Vec<u8>>> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        zip.start_file("ppt/empty.txt", options)
+            .expect("start archive file");
+        zip.write_all(b"").expect("write empty archive payload");
+        ZipArchive::new(Cursor::new(
+            zip.finish().expect("finish archive").into_inner(),
+        ))
+        .expect("open archive")
+    }
+
+    let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:solidFill><a:schemeClr val="accent2"/></a:solidFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="DashDot"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cap="flat" cmpd="tri" algn="in">
+            <a:prstDash val="dashDot"/>
+            <a:bevel/>
+          </a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="ImplicitSolid"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="25400" y="38100"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700"></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sldMaster>"#;
+
+    let mut archive = empty_archive();
+    let master = parse_slide_master(xml, &HashMap::new(), &mut archive).expect("master parses");
+
+    assert!(matches!(
+        &master.background,
+        Some(Fill::Solid(fill))
+            if matches!(fill.color.kind, ColorKind::Theme(ref name) if name == "accent2")
+    ));
+    assert!(matches!(master.shapes[0].border.cap, LineCap::Flat));
+    assert!(matches!(
+        master.shapes[0].border.compound,
+        CompoundLine::Triple
+    ));
+    assert!(matches!(master.shapes[0].border.style, BorderStyle::Solid));
+    assert!(matches!(
+        master.shapes[0].border.dash_style,
+        DashStyle::DashDot
+    ));
+    assert!(matches!(master.shapes[0].border.join, LineJoin::Bevel));
+    assert!(matches!(master.shapes[1].border.style, BorderStyle::Solid));
 }
 
 #[test]
