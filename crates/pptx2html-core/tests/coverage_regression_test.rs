@@ -1,8 +1,9 @@
 mod fixtures;
 
 use pptx2html_core::model::{
-    Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, CompoundLine, DashStyle, Fill,
-    LineAlignment, LineCap, LineJoin, PlaceholderType, ShapeType, VerticalAlign,
+    Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, ColorKind, CompoundLine, DashStyle,
+    Fill, GradientType, LineAlignment, LineCap, LineJoin, PathFill, PlaceholderType, ShapeType,
+    StrikethroughType, TextCapitalization, UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 
@@ -546,6 +547,214 @@ fn parses_group_and_dash_empty_variants_through_public_parser() {
         system_dash_dot_dot.border.dash_style,
         DashStyle::SystemDashDotDot
     ));
+}
+
+#[test]
+fn parses_empty_event_color_and_dash_matrix_through_public_parser() {
+    let slide = r#"
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="30" name="Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1" bandCol="true" firstRow="1" lastRow="true" firstCol="1" lastCol="true"></a:tblPr>
+              <a:tblGrid>
+                <a:gridCol w="914400"/>
+                <a:gridCol w="457200"/>
+              </a:tblGrid>
+              <a:tr h="457200">
+                <a:tc gridSpan="2" rowSpan="1" vMerge="1">
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="ctr" lvl="1" indent="91440" marL="45720"/>
+                      <a:defRPr sz="2000" spc="100" baseline="10000" cap="small" u="dashLong" strike="dblStrike" b="true" i="true"/>
+                      <a:buClr><a:prstClr val="orange"/></a:buClr>
+                      <a:r><a:rPr sz="1800"/><a:t>Cell One</a:t></a:r>
+                      <a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdCell"/></a:rPr><a:t>Cell Two</a:t></a:r>
+                      <a:br/>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr marL="91440" marR="137160" marT="45720" marB="22860" anchor="ctr">
+                    <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+                    <a:lnL w="12700"><a:prstDash val="solid"/><a:srgbClr val="FF0000"/></a:lnL>
+                    <a:lnR w="12700"><a:prstDash val="dashDot"/><a:srgbClr val="0000FF"/></a:lnR>
+                    <a:lnT w="12700"><a:prstDash val="lgDash"/><a:srgbClr val="123456"/></a:lnT>
+                    <a:lnB w="12700"><a:prstDash val="sysDashDotDot"/><a:srgbClr val="654321"/></a:lnB>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="31" name="Shape Matrix"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="5400000" flipH="true"/>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:prstClr val="orange"/></a:gs>
+              <a:gs pos="100000"><a:sysClr lastClr="112233"/></a:gs>
+            </a:gsLst>
+            <a:lin ang="5400000"/>
+            <a:path path="shape"/>
+          </a:gradFill>
+          <a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">
+            <a:prstDash val="sysDashDot"/>
+            <a:bevel/>
+            <a:headEnd type="triangle" w="lg" len="sm"/>
+            <a:tailEnd type="diamond" w="sm" len="lg"/>
+            <a:sysClr val="windowText"/>
+          </a:ln>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"/></a:outerShdw>
+            <a:glow rad="6350"><a:sysClr lastClr="123456"/></a:glow>
+          </a:effectLst>
+          <a:custGeom>
+            <a:avLst><a:gd name="adj1" fmla="val 50000"/></a:avLst>
+            <a:gdLst><a:gd name="x1" fmla="val 100000"/></a:gdLst>
+            <a:ahLst>
+              <a:ahXY gdRefX="adj1" minX="0" maxX="100000" gdRefY="adj1" minY="0" maxY="100000"><a:pos x="50000" y="50000"/></a:ahXY>
+              <a:ahPolar gdRefR="adj1" minR="0" maxR="100000" gdRefAng="adj1" minAng="0" maxAng="100000"><a:pos x="50000" y="50000"/></a:ahPolar>
+            </a:ahLst>
+            <a:cxnLst><a:cxn ang="0"><a:pos x="0" y="0"/></a:cxn></a:cxnLst>
+            <a:rect l="0" t="0" r="100000" b="100000"/>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="lighten"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path>
+              <a:path w="100000" h="100000" fill="darken"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path>
+              <a:path w="100000" h="100000" fill="lightenLess"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"/>
+          <a:fillRef idx="2"/>
+          <a:effectRef idx="3"/>
+          <a:fontRef idx="minor"/>
+        </p:style>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" wrap="none"/>
+          <a:normAutofit fontScale="80000" lnSpcReduction="10000"/>
+          <a:p>
+            <a:pPr algn="r" lvl="1" indent="12700" marL="25400"/>
+            <a:defRPr sz="2400" spc="200" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="true" i="1"/>
+            <a:buClr><a:sysClr lastClr="445566"/></a:buClr>
+            <a:r><a:rPr sz="1800"/><a:t>Shape One</a:t></a:r>
+            <a:r><a:rPr sz="1800"><a:hlinkClick r:id="rIdShape"/></a:rPr><a:t>Shape Two</a:t></a:r>
+            <a:br/>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdCell" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/cell" TargetMode="External"/>
+  <Relationship Id="rIdShape" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/shape" TargetMode="External"/>
+</Relationships>"#,
+        )
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let shapes = &presentation.slides[0].shapes;
+
+    let table = shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let cell = &table.rows[0].cells[0];
+    assert!(table.band_row && table.band_col && table.first_row && table.last_row);
+    assert!(table.first_col && table.last_col);
+    assert_eq!(cell.col_span, 2);
+    assert!(matches!(cell.border_left.style, BorderStyle::Solid));
+    assert!(matches!(cell.border_left.dash_style, DashStyle::Solid));
+    assert!(cell.border_right.width > 0.0);
+    assert!(cell.border_top.width > 0.0);
+    assert!(cell.border_bottom.width > 0.0);
+    let cell_para = &cell.text_body.as_ref().expect("cell text").paragraphs[0];
+    assert_eq!(cell_para.runs.len(), 3);
+    assert_eq!(
+        cell_para.runs[1].hyperlink.as_deref(),
+        Some("https://example.com/cell")
+    );
+    let cell_def = cell_para.def_rpr.as_ref().expect("cell defRPr");
+    assert_eq!(cell_def.font_size, Some(20.0));
+    assert_eq!(cell_def.letter_spacing, Some(1.0));
+    assert_eq!(cell_def.baseline, Some(10000));
+    assert_eq!(cell_def.bold, Some(true));
+    assert_eq!(cell_def.italic, Some(true));
+    assert!(matches!(
+        cell_def.capitalization,
+        Some(TextCapitalization::Small)
+    ));
+    assert!(matches!(cell_def.underline, Some(UnderlineType::DashLong)));
+    assert!(matches!(
+        cell_def.strikethrough,
+        Some(StrikethroughType::Double)
+    ));
+
+    let shape = shapes
+        .iter()
+        .find(|shape| shape.name == "Shape Matrix")
+        .expect("shape matrix");
+    assert!(matches!(
+        shape.fill,
+        Fill::Gradient(ref fill)
+            if fill.stops.len() == 2
+                && matches!(fill.gradient_type, GradientType::Shape)
+                && matches!(fill.stops[0].color.kind, ColorKind::Preset(_))
+                && matches!(fill.stops[1].color.kind, ColorKind::Rgb(_))
+    ));
+    assert!(matches!(shape.border.cap, LineCap::Round));
+    assert!(matches!(shape.border.compound, CompoundLine::Double));
+    assert!(matches!(shape.border.alignment, LineAlignment::Inset));
+    assert!(matches!(shape.border.join, LineJoin::Bevel));
+    assert!(matches!(shape.border.dash_style, DashStyle::SystemDashDot));
+    assert!(shape.style_ref.as_ref().is_some());
+    let text_body = shape.text_body.as_ref().expect("shape text body");
+    assert!(matches!(
+        text_body.auto_fit,
+        AutoFit::Normal {
+            font_scale: Some(v),
+            line_spacing_reduction: Some(lsr)
+        } if (v - 0.8).abs() < 1e-6 && (lsr - 0.1).abs() < 1e-6
+    ));
+    let para = &text_body.paragraphs[0];
+    assert_eq!(para.runs.len(), 3);
+    assert_eq!(
+        para.runs[1].hyperlink.as_deref(),
+        Some("https://example.com/shape")
+    );
+    let def = para.def_rpr.as_ref().expect("shape defRPr");
+    assert_eq!(def.font_size, Some(24.0));
+    assert!(matches!(def.capitalization, Some(TextCapitalization::All)));
+    assert!(matches!(def.underline, Some(UnderlineType::Double)));
+    assert!(matches!(def.strikethrough, Some(StrikethroughType::Single)));
+
+    let custom_geom = match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.adjust_handles.len(), 2);
+    assert_eq!(custom_geom.connection_sites.len(), 1);
+    assert_eq!(custom_geom.paths.len(), 3);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::Lighten));
+    assert!(matches!(custom_geom.paths[1].fill, PathFill::Darken));
+    assert!(matches!(custom_geom.paths[2].fill, PathFill::LightenLess));
+
+    let rendered = render_with_metadata(&pptx).expect("render with metadata");
+    assert!(
+        !rendered.html.is_empty(),
+        "rendered HTML should still be produced for the fixture"
+    );
 }
 
 #[test]
