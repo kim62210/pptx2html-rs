@@ -1757,6 +1757,234 @@ fn parses_empty_event_bullet_font_highlight_and_style_ref_matrix_through_public_
 }
 
 #[test]
+fn parses_empty_event_autonum_bullet_none_and_gradient_stop_matrix_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:prstClr val="orange"/></a:gs>
+              <a:gs pos="100000"><a:sysClr lastClr="123456"/></a:gs>
+            </a:gsLst>
+            <a:path path="shape"/>
+          </a:gradFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="50" name="AutoNum Shape"></p:cNvPr>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:custGeom>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="none"/>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:p>
+            <a:pPr algn="ctr">
+              <a:lnSpc><a:spcPct val="110000"/></a:lnSpc>
+              <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+              <a:spcAft><a:spcPct val="25000"/></a:spcAft>
+              <a:buFont typeface="Wingdings"/>
+              <a:buSzPct val="125000"/>
+              <a:buClr><a:prstClr val="orange"/></a:buClr>
+              <a:buAutoNum type="arabicParenR" startAt="3"/>
+            </a:pPr>
+            <a:r>
+              <a:rPr sz="1800">
+                <a:hlinkClick r:id="rIdRun"></a:hlinkClick>
+                <a:highlight><a:schemeClr val="accent6"/></a:highlight>
+                <a:sysClr val="windowText"/>
+              </a:rPr>
+              <a:t>AutoNum</a:t>
+            </a:r>
+          </a:p>
+          <a:p>
+            <a:pPr><a:buNone/></a:pPr>
+            <a:r><a:t>No Bullet</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="51" name="AutoNum Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="l">
+                        <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+                        <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+                        <a:spcAft><a:spcPts val="1200"/></a:spcAft>
+                        <a:buFont typeface="Symbol"/>
+                        <a:buSzPts val="1600"/>
+                        <a:buClr><a:schemeClr val="accent4"/></a:buClr>
+                        <a:buAutoNum type="alphaLcParenR" startAt="2"/>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr sz="1700">
+                          <a:highlight><a:schemeClr val="accent6"/></a:highlight>
+                          <a:prstClr val="orange"/>
+                          <a:latin typeface="CellRun Latin"/>
+                        </a:rPr>
+                        <a:t>Cell Auto</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr">
+                    <a:solidFill><a:sysClr lastClr="ABCDEF"/></a:solidFill>
+                    <a:lnL w="12700"><a:sysClr val="windowText"/></a:lnL>
+                    <a:lnR w="12700"><a:prstClr val="orange"/></a:lnR>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdRun" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/auto" TargetMode="External"/>
+</Relationships>"#,
+        )
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Gradient(fill))
+            if fill.stops.len() == 2
+                && matches!(fill.gradient_type, GradientType::Shape)
+                && matches!(fill.stops[0].color.kind, ColorKind::Preset(_))
+                && matches!(fill.stops[1].color.kind, ColorKind::Rgb(_))
+    ));
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "AutoNum Shape")
+        .expect("auto-num shape");
+    let text_body = shape.text_body.as_ref().expect("shape text body");
+    let auto_num_para = &text_body.paragraphs[0];
+    assert!(matches!(
+        auto_num_para.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6
+    ));
+    assert!(matches!(
+        auto_num_para.space_before,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        auto_num_para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &auto_num_para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "arabicParenR"
+                && bullet.start_at == Some(3)
+                && bullet.font.as_deref() == Some("Wingdings")
+                && bullet.size_pct.is_some_and(|v| (v - 1.25).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#FFA500")
+    ));
+    assert_eq!(
+        auto_num_para.runs[0].hyperlink.as_deref(),
+        Some("https://example.com/auto")
+    );
+    assert_eq!(
+        auto_num_para.runs[0]
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#70AD47")
+    );
+    assert_eq!(
+        auto_num_para.runs[0].style.color.to_css().as_deref(),
+        Some("#000000")
+    );
+    assert!(matches!(
+        &text_body.paragraphs[1].bullet,
+        Some(Bullet::None)
+    ));
+    let custom_geom = match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.paths.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::None));
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let cell = &table.rows[0].cells[0];
+    assert!(matches!(
+        &cell.fill,
+        Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#ABCDEF")
+    ));
+    assert_eq!(cell.border_left.color.to_css().as_deref(), Some("#000000"));
+    assert_eq!(cell.border_right.color.to_css().as_deref(), Some("#FFA500"));
+    let cell_para = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
+    assert!(matches!(
+        cell_para.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 9.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        cell_para.space_before,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    assert!(matches!(
+        cell_para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &cell_para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "alphaLcParenR"
+                && bullet.start_at == Some(2)
+                && bullet.font.as_deref() == Some("Symbol")
+                && bullet.size_pct.is_some_and(|v| (v + 16.0).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#FFC000")
+    ));
+    let cell_run = &cell_para.runs[0];
+    assert_eq!(cell_run.font.latin.as_deref(), Some("CellRun Latin"));
+    assert_eq!(cell_run.style.color.to_css().as_deref(), Some("#FFA500"));
+    assert_eq!(
+        cell_run
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#70AD47")
+    );
+}
+
+#[test]
 fn parses_shape_text_autofit_connector_and_ole_branches() {
     let slide = r#"
       <p:graphicFrame>
