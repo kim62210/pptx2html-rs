@@ -295,6 +295,332 @@ fn parses_theme_master_and_layout_branches_through_public_parser() {
 }
 
 #[test]
+fn parses_start_tag_layout_defaults_and_background_relations_through_public_parser() {
+    let presentation_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000" foo="ignored"/>
+    <p:defaultTextStyle>
+    <a:lvl1pPr algn="ctr">
+      <a:spcAft><a:spcPts val="600"/></a:spcAft>
+      <a:defRPr sz="2000">
+        <a:srgbClr val="112233"></a:srgbClr>
+      </a:defRPr>
+    </a:lvl1pPr>
+    <a:lvl2pPr algn="just">
+      <a:lnSpc><a:spcPct val="150000"/></a:lnSpc>
+      <a:defRPr sz="1800">
+        <a:schemeClr val="accent2"></a:schemeClr>
+      </a:defRPr>
+    </a:lvl2pPr>
+    <a:lvl3pPr algn="r">
+      <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+    </a:lvl3pPr>
+    <a:lvl4pPr algn="l">
+      <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+    </a:lvl4pPr>
+    <a:lvl5pPr algn="just">
+      <a:spcAft><a:spcPct val="50000"/></a:spcAft>
+    </a:lvl5pPr>
+  </p:defaultTextStyle>
+</p:presentation>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+             type="title" showMasterSp="false">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"></a:srgbClr></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent2"></a:schemeClr></a:gs>
+          </a:gsLst>
+          <a:path path="rect"></a:path>
+          <a:lin ang="1800000"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="2" name="StartTagNormal"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cap="flat" cmpd="thickThin" algn="in">
+            <a:prstDash val="sysDashDotDot"/>
+            <a:round/>
+            <a:schemeClr val="accent3"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="true" rot="60000" vert="horz"
+                    lIns="91440" tIns="45720" rIns="182880" bIns="22860" wrap="square"></a:bodyPr>
+          <a:normAutofit fontScale="65000" lnSpcReduction="12000"></a:normAutofit>
+          <a:lstStyle>
+            <a:lvl1pPr algn="ctr">
+              <a:defRPr sz="1800">
+                <a:srgbClr val="112233"></a:srgbClr>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p/>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="3" name="StartTagNoAuto"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="25400" y="38100"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cmpd="thinThick">
+            <a:prstDash val="dash"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr></a:bodyPr>
+          <a:noAutofit></a:noAutofit>
+          <a:lstStyle>
+            <a:lvl1pPr>
+              <a:defRPr sz="1600">
+                <a:schemeClr val="accent2"></a:schemeClr>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p/>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="4" name="StartTagShrink"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="38100" y="50800"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr></a:bodyPr>
+          <a:spAutoFit></a:spAutoFit>
+          <a:p/>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="5" name="ImplicitSolidLine"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="50800" y="63500"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700"></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sldLayout>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_presentation_xml(presentation_xml)
+        .with_clr_map(
+            r#"bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink""#,
+        )
+        .with_layout(layout_xml)
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+
+    let defaults = presentation
+        .default_text_style
+        .as_ref()
+        .expect("default text style should be parsed");
+    let lvl1 = defaults.levels[0].as_ref().expect("level 1 defaults");
+    assert!(matches!(
+        lvl1.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 6.0).abs() < 1e-6
+    ));
+    assert_eq!(
+        lvl1.def_run_props
+            .as_ref()
+            .and_then(|rd| rd.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#112233")
+    );
+    let lvl2 = defaults.levels[1].as_ref().expect("level 2 defaults");
+    assert!(matches!(
+        lvl2.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 1.5).abs() < 1e-6
+    ));
+    assert_eq!(
+        lvl2.def_run_props
+            .as_ref()
+            .and_then(|rd| rd.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#ED7D31")
+    );
+    let lvl3 = defaults.levels[2].as_ref().expect("level 3 defaults");
+    assert!(matches!(
+        lvl3.space_before,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    let lvl4 = defaults.levels[3].as_ref().expect("level 4 defaults");
+    assert!(matches!(
+        lvl4.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 9.0).abs() < 1e-6
+    ));
+    let lvl5 = defaults.levels[4].as_ref().expect("level 5 defaults");
+    assert!(matches!(
+        lvl5.space_after,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.5).abs() < 1e-6
+    ));
+
+    let layout = &presentation.layouts[0];
+    assert_eq!(layout.layout_type.as_deref(), Some("title"));
+    assert!(!layout.show_master_sp);
+    assert!(matches!(
+        &layout.background,
+        Some(Fill::Gradient(fill)) if fill.stops.len() == 2
+    ));
+
+    assert_eq!(layout.shapes.len(), 4);
+    let normal_shape = &layout.shapes[0];
+    assert!(matches!(normal_shape.border.cap, LineCap::Flat));
+    assert!(matches!(
+        normal_shape.border.compound,
+        CompoundLine::ThickThin
+    ));
+    assert!(matches!(normal_shape.border.join, LineJoin::Round));
+    assert!(matches!(
+        normal_shape.border.dash_style,
+        DashStyle::SystemDashDotDot
+    ));
+    assert_eq!(
+        normal_shape.border.color.to_css().as_deref(),
+        Some("#A5A5A5")
+    );
+    assert_eq!(normal_shape.vertical_text, None);
+    let normal_text = normal_shape
+        .text_body
+        .as_ref()
+        .expect("normal shape text body");
+    assert!(matches!(normal_text.vertical_align, VerticalAlign::Middle));
+    assert!(normal_text.anchor_center);
+    assert!(normal_text.word_wrap);
+    assert!(matches!(
+        normal_text.auto_fit,
+        AutoFit::Normal {
+            font_scale: Some(v),
+            line_spacing_reduction: Some(lsr)
+        } if (v - 0.65).abs() < 1e-6 && (lsr - 0.12).abs() < 1e-6
+    ));
+    assert_eq!(
+        normal_text
+            .list_style
+            .as_ref()
+            .and_then(|style| style.levels[0].as_ref())
+            .and_then(|level| level.def_run_props.as_ref())
+            .and_then(|rd| rd.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#112233")
+    );
+
+    let no_auto_shape = &layout.shapes[1];
+    assert!(matches!(
+        no_auto_shape.border.compound,
+        CompoundLine::ThinThick
+    ));
+    let no_auto_text = no_auto_shape.text_body.as_ref().expect("no-auto text body");
+    assert!(matches!(no_auto_text.auto_fit, AutoFit::NoAutoFit));
+    assert_eq!(
+        no_auto_text
+            .list_style
+            .as_ref()
+            .and_then(|style| style.levels[0].as_ref())
+            .and_then(|level| level.def_run_props.as_ref())
+            .and_then(|rd| rd.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#ED7D31")
+    );
+
+    let shrink_shape = &layout.shapes[2];
+    assert!(matches!(
+        shrink_shape
+            .text_body
+            .as_ref()
+            .expect("shrink text body")
+            .auto_fit,
+        AutoFit::Shrink
+    ));
+    let implicit_line_shape = &layout.shapes[3];
+    assert!(matches!(
+        implicit_line_shape.border.style,
+        BorderStyle::Solid
+    ));
+}
+
+#[test]
+fn parses_layout_background_image_start_tags_through_public_parser() {
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+             type="body">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill>
+          <a:blip r:embed="rIdBg"></a:blip>
+        </a:blipFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sldLayout>"#;
+
+    let layout_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rIdBg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/layout-bg.png"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_clr_map(
+            r#"bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink""#,
+        )
+        .with_layout(layout_xml)
+        .with_layout_rels(layout_rels)
+        .with_extra_file("ppt/media/layout-bg.png", b"layout-background")
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let layout = &presentation.layouts[0];
+    assert_eq!(layout.layout_type.as_deref(), Some("body"));
+    assert!(matches!(
+        &layout.background,
+        Some(Fill::Image(image))
+            if image.content_type == "image/png" && image.data == b"layout-background"
+    ));
+}
+
+#[test]
 fn parses_tables_and_unresolved_graphic_frames_and_renders_markers() {
     let slide = r#"
       <p:graphicFrame>

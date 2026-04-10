@@ -1,8 +1,8 @@
 //! Test helper for generating minimal PPTX files
 
 use std::io::{Cursor, Write};
-use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
+use zip::ZipWriter;
 
 /// Minimal PPTX builder -- generates various test cases by swapping slide XML
 pub struct MinimalPptx {
@@ -10,11 +10,13 @@ pub struct MinimalPptx {
     theme_xml: Option<String>,
     master_xml: Option<String>,
     layout_xml: Option<String>,
+    layout_rels_xml: Option<String>,
     has_layout_rel: bool,
     presentation_xml: Option<String>,
     custom_theme_xml: Option<String>,
     slide_rels_xml: Option<String>,
     core_properties_xml: Option<String>,
+    extra_files: Vec<(String, Vec<u8>)>,
 }
 
 impl MinimalPptx {
@@ -35,11 +37,13 @@ impl MinimalPptx {
             theme_xml: None,
             master_xml: None,
             layout_xml: None,
+            layout_rels_xml: None,
             has_layout_rel: false,
             presentation_xml: None,
             custom_theme_xml: None,
             slide_rels_xml: None,
             core_properties_xml: None,
+            extra_files: Vec::new(),
         }
     }
 
@@ -128,6 +132,11 @@ impl MinimalPptx {
         self
     }
 
+    pub fn with_layout_rels(mut self, layout_rels_xml: &str) -> Self {
+        self.layout_rels_xml = Some(layout_rels_xml.to_string());
+        self
+    }
+
     /// Set custom presentation.xml (complete document)
     pub fn with_presentation_xml(mut self, pres_xml: &str) -> Self {
         self.presentation_xml = Some(pres_xml.to_string());
@@ -141,6 +150,11 @@ impl MinimalPptx {
 
     pub fn with_core_properties(mut self, core_xml: &str) -> Self {
         self.core_properties_xml = Some(core_xml.to_string());
+        self
+    }
+
+    pub fn with_extra_file(mut self, path: &str, data: &[u8]) -> Self {
+        self.extra_files.push((path.to_string(), data.to_vec()));
         self
     }
 
@@ -226,14 +240,20 @@ impl MinimalPptx {
             zip.write_all(layout.as_bytes()).unwrap();
 
             // Layout rels (references master)
+            let layout_rels = self.layout_rels_xml.as_deref().unwrap_or(LAYOUT_RELS);
             zip.start_file("ppt/slideLayouts/_rels/slideLayout1.xml.rels", opts)
                 .unwrap();
-            zip.write_all(LAYOUT_RELS.as_bytes()).unwrap();
+            zip.write_all(layout_rels.as_bytes()).unwrap();
         }
 
         if let Some(ref core_props) = self.core_properties_xml {
             zip.start_file("docProps/core.xml", opts).unwrap();
             zip.write_all(core_props.as_bytes()).unwrap();
+        }
+
+        for (path, data) in &self.extra_files {
+            zip.start_file(path, opts).unwrap();
+            zip.write_all(data).unwrap();
         }
 
         zip.finish().unwrap().into_inner()
