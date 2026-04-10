@@ -2715,6 +2715,230 @@ fn parses_empty_tag_color_context_matrix_through_public_parser() {
 }
 
 #[test]
+fn parses_empty_event_cell_and_shape_dispatch_matrix_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:sysClr lastClr="A1B2C3"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="90" name="Dispatch Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst><a:glow rad="6350"><a:prstClr val="orange"/></a:glow></a:effectLst>
+          <a:custGeom><a:pathLst><a:path w="100000" h="100000"/></a:pathLst></a:custGeom>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"><a:srgbClr val="111111"/></a:lnRef>
+          <a:fillRef idx="2"><a:schemeClr val="accent2"/></a:fillRef>
+          <a:effectRef idx="3"><a:prstClr val="orange"/></a:effectRef>
+          <a:fontRef idx="minor"><a:sysClr lastClr="123456"/></a:fontRef>
+        </p:style>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:lstStyle>
+            <a:lvl1pPr>
+              <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+              <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p>
+            <a:pPr><a:spcAft><a:spcPts val="1400"/></a:spcAft></a:pPr>
+            <a:r><a:rPr><a:srgbClr val="445566"/></a:rPr><a:t>Shape Run</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="91" name="Dispatch Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:defRPr><a:schemeClr val="accent3"></a:schemeClr></a:defRPr>
+                        <a:buClr><a:srgbClr val="334455"/></a:buClr>
+                        <a:buFont typeface="Symbol"/>
+                        <a:buSzPct val="125000"/>
+                        <a:buAutoNum type="alphaLcParenR" startAt="2"/>
+                      </a:pPr>
+                      <a:r><a:rPr><a:srgbClr val="224466"/></a:rPr><a:t>RGB</a:t></a:r>
+                      <a:r><a:rPr><a:schemeClr val="accent2"/></a:rPr><a:t>Theme</a:t></a:r>
+                      <a:r><a:rPr><a:sysClr val="windowText"/></a:rPr><a:t>System</a:t></a:r>
+                      <a:r>
+                        <a:rPr>
+                          <a:effectLst><a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"/></a:outerShdw></a:effectLst>
+                          <a:highlight><a:srgbClr val="FFFF00"/></a:highlight>
+                        </a:rPr>
+                        <a:t>FX</a:t>
+                      </a:r>
+                    </a:p>
+                    <a:p>
+                      <a:pPr><a:buClr><a:sysClr lastClr="556677"/></a:buClr><a:buChar char="•"/></a:pPr>
+                      <a:r><a:t>Bullet Char</a:t></a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr"/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#A1B2C3")
+    ));
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Dispatch Shape")
+        .expect("dispatch shape");
+    let style_ref = shape.style_ref.as_ref().expect("shape style ref");
+    assert!(matches!(
+        style_ref
+            .ln_ref
+            .as_ref()
+            .and_then(|style| style.color.to_css())
+            .as_deref(),
+        Some("#111111")
+    ));
+    assert!(matches!(
+        style_ref
+            .fill_ref
+            .as_ref()
+            .and_then(|style| style.color.to_css())
+            .as_deref(),
+        Some("#ED7D31")
+    ));
+    assert!(matches!(
+        style_ref
+            .effect_ref
+            .as_ref()
+            .and_then(|style| style.color.to_css())
+            .as_deref(),
+        Some("#FFA500")
+    ));
+    assert!(matches!(
+        style_ref
+            .font_ref
+            .as_ref()
+            .and_then(|style| style.color.to_css())
+            .as_deref(),
+        Some("#123456")
+    ));
+    assert!(shape.effects.glow.is_some());
+    let custom_geom = match &shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.paths.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::Norm));
+    let list_level = shape
+        .text_body
+        .as_ref()
+        .expect("shape text body")
+        .list_style
+        .as_ref()
+        .and_then(|style| style.levels[0].as_ref())
+        .expect("shape list level");
+    assert!(matches!(
+        list_level.space_before,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    assert!(matches!(
+        list_level.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 9.0).abs() < 1e-6
+    ));
+    let shape_para = &shape
+        .text_body
+        .as_ref()
+        .expect("shape text body")
+        .paragraphs[0];
+    assert!(matches!(
+        shape_para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 14.0).abs() < 1e-6
+    ));
+    assert_eq!(
+        shape_para.runs[0].style.color.to_css().as_deref(),
+        Some("#445566")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let cell = &table.rows[0].cells[0];
+    let para = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::AutoNum(bullet))
+            if bullet.num_type == "alphaLcParenR"
+                && bullet.start_at == Some(2)
+                && bullet.font.as_deref() == Some("Symbol")
+                && bullet.size_pct.is_some_and(|v| (v - 1.25).abs() < 1e-6)
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#334455")
+    ));
+    assert_eq!(
+        para.runs[0].style.color.to_css().as_deref(),
+        Some("#224466")
+    );
+    assert_eq!(
+        para.runs[1].style.color.to_css().as_deref(),
+        Some("#ED7D31")
+    );
+    assert_eq!(
+        para.runs[2].style.color.to_css().as_deref(),
+        Some("#000000")
+    );
+    assert_eq!(
+        para.runs[3]
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+    assert_eq!(
+        para.runs[3]
+            .style
+            .shadow
+            .as_ref()
+            .and_then(|s| s.color.to_css())
+            .as_deref(),
+        Some("#4472C4")
+    );
+    let second_para = &cell.text_body.as_ref().expect("cell text body").paragraphs[1];
+    assert!(matches!(
+        &second_para.bullet,
+        Some(Bullet::Char(bullet))
+            if bullet.char == "•"
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#556677")
+    ));
+}
+
+#[test]
 fn parses_shape_text_autofit_connector_and_ole_branches() {
     let slide = r#"
       <p:graphicFrame>
