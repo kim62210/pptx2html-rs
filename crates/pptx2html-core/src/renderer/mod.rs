@@ -4544,7 +4544,8 @@ mod tests {
     }
 
     #[test]
-    fn render_slide_covers_hidden_shapes_rotation_min_line_size_crop_and_unresolved_custom_geometry() {
+    fn render_slide_covers_hidden_shapes_rotation_min_line_size_crop_and_unresolved_custom_geometry()
+     {
         let (mut pres, collector) = test_ctx(true);
         pres.masters.push(SlideMaster {
             theme_idx: 0,
@@ -4699,20 +4700,23 @@ mod tests {
     #[test]
     fn render_shape_resolved_covers_outline_none_and_effect_ref_fallback() {
         let (mut pres, collector) = test_ctx(true);
-        pres.themes[0].fmt_scheme.effect_style_lst.push(EffectStyle {
-            outer_shadow: Some(OuterShadow {
-                blur_radius: 2.0,
-                distance: 3.0,
-                direction: 45.0,
-                color: Color::theme("accent1"),
-                alpha: 1.0,
-            }),
-            glow: Some(GlowEffect {
-                radius: 1.5,
-                color: Color::rgb("ABCDEF"),
-                alpha: 1.0,
-            }),
-        });
+        pres.themes[0]
+            .fmt_scheme
+            .effect_style_lst
+            .push(EffectStyle {
+                outer_shadow: Some(OuterShadow {
+                    blur_radius: 2.0,
+                    distance: 3.0,
+                    direction: 45.0,
+                    color: Color::theme("accent1"),
+                    alpha: 1.0,
+                }),
+                glow: Some(GlowEffect {
+                    radius: 1.5,
+                    color: Color::rgb("ABCDEF"),
+                    alpha: 1.0,
+                }),
+            });
         let clr_map = ClrMap::default();
 
         let shape = Shape {
@@ -4911,5 +4915,214 @@ mod tests {
             &mut pie_html,
         );
         assert!(pie_html.contains("data-label-position=\"inEnd\""));
+    }
+
+    #[test]
+    fn render_context_helpers_cover_asset_extensions_theme_override_and_wrappers() {
+        let (mut pres, collector) = test_ctx(false);
+        pres.themes.push(Theme {
+            name: "Alt".to_string(),
+            color_scheme: ColorScheme {
+                accent1: "00FF00".to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let clr_map = ClrMap::default();
+        let slide_ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: Some(&clr_map),
+            embed_images: false,
+            collector: &collector,
+        };
+
+        assert!(
+            slide_ctx
+                .register_external_asset("img", "image/jpeg", &[1, 2, 3])
+                .ends_with(".jpg")
+        );
+        assert!(
+            slide_ctx
+                .register_external_asset("img", "image/gif", &[1, 2, 3])
+                .ends_with(".gif")
+        );
+        assert!(
+            slide_ctx
+                .register_external_asset("img", "image/svg+xml", &[1, 2, 3])
+                .ends_with(".svg")
+        );
+        assert!(
+            slide_ctx
+                .register_external_asset("img", "image/webp", &[1, 2, 3])
+                .ends_with(".webp")
+        );
+        assert!(
+            slide_ctx
+                .register_external_asset("img", "image/png", &[1, 2, 3])
+                .ends_with(".png")
+        );
+
+        let alt_ctx = slide_ctx.for_slide(None, Some(1));
+        assert_eq!(
+            alt_ctx
+                .scheme
+                .and_then(|scheme| Some(scheme.accent1.as_str())),
+            Some("00FF00")
+        );
+        let inherited_ctx = slide_ctx.for_slide(None, None);
+        assert_eq!(inherited_ctx.clr_map.map(|_| true), Some(true));
+
+        let mut presentation = Presentation::default();
+        presentation.slide_size = Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        };
+        presentation.slides.push(Slide {
+            shapes: vec![Shape {
+                shape_type: ShapeType::Rectangle,
+                size: Size {
+                    width: Emu(457_200),
+                    height: Emu(228_600),
+                },
+                fill: Fill::Solid(SolidFill {
+                    color: Color::rgb("CCCCCC"),
+                }),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+        assert!(
+            HtmlRenderer::render(&presentation)
+                .expect("render wrapper")
+                .contains("pptx-container")
+        );
+        assert!(
+            HtmlRenderer::render_with_options(&presentation, &ConversionOptions::default())
+                .expect("render_with_options wrapper")
+                .contains("pptx-container")
+        );
+    }
+
+    #[test]
+    fn render_shape_resolved_covers_chart_edge_case_branches() {
+        let (pres, collector) = test_ctx(true);
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+
+        let make_chart_shape = |spec: ChartSpec| Shape {
+            shape_type: ShapeType::Chart(ChartData {
+                rel_id: "rIdChart".to_string(),
+                preview_image: None,
+                preview_mime: None,
+                direct_spec: Some(spec),
+            }),
+            size: Size {
+                width: Emu(1_828_800),
+                height: Emu(914_400),
+            },
+            ..Default::default()
+        };
+
+        let mut scatter_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Scatter,
+                scatter_style: Some(ChartScatterStyle::Line),
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::Center),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Scatter".to_string()),
+                    x_values: vec![f64::NAN],
+                    values: vec![5.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx,
+            &mut scatter_html,
+        );
+        assert!(scatter_html.contains("chart-line"));
+        assert!(scatter_html.contains("data-label-position=\"ctr\""));
+
+        let mut bubble_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Bubble,
+                bubble_scale: Some(150.0),
+                series: vec![ChartSeries {
+                    name: Some("Bubbles".to_string()),
+                    x_values: vec![f64::NAN],
+                    values: vec![f64::NAN],
+                    bubble_sizes: vec![4.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx,
+            &mut bubble_html,
+        );
+        assert!(bubble_html.contains("chart-bubble"));
+
+        let mut area_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::Area,
+                data_labels: Some(ChartDataLabelSettings {
+                    show_value: true,
+                    position: Some(ChartDataLabelPosition::Center),
+                    ..Default::default()
+                }),
+                series: vec![ChartSeries {
+                    name: Some("Area".to_string()),
+                    categories: vec!["Only".to_string()],
+                    values: vec![0.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx,
+            &mut area_html,
+        );
+        assert!(area_html.contains("chart-area"));
+
+        let mut of_pie_html = String::new();
+        HtmlRenderer::render_shape_resolved(
+            &make_chart_shape(ChartSpec {
+                chart_type: ChartType::OfPie,
+                of_pie_type: Some(ChartOfPieType::Pie),
+                split_type: Some(ChartSplitType::Pos),
+                split_pos: Some(1.0),
+                series: vec![ChartSeries {
+                    name: Some("Split".to_string()),
+                    categories: vec!["A".to_string(), "B".to_string()],
+                    values: vec![5.0, 0.0],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            None,
+            None,
+            &ctx,
+            &mut of_pie_html,
+        );
+        assert!(of_pie_html.contains("chart-of-pie-primary"));
     }
 }

@@ -140,7 +140,10 @@ fn info_command_escapes_title_strings() {
 
 #[test]
 fn multi_file_conversion_reports_output_directory_creation_failure() {
-    let input = write_temp_file("multi-dir-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let input = write_temp_file(
+        "multi-dir-fail",
+        include_bytes!("fixtures/single-slide.pptx"),
+    );
     let output_path = unique_temp_path("multi-dir-target");
     fs::write(&output_path, b"not-a-directory").expect("seed output path as file");
 
@@ -163,7 +166,10 @@ fn multi_file_conversion_reports_output_directory_creation_failure() {
 
 #[test]
 fn multi_file_conversion_reports_slide_write_failures() {
-    let input = write_temp_file("multi-write-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let input = write_temp_file(
+        "multi-write-fail",
+        include_bytes!("fixtures/single-slide.pptx"),
+    );
     let output_dir = unique_temp_path("multi-write-target");
     fs::create_dir_all(output_dir.join("slide-1.html")).expect("seed slide html path as dir");
 
@@ -186,7 +192,10 @@ fn multi_file_conversion_reports_slide_write_failures() {
 
 #[test]
 fn single_file_conversion_reports_output_write_failures() {
-    let input = write_temp_file("single-write-fail", include_bytes!("fixtures/single-slide.pptx"));
+    let input = write_temp_file(
+        "single-write-fail",
+        include_bytes!("fixtures/single-slide.pptx"),
+    );
     let output_dir = unique_temp_path("single-output-dir");
     fs::create_dir_all(&output_dir).expect("create output dir");
 

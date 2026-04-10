@@ -608,11 +608,17 @@ fn parses_shape_text_autofit_connector_and_ole_branches() {
         .expect("connector");
     assert!(matches!(&connector.shape_type, ShapeType::Custom(name) if name == "line"));
     assert_eq!(
-        connector.start_connection.as_ref().map(|connection| connection.shape_id),
+        connector
+            .start_connection
+            .as_ref()
+            .map(|connection| connection.shape_id),
         Some(10)
     );
     assert_eq!(
-        connector.end_connection.as_ref().map(|connection| connection.site_idx),
+        connector
+            .end_connection
+            .as_ref()
+            .map(|connection| connection.site_idx),
         Some(2)
     );
 }

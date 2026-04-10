@@ -4339,10 +4339,7 @@ mod tests {
   </p:cSld>
 </p:sld>"#;
 
-        let rels = HashMap::from([(
-            "rIdHyper".to_string(),
-            "https://example.com".to_string(),
-        )]);
+        let rels = HashMap::from([("rIdHyper".to_string(), "https://example.com".to_string())]);
         let mut archive = archive_with_entries(&[]);
 
         let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
@@ -4391,7 +4388,10 @@ mod tests {
         assert!(paragraph.rtl);
         assert_eq!(paragraph.level, 1);
         assert_eq!(paragraph.runs.len(), 3);
-        assert_eq!(paragraph.runs[0].hyperlink.as_deref(), Some("https://example.com"));
+        assert_eq!(
+            paragraph.runs[0].hyperlink.as_deref(),
+            Some("https://example.com")
+        );
         assert!(paragraph.runs[1].is_break);
         let def_rpr = paragraph.def_rpr.as_ref().expect("paragraph defRPr");
         assert_eq!(def_rpr.font_size, Some(24.0));
@@ -4512,14 +4512,20 @@ mod tests {
         assert!(matches!(cell.border_left.style, BorderStyle::Dotted));
         assert!(matches!(cell.border_left.dash_style, DashStyle::SystemDot));
         assert!(matches!(cell.border_right.style, BorderStyle::Dotted));
-        assert!(matches!(cell.border_right.dash_style, DashStyle::LongDashDot));
+        assert!(matches!(
+            cell.border_right.dash_style,
+            DashStyle::LongDashDot
+        ));
         assert!(matches!(cell.border_top.style, BorderStyle::Dotted));
         assert!(matches!(
             cell.border_top.dash_style,
             DashStyle::LongDashDotDot
         ));
         assert!(matches!(cell.border_bottom.style, BorderStyle::Dashed));
-        assert!(matches!(cell.border_bottom.dash_style, DashStyle::SystemDash));
+        assert!(matches!(
+            cell.border_bottom.dash_style,
+            DashStyle::SystemDash
+        ));
 
         let paragraph = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
         assert!(matches!(paragraph.alignment, Alignment::Center));
@@ -4636,7 +4642,10 @@ mod tests {
             })
             .expect("chart shape");
         assert_eq!(chart.rel_id, "rIdChart");
-        assert!(chart.direct_spec.is_some(), "expected parsed direct chart spec");
+        assert!(
+            chart.direct_spec.is_some(),
+            "expected parsed direct chart spec"
+        );
         assert_eq!(chart.preview_image.as_deref(), Some(b"preview".as_slice()));
         assert_eq!(chart.preview_mime.as_deref(), Some("image/png"));
 
@@ -4805,7 +4814,10 @@ mod tests {
         assert!(custom_shape.flip_v);
         assert!(matches!(custom_shape.border.cap, LineCap::Flat));
         assert!(matches!(custom_shape.border.compound, CompoundLine::Triple));
-        assert!(matches!(custom_shape.border.alignment, LineAlignment::Inset));
+        assert!(matches!(
+            custom_shape.border.alignment,
+            LineAlignment::Inset
+        ));
         let custom_text = custom_shape.text_body.as_ref().expect("custom text body");
         assert!(matches!(custom_text.auto_fit, AutoFit::Shrink));
         assert!(matches!(custom_text.vertical_align, VerticalAlign::Bottom));
@@ -4846,13 +4858,196 @@ mod tests {
             .find(|shape| matches!(shape.shape_type, ShapeType::Custom(ref name) if name == "line"))
             .expect("connector shape");
         assert_eq!(
-            connector.start_connection.as_ref().map(|conn| conn.shape_id),
+            connector
+                .start_connection
+                .as_ref()
+                .map(|conn| conn.shape_id),
             Some(10)
         );
         assert_eq!(
             connector.end_connection.as_ref().map(|conn| conn.site_idx),
             Some(2)
         );
+    }
+
+    #[test]
+    fn parse_slide_covers_table_start_tags_norm_autofit_and_effect_color_variants() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"></a:srgbClr></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent1"></a:schemeClr></a:gs>
+          </a:gsLst>
+          <a:path path="rect"></a:path>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""></p:cNvPr><p:cNvGrpSpPr></p:cNvGrpSpPr><p:nvPr></p:nvPr></p:nvGrpSpPr>
+      <p:grpSpPr></p:grpSpPr>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="Table"></p:cNvPr><p:cNvGraphicFramePr></p:cNvGraphicFramePr><p:nvPr></p:nvPr></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"></a:off><a:ext cx="1828800" cy="914400"></a:ext></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="true" bandCol="true" firstRow="true" lastRow="true" firstCol="true" lastCol="true"></a:tblPr>
+              <a:tblGrid><a:gridCol w="914400"></a:gridCol></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc gridSpan="1" rowSpan="1" vMerge="true">
+                  <a:txBody>
+                    <a:bodyPr></a:bodyPr>
+                    <a:lstStyle></a:lstStyle>
+                    <a:p>
+                      <a:pPr algn="ctr" lvl="1" indent="91440" marL="45720">
+                        <a:defRPr sz="2000" spc="100" baseline="10000" cap="small" u="dashLong" strike="dblStrike" b="true" i="true"></a:defRPr>
+                        <a:lnSpc><a:spcPct val="125000"></a:spcPct></a:lnSpc>
+                        <a:spcBef><a:spcPts val="1200"></a:spcPts></a:spcBef>
+                        <a:spcAft><a:spcPts val="600"></a:spcPts></a:spcAft>
+                        <a:buClr><a:schemeClr val="accent2"></a:schemeClr></a:buClr>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr sz="1800"><a:hlinkClick r:id="rIdHyper"/></a:rPr>
+                        <a:t>Cell</a:t>
+                      </a:r>
+                      <a:br></a:br>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr marL="91440" marR="137160" marT="45720" marB="22860" anchor="b">
+                    <a:solidFill><a:srgbClr val="00FF00"></a:srgbClr></a:solidFill>
+                    <a:lnL w="12700"><a:prstDash val="solid"></a:prstDash><a:srgbClr val="FF0000"></a:srgbClr></a:lnL>
+                    <a:lnR w="12700"><a:prstDash val="dash"></a:prstDash><a:srgbClr val="0000FF"></a:srgbClr></a:lnR>
+                    <a:lnT w="12700"><a:prstDash val="dot"></a:prstDash><a:srgbClr val="123456"></a:srgbClr></a:lnT>
+                    <a:lnB w="12700"><a:prstDash val="lgDash"></a:prstDash><a:srgbClr val="654321"></a:srgbClr></a:lnB>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Norm Autofit Shape"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="914400" cy="457200"></a:ext></a:xfrm>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:prstClr val="orange"></a:prstClr></a:gs>
+              <a:gs pos="100000"><a:sysClr lastClr="112233"></a:sysClr></a:gs>
+            </a:gsLst>
+            <a:path path="shape"></a:path>
+          </a:gradFill>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:schemeClr val="accent1"></a:schemeClr></a:outerShdw>
+            <a:glow rad="6350"><a:sysClr val="windowText"></a:sysClr></a:glow>
+          </a:effectLst>
+          <a:custGeom>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="lighten"><a:moveTo><a:pt x="0" y="0"></a:pt></a:moveTo></a:path>
+              <a:path w="100000" h="100000" fill="darken"><a:moveTo><a:pt x="0" y="0"></a:pt></a:moveTo></a:path>
+              <a:path w="100000" h="100000" fill="lightenLess"><a:moveTo><a:pt x="0" y="0"></a:pt></a:moveTo></a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr wrap="none"></a:bodyPr>
+          <a:normAutofit fontScale="70000" lnSpcReduction="15000"></a:normAutofit>
+          <a:p><a:r><a:t>Shape</a:t></a:r></a:p>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let rels = HashMap::from([(
+            "rIdHyper".to_string(),
+            "https://example.com/table-start".to_string(),
+        )]);
+        let mut archive = archive_with_entries(&[]);
+
+        let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide parses");
+
+        assert!(matches!(
+            &slide.background,
+            Some(Fill::Gradient(fill))
+                if fill.stops.len() == 2 && matches!(fill.gradient_type, GradientType::Rectangular)
+        ));
+
+        let table = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Table(table) => Some(table),
+                _ => None,
+            })
+            .expect("table shape");
+        assert!(table.band_row && table.band_col && table.first_row && table.last_row);
+        assert!(table.first_col && table.last_col);
+        let cell = &table.rows[0].cells[0];
+        assert!(cell.v_merge);
+        assert!(matches!(cell.vertical_align, VerticalAlign::Bottom));
+        assert!(matches!(cell.border_left.style, BorderStyle::Solid));
+        assert!(matches!(cell.border_left.dash_style, DashStyle::Solid));
+        assert!(matches!(cell.border_right.style, BorderStyle::Dashed));
+        assert!(matches!(cell.border_right.dash_style, DashStyle::Dash));
+        assert!(matches!(cell.border_top.style, BorderStyle::Dotted));
+        assert!(matches!(cell.border_top.dash_style, DashStyle::Dot));
+        assert!(matches!(cell.border_bottom.style, BorderStyle::Dashed));
+        assert!(matches!(cell.border_bottom.dash_style, DashStyle::LongDash));
+
+        let paragraph = &cell.text_body.as_ref().expect("table text body").paragraphs[0];
+        assert_eq!(
+            paragraph.runs.len(),
+            2,
+            "expected one run plus one line break"
+        );
+        assert_eq!(
+            paragraph.runs[0].hyperlink.as_deref(),
+            Some("https://example.com/table-start")
+        );
+        assert!(paragraph.runs[1].is_break);
+        let def_rpr = paragraph.def_rpr.as_ref().expect("table start-tag defRPr");
+        assert_eq!(def_rpr.font_size, Some(20.0));
+        assert_eq!(def_rpr.letter_spacing, Some(1.0));
+        assert_eq!(def_rpr.baseline, Some(10000));
+        assert_eq!(def_rpr.bold, Some(true));
+        assert_eq!(def_rpr.italic, Some(true));
+        assert!(matches!(
+            def_rpr.capitalization,
+            Some(TextCapitalization::Small)
+        ));
+        assert!(matches!(def_rpr.underline, Some(UnderlineType::DashLong)));
+        assert!(matches!(
+            def_rpr.strikethrough,
+            Some(StrikethroughType::Double)
+        ));
+
+        let shape = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "Norm Autofit Shape")
+            .expect("norm autofit shape");
+        assert!(matches!(
+            shape.text_body.as_ref().map(|body| &body.auto_fit),
+            Some(AutoFit::Normal {
+                font_scale: Some(v),
+                line_spacing_reduction: Some(lsr)
+            }) if (*v - 0.7).abs() < 1e-6 && (*lsr - 0.15).abs() < 1e-6
+        ));
+        let custom_geom = match &shape.shape_type {
+            ShapeType::CustomGeom(geom) => geom,
+            other => panic!("expected custom geometry, got {other:?}"),
+        };
+        assert_eq!(custom_geom.paths.len(), 3);
+        assert!(matches!(custom_geom.paths[0].fill, PathFill::Lighten));
+        assert!(matches!(custom_geom.paths[1].fill, PathFill::Darken));
+        assert!(matches!(custom_geom.paths[2].fill, PathFill::LightenLess));
     }
 
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {

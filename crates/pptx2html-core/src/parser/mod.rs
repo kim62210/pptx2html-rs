@@ -861,7 +861,8 @@ mod tests {
         .unwrap();
 
         let bytes = zip.finish().unwrap().into_inner();
-        let err = PptxParser::parse_bytes(&bytes).expect_err("missing presentation.xml should fail");
+        let err =
+            PptxParser::parse_bytes(&bytes).expect_err("missing presentation.xml should fail");
         assert!(matches!(
             err,
             PptxError::MissingFile(msg) if msg.contains("ppt/presentation.xml")
