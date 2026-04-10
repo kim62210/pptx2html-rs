@@ -1509,6 +1509,254 @@ fn parses_empty_event_color_and_dash_matrix_through_public_parser() {
 }
 
 #[test]
+fn parses_empty_event_bullet_font_highlight_and_style_ref_matrix_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:prstClr val="orange"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="40" name="Style Ref Matrix"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+        </p:spPr>
+        <p:style>
+          <a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>
+          <a:fillRef idx="2"><a:prstClr val="orange"/></a:fillRef>
+          <a:effectRef idx="3"><a:sysClr lastClr="112233"/></a:effectRef>
+          <a:fontRef idx="minor"><a:schemeClr val="accent2"/></a:fontRef>
+        </p:style>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:p>
+            <a:pPr algn="ctr">
+              <a:lnSpc><a:spcPct val="110000"/></a:lnSpc>
+              <a:spcAft><a:spcPts val="1400"/></a:spcAft>
+              <a:buChar char="•"/>
+              <a:buClr><a:schemeClr val="accent4"/></a:buClr>
+              <a:buFont typeface="Wingdings"/>
+              <a:buSzPct val="125000"/>
+              <a:defRPr sz="2000">
+                <a:latin typeface="Aptos"/>
+                <a:ea typeface="Yu Gothic"/>
+                <a:cs typeface="Noto Sans Arabic"/>
+              </a:defRPr>
+            </a:pPr>
+            <a:r>
+              <a:rPr sz="1800">
+                <a:hlinkClick r:id="rIdStart"></a:hlinkClick>
+                <a:highlight><a:schemeClr val="accent6"/></a:highlight>
+                <a:latin typeface="Calibri"/>
+                <a:ea typeface="Meiryo"/>
+                <a:cs typeface="Noto Sans Devanagari"/>
+                <a:sysClr lastClr="223344"/>
+              </a:rPr>
+              <a:t>Styled Run</a:t>
+            </a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="41" name="Cell Matrix"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="l">
+                        <a:lnSpc><a:spcPts val="900"/></a:lnSpc>
+                        <a:spcBef><a:spcPct val="25000"/></a:spcBef>
+                        <a:spcAft><a:spcPts val="1200"/></a:spcAft>
+                        <a:buChar char="◦"/>
+                        <a:buClr><a:prstClr val="orange"/></a:buClr>
+                        <a:buFont typeface="Symbol"/>
+                        <a:buSzPts val="1600"/>
+                        <a:defRPr sz="1900">
+                          <a:latin typeface="Cell Latin"/>
+                          <a:ea typeface="Cell EA"/>
+                          <a:cs typeface="Cell CS"/>
+                        </a:defRPr>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr sz="1700">
+                          <a:highlight><a:srgbClr val="FFFF00"/></a:highlight>
+                          <a:latin typeface="CellRun Latin"/>
+                          <a:ea typeface="CellRun EA"/>
+                          <a:cs typeface="CellRun CS"/>
+                          <a:prstClr val="orange"/>
+                        </a:rPr>
+                        <a:t>Cell Run</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr">
+                    <a:solidFill><a:schemeClr val="accent5"/></a:solidFill>
+                    <a:lnL w="12700"><a:sysClr val="windowText"/></a:lnL>
+                    <a:lnR w="12700"><a:prstClr val="orange"/></a:lnR>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdStart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/start" TargetMode="External"/>
+</Relationships>"#,
+        )
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill))
+            if matches!(fill.color.kind, ColorKind::Preset(ref name) if name == "orange")
+    ));
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Style Ref Matrix")
+        .expect("style ref shape");
+    let style_ref = shape.style_ref.as_ref().expect("shape style ref");
+    assert!(matches!(
+        style_ref
+            .ln_ref
+            .as_ref()
+            .map(|style| style.color.kind.clone()),
+        Some(ColorKind::Theme(name)) if name == "accent1"
+    ));
+    assert!(matches!(
+        style_ref
+            .fill_ref
+            .as_ref()
+            .map(|style| style.color.kind.clone()),
+        Some(ColorKind::Preset(name)) if name == "orange"
+    ));
+    assert!(matches!(
+        style_ref
+            .effect_ref
+            .as_ref()
+            .map(|style| style.color.kind.clone()),
+        Some(ColorKind::Rgb(rgb)) if rgb == "112233"
+    ));
+    assert!(matches!(
+        style_ref
+            .font_ref
+            .as_ref()
+            .map(|style| style.color.kind.clone()),
+        Some(ColorKind::Theme(name)) if name == "accent2"
+    ));
+
+    let para = &shape
+        .text_body
+        .as_ref()
+        .expect("shape text body")
+        .paragraphs[0];
+    assert!(matches!(
+        para.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6
+    ));
+    assert!(matches!(
+        para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 14.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::Char(bullet))
+            if bullet.char == "•"
+    ));
+    let shape_def = para.def_rpr.as_ref().expect("shape defRPr");
+    assert_eq!(shape_def.font_latin.as_deref(), Some("Aptos"));
+    assert_eq!(shape_def.font_ea.as_deref(), Some("Yu Gothic"));
+    assert_eq!(shape_def.font_cs.as_deref(), Some("Noto Sans Arabic"));
+    let run = &para.runs[0];
+    assert_eq!(run.hyperlink.as_deref(), Some("https://example.com/start"));
+    assert_eq!(run.font.latin.as_deref(), Some("Calibri"));
+    assert_eq!(run.font.east_asian.as_deref(), Some("Meiryo"));
+    assert_eq!(
+        run.font.complex_script.as_deref(),
+        Some("Noto Sans Devanagari")
+    );
+    assert_eq!(run.style.color.to_css().as_deref(), Some("#223344"));
+    assert_eq!(
+        run.style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#70AD47")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let cell = &table.rows[0].cells[0];
+    assert!(matches!(
+        &cell.fill,
+        Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#5B9BD5")
+    ));
+    assert_eq!(cell.border_left.color.to_css().as_deref(), Some("#000000"));
+    assert_eq!(cell.border_right.color.to_css().as_deref(), Some("#FFA500"));
+    let cell_para = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
+    assert!(matches!(
+        cell_para.line_spacing,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 9.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        cell_para.space_before,
+        Some(pptx2html_core::model::SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6
+    ));
+    assert!(matches!(
+        cell_para.space_after,
+        Some(pptx2html_core::model::SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &cell_para.bullet,
+        Some(Bullet::Char(bullet))
+            if bullet.char == "◦"
+    ));
+    let cell_def = cell_para.def_rpr.as_ref().expect("cell defRPr");
+    assert_eq!(cell_def.font_latin.as_deref(), Some("Cell Latin"));
+    assert_eq!(cell_def.font_ea.as_deref(), Some("Cell EA"));
+    assert_eq!(cell_def.font_cs.as_deref(), Some("Cell CS"));
+    let cell_run = &cell_para.runs[0];
+    assert_eq!(cell_run.font.latin.as_deref(), Some("CellRun Latin"));
+    assert_eq!(cell_run.font.east_asian.as_deref(), Some("CellRun EA"));
+    assert_eq!(cell_run.font.complex_script.as_deref(), Some("CellRun CS"));
+    assert_eq!(cell_run.style.color.to_css().as_deref(), Some("#FFA500"));
+    assert_eq!(
+        cell_run
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+}
+
+#[test]
 fn parses_shape_text_autofit_connector_and_ole_branches() {
     let slide = r#"
       <p:graphicFrame>
