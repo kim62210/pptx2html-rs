@@ -122,6 +122,20 @@ fn missing_input_returns_nonzero_exit_code() {
 }
 
 #[test]
+fn single_file_conversion_reports_conversion_failures_for_missing_input() {
+    let missing = unique_temp_path("missing-convert").with_extension("pptx");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&missing)
+        .output()
+        .expect("run cli");
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("Conversion failed"));
+}
+
+#[test]
 fn info_command_escapes_title_strings() {
     let input = write_temp_file("info-title", &build_titled_single_slide_pptx());
 
