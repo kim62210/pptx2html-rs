@@ -2,8 +2,9 @@ mod fixtures;
 
 use pptx2html_core::model::{
     Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, ColorKind, CompoundLine, DashStyle,
-    Fill, GradientType, LineAlignment, LineCap, LineJoin, PathFill, PlaceholderType, ShapeType,
-    StrikethroughType, TextCapitalization, UnderlineType, VerticalAlign,
+    Emu, Fill, GradientType, ImageFill, LineAlignment, LineCap, LineJoin, PathFill,
+    PlaceholderType, ShapeType, StrikethroughType, TextCapitalization, UnderlineType,
+    VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 
@@ -1982,6 +1983,233 @@ fn parses_empty_event_autonum_bullet_none_and_gradient_stop_matrix_through_publi
             .as_deref(),
         Some("#70AD47")
     );
+}
+
+#[test]
+fn parses_grouped_chart_table_unsupported_and_image_fill_branches_through_public_parser() {
+    let slide = r#"
+      <p:grpSp>
+        <p:nvGrpSpPr><p:cNvPr id="60" name="Outer Group"></p:cNvPr><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+        <p:grpSpPr>
+          <a:xfrm>
+            <a:off x="100000" y="100000"/>
+            <a:ext cx="5000000" cy="3000000"/>
+            <a:chOff x="0" y="0"/>
+            <a:chExt cx="5000000" cy="3000000"/>
+          </a:xfrm>
+        </p:grpSpPr>
+        <p:grpSp>
+          <p:nvGrpSpPr><p:cNvPr id="61" name="Inner Group"></p:cNvPr><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+          <p:grpSpPr>
+            <a:xfrm>
+              <a:off x="0" y="0"/>
+              <a:ext cx="2000000" cy="1000000"/>
+              <a:chOff x="0" y="0"/>
+              <a:chExt cx="2000000" cy="1000000"/>
+            </a:xfrm>
+          </p:grpSpPr>
+          <p:sp>
+            <p:nvSpPr><p:cNvPr id="62" name="Custom Paths"></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+            <p:spPr>
+              <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+              <a:custGeom>
+                <a:pathLst>
+                  <a:path w="100000" h="100000" fill="none"/>
+                  <a:path w="100000" h="100000" fill="lighten"/>
+                  <a:path w="100000" h="100000" fill="darken"/>
+                  <a:path w="100000" h="100000" fill="lightenLess"/>
+                  <a:path w="100000" h="100000" fill="darkenLess"/>
+                </a:pathLst>
+              </a:custGeom>
+            </p:spPr>
+          </p:sp>
+        </p:grpSp>
+        <p:graphicFrame>
+          <p:nvGraphicFramePr><p:cNvPr id="63" name="Grouped Chart"></p:cNvPr><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+          <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+          <a:graphic>
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <chart r:id="rIdChart"/>
+            </a:graphicData>
+          </a:graphic>
+        </p:graphicFrame>
+        <p:graphicFrame>
+          <p:nvGraphicFramePr><p:cNvPr id="64" name="Grouped Math"></p:cNvPr><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+          <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+          <a:graphic>
+            <a:graphicData uri="http://schemas.openxmlformats.org/officeDocument/2006/math">
+              <m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"/>
+            </a:graphicData>
+          </a:graphic>
+        </p:graphicFrame>
+        <p:graphicFrame>
+          <p:nvGraphicFramePr><p:cNvPr id="65" name="Grouped Table"></p:cNvPr><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+          <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+          <a:graphic>
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+              <a:tbl>
+                <a:tblPr bandRow="1"/>
+                <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+                <a:tr h="457200">
+                  <a:tc>
+                    <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Grouped Cell</a:t></a:r></a:p></a:txBody>
+                    <a:tcPr/>
+                  </a:tc>
+                </a:tr>
+              </a:tbl>
+            </a:graphicData>
+          </a:graphic>
+        </p:graphicFrame>
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="66" name="Image Fill Shape"></p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="25400" y="38100"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+            <a:prstGeom prst="rect"/>
+            <a:blipFill><a:blip r:embed="rIdFill"/></a:blipFill>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr/>
+            <a:p>
+              <a:r>
+                <a:rPr><a:hlinkClick r:id="rIdRun"></a:hlinkClick></a:rPr>
+                <a:t>Image Fill</a:t>
+              </a:r>
+            </a:p>
+          </p:txBody>
+        </p:sp>
+      </p:grpSp>
+    "#;
+
+    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:pieChart>
+        <c:varyColors val="1"/>
+        <c:ser>
+          <c:idx val="0"/>
+          <c:order val="0"/>
+          <c:tx><c:v>Series</c:v></c:tx>
+          <c:cat><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>Only</c:v></c:pt></c:strLit></c:cat>
+          <c:val><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>42</c:v></c:pt></c:numLit></c:val>
+        </c:ser>
+      </c:pieChart>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#;
+
+    let chart_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdSkip" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/ignored.bin"/>
+  <Relationship Id="rIdPreview" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/chart-preview.png"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+  <Relationship Id="rIdFill" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/fill.png"/>
+  <Relationship Id="rIdRun" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/grouped" TargetMode="External"/>
+</Relationships>"#,
+        )
+        .with_extra_file("ppt/charts/chart1.xml", chart_xml.as_bytes())
+        .with_extra_file("ppt/charts/_rels/chart1.xml.rels", chart_rels.as_bytes())
+        .with_extra_file("ppt/media/chart-preview.png", b"preview")
+        .with_extra_file("ppt/media/fill.png", b"fill-bytes")
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    assert_eq!(presentation.slides.len(), 1);
+    assert_eq!(presentation.slides[0].shapes.len(), 1);
+
+    let outer_group = match &presentation.slides[0].shapes[0].shape_type {
+        ShapeType::Group(children, group_data) => {
+            assert_eq!(group_data.child_offset.x.to_px(), 0.0);
+            assert_eq!(
+                group_data.child_extent.width.to_px(),
+                Emu::parse_emu("5000000").to_px()
+            );
+            children
+        }
+        other => panic!("expected outer group, got {other:?}"),
+    };
+    assert_eq!(outer_group.len(), 5);
+
+    let nested_group = outer_group
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Group(children, _) => Some(children),
+            _ => None,
+        })
+        .expect("nested group");
+    let custom_geom = match &nested_group[0].shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected nested custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.paths.len(), 5);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::None));
+    assert!(matches!(custom_geom.paths[1].fill, PathFill::Lighten));
+    assert!(matches!(custom_geom.paths[2].fill, PathFill::Darken));
+    assert!(matches!(custom_geom.paths[3].fill, PathFill::LightenLess));
+    assert!(matches!(custom_geom.paths[4].fill, PathFill::DarkenLess));
+
+    let chart = outer_group
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Chart(chart) => Some(chart),
+            _ => None,
+        })
+        .expect("grouped chart");
+    assert_eq!(chart.preview_image.as_deref(), Some(b"preview".as_slice()));
+    assert_eq!(chart.preview_mime.as_deref(), Some("image/png"));
+
+    assert!(outer_group.iter().any(|shape| matches!(
+        &shape.shape_type,
+        ShapeType::Unsupported(data)
+            if data.raw_xml.as_deref().is_some_and(|raw| raw.contains("oMath"))
+    )));
+
+    let table = outer_group
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("grouped table");
+    assert_eq!(table.rows.len(), 1);
+    assert_eq!(
+        table.rows[0].cells[0]
+            .text_body
+            .as_ref()
+            .expect("cell body")
+            .paragraphs[0]
+            .runs[0]
+            .text,
+        "Grouped Cell"
+    );
+
+    let image_fill_shape = outer_group
+        .iter()
+        .find(|shape| shape.name == "Image Fill Shape")
+        .expect("image fill shape");
+    assert_eq!(
+        image_fill_shape
+            .text_body
+            .as_ref()
+            .expect("image fill text")
+            .paragraphs[0]
+            .runs[0]
+            .hyperlink
+            .as_deref(),
+        Some("https://example.com/grouped")
+    );
+    assert!(matches!(
+        &image_fill_shape.fill,
+        Fill::Image(ImageFill { data, content_type, .. })
+            if data == b"fill-bytes" && content_type == "image/png"
+    ));
 }
 
 #[test]
