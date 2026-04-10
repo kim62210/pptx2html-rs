@@ -217,6 +217,11 @@ fn is_east_asian_nonstarter_punctuation(ch: char) -> bool {
             | '\u{FF09}'
             | '\u{FF3D}'
             | '\u{FF5D}'
+            | '\u{FF1E}'
+            | '\u{301C}'
+            | '\u{FF5E}'
+            | '\u{301E}'
+            | '\u{301F}'
     )
 }
 
@@ -235,6 +240,8 @@ fn is_east_asian_opening_punctuation(ch: char) -> bool {
             | '\u{FF08}'
             | '\u{FF3B}'
             | '\u{FF5B}'
+            | '\u{FF1C}'
+            | '\u{301D}'
     )
 }
 
@@ -774,6 +781,160 @@ mod tests {
     }
 
     #[test]
+    fn classify_wrap_policy_marks_ideographic_full_stop_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢。漢。漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_full_stop_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢．漢．漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_comma_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢，漢，漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_exclamation_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢！漢！漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_question_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢？漢？漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_colon_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢：漢：漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_semicolon_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢；漢；漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
     fn classify_wrap_policy_marks_white_square_bracket_cluster_as_emergency() {
         let paragraphs = vec![TextParagraph {
             runs: vec![TextRun {
@@ -822,6 +983,490 @@ mod tests {
         let paragraphs = vec![TextParagraph {
             runs: vec![TextRun {
                 text: "〘漢〙〘漢〙".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_closing_parenthesis_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢）漢）漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_ascii_closing_parenthesis_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "A)A)A)A".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 18.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_closing_square_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢］漢］漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_closing_curly_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢｝漢｝漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_opening_square_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "［漢［漢［漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_opening_curly_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "｛漢｛漢｛漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_black_square_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "【漢】【漢】".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_black_lenticular_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〖漢〗〖漢〗".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_corner_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "「漢」「漢」".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_double_corner_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "『漢』『漢』".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_reversed_double_prime_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〝漢〞〝漢〞".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_low_reversed_double_prime_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〝漢〟〝漢〟".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_closing_corner_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢」漢」漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_closing_double_corner_quote_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢』漢』漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_opening_angle_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "《漢《漢《漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_opening_angle_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "＜漢＜漢＜漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_closing_angle_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢＞漢＞漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_single_closing_angle_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢〉漢〉漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_wave_dash_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢〜漢〜漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_tilde_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "漢～漢～漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_single_angle_bracket_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "〈漢〈漢〈漢".into(),
+                style: TextStyle {
+                    font_size: Some(18.0),
+                    ..Default::default()
+                },
+                font: FontStyle::default(),
+                hyperlink: None,
+                is_break: false,
+            }],
+            ..Default::default()
+        }];
+
+        assert_eq!(
+            classify_wrap_policy(&paragraphs, &[None], 30.0, None),
+            TextWrapPolicy::Emergency
+        );
+    }
+
+    #[test]
+    fn classify_wrap_policy_marks_fullwidth_opening_parenthesis_cluster_as_emergency() {
+        let paragraphs = vec![TextParagraph {
+            runs: vec![TextRun {
+                text: "（漢（漢（漢".into(),
                 style: TextStyle {
                     font_size: Some(18.0),
                     ..Default::default()

@@ -2479,6 +2479,209 @@ fn test_cjk_nonstarter_punctuation_cluster_marks_emergency_wrap() {
 }
 
 #[test]
+fn test_ideographic_full_stop_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="IdeographicFullStopWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢。漢。漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Ideographic full-stop clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Ideographic full-stop clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_comma_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthCommaWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢，漢，漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth comma clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth comma clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_exclamation_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthExclamationWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢！漢！漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth exclamation clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth exclamation clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_question_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthQuestionWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢？漢？漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth question clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth question clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_colon_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthColonWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢：漢：漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth colon clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth colon clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_semicolon_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthSemicolonWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢；漢；漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth semicolon clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth semicolon clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_full_stop_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthFullStopWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢．漢．漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth full-stop clusters should opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth full-stop clusters should emit overflow-wrap:anywhere when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
 fn test_slash_separated_text_does_not_mark_emergency_wrap() {
     let slide = r#"
     <p:sp>
@@ -3452,6 +3655,644 @@ fn test_soft_hyphen_text_body_does_not_mark_emergency_wrap() {
     assert!(
         !tb_chunk.contains("emergency-wrap"),
         "Soft-hyphenated text should not carry an emergency-wrap marker when normal break opportunities exist: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_closing_parenthesis_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthCloseParenWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢）漢）漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth closing-parenthesis clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth closing-parenthesis clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_ascii_closing_parenthesis_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="AsciiCloseParenWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="350000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>A)A)A)A</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "ASCII closing-parenthesis clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "ASCII closing-parenthesis clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_closing_square_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthCloseSquareWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢］漢］漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth closing-square-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth closing-square-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_closing_curly_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthCloseCurlyWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢｝漢｝漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth closing-curly-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth closing-curly-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_opening_square_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthOpenSquareWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>［漢［漢［漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth opening-square-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth opening-square-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_opening_curly_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthOpenCurlyWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>｛漢｛漢｛漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth opening-curly-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth opening-curly-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_black_square_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="BlackSquareBracketWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>【漢】【漢】</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Black square bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Black square bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_black_lenticular_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="BlackLenticularBracketWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>〖漢〗〖漢〗</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Black lenticular bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Black lenticular bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_corner_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="CornerQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>「漢」「漢」</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Corner quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Corner quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_double_corner_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="DoubleCornerQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>『漢』『漢』</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Double corner quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Double corner quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_reversed_double_prime_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ReversedDoublePrimeQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>〝漢〞〝漢〞</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Reversed double-prime quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Reversed double-prime quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_low_reversed_double_prime_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="LowReversedDoublePrimeQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>〝漢〟〝漢〟</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Low reversed double-prime quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Low reversed double-prime quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_closing_corner_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ClosingCornerQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢」漢」漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Closing corner quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Closing corner quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_closing_double_corner_quote_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="ClosingDoubleCornerQuoteWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢』漢』漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Closing double corner quote clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Closing double corner quote clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_opening_angle_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="OpeningAngleBracketWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>《漢《漢《漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Opening angle-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Opening angle-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_opening_angle_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthOpeningAngleWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>＜漢＜漢＜漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth opening angle-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth opening angle-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_closing_angle_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthClosingAngleWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢＞漢＞漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth closing angle-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth closing angle-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_single_closing_angle_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="SingleClosingAngleBracketWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢〉漢〉漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Single closing angle-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Single closing angle-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_wave_dash_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="WaveDashWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢〜漢〜漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Wave-dash clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Wave-dash clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_tilde_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthTildeWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>漢～漢～漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth tilde clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth tilde clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_single_angle_bracket_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="SingleAngleBracketWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>〈漢〈漢〈漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Single angle-bracket clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Single angle-bracket clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
+    );
+}
+
+#[test]
+fn test_fullwidth_opening_parenthesis_cluster_marks_emergency_wrap() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="FullwidthOpenParenWrap"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="500000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="rect"/>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:rPr sz="1800"/><a:t>（漢（漢（漢</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let tb_start = html.find("class=\"text-body").expect("text-body div");
+    let tb_chunk: String = html[tb_start..].chars().take(320).collect();
+    assert!(
+        tb_chunk.contains("overflow-wrap: anywhere"),
+        "Fullwidth opening-parenthesis clusters should still opt into emergency wrapping when the cluster is too wide: {tb_chunk}"
+    );
+    assert!(
+        tb_chunk.contains("emergency-wrap"),
+        "Fullwidth opening-parenthesis clusters should carry an emergency-wrap marker when the cluster is too wide: {tb_chunk}"
     );
 }
 
