@@ -3191,6 +3191,216 @@ fn parses_formula_short_arity_and_default_line_end_sizes_through_public_parser()
 }
 
 #[test]
+fn parses_end_handler_color_handoff_matrix_through_public_parser() {
+    let slide = r#"
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="150" name="Shape Glow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst>
+            <a:glow rad="6350">
+              <a:schemeClr val="accent1"><a:alpha val="50000"/></a:schemeClr>
+            </a:glow>
+          </a:effectLst>
+        </p:spPr>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="151" name="Color Handoff Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:defRPr sz="1900"><a:schemeClr val="accent3"/></a:defRPr>
+                      </a:pPr>
+                      <a:r>
+                        <a:rPr>
+                          <a:highlight><a:srgbClr val="FFFF00"/></a:highlight>
+                          <a:effectLst>
+                            <a:outerShdw blurRad="12700" dist="25400" dir="5400000">
+                              <a:schemeClr val="accent1"/>
+                            </a:outerShdw>
+                          </a:effectLst>
+                        </a:rPr>
+                        <a:t>Color Handoff</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr"/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Shape Glow")
+        .expect("shape glow");
+    assert_eq!(
+        shape
+            .effects
+            .glow
+            .as_ref()
+            .and_then(|glow| glow.color.to_css())
+            .as_deref(),
+        Some("#4472C4")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text body")
+        .paragraphs[0];
+    let run = &para.runs[0];
+    assert_eq!(
+        run.style
+            .highlight
+            .as_ref()
+            .and_then(|c| c.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+    assert_eq!(
+        run.style
+            .shadow
+            .as_ref()
+            .and_then(|s| s.color.to_css())
+            .as_deref(),
+        Some("#4472C4")
+    );
+}
+
+#[test]
+fn parses_empty_event_color_dispatch_contexts_through_public_parser() {
+    let slide = r#"
+      <p:bg>
+        <p:bgPr>
+          <a:solidFill><a:schemeClr val="accent2"/></a:solidFill>
+        </p:bgPr>
+      </p:bg>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="140" name="Effect Dispatch"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:effectLst><a:glow rad="6350"><a:prstClr val="orange"/></a:glow></a:effectLst>
+        </p:spPr>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="141" name="Color Dispatch Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1"/>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr>
+                        <a:buClr><a:sysClr val="windowText"/></a:buClr>
+                        <a:buChar char="•"/>
+                      </a:pPr>
+                      <a:r><a:rPr><a:srgbClr val="224466"/></a:rPr><a:t>RGB</a:t></a:r>
+                      <a:r><a:rPr><a:schemeClr val="accent2"/></a:rPr><a:t>Theme</a:t></a:r>
+                      <a:r><a:rPr><a:sysClr lastClr="ABCDEF"/></a:rPr><a:t>System</a:t></a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="ctr"/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#ED7D31")
+    ));
+
+    let effect_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Effect Dispatch")
+        .expect("effect dispatch shape");
+    assert_eq!(
+        effect_shape
+            .effects
+            .glow
+            .as_ref()
+            .and_then(|glow| glow.color.to_css())
+            .as_deref(),
+        Some("#FFA500")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text body")
+        .paragraphs[0];
+    assert!(matches!(
+        &para.bullet,
+        Some(Bullet::Char(bullet))
+            if bullet.char == "•"
+                && bullet.color.as_ref().and_then(|c| c.to_css()).as_deref() == Some("#000000")
+    ));
+    assert_eq!(
+        para.runs[0].style.color.to_css().as_deref(),
+        Some("#224466")
+    );
+    assert_eq!(
+        para.runs[1].style.color.to_css().as_deref(),
+        Some("#ED7D31")
+    );
+    assert_eq!(
+        para.runs[2].style.color.to_css().as_deref(),
+        Some("#ABCDEF")
+    );
+}
+
+#[test]
 fn parses_self_closing_srgb_dispatch_matrix_through_public_parser() {
     let slide = r#"
       <p:bg>
