@@ -2,7 +2,7 @@ mod fixtures;
 
 use pptx2html_core::model::{
     Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, ColorKind, CompoundLine, DashStyle,
-    Emu, Fill, GradientType, ImageFill, LineAlignment, LineCap, LineJoin, PathFill,
+    Emu, Fill, GradientType, ImageFill, LineAlignment, LineCap, LineEndSize, LineJoin, PathFill,
     PlaceholderType, ShapeType, StrikethroughType, TextCapitalization, UnderlineType,
     VerticalAlign,
 };
@@ -3114,6 +3114,80 @@ fn parses_custom_geometry_invalid_formula_matrix_through_public_parser() {
     };
     assert_eq!(custom_geom.paths.len(), 1);
     assert!(matches!(custom_geom.paths[0].fill, PathFill::None));
+}
+
+#[test]
+fn parses_formula_short_arity_and_default_line_end_sizes_through_public_parser() {
+    let slide = r#"
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="130" name="Short Formula Matrix"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:custGeom>
+            <a:gdLst>
+              <a:gd name="g1" fmla="*/ 1 2"/>
+              <a:gd name="g2" fmla="+/ 1 2"/>
+            </a:gdLst>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="none">
+                <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+                <a:lnTo><a:pt x="100000" y="0"/></a:lnTo>
+                <a:close/>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+      </p:sp>
+      <p:cxnSp>
+        <p:nvCxnSpPr>
+          <p:cNvPr id="131" name="Default End Sizes"/>
+          <p:cNvCxnSpPr/>
+          <p:nvPr/>
+        </p:nvCxnSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="0"/></a:xfrm>
+          <a:ln>
+            <a:headEnd type="triangle"/>
+            <a:tailEnd type="diamond"/>
+          </a:ln>
+        </p:spPr>
+      </p:cxnSp>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let shapes = &presentation.slides[0].shapes;
+
+    let custom_geom = shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::CustomGeom(geom) => Some(geom),
+            _ => None,
+        })
+        .expect("custom geometry");
+    assert_eq!(custom_geom.paths.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::None));
+
+    let connector = shapes
+        .iter()
+        .find(|shape| shape.name == "Default End Sizes")
+        .expect("connector");
+    assert!(matches!(
+        connector
+            .border
+            .head_end
+            .as_ref()
+            .map(|end| end.width.clone()),
+        Some(LineEndSize::Medium)
+    ));
+    assert!(matches!(
+        connector
+            .border
+            .tail_end
+            .as_ref()
+            .map(|end| end.length.clone()),
+        Some(LineEndSize::Medium)
+    ));
 }
 
 #[test]
