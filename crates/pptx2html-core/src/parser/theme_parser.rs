@@ -483,3 +483,181 @@ fn set_color_scheme(scheme: &mut ColorScheme, role: &str, hex: &str) {
         _ => {}
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_theme_covers_color_font_fill_line_and_effect_schemes() {
+        let theme = parse_theme(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CoverageTheme">
+  <a:themeElements>
+    <a:clrScheme name="CoverageColors">
+      <a:dk1><a:sysClr val="windowText" lastClr="111111"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="222222"/></a:dk2>
+      <a:lt2><a:srgbClr val="F7F7F7"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="CoverageFonts">
+      <a:majorFont>
+        <a:latin typeface="Aptos"/>
+        <a:ea typeface="Yu Gothic"/>
+        <a:cs typeface="Noto Sans Devanagari"/>
+      </a:majorFont>
+      <a:minorFont>
+        <a:latin typeface="Aptos Narrow"/>
+        <a:ea typeface="Meiryo"/>
+        <a:cs typeface="Noto Sans Arabic"/>
+      </a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="CoverageFmt">
+      <a:fillStyleLst>
+        <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+        <a:solidFill><a:schemeClr val="accent2"/></a:solidFill>
+      </a:fillStyleLst>
+      <a:lnStyleLst>
+        <a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">
+          <a:solidFill><a:schemeClr val="accent3"/></a:solidFill>
+          <a:prstDash val="lgDashDot"/>
+          <a:miter lim="200000"/>
+        </a:ln>
+        <a:ln w="0" cap="flat">
+          <a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>
+          <a:round/>
+        </a:ln>
+        <a:ln w="25400">
+          <a:solidFill><a:srgbClr val="0000FF"/></a:solidFill>
+          <a:bevel/>
+        </a:ln>
+      </a:lnStyleLst>
+      <a:effectStyleLst>
+        <a:effectStyle>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000">
+              <a:schemeClr val="accent4"/>
+              <a:alpha val="50000"/>
+            </a:outerShdw>
+            <a:glow rad="6350">
+              <a:srgbClr val="ABCDEF"/>
+              <a:alpha val="60000"/>
+            </a:glow>
+          </a:effectLst>
+        </a:effectStyle>
+        <a:effectStyle><a:effectLst/></a:effectStyle>
+      </a:effectStyleLst>
+      <a:bgFillStyleLst>
+        <a:noFill/>
+        <a:solidFill><a:schemeClr val="accent5"/></a:solidFill>
+      </a:bgFillStyleLst>
+    </a:fmtScheme>
+  </a:themeElements>
+</a:theme>"#,
+        )
+        .expect("theme should parse");
+
+        assert_eq!(theme.name, "CoverageColors");
+        assert_eq!(theme.color_scheme.dk1, "111111");
+        assert_eq!(theme.color_scheme.lt1, "FFFFFF");
+        assert_eq!(theme.color_scheme.hlink, "0563C1");
+        assert_eq!(theme.color_scheme.fol_hlink, "954F72");
+
+        assert_eq!(theme.font_scheme.major_latin, "Aptos");
+        assert_eq!(
+            theme.font_scheme.major_east_asian.as_deref(),
+            Some("Yu Gothic")
+        );
+        assert_eq!(
+            theme.font_scheme.major_complex_script.as_deref(),
+            Some("Noto Sans Devanagari")
+        );
+        assert_eq!(theme.font_scheme.minor_latin, "Aptos Narrow");
+        assert_eq!(
+            theme.font_scheme.minor_east_asian.as_deref(),
+            Some("Meiryo")
+        );
+        assert_eq!(
+            theme.font_scheme.minor_complex_script.as_deref(),
+            Some("Noto Sans Arabic")
+        );
+
+        assert_eq!(theme.fmt_scheme.fill_style_lst.len(), 2);
+        assert!(matches!(theme.fmt_scheme.bg_fill_style_lst[0], Fill::None));
+        assert!(matches!(
+            &theme.fmt_scheme.bg_fill_style_lst[1],
+            Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#5B9BD5")
+        ));
+
+        assert_eq!(theme.fmt_scheme.ln_style_lst.len(), 3);
+        let first_ln = &theme.fmt_scheme.ln_style_lst[0];
+        assert_eq!(first_ln.width, 1.0);
+        assert!(matches!(first_ln.cap, LineCap::Round));
+        assert!(matches!(first_ln.compound, CompoundLine::Double));
+        assert!(matches!(first_ln.alignment, LineAlignment::Inset));
+        assert!(matches!(first_ln.join, LineJoin::Miter));
+        assert_eq!(first_ln.miter_limit, Some(2.0));
+        assert!(matches!(first_ln.dash_style, DashStyle::LongDashDot));
+        assert_eq!(first_ln.color.to_css().as_deref(), Some("#A5A5A5"));
+
+        assert!(matches!(
+            theme.fmt_scheme.ln_style_lst[1].join,
+            LineJoin::Round
+        ));
+        assert!(matches!(
+            theme.fmt_scheme.ln_style_lst[2].join,
+            LineJoin::Bevel
+        ));
+
+        assert_eq!(theme.fmt_scheme.effect_style_lst.len(), 2);
+        let effect = &theme.fmt_scheme.effect_style_lst[0];
+        let shadow = effect.outer_shadow.as_ref().expect("outer shadow");
+        assert!((shadow.blur_radius - 1.0).abs() < 1e-6);
+        assert!((shadow.distance - 2.0).abs() < 1e-6);
+        assert!((shadow.direction - 90.0).abs() < 1e-6);
+        assert_eq!(shadow.color.to_css().as_deref(), Some("#FFC000"));
+        assert!((shadow.alpha - 0.5).abs() < 1e-6);
+        let glow = effect.glow.as_ref().expect("glow");
+        assert!((glow.radius - 0.5).abs() < 1e-6);
+        assert_eq!(glow.color.to_css().as_deref(), Some("#ABCDEF"));
+        assert!((glow.alpha - 0.6).abs() < 1e-6);
+        assert!(theme.fmt_scheme.effect_style_lst[1].outer_shadow.is_none());
+        assert!(theme.fmt_scheme.effect_style_lst[1].glow.is_none());
+    }
+
+    #[test]
+    fn push_fill_and_set_color_scheme_ignore_non_matching_roles() {
+        let mut fmt = FmtScheme::default();
+        push_fill(
+            &Some(FmtKind::Fill),
+            &mut fmt,
+            Fill::Solid(SolidFill {
+                color: Color::rgb("010203"),
+            }),
+        );
+        push_fill(
+            &Some(FmtKind::BgFill),
+            &mut fmt,
+            Fill::Solid(SolidFill {
+                color: Color::rgb("040506"),
+            }),
+        );
+        push_fill(&Some(FmtKind::Ln), &mut fmt, Fill::None);
+        assert_eq!(fmt.fill_style_lst.len(), 1);
+        assert_eq!(fmt.bg_fill_style_lst.len(), 1);
+
+        let mut scheme = ColorScheme::default();
+        set_color_scheme(&mut scheme, "accent6", "AABBCC");
+        set_color_scheme(&mut scheme, "unknown", "DEADBE");
+        assert_eq!(scheme.accent6, "AABBCC");
+        assert_ne!(scheme.dk1, "DEADBE");
+    }
+}

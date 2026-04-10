@@ -2,8 +2,8 @@ use std::path::Path;
 
 use pyo3::prelude::*;
 
-use pptx2html_core::model::slide::UnresolvedType;
 use pptx2html_core::ConversionOptions;
+use pptx2html_core::model::slide::UnresolvedType;
 
 /// Convert a PPTX file to HTML string
 #[pyfunction]
@@ -254,10 +254,16 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
-    use zip::write::SimpleFileOptions;
+    use pyo3::Python;
+    use pyo3::types::{PyAnyMethods, PyModule};
     use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
 
-    use super::{convert, convert_bytes_with_metadata, convert_with_metadata, get_info};
+    use super::{
+        PresentationInfo, PyConversionResult, PyUnresolvedElement, convert, convert_bytes,
+        convert_bytes_with_metadata, convert_file, convert_with_metadata, get_info, pptx2html,
+    };
+    use pptx2html_core::model::slide::UnresolvedType;
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -317,6 +323,101 @@ mod tests {
         assert!(result.html.contains("Slide Two"));
         assert!(!result.html.contains("Slide One"));
         assert_eq!(result.unresolved_elements.len(), 0);
+    }
+
+    #[test]
+    fn convert_file_and_convert_bytes_cover_basic_public_apis() {
+        let bytes = build_two_slide_pptx();
+        let path = write_temp_pptx(bytes.clone());
+
+        let file_html = convert_file(path.to_str().unwrap()).expect("convert_file should succeed");
+        let bytes_html = convert_bytes(&bytes).expect("convert_bytes should succeed");
+
+        assert!(file_html.contains("Slide One"));
+        assert!(file_html.contains("Slide Two"));
+        assert!(bytes_html.contains("Slide One"));
+        assert!(bytes_html.contains("Slide Two"));
+
+        fs::remove_file(path).expect("remove temp pptx");
+    }
+
+    #[test]
+    fn python_bindings_map_failures_to_runtime_errors() {
+        let missing_file_err = convert_file("/definitely/missing.pptx")
+            .expect_err("missing file should map to PyRuntimeError");
+        let invalid_bytes_err =
+            convert_bytes(b"not-a-pptx").expect_err("invalid bytes should map to PyRuntimeError");
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            assert!(missing_file_err.is_instance_of::<pyo3::exceptions::PyRuntimeError>(py));
+            assert!(invalid_bytes_err.is_instance_of::<pyo3::exceptions::PyRuntimeError>(py));
+        });
+    }
+
+    #[test]
+    fn py_classes_repr_and_module_registration_work() {
+        let info = PresentationInfo {
+            slide_count: 2,
+            width_px: 960.0,
+            height_px: 540.0,
+            title: Some("Deck".to_string()),
+        };
+        assert_eq!(
+            info.__repr__(),
+            "PresentationInfo(slide_count=2, width_px=960.0, height_px=540.0, title=Some(\"Deck\"))"
+        );
+
+        let unresolved = PyUnresolvedElement {
+            slide_index: 1,
+            element_type: "smartart".to_string(),
+            placeholder_id: "ph-1".to_string(),
+            raw_xml: Some("<dgm/>".to_string()),
+            data_model: Some("{\"kind\":\"smartart\"}".to_string()),
+        };
+        assert_eq!(
+            unresolved.__repr__(),
+            "UnresolvedElement(slide=1, type='smartart', id='ph-1')"
+        );
+
+        let result = PyConversionResult {
+            html: "<html/>".to_string(),
+            unresolved_elements: vec![PyUnresolvedElement {
+                slide_index: 0,
+                element_type: "math".to_string(),
+                placeholder_id: "ph-2".to_string(),
+                raw_xml: None,
+                data_model: None,
+            }],
+            slide_count: 1,
+        };
+        assert_eq!(
+            result.__repr__(),
+            "ConversionResult(slide_count=1, unresolved_elements=1)"
+        );
+
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let module = PyModule::new(py, "pptx2html").expect("create module");
+            pptx2html(&module).expect("register module contents");
+
+            assert!(module.getattr("convert_file").is_ok());
+            assert!(module.getattr("convert_bytes").is_ok());
+            assert!(module.getattr("convert").is_ok());
+            assert!(module.getattr("convert_with_metadata").is_ok());
+            assert!(module.getattr("convert_bytes_with_metadata").is_ok());
+            assert!(module.getattr("get_info").is_ok());
+            assert!(module.getattr("PresentationInfo").is_ok());
+            assert!(module.getattr("ConversionResult").is_ok());
+            assert!(module.getattr("UnresolvedElement").is_ok());
+        });
+
+        let _all_unresolved_types = [
+            UnresolvedType::SmartArt,
+            UnresolvedType::OleObject,
+            UnresolvedType::MathEquation,
+            UnresolvedType::CustomGeometry,
+        ];
     }
 
     fn write_temp_pptx(bytes: Vec<u8>) -> PathBuf {

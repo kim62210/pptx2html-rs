@@ -207,3 +207,235 @@ pub fn get_info_from_bytes(data: &[u8]) -> PptxResult<PresentationInfo> {
         title: presentation.title.clone(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::{Cursor, Write};
+
+    use tempfile::tempdir;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::{
+        ConversionOptions, convert_bytes, convert_bytes_with_metadata, convert_bytes_with_options,
+        convert_bytes_with_options_metadata, convert_file, convert_file_with_metadata,
+        convert_file_with_options, get_info, get_info_from_bytes,
+    };
+
+    #[test]
+    fn conversion_options_should_include_slide_respects_hidden_indices_and_ranges() {
+        let default_opts = ConversionOptions::default();
+        assert!(default_opts.should_include_slide(1, false));
+        assert!(!default_opts.should_include_slide(1, true));
+
+        let indexed = ConversionOptions {
+            include_hidden: true,
+            slide_indices: Some(vec![1, 3]),
+            ..Default::default()
+        };
+        assert!(indexed.should_include_slide(1, false));
+        assert!(!indexed.should_include_slide(2, false));
+
+        let ranged = ConversionOptions {
+            slide_range: Some((2, 4)),
+            ..Default::default()
+        };
+        assert!(!ranged.should_include_slide(1, false));
+        assert!(ranged.should_include_slide(3, false));
+        assert!(!ranged.should_include_slide(5, false));
+    }
+
+    #[test]
+    fn file_and_bytes_wrappers_convert_generated_fixture_and_report_metadata() {
+        let bytes = build_basic_pptx();
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("fixture.pptx");
+        fs::write(&path, &bytes).expect("write fixture");
+
+        let html_from_file = convert_file(&path).expect("convert_file should succeed");
+        assert!(html_from_file.contains("Coverage Slide"));
+
+        let html_from_bytes = convert_bytes(&bytes).expect("convert_bytes should succeed");
+        assert!(html_from_bytes.contains("Coverage Slide"));
+
+        let opts = ConversionOptions {
+            slide_indices: Some(vec![1]),
+            ..Default::default()
+        };
+        assert!(
+            convert_file_with_options(&path, &opts)
+                .expect("convert_file_with_options should succeed")
+                .contains("Coverage Slide")
+        );
+        assert!(
+            convert_bytes_with_options(&bytes, &opts)
+                .expect("convert_bytes_with_options should succeed")
+                .contains("Coverage Slide")
+        );
+
+        let file_result =
+            convert_file_with_metadata(&path).expect("convert_file_with_metadata should succeed");
+        assert_eq!(file_result.slide_count, 1);
+        assert_eq!(file_result.unresolved_elements.len(), 0);
+
+        let bytes_result = convert_bytes_with_metadata(&bytes)
+            .expect("convert_bytes_with_metadata should succeed");
+        assert_eq!(bytes_result.slide_count, 1);
+        assert_eq!(bytes_result.unresolved_elements.len(), 0);
+
+        let bytes_opts_result = convert_bytes_with_options_metadata(&bytes, &opts)
+            .expect("convert_bytes_with_options_metadata should succeed");
+        assert_eq!(bytes_opts_result.slide_count, 1);
+
+        let file_info = get_info(&path).expect("get_info should succeed");
+        assert_eq!(file_info.slide_count, 1);
+        assert_eq!(file_info.width_px, 960.0);
+        assert_eq!(file_info.height_px, 720.0);
+
+        let bytes_info = get_info_from_bytes(&bytes).expect("get_info_from_bytes should succeed");
+        assert_eq!(bytes_info.slide_count, 1);
+        assert_eq!(bytes_info.width_px, 960.0);
+        assert_eq!(bytes_info.height_px, 720.0);
+    }
+
+    fn build_basic_pptx() -> Vec<u8> {
+        let cursor = Cursor::new(Vec::new());
+        let mut zip = ZipWriter::new(cursor);
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("[Content_Types].xml", options).unwrap();
+        zip.write_all(content_types().as_bytes()).unwrap();
+
+        zip.start_file("_rels/.rels", options).unwrap();
+        zip.write_all(root_rels().as_bytes()).unwrap();
+
+        zip.start_file("ppt/presentation.xml", options).unwrap();
+        zip.write_all(presentation_xml().as_bytes()).unwrap();
+
+        zip.start_file("ppt/_rels/presentation.xml.rels", options)
+            .unwrap();
+        zip.write_all(presentation_rels().as_bytes()).unwrap();
+
+        zip.start_file("ppt/slides/slide1.xml", options).unwrap();
+        zip.write_all(slide_xml("Coverage Slide").as_bytes())
+            .unwrap();
+
+        zip.start_file("ppt/slides/_rels/slide1.xml.rels", options)
+            .unwrap();
+        zip.write_all(empty_relationships().as_bytes()).unwrap();
+
+        zip.start_file("ppt/theme/theme1.xml", options).unwrap();
+        zip.write_all(theme_xml().as_bytes()).unwrap();
+
+        zip.finish().unwrap().into_inner()
+    }
+
+    fn content_types() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#
+    }
+
+    fn root_rels() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#
+    }
+
+    fn presentation_xml() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+  </p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:notesSz cx="6858000" cy="9144000"/>
+</p:presentation>"#
+    }
+
+    fn presentation_rels() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#
+    }
+
+    fn slide_xml(text: &str) -> String {
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="2" name="TextBox 1"/>
+          <p:cNvSpPr txBox="1"/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:lstStyle/>
+          <a:p>
+            <a:r>
+              <a:rPr lang="en-US" sz="1800"/>
+              <a:t>{text}</a:t>
+            </a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#
+        )
+    }
+
+    fn empty_relationships() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>"#
+    }
+
+    fn theme_xml() -> &'static str {
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TestTheme">
+  <a:themeElements>
+    <a:clrScheme name="TestColors">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="1F1F1F"/></a:dk2>
+      <a:lt2><a:srgbClr val="F7F7F7"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="TestFonts">
+      <a:majorFont><a:latin typeface="Calibri"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="TestFmt"/>
+  </a:themeElements>
+</a:theme>"#
+    }
+}

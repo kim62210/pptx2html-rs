@@ -332,8 +332,8 @@ fn test_invalid_zip_returns_error() {
 fn test_password_protected_detection() {
     // Build a fake "encrypted" package with EncryptedPackage entry
     use std::io::{Cursor, Write};
-    use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);

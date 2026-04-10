@@ -5,8 +5,8 @@ use super::xml_utils;
 use crate::error::PptxResult;
 use crate::model::{
     ChartBubbleSizeRepresents, ChartDataLabelPosition, ChartDataLabelSettings, ChartGrouping,
-    ChartMarkerSpec, ChartOfPieType, ChartRadarStyle, ChartScatterStyle, ChartSeries,
-    ChartSpec, ChartSplitType, ChartType,
+    ChartMarkerSpec, ChartOfPieType, ChartRadarStyle, ChartScatterStyle, ChartSeries, ChartSpec,
+    ChartSplitType, ChartType,
 };
 
 #[derive(Default)]
@@ -96,17 +96,15 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         });
                     }
                     "sizeRepresents" if in_bubble_chart => {
-                        bubble_size_represents = Some(
-                            match xml_utils::attr_str(e, "val").as_deref() {
+                        bubble_size_represents =
+                            Some(match xml_utils::attr_str(e, "val").as_deref() {
                                 Some("w") => ChartBubbleSizeRepresents::Width,
                                 _ => ChartBubbleSizeRepresents::Area,
-                            },
-                        );
+                            });
                     }
                     "showNegBubbles" if in_bubble_chart => {
-                        show_neg_bubbles = xml_utils::attr_str(e, "val").map(|val| {
-                            matches!(val.as_str(), "1" | "true")
-                        });
+                        show_neg_bubbles = xml_utils::attr_str(e, "val")
+                            .map(|val| matches!(val.as_str(), "1" | "true"));
                     }
                     "scatterStyle" if in_scatter_chart => {
                         scatter_style = Some(match xml_utils::attr_str(e, "val").as_deref() {
@@ -156,7 +154,8 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         });
                     }
                     "splitPos" if in_of_pie_chart => {
-                        split_pos = xml_utils::attr_str(e, "val").and_then(|val| val.parse::<f64>().ok());
+                        split_pos =
+                            xml_utils::attr_str(e, "val").and_then(|val| val.parse::<f64>().ok());
                     }
                     "secondPieSize" if in_of_pie_chart => {
                         second_pie_size = xml_utils::attr_str(e, "val")
@@ -205,7 +204,17 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                             .and_then(|val| val.parse::<i32>().ok())
                             .map(|val| val.clamp(10, 90));
                     }
-                    "dLbls" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_of_pie_chart || in_pie_chart || in_doughnut_chart => {
+                    "dLbls"
+                        if in_bar_chart
+                            || in_line_chart
+                            || in_scatter_chart
+                            || in_bubble_chart
+                            || in_area_chart
+                            || in_radar_chart
+                            || in_of_pie_chart
+                            || in_pie_chart
+                            || in_doughnut_chart =>
+                    {
                         in_dlbls = true;
                         saw_dlbls = true;
                     }
@@ -241,10 +250,25 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "valAx" => in_val_ax = true,
                     "title" if in_cat_ax || in_val_ax => in_title = true,
                     "t" if in_title => in_title_text = true,
-                    "ser" if in_bar_chart || in_line_chart || in_scatter_chart || in_bubble_chart || in_area_chart || in_radar_chart || in_of_pie_chart || in_pie_chart || in_doughnut_chart => {
+                    "ser"
+                        if in_bar_chart
+                            || in_line_chart
+                            || in_scatter_chart
+                            || in_bubble_chart
+                            || in_area_chart
+                            || in_radar_chart
+                            || in_of_pie_chart
+                            || in_pie_chart
+                            || in_doughnut_chart =>
+                    {
                         current_series = Some(SeriesBuilder::default())
                     }
-                    "marker" if current_series.is_some() && (in_line_chart || in_scatter_chart || in_radar_chart) => in_marker = true,
+                    "marker"
+                        if current_series.is_some()
+                            && (in_line_chart || in_scatter_chart || in_radar_chart) =>
+                    {
+                        in_marker = true
+                    }
                     "symbol" if current_series.is_some() && in_marker => {
                         if let Some(symbol) = xml_utils::attr_str(e, "val")
                             && let Some(series_builder) = current_series.as_mut()
@@ -270,9 +294,15 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "tx" if current_series.is_some() => in_tx = true,
                     "cat" if current_series.is_some() => in_cat = true,
                     "val" if current_series.is_some() => in_val = true,
-                    "xVal" if current_series.is_some() && (in_scatter_chart || in_bubble_chart) => in_x_val = true,
-                    "yVal" if current_series.is_some() && (in_scatter_chart || in_bubble_chart) => in_y_val = true,
-                    "bubbleSize" if current_series.is_some() && in_bubble_chart => in_bubble_size = true,
+                    "xVal" if current_series.is_some() && (in_scatter_chart || in_bubble_chart) => {
+                        in_x_val = true
+                    }
+                    "yVal" if current_series.is_some() && (in_scatter_chart || in_bubble_chart) => {
+                        in_y_val = true
+                    }
+                    "bubbleSize" if current_series.is_some() && in_bubble_chart => {
+                        in_bubble_size = true
+                    }
                     "pt" if current_series.is_some() => in_pt = true,
                     "v" if current_series.is_some() => in_v = true,
                     _ => {}
@@ -285,15 +315,27 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                         if !text.trim().is_empty() {
                             series_builder.name = Some(text);
                         }
-                    } else if in_pt && in_x_val && let Ok(value) = text.parse::<f64>() {
+                    } else if in_pt
+                        && in_x_val
+                        && let Ok(value) = text.parse::<f64>()
+                    {
                         series_builder.x_values.push(value);
-                    } else if in_pt && in_y_val && let Ok(value) = text.parse::<f64>() {
+                    } else if in_pt
+                        && in_y_val
+                        && let Ok(value) = text.parse::<f64>()
+                    {
                         series_builder.values.push(value);
-                    } else if in_pt && in_bubble_size && let Ok(value) = text.parse::<f64>() {
+                    } else if in_pt
+                        && in_bubble_size
+                        && let Ok(value) = text.parse::<f64>()
+                    {
                         series_builder.bubble_sizes.push(value);
                     } else if in_pt && in_cat {
                         series_builder.categories.push(text);
-                    } else if in_pt && in_val && let Ok(value) = text.parse::<f64>() {
+                    } else if in_pt
+                        && in_val
+                        && let Ok(value) = text.parse::<f64>()
+                    {
                         series_builder.values.push(value);
                     }
                 }
@@ -325,8 +367,10 @@ pub fn parse_chart(xml: &str) -> PptxResult<Option<ChartSpec>> {
                     "valAx" => in_val_ax = false,
                     "ser" => {
                         if let Some(series_builder) = current_series.take()
-                            && ((!series_builder.categories.is_empty() && !series_builder.values.is_empty())
-                                || (!series_builder.x_values.is_empty() && !series_builder.values.is_empty()))
+                            && ((!series_builder.categories.is_empty()
+                                && !series_builder.values.is_empty())
+                                || (!series_builder.x_values.is_empty()
+                                    && !series_builder.values.is_empty()))
                         {
                             series.push(ChartSeries {
                                 name: series_builder.name,

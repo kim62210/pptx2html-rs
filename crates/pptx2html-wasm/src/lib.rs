@@ -290,10 +290,14 @@ mod tests {
     use std::io::{Cursor, Write};
 
     use pptx2html_core::model::{UnresolvedElement, UnresolvedType};
-    use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
 
-    use super::{convert_slides, convert_with_options, serialize_unresolved};
+    use super::{
+        ConversionResult, PresentationInfo, convert, convert_slides, convert_with_metadata,
+        convert_with_options, convert_with_options_metadata, escape_json_string, get_info,
+        get_presentation_info, get_slide_count, serialize_unresolved,
+    };
 
     #[test]
     fn convert_slides_uses_zero_based_indices() {
@@ -344,6 +348,67 @@ mod tests {
         assert!(!json.contains("placeholder\n\t\u{8}\"\\id"));
         assert!(json.contains("<node>line\\nvalue</node>"));
         assert!(json.contains("{\\\"line\\\":\\\"value\\r\\\"}"));
+    }
+
+    #[test]
+    fn wasm_public_apis_cover_metadata_and_error_paths() {
+        let data = build_two_slide_pptx();
+
+        let html = convert(&data).expect("convert should succeed");
+        assert!(html.contains("Slide One"));
+        assert!(html.contains("Slide Two"));
+
+        assert_eq!(get_slide_count(&data).expect("slide count"), 2);
+
+        let info_json = get_info(&data).expect("get_info should succeed");
+        assert!(info_json.contains("\"slide_count\":2"));
+        assert!(info_json.contains("\"title\":null"));
+
+        let info = get_presentation_info(&data).expect("typed info should succeed");
+        assert_eq!(info.slide_count(), 2);
+        assert_eq!(info.width_px(), 960.0);
+        assert_eq!(info.height_px(), 720.0);
+        assert_eq!(info.title(), None);
+
+        let metadata = convert_with_metadata(&data).expect("metadata conversion should succeed");
+        assert!(metadata.html().contains("Slide One"));
+        assert_eq!(metadata.slide_count(), 2);
+        assert_eq!(metadata.unresolved_elements(), "[]");
+
+        let filtered = convert_with_options_metadata(&data, true, false, &[2])
+            .expect("filtered conversion should succeed");
+        assert!(filtered.html().contains("Slide Two"));
+        assert!(!filtered.html().contains("Slide One"));
+        assert_eq!(filtered.slide_count(), 1);
+        assert_eq!(filtered.unresolved_elements(), "[]");
+    }
+
+    #[test]
+    fn wasm_struct_getters_and_escape_helper_cover_remaining_paths() {
+        let info = PresentationInfo {
+            slide_count: 3,
+            width_px: 1024.0,
+            height_px: 768.0,
+            title: Some("Deck".to_string()),
+        };
+        assert_eq!(info.slide_count(), 3);
+        assert_eq!(info.width_px(), 1024.0);
+        assert_eq!(info.height_px(), 768.0);
+        assert_eq!(info.title(), Some("Deck".to_string()));
+
+        let result = ConversionResult {
+            html: "<html/>".to_string(),
+            unresolved_json: "[{\"slideIndex\":1}]".to_string(),
+            slide_count: 1,
+        };
+        assert_eq!(result.html(), "<html/>");
+        assert_eq!(result.unresolved_elements(), "[{\"slideIndex\":1}]");
+        assert_eq!(result.slide_count(), 1);
+
+        assert_eq!(
+            escape_json_string("line\nquote\"slash\\tab\tbackspace\u{08}formfeed\u{0C}"),
+            "line\\nquote\\\"slash\\\\tab\\tbackspace\\bformfeed\\f"
+        );
     }
 
     fn build_two_slide_pptx() -> Vec<u8> {

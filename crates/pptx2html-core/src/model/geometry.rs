@@ -145,3 +145,29 @@ pub enum PathFill {
     LightenLess,
     DarkenLess,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Emu, PathFill};
+
+    #[test]
+    fn emu_conversions_use_expected_ooxml_ratios() {
+        let inch = Emu(914_400);
+        assert_eq!(inch.to_px(), 96.0);
+        assert_eq!(inch.to_pt(), 72.0);
+
+        let centimeter = Emu(360_000);
+        assert_eq!(centimeter.to_cm(), 1.0);
+    }
+
+    #[test]
+    fn parse_emu_defaults_invalid_values_to_zero() {
+        assert_eq!(Emu::parse_emu("12700").0, 12_700);
+        assert_eq!(Emu::parse_emu("not-a-number").0, 0);
+    }
+
+    #[test]
+    fn path_fill_defaults_to_normal_fill_mode() {
+        assert!(matches!(PathFill::default(), PathFill::Norm));
+    }
+}

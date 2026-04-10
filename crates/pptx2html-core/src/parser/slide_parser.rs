@@ -2219,16 +2219,23 @@ pub fn parse_slide<R: Read + Seek>(
                                             chart_parser::parse_chart(&chart_xml).ok().flatten();
 
                                         let chart_rels_path = rels_path_for(&path);
-                                        if let Ok(chart_rels_xml) = read_archive_entry(archive, &chart_rels_path)
-                                            && let Ok(chart_rels) = relationships::parse_relationships(&chart_rels_xml)
+                                        if let Ok(chart_rels_xml) =
+                                            read_archive_entry(archive, &chart_rels_path)
+                                            && let Ok(chart_rels) =
+                                                relationships::parse_relationships(&chart_rels_xml)
                                         {
                                             for preview_target in chart_rels.values() {
-                                                let preview_path = resolve_relative_file_path(&path, preview_target);
-                                                let preview_mime = mime_from_extension(&preview_path);
+                                                let preview_path = resolve_relative_file_path(
+                                                    &path,
+                                                    preview_target,
+                                                );
+                                                let preview_mime =
+                                                    mime_from_extension(&preview_path);
                                                 if !preview_mime.starts_with("image/") {
                                                     continue;
                                                 }
-                                                if let Ok(preview_bytes) = read_archive_bytes(archive, &preview_path)
+                                                if let Ok(preview_bytes) =
+                                                    read_archive_bytes(archive, &preview_path)
                                                     && !preview_bytes.is_empty()
                                                 {
                                                     sb.chart_preview_mime = Some(preview_mime);
@@ -3446,7 +3453,10 @@ impl ShapeBuilder {
     }
 }
 
-fn read_archive_entry<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> PptxResult<String> {
+fn read_archive_entry<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
+    name: &str,
+) -> PptxResult<String> {
     let mut file = archive
         .by_name(name)
         .map_err(|_| PptxError::MissingFile(name.to_string()))?;
@@ -3455,7 +3465,10 @@ fn read_archive_entry<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -
     Ok(contents)
 }
 
-fn read_archive_bytes<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> PptxResult<Vec<u8>> {
+fn read_archive_bytes<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
+    name: &str,
+) -> PptxResult<Vec<u8>> {
     let mut file = archive
         .by_name(name)
         .map_err(|_| PptxError::MissingFile(name.to_string()))?;
@@ -3678,6 +3691,28 @@ struct TableCellBuilder {
     vertical_align: VerticalAlign,
 }
 
+impl Default for TableCellBuilder {
+    fn default() -> Self {
+        let cell = TableCell::default();
+        Self {
+            text_body: cell.text_body,
+            fill: cell.fill,
+            border_left: cell.border_left,
+            border_right: cell.border_right,
+            border_top: cell.border_top,
+            border_bottom: cell.border_bottom,
+            col_span: cell.col_span,
+            row_span: cell.row_span,
+            v_merge: cell.v_merge,
+            margin_left: cell.margin_left,
+            margin_right: cell.margin_right,
+            margin_top: cell.margin_top,
+            margin_bottom: cell.margin_bottom,
+            vertical_align: cell.vertical_align,
+        }
+    }
+}
+
 impl TableCellBuilder {
     fn build(self) -> TableCell {
         TableCell {
@@ -3787,4 +3822,477 @@ fn mime_from_extension(path: &str) -> String {
         _ => "image/png",
     }
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::io::{Cursor, Write};
+
+    use quick_xml::events::BytesStart;
+    use zip::ZipArchive;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    #[test]
+    fn assign_color_routes_to_runs_gradients_borders_and_fills() {
+        let mut run = Some(RunBuilder::default());
+        let mut shape = Some(ShapeBuilder::default());
+        let mut grad_stops = Vec::new();
+
+        assign_color(
+            Color::rgb("112233"),
+            &["sp".into(), "txBody".into(), "p".into(), "rPr".into()],
+            false,
+            false,
+            true,
+            false,
+            0.0,
+            &mut shape,
+            &mut run,
+            &mut grad_stops,
+        );
+        assert_eq!(
+            run.as_ref().and_then(|rb| rb.color.to_css()).as_deref(),
+            Some("#112233")
+        );
+
+        assign_color(
+            Color::theme("accent1"),
+            &["spPr".into(), "gradFill".into(), "gs".into()],
+            false,
+            false,
+            false,
+            true,
+            0.25,
+            &mut shape,
+            &mut run,
+            &mut grad_stops,
+        );
+        assert_eq!(grad_stops.len(), 1);
+        assert!((grad_stops[0].position - 0.25).abs() < 1e-6);
+
+        assign_color(
+            Color::rgb("445566"),
+            &["spPr".into(), "ln".into()],
+            false,
+            true,
+            false,
+            false,
+            0.0,
+            &mut shape,
+            &mut run,
+            &mut grad_stops,
+        );
+        let shape_ref = shape.as_ref().expect("shape builder");
+        assert_eq!(shape_ref.border_color.to_css().as_deref(), Some("#445566"));
+        assert!(matches!(shape_ref.border_style, BorderStyle::Solid));
+
+        assign_color(
+            Color::rgb("778899"),
+            &["spPr".into(), "solidFill".into()],
+            true,
+            false,
+            false,
+            false,
+            0.0,
+            &mut shape,
+            &mut run,
+            &mut grad_stops,
+        );
+        assert!(matches!(
+            shape.as_ref().expect("shape").fill,
+            Fill::Solid(ref fill) if fill.color.to_css().as_deref() == Some("#778899")
+        ));
+
+        assign_color(
+            Color::rgb("AABBCC"),
+            &["spPr".into()],
+            true,
+            false,
+            false,
+            false,
+            0.0,
+            &mut shape,
+            &mut run,
+            &mut grad_stops,
+        );
+        assert!(matches!(
+            shape.as_ref().expect("shape").fill,
+            Fill::Solid(ref fill) if fill.color.to_css().as_deref() == Some("#AABBCC")
+        ));
+    }
+
+    #[test]
+    fn style_ref_and_line_end_helpers_cover_supported_variants() {
+        let mut style_ref = Some(ShapeStyleRef::default());
+        assign_style_ref_color("fillRef", "2", Color::rgb("112233"), &mut style_ref);
+        assign_style_ref_color("lnRef", "3", Color::theme("accent2"), &mut style_ref);
+        assign_style_ref_color("effectRef", "4", Color::rgb("445566"), &mut style_ref);
+        assign_style_ref_color("fontRef", "minor", Color::theme("accent3"), &mut style_ref);
+        ensure_style_ref("fillRef", "9", &mut style_ref);
+        assign_style_ref_no_color("effectRef", "6", &mut style_ref);
+
+        let style_ref = style_ref.expect("style ref");
+        assert_eq!(style_ref.fill_ref.as_ref().map(|s| s.idx), Some(2));
+        assert_eq!(style_ref.ln_ref.as_ref().map(|s| s.idx), Some(3));
+        assert_eq!(style_ref.effect_ref.as_ref().map(|s| s.idx), Some(6));
+        assert_eq!(
+            style_ref.font_ref.as_ref().map(|s| s.idx.as_str()),
+            Some("minor")
+        );
+
+        let arrow = parse_line_end(&bytes_start(
+            "a:headEnd",
+            &[("type", "arrow"), ("w", "sm"), ("len", "lg")],
+        ))
+        .expect("arrow line end");
+        assert!(matches!(arrow.end_type, LineEndType::Arrow));
+        assert!(matches!(arrow.width, LineEndSize::Small));
+        assert!(matches!(arrow.length, LineEndSize::Large));
+        assert!(parse_line_end(&bytes_start("a:tailEnd", &[("type", "none")])).is_none());
+        assert!(parse_line_end(&bytes_start("a:tailEnd", &[("type", "weird")])).is_none());
+    }
+
+    #[test]
+    fn guide_formula_and_body_parsers_cover_helper_branches() {
+        let guides = HashMap::from([
+            ("x".to_string(), 3.0),
+            ("y".to_string(), 4.0),
+            ("z".to_string(), 12.0),
+        ]);
+        assert_eq!(parse_guide_formula_value("val x", &guides), 3.0);
+        assert_eq!(parse_guide_formula_value("+- 5 4 3", &guides), 6.0);
+        assert_eq!(parse_guide_formula_value("*/ 6 4 3", &guides), 8.0);
+        assert_eq!(parse_guide_formula_value("+/ 6 4 2", &guides), 5.0);
+        assert_eq!(parse_guide_formula_value("pin 1 5 3", &guides), 3.0);
+        assert_eq!(parse_guide_formula_value("min 7 3", &guides), 3.0);
+        assert_eq!(parse_guide_formula_value("max 7 3", &guides), 7.0);
+        assert_eq!(parse_guide_formula_value("?: 1 8 9", &guides), 8.0);
+        assert_eq!(parse_guide_formula_value("?: 0 8 9", &guides), 9.0);
+        assert_eq!(parse_guide_formula_value("abs -7", &guides), 7.0);
+        assert_eq!(parse_guide_formula_value("sqrt 16", &guides), 4.0);
+        assert!((parse_guide_formula_value("mod x y z", &guides) - 13.0).abs() < 1e-6);
+        assert!((parse_guide_formula_value("sin 10 5400000", &guides) - 10.0).abs() < 1e-6);
+        assert!((parse_guide_formula_value("cos 10 0", &guides) - 10.0).abs() < 1e-6);
+        assert!(
+            (parse_guide_formula_value("cat2 10 y z", &guides) - 10.0 * (12.0f64.atan2(4.0)).cos())
+                .abs()
+                < 1e-6
+        );
+        assert!(
+            (parse_guide_formula_value("sat2 10 y z", &guides) - 10.0 * (12.0f64.atan2(4.0)).sin())
+                .abs()
+                < 1e-6
+        );
+        assert!(
+            (parse_guide_formula_value("at2 x y", &guides)
+                - 4.0f64.atan2(3.0).to_degrees() * 60_000.0)
+                .abs()
+                < 1e-6
+        );
+        assert!((parse_guide_formula_value("tan 10 2700000", &guides) - 10.0).abs() < 1e-6);
+        assert_eq!(parse_guide_formula_value("unknown", &guides), 0.0);
+        assert_eq!(resolve_custom_geom_value("42", &guides), 42.0);
+        assert_eq!(resolve_custom_geom_value("x", &guides), 3.0);
+        assert_eq!(resolve_custom_geom_value("missing", &guides), 0.0);
+        assert!((ooxml_angle_to_radians(5_400_000.0) - std::f64::consts::FRAC_PI_2).abs() < 1e-6);
+
+        let mut shape = Some(ShapeBuilder::default());
+        parse_body_pr(
+            &bytes_start(
+                "a:bodyPr",
+                &[
+                    ("anchor", "ctr"),
+                    ("anchorCtr", "1"),
+                    ("rot", "5400000"),
+                    ("lIns", "91440"),
+                    ("tIns", "45720"),
+                    ("rIns", "182880"),
+                    ("bIns", "22860"),
+                    ("wrap", "none"),
+                    ("vert", "vert270"),
+                ],
+            ),
+            &mut shape,
+        );
+        let shape = shape.expect("shape builder");
+        assert!(matches!(shape.text_vertical_align, VerticalAlign::Middle));
+        assert!(shape.text_anchor_center);
+        assert!((shape.text_rotation_deg - 90.0).abs() < 1e-6);
+        assert!(!shape.text_word_wrap);
+        assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
+        assert_eq!(shape.text_margins.left, 7.2);
+        assert_eq!(shape.text_margins.top, 3.6);
+        assert_eq!(shape.text_margins.right, 14.4);
+        assert_eq!(shape.text_margins.bottom, 1.8);
+        assert_eq!(
+            parse_autofit_ratio(
+                &bytes_start("a:normAutofit", &[("fontScale", "250000")]),
+                "fontScale"
+            ),
+            Some(1.0)
+        );
+        assert_eq!(
+            parse_autofit_ratio(
+                &bytes_start("a:normAutofit", &[("fontScale", "-1000")]),
+                "fontScale"
+            ),
+            Some(0.0)
+        );
+    }
+
+    #[test]
+    fn shape_paragraph_run_archive_and_table_helpers_cover_remaining_paths() {
+        let mut shape = Some(ShapeBuilder::default());
+        parse_shape_identity(
+            &bytes_start("p:cNvPr", &[("id", "7"), ("name", "Connector")]),
+            &mut shape,
+        );
+        parse_connector_ref(
+            &bytes_start("a:stCxn", &[("id", "11"), ("idx", "2")]),
+            &mut shape,
+            true,
+        );
+        parse_connector_ref(
+            &bytes_start("a:endCxn", &[("id", "12"), ("idx", "3")]),
+            &mut shape,
+            false,
+        );
+        let shape = shape.expect("shape");
+        assert_eq!(shape.id, 7);
+        assert_eq!(shape.name, "Connector");
+        assert_eq!(
+            shape.start_connection.as_ref().map(|c| c.shape_id),
+            Some(11)
+        );
+        assert_eq!(shape.end_connection.as_ref().map(|c| c.site_idx), Some(3));
+
+        let mut para = Some(ParagraphBuilder::default());
+        parse_para_props(
+            &bytes_start(
+                "a:pPr",
+                &[
+                    ("algn", "ctr"),
+                    ("rtl", "1"),
+                    ("lvl", "2"),
+                    ("indent", "12700"),
+                    ("marL", "25400"),
+                ],
+            ),
+            &mut para,
+        );
+        let mut run = Some(RunBuilder::default());
+        parse_run_props(
+            &bytes_start(
+                "a:rPr",
+                &[
+                    ("sz", "2400"),
+                    ("b", "1"),
+                    ("i", "true"),
+                    ("u", "dbl"),
+                    ("strike", "sngStrike"),
+                    ("cap", "all"),
+                    ("baseline", "30000"),
+                    ("spc", "200"),
+                ],
+            ),
+            &mut run,
+        );
+        assert_eq!(
+            hyperlink_rel_id(&bytes_start("a:hlinkClick", &[("r:id", "rIdHyper")])),
+            Some("rIdHyper".to_string())
+        );
+
+        let mut archive = archive_with_entries(&[
+            ("ppt/slides/slide1.xml", b"<slide/>".as_slice()),
+            ("ppt/media/image.png", b"png".as_slice()),
+        ]);
+        assert_eq!(
+            read_archive_entry(&mut archive, "ppt/slides/slide1.xml").unwrap(),
+            "<slide/>"
+        );
+        assert_eq!(
+            read_archive_bytes(&mut archive, "ppt/media/image.png").unwrap(),
+            b"png"
+        );
+        assert!(read_archive_entry(&mut archive, "missing.xml").is_err());
+        assert_eq!(
+            rels_path_for("ppt/slides/slide1.xml"),
+            "ppt/slides/_rels/slide1.xml.rels"
+        );
+        assert_eq!(
+            resolve_relative_file_path("ppt/slides/slide1.xml", "../media/image1.png"),
+            "ppt/media/image1.png"
+        );
+        assert_eq!(
+            resolve_rel_path("ppt/slides", "../media/image1.png"),
+            "ppt/media/image1.png"
+        );
+        assert_eq!(
+            resolve_rel_path("ppt/slides", "media/image1.png"),
+            "ppt/slides/media/image1.png"
+        );
+        assert_eq!(mime_from_extension("image.png"), "image/png");
+        assert_eq!(mime_from_extension("image.jpg"), "image/jpeg");
+        assert_eq!(mime_from_extension("image.gif"), "image/gif");
+        assert_eq!(mime_from_extension("image.bmp"), "image/bmp");
+        assert_eq!(mime_from_extension("image.tif"), "image/tiff");
+        assert_eq!(mime_from_extension("image.svg"), "image/svg+xml");
+        assert_eq!(mime_from_extension("image.emf"), "image/x-emf");
+        assert_eq!(mime_from_extension("image.wmf"), "image/x-wmf");
+        assert_eq!(mime_from_extension("image.bin"), "image/png");
+
+        let mut list_shape = Some(ShapeBuilder::default());
+        store_shape_level_defaults(&mut list_shape, 0, ParagraphDefaults::default());
+        assert!(
+            list_shape
+                .as_ref()
+                .and_then(|s| s.text_list_style.as_ref())
+                .and_then(|ls| ls.levels[0].as_ref())
+                .is_some()
+        );
+
+        let paragraph = para.expect("paragraph").build();
+        let built_run = run.expect("run").build();
+        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert!(paragraph.rtl);
+        assert_eq!(paragraph.level, 2);
+        assert_eq!(paragraph.indent, Some(1.0));
+        assert_eq!(paragraph.margin_left, Some(2.0));
+        assert_eq!(built_run.style.font_size, Some(24.0));
+        assert!(built_run.style.bold);
+        assert!(built_run.style.italic);
+        assert!(matches!(built_run.style.underline, UnderlineType::Double));
+        assert!(matches!(
+            built_run.style.strikethrough,
+            StrikethroughType::Single
+        ));
+        assert!(matches!(
+            built_run.style.capitalization,
+            TextCapitalization::All
+        ));
+        assert_eq!(built_run.style.baseline, Some(30000));
+        assert_eq!(built_run.style.letter_spacing, Some(2.0));
+
+        let chart_shape = ShapeBuilder {
+            is_chart: true,
+            chart_rel_id: Some("rIdChart".to_string()),
+            chart_direct_spec: Some(ChartSpec::default()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(chart_shape.shape_type, ShapeType::Chart(_)));
+
+        let picture_shape = ShapeBuilder {
+            is_picture: true,
+            image_rel_id: Some("rIdImage".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(picture_shape.shape_type, ShapeType::Picture(_)));
+
+        let connector_shape = ShapeBuilder {
+            is_connector: true,
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(connector_shape.shape_type, ShapeType::Custom(ref s) if s == "line"));
+
+        let unsupported_shape = ShapeBuilder {
+            unsupported_content: Some("SmartArt".to_string()),
+            unresolved_type: Some(UnresolvedType::SmartArt),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(
+            unsupported_shape.shape_type,
+            ShapeType::Unsupported(_)
+        ));
+
+        let custom_geom_shape = ShapeBuilder {
+            custom_geometry: Some(CustomGeometry {
+                paths: Vec::new(),
+                text_rect: None,
+                adjust_handles: Vec::new(),
+                connection_sites: Vec::new(),
+            }),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(
+            custom_geom_shape.shape_type,
+            ShapeType::CustomGeom(_)
+        ));
+
+        let mut cell = Some(default_table_cell_builder());
+        cell.as_mut().unwrap().border_left.width = 1.0;
+        cell.as_mut().unwrap().border_top.width = 1.0;
+        assign_tc_color(Color::rgb("112233"), &Some("lnL".to_string()), &mut cell);
+        assign_tc_color(Color::rgb("445566"), &Some("lnT".to_string()), &mut cell);
+        assign_tc_color(Color::rgb("778899"), &None, &mut cell);
+        let cell = cell.expect("cell").build();
+        assert_eq!(cell.border_left.color.to_css().as_deref(), Some("#112233"));
+        assert_eq!(cell.border_top.color.to_css().as_deref(), Some("#445566"));
+        assert!(
+            matches!(cell.fill, Fill::Solid(ref fill) if fill.color.to_css().as_deref() == Some("#778899"))
+        );
+
+        let table = TableBuilder {
+            rows: vec![
+                TableRowBuilder {
+                    height: 18.0,
+                    cells: vec![default_table_cell_builder().build()],
+                }
+                .build(),
+            ],
+            col_widths: vec![120.0],
+            band_row: true,
+            ..Default::default()
+        }
+        .build();
+        assert_eq!(table.rows.len(), 1);
+        assert_eq!(table.col_widths, vec![120.0]);
+        assert!(table.band_row);
+    }
+
+    fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
+        let mut start = BytesStart::new(name);
+        for (key, value) in attrs {
+            start.push_attribute((*key, *value));
+        }
+        start
+    }
+
+    fn archive_with_entries(entries: &[(&str, &[u8])]) -> ZipArchive<Cursor<Vec<u8>>> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        for (path, data) in entries {
+            zip.start_file(path, options).expect("start file");
+            zip.write_all(data).expect("write file");
+        }
+        let cursor = zip.finish().expect("finish zip");
+        ZipArchive::new(cursor).expect("open archive")
+    }
+
+    fn default_table_cell_builder() -> TableCellBuilder {
+        TableCellBuilder {
+            text_body: None,
+            fill: Fill::None,
+            border_left: Border::default(),
+            border_right: Border::default(),
+            border_top: Border::default(),
+            border_bottom: Border::default(),
+            col_span: 0,
+            row_span: 0,
+            v_merge: false,
+            margin_left: 7.2,
+            margin_right: 7.2,
+            margin_top: 3.6,
+            margin_bottom: 3.6,
+            vertical_align: VerticalAlign::Top,
+        }
+    }
 }

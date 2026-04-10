@@ -199,4 +199,64 @@ mod tests {
         );
         assert!(exact.is_err());
     }
+
+    #[test]
+    fn feature_family_display_is_stable_for_all_families() {
+        assert_eq!(FeatureFamily::Shapes.to_string(), "shapes");
+        assert_eq!(FeatureFamily::Text.to_string(), "text");
+        assert_eq!(FeatureFamily::Tables.to_string(), "tables");
+        assert_eq!(FeatureFamily::Images.to_string(), "images");
+        assert_eq!(FeatureFamily::Layout.to_string(), "layout");
+        assert_eq!(FeatureFamily::Charts.to_string(), "charts");
+        assert_eq!(FeatureFamily::Media.to_string(), "media");
+        assert_eq!(FeatureFamily::Unsupported.to_string(), "unsupported");
+    }
+
+    #[test]
+    fn capability_matrix_and_valid_combinations_cover_remaining_paths() {
+        let exact = FeatureCapability::new(
+            FeatureFamily::Shapes,
+            "preset shape svg",
+            SupportTier::Exact,
+            Some(CapabilityStage::FidelityTested),
+        )
+        .expect("exact + fidelity tested should be valid");
+        let approximate = FeatureCapability::new(
+            FeatureFamily::Layout,
+            "placeholder inheritance",
+            SupportTier::Approximate,
+            Some(CapabilityStage::Resolved),
+        )
+        .expect("approximate + stage should be valid");
+        let fallback = FeatureCapability::new(
+            FeatureFamily::Unsupported,
+            "smartart placeholder",
+            SupportTier::Fallback,
+            Some(CapabilityStage::Rendered),
+        )
+        .expect("fallback + stage should be valid");
+        let unparsed = FeatureCapability::new(
+            FeatureFamily::Media,
+            "embedded video",
+            SupportTier::Unparsed,
+            None,
+        )
+        .expect("unparsed without stage should be valid");
+
+        let matrix = super::CapabilityMatrix::new(vec![
+            exact.clone(),
+            approximate.clone(),
+            fallback.clone(),
+            unparsed.clone(),
+        ]);
+
+        assert_eq!(
+            matrix.features,
+            vec![exact, approximate, fallback, unparsed]
+        );
+        assert!(
+            FeatureCapability::new(FeatureFamily::Media, "video", SupportTier::Fallback, None)
+                .is_err()
+        );
+    }
 }

@@ -411,8 +411,8 @@ mod tests {
     use crate::model::{FontStyle, ParagraphDefRPr, TextParagraph, TextRun, TextStyle};
 
     use super::{
-        classify_script_category, classify_wrap_policy, segment_by_script, ScriptCategory,
-        TextWrapPolicy,
+        ScriptCategory, TextWrapPolicy, classify_script_category, classify_wrap_policy,
+        segment_by_script,
     };
 
     #[test]

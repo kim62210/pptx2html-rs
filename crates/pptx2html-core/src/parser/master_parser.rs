@@ -1058,3 +1058,641 @@ fn bg_mime_from_ext(path: &str) -> String {
     }
     .to_string()
 }
+
+#[cfg(test)]
+mod coverage_tests {
+    use std::io::{Cursor, Write};
+
+    use zip::write::SimpleFileOptions;
+    use zip::{ZipArchive, ZipWriter};
+
+    use super::*;
+
+    #[test]
+    fn parse_slide_master_covers_background_styles_and_shape_builders() {
+        let xml = concat!(
+            r#"<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">"#,
+            r#"<p:cSld><p:bg><p:bgPr><a:blipFill><a:blip r:embed="rIdBg"/></a:blipFill></p:bgPr></p:bg><p:spTree>"#,
+            r#"<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>"#,
+            r#"<p:sp><p:nvSpPr><p:cNvPr id="2" name="Shape 1"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="2"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm><a:ln w="12700" cap="rnd" cmpd="dbl" algn="in"><a:prstDash val="lgDashDot"/><a:schemeClr val="accent3"/><a:round/><a:headEnd type="triangle" w="sm" len="lg"/><a:tailEnd type="oval" w="lg" len="sm"/></a:ln></p:spPr><p:txBody><a:bodyPr anchor="ctr" anchorCtr="1" rot="5400000" vert="vert270" lIns="45720" tIns="91440" rIns="45720" bIns="91440" wrap="none"></a:bodyPr><a:lstStyle><a:lvl1pPr algn="ctr"><a:lnSpc><a:spcPct val="150000"/></a:lnSpc><a:spcBef><a:spcPts val="1200"/></a:spcBef><a:spcAft><a:spcPct val="30000"/></a:spcAft><a:defRPr sz="1800" b="1"><a:latin typeface="Calibri"/><a:ea typeface="Malgun Gothic"/><a:cs typeface="Mangal"/><a:srgbClr val="FF0000"/></a:defRPr></a:lvl1pPr></a:lstStyle><a:normAutofit fontScale="50000" lnSpcReduction="20000"/></p:txBody></p:sp>"#,
+            r#"<p:sp><p:nvSpPr><p:cNvPr id="3" name="Shape 2"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm><a:ln w="6350"><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr anchor="b" wrap="square"/><a:spAutoFit/><a:lstStyle><a:lvl2pPr><a:defRPr sz="1600"><a:schemeClr val="accent2"/></a:defRPr></a:lvl2pPr></a:lstStyle></p:txBody></p:sp>"#,
+            r#"</p:spTree></p:cSld>"#,
+            r#"<p:txStyles><p:titleStyle><a:lvl1pPr algn="ctr"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:spcBef><a:spcPts val="1200"/></a:spcBef><a:spcAft><a:spcPct val="50000"/></a:spcAft><a:defRPr sz="2400" b="1"><a:latin typeface="Aptos"/><a:ea typeface="Yu Gothic"/><a:cs typeface="Noto Sans Devanagari"/><a:schemeClr val="accent2"/></a:defRPr></a:lvl1pPr></p:titleStyle></p:txStyles>"#,
+            r#"<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/></p:sldMaster>"#
+        );
+
+        let rels = HashMap::from([("rIdBg".to_string(), "../media/background.png".to_string())]);
+        let mut archive = archive_with_entries(&[("ppt/media/background.png", b"pngdata")]);
+        let master = parse_slide_master(xml, &rels, &mut archive).expect("master parses");
+
+        assert!(matches!(master.background, Some(Fill::Image(_))));
+        assert_eq!(master.shapes.len(), 2);
+
+        let first = &master.shapes[0];
+        assert_eq!(first.placeholder.as_ref().and_then(|p| p.idx), Some(2));
+        let first_body = first.text_body.as_ref().expect("text body");
+        assert!(matches!(first_body.vertical_align, VerticalAlign::Middle));
+        assert!(first_body.anchor_center);
+        assert_eq!(first_body.text_rotation_deg, 90.0);
+        assert_eq!(first.vertical_text.as_deref(), Some("vert270"));
+        assert!(!first_body.word_wrap);
+        assert!(matches!(
+            first_body.auto_fit,
+            AutoFit::Normal {
+                font_scale: Some(0.5),
+                line_spacing_reduction: Some(0.2)
+            }
+        ));
+        assert!(matches!(first.border.dash_style, DashStyle::LongDashDot));
+        assert!(matches!(first.border.join, LineJoin::Round));
+        assert!(matches!(
+            first.border.head_end.as_ref().map(|e| &e.end_type),
+            Some(LineEndType::Triangle)
+        ));
+        assert!(matches!(
+            first.border.tail_end.as_ref().map(|e| &e.end_type),
+            Some(LineEndType::Oval)
+        ));
+
+        let second = &master.shapes[1];
+        let second_body = second.text_body.as_ref().expect("second body");
+        assert!(matches!(second_body.vertical_align, VerticalAlign::Bottom));
+        assert!(matches!(second_body.auto_fit, AutoFit::Shrink));
+        assert_eq!(second_body.word_wrap, true);
+        assert!(second.border.no_fill);
+        assert_eq!(second.border.width, 0.0);
+
+        let title_style = master.tx_styles.title_style.as_ref().expect("title style");
+        let lvl1 = title_style.levels[0].as_ref().expect("lvl1");
+        assert!(matches!(lvl1.alignment, Some(Alignment::Center)));
+        assert!(
+            matches!(lvl1.line_spacing, Some(SpacingValue::Percent(v)) if (v - 0.9).abs() < 1e-6)
+        );
+        assert!(
+            matches!(lvl1.space_before, Some(SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6)
+        );
+        assert!(
+            matches!(lvl1.space_after, Some(SpacingValue::Percent(v)) if (v - 0.5).abs() < 1e-6)
+        );
+        let run = lvl1.def_run_props.as_ref().expect("run defaults");
+        assert_eq!(run.font_latin.as_deref(), Some("Aptos"));
+        assert_eq!(run.font_ea.as_deref(), Some("Yu Gothic"));
+        assert_eq!(run.font_cs.as_deref(), Some("Noto Sans Devanagari"));
+        assert_eq!(
+            run.color.as_ref().and_then(|c| c.to_css()).as_deref(),
+            Some("#ED7D31")
+        );
+        assert_eq!(master.clr_map.get("tx1").map(String::as_str), Some("dk1"));
+    }
+
+    #[test]
+    fn master_helper_functions_cover_path_mime_and_shape_building() {
+        assert_eq!(
+            resolve_master_rel_path("ppt/slideMasters", "../media/image1.png"),
+            "ppt/media/image1.png"
+        );
+        assert_eq!(
+            resolve_master_rel_path("ppt/slideMasters", "media/image1.png"),
+            "ppt/slideMasters/media/image1.png"
+        );
+        assert_eq!(bg_mime_from_ext("bg.png"), "image/png");
+        assert_eq!(bg_mime_from_ext("bg.jpg"), "image/jpeg");
+        assert_eq!(bg_mime_from_ext("bg.gif"), "image/gif");
+        assert_eq!(bg_mime_from_ext("bg.bmp"), "image/bmp");
+        assert_eq!(bg_mime_from_ext("bg.svg"), "image/svg+xml");
+        assert_eq!(bg_mime_from_ext("bg.emf"), "image/x-emf");
+        assert_eq!(bg_mime_from_ext("bg.wmf"), "image/x-wmf");
+        assert_eq!(bg_mime_from_ext("bg.unknown"), "image/png");
+
+        let mut shape = Some(MasterShapeBuilder::default());
+        store_shape_level_defaults(
+            &mut shape,
+            0,
+            ParagraphDefaults {
+                alignment: Some(Alignment::Center),
+                ..Default::default()
+            },
+        );
+        let built = shape.expect("shape builder").build();
+        assert!(built.text_body.is_some());
+        assert!(
+            built
+                .text_body
+                .as_ref()
+                .and_then(|body| body.list_style.as_ref())
+                .is_some()
+        );
+    }
+
+    fn archive_with_entries(entries: &[(&str, &[u8])]) -> ZipArchive<Cursor<Vec<u8>>> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        for (path, data) in entries {
+            zip.start_file(path, options).unwrap();
+            zip.write_all(data).unwrap();
+        }
+        ZipArchive::new(Cursor::new(zip.finish().unwrap().into_inner())).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::io::{Cursor, Write};
+
+    use zip::ZipArchive;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    #[test]
+    fn parse_slide_master_parses_gradient_tx_styles_and_shape_body_variants() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent1"/></a:gs>
+          </a:gsLst>
+          <a:path path="rect"/>
+          <a:lin ang="5400000"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="2" name="Title Placeholder"/>
+          <p:cNvSpPr/>
+          <p:nvPr><p:ph type="title" idx="1"/></p:nvPr>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"/><a:ext cx="381000" cy="254000"/></a:xfrm>
+          <a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">
+            <a:prstDash val="lgDashDot"/>
+            <a:miter lim="200000"/>
+            <a:headEnd type="triangle" w="lg" len="sm"/>
+            <a:tailEnd type="stealth" w="sm" len="lg"/>
+            <a:schemeClr val="accent3"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="1" rot="5400000" vert="vert270" lIns="91440" tIns="45720" rIns="182880" bIns="22860" wrap="none"></a:bodyPr>
+          <a:noAutofit/>
+          <a:lstStyle>
+            <a:lvl1pPr algn="r" marL="457200" indent="-228600">
+              <a:lnSpc><a:spcPct val="90000"/></a:lnSpc>
+              <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+              <a:spcAft><a:spcPct val="50000"/></a:spcAft>
+              <a:defRPr sz="2400" spc="200" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="1" i="1">
+                <a:latin typeface="Aptos"/>
+                <a:ea typeface="Yu Gothic"/>
+                <a:cs typeface="Noto Sans Devanagari"/>
+                <a:schemeClr val="accent2"/>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Normal Autofit"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm></p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="b" lIns="12700" tIns="12700" rIns="12700" bIns="12700" wrap="square"/>
+          <a:normAutofit fontScale="80000" lnSpcReduction="25000"/>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="Shrink Autofit"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm><a:ln w="12700"><a:noFill/></a:ln></p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="t" vert="horz"></a:bodyPr>
+          <a:spAutoFit/>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr algn="ctr"><a:defRPr sz="2200"><a:schemeClr val="accent4"/></a:defRPr></a:lvl1pPr>
+    </p:titleStyle>
+    <p:bodyStyle>
+      <a:lvl1pPr algn="l"><a:defRPr sz="2000"><a:srgbClr val="112233"/></a:defRPr></a:lvl1pPr>
+    </p:bodyStyle>
+    <p:otherStyle>
+      <a:lvl1pPr algn="just"><a:defRPr sz="1800"><a:schemeClr val="accent5"/></a:defRPr></a:lvl1pPr>
+    </p:otherStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+        let mut archive = archive_with_entries(&[]);
+        let master = parse_slide_master(xml, &HashMap::new(), &mut archive)
+            .expect("master xml should parse");
+
+        assert!(master.background.is_some());
+        assert!(master.tx_styles.title_style.is_some());
+        assert!(master.tx_styles.body_style.is_some());
+        assert!(master.tx_styles.other_style.is_some());
+        assert_eq!(master.shapes.len(), 3);
+
+        let title_shape = &master.shapes[0];
+        assert!(matches!(
+            title_shape
+                .placeholder
+                .as_ref()
+                .and_then(|ph| ph.ph_type.as_ref()),
+            Some(PlaceholderType::Title)
+        ));
+        let title_body = title_shape.text_body.as_ref().expect("title text body");
+        assert!(matches!(title_body.vertical_align, VerticalAlign::Middle));
+        assert!(title_body.anchor_center);
+        assert!(matches!(title_body.auto_fit, AutoFit::NoAutoFit));
+        assert_eq!(title_shape.vertical_text.as_deref(), Some("vert270"));
+        assert_eq!(
+            title_shape.border.color.to_css().as_deref(),
+            Some("#A5A5A5")
+        );
+
+        let normal_autofit = master.shapes[1]
+            .text_body
+            .as_ref()
+            .expect("normal autofit text body");
+        assert!(matches!(
+            normal_autofit.auto_fit,
+            AutoFit::Normal {
+                font_scale: Some(scale),
+                line_spacing_reduction: Some(reduction),
+            } if (scale - 0.8).abs() < 1e-6 && (reduction - 0.25).abs() < 1e-6
+        ));
+
+        let shrink_autofit = master.shapes[2]
+            .text_body
+            .as_ref()
+            .expect("shrink autofit text body");
+        assert!(matches!(shrink_autofit.auto_fit, AutoFit::Shrink));
+        assert!(master.shapes[2].border.no_fill);
+    }
+
+    #[test]
+    fn parse_slide_master_resolves_background_blip_fill_assets() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill><a:blip r:embed="rIdBg"></a:blip></a:blipFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sldMaster>"#;
+
+        let rels = HashMap::from([("rIdBg".to_string(), "../media/background.svg".to_string())]);
+        let mut archive = archive_with_entries(&[("ppt/media/background.svg", b"<svg/>")]);
+        let master = parse_slide_master(xml, &rels, &mut archive).expect("master image background");
+
+        assert!(matches!(
+            &master.background,
+            Some(Fill::Image(fill))
+                if fill.rel_id == "rIdBg"
+                    && fill.content_type == "image/svg+xml"
+                    && fill.data == b"<svg/>"
+        ));
+    }
+
+    fn archive_with_entries(entries: &[(&str, &[u8])]) -> ZipArchive<Cursor<Vec<u8>>> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        for (path, data) in entries {
+            zip.start_file(path, options).unwrap();
+            zip.write_all(data).unwrap();
+        }
+        ZipArchive::new(Cursor::new(zip.finish().unwrap().into_inner())).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod more_tests {
+    use std::collections::HashMap;
+    use std::io::{Cursor, Write};
+
+    use quick_xml::events::BytesStart;
+    use zip::ZipArchive;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    #[test]
+    fn helper_parsers_cover_level_run_color_and_placeholder_defaults() {
+        assert!(is_lvl_ppr("lvl1pPr"));
+        assert!(!is_lvl_ppr("bodyPr"));
+        assert_eq!(parse_lvl_index("lvl1pPr"), 0);
+        assert_eq!(parse_lvl_index("lvl9pPr"), 8);
+        assert_eq!(parse_lvl_index("unknown"), 0);
+
+        let lvl = bytes_start(
+            "a:lvl1pPr",
+            &[("algn", "ctr"), ("marL", "457200"), ("indent", "-228600")],
+        );
+        let mut pd = ParagraphDefaults::default();
+        parse_lvl_ppr_attrs(&lvl, &mut pd);
+        assert!(matches!(pd.alignment, Some(Alignment::Center)));
+        assert_eq!(pd.margin_left, Some(36.0));
+        assert_eq!(pd.indent, Some(-18.0));
+
+        let def_rpr = bytes_start(
+            "a:defRPr",
+            &[
+                ("sz", "2400"),
+                ("spc", "200"),
+                ("baseline", "30000"),
+                ("cap", "all"),
+                ("u", "dbl"),
+                ("strike", "sngStrike"),
+                ("b", "1"),
+                ("i", "true"),
+            ],
+        );
+        let mut rd = RunDefaults::default();
+        parse_def_rpr_attrs(&def_rpr, &mut rd);
+        assert_eq!(rd.font_size, Some(24.0));
+        assert_eq!(rd.letter_spacing, Some(2.0));
+        assert_eq!(rd.baseline, Some(30000));
+        assert_eq!(rd.bold, Some(true));
+        assert_eq!(rd.italic, Some(true));
+        assert!(matches!(rd.capitalization, Some(TextCapitalization::All)));
+        assert!(matches!(rd.underline, Some(UnderlineType::Double)));
+        assert!(matches!(rd.strikethrough, Some(StrikethroughType::Single)));
+
+        let clr_map = parse_clr_map_element(&bytes_start(
+            "p:clrMap",
+            &[("bg1", "lt1"), ("tx1", "dk1"), ("accent1", "accent1")],
+        ));
+        assert_eq!(clr_map.get("bg1").map(String::as_str), Some("lt1"));
+        assert_eq!(clr_map.get("tx1").map(String::as_str), Some("dk1"));
+
+        let placeholder =
+            parse_placeholder_attrs(&bytes_start("p:ph", &[("type", "body"), ("idx", "3")]));
+        assert_eq!(placeholder.idx, Some(3));
+        assert!(matches!(
+            placeholder.ph_type.as_ref(),
+            Some(PlaceholderType::Body)
+        ));
+
+        let mut tx_styles = TxStyles::default();
+        store_level_defaults(
+            &Some(TxStyleKind::Title),
+            &mut tx_styles,
+            0,
+            ParagraphDefaults::default(),
+        );
+        store_level_defaults(
+            &Some(TxStyleKind::Body),
+            &mut tx_styles,
+            1,
+            ParagraphDefaults::default(),
+        );
+        store_level_defaults(
+            &Some(TxStyleKind::Other),
+            &mut tx_styles,
+            2,
+            ParagraphDefaults::default(),
+        );
+        assert!(
+            tx_styles
+                .title_style
+                .as_ref()
+                .and_then(|s| s.levels[0].as_ref())
+                .is_some()
+        );
+        assert!(
+            tx_styles
+                .body_style
+                .as_ref()
+                .and_then(|s| s.levels[1].as_ref())
+                .is_some()
+        );
+        assert!(
+            tx_styles
+                .other_style
+                .as_ref()
+                .and_then(|s| s.levels[2].as_ref())
+                .is_some()
+        );
+
+        let mut builder = Some(MasterShapeBuilder {
+            text_word_wrap_explicit: true,
+            text_word_wrap: false,
+            text_vertical_align_explicit: true,
+            text_vertical_align: VerticalAlign::Middle,
+            text_anchor_center: true,
+            text_rotation_deg: 90.0,
+            text_margin_left_explicit: true,
+            text_auto_fit: AutoFit::Shrink,
+            vertical_text: Some("vert270".to_string()),
+            vertical_text_explicit: true,
+            ..Default::default()
+        });
+        store_shape_level_defaults(&mut builder, 0, ParagraphDefaults::default());
+        let shape = builder.expect("builder").build();
+        let text_body = shape.text_body.expect("shape text body");
+        assert!(matches!(text_body.vertical_align, VerticalAlign::Middle));
+        assert!(text_body.anchor_center);
+        assert!(!text_body.word_wrap);
+        assert!(matches!(text_body.auto_fit, AutoFit::Shrink));
+        assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
+
+        assert_eq!(
+            resolve_master_rel_path("ppt/slideMasters", "../media/image.png"),
+            "ppt/media/image.png"
+        );
+        assert_eq!(
+            resolve_master_rel_path("ppt/slideMasters", "media/image.png"),
+            "ppt/slideMasters/media/image.png"
+        );
+        assert_eq!(bg_mime_from_ext("bg.png"), "image/png");
+        assert_eq!(bg_mime_from_ext("bg.jpg"), "image/jpeg");
+        assert_eq!(bg_mime_from_ext("bg.gif"), "image/gif");
+        assert_eq!(bg_mime_from_ext("bg.bmp"), "image/bmp");
+        assert_eq!(bg_mime_from_ext("bg.svg"), "image/svg+xml");
+        assert_eq!(bg_mime_from_ext("bg.emf"), "image/x-emf");
+        assert_eq!(bg_mime_from_ext("bg.wmf"), "image/x-wmf");
+        assert_eq!(bg_mime_from_ext("bg.unknown"), "image/png");
+    }
+
+    #[test]
+    fn parse_slide_master_handles_gradient_and_image_backgrounds() {
+        let gradient_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent1"/></a:gs>
+          </a:gsLst>
+          <a:path path="rect"/>
+          <a:lin ang="5400000"/>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+  <p:txStyles>
+    <p:titleStyle><a:lvl1pPr algn="ctr"/></p:titleStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+        let mut gradient_archive = empty_archive();
+        let gradient_master =
+            parse_slide_master(gradient_xml, &HashMap::new(), &mut gradient_archive)
+                .expect("gradient master should parse");
+        match &gradient_master.background {
+            Some(Fill::Gradient(fill)) => {
+                assert_eq!(fill.stops.len(), 2);
+            }
+            other => panic!("expected gradient background, got {other:?}"),
+        }
+
+        let image_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr><a:blipFill><a:blip r:embed="rIdBg"/></a:blipFill></p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="2" name="Master Placeholder"/>
+          <p:cNvSpPr/>
+          <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm>
+            <a:off x="12700" y="25400"/>
+            <a:ext cx="381000" cy="254000"/>
+          </a:xfrm>
+          <a:ln w="12700" cap="rnd" cmpd="dbl" algn="in">
+            <a:prstDash val="lgDashDot"/>
+            <a:miter lim="200000"/>
+            <a:headEnd type="triangle" w="lg" len="sm"/>
+            <a:tailEnd type="stealth" w="sm" len="lg"/>
+            <a:schemeClr val="accent3"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="1" rot="5400000" vert="vert270"
+                    lIns="91440" tIns="45720" rIns="182880" bIns="22860" wrap="none"/>
+          <a:lstStyle>
+            <a:lvl1pPr algn="r">
+              <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+              <a:defRPr sz="1800">
+                <a:latin typeface="Calibri"/>
+                <a:srgbClr val="336699"/>
+              </a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p/>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2"
+            accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6"
+            hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+        let mut image_archive = archive_with_media("ppt/media/bg.png", b"png-data");
+        let rels = HashMap::from([("rIdBg".to_string(), "../media/bg.png".to_string())]);
+        let image_master =
+            parse_slide_master(image_xml, &rels, &mut image_archive).expect("image master parses");
+
+        assert!(matches!(
+            &image_master.background,
+            Some(Fill::Image(ImageFill { content_type, data, .. }))
+                if content_type == "image/png" && data == b"png-data"
+        ));
+        assert_eq!(
+            image_master.clr_map.get("bg1").map(String::as_str),
+            Some("lt1")
+        );
+        let shape = &image_master.shapes[0];
+        assert_eq!(shape.position.x.to_pt(), 1.0);
+        assert_eq!(shape.position.y.to_pt(), 2.0);
+        assert_eq!(shape.size.width.to_pt(), 30.0);
+        assert_eq!(shape.size.height.to_pt(), 20.0);
+        assert_eq!(shape.placeholder.as_ref().and_then(|ph| ph.idx), Some(1));
+        assert!(matches!(
+            shape
+                .placeholder
+                .as_ref()
+                .and_then(|ph| ph.ph_type.as_ref()),
+            Some(PlaceholderType::Body)
+        ));
+        assert!(matches!(shape.border.cap, LineCap::Round));
+        assert!(matches!(shape.border.compound, CompoundLine::Double));
+        assert!(matches!(shape.border.alignment, LineAlignment::Inset));
+        assert!(matches!(shape.border.join, LineJoin::Miter));
+        assert_eq!(shape.border.miter_limit, Some(2.0));
+        assert!(matches!(shape.border.dash_style, DashStyle::LongDashDot));
+        assert_eq!(shape.border.color.to_css().as_deref(), Some("#A5A5A5"));
+        assert!(matches!(
+            shape.border.head_end.as_ref().map(|e| &e.end_type),
+            Some(LineEndType::Triangle)
+        ));
+        assert!(matches!(
+            shape.border.tail_end.as_ref().map(|e| &e.end_type),
+            Some(LineEndType::Stealth)
+        ));
+        let text_body = shape.text_body.as_ref().expect("shape text body");
+        assert!(matches!(text_body.vertical_align, VerticalAlign::Middle));
+        assert!(text_body.anchor_center);
+        assert!((text_body.text_rotation_deg - 90.0).abs() < 1e-6);
+        assert!(!text_body.word_wrap);
+        assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
+    }
+
+    fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
+        let mut start = BytesStart::new(name);
+        for (key, value) in attrs {
+            start.push_attribute((*key, *value));
+        }
+        start
+    }
+
+    fn empty_archive() -> ZipArchive<Cursor<Vec<u8>>> {
+        archive_with_media("ppt/empty.txt", b"")
+    }
+
+    fn archive_with_media(path: &str, data: &[u8]) -> ZipArchive<Cursor<Vec<u8>>> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        zip.start_file(path, options).expect("start file");
+        zip.write_all(data).expect("write file");
+        let cursor = zip.finish().expect("finish zip");
+        ZipArchive::new(cursor).expect("open archive")
+    }
+}

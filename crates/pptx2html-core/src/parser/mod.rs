@@ -642,3 +642,316 @@ fn canonical_part_name(path: &str) -> String {
         .unwrap_or_else(|| path.to_string())
         .to_lowercase()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Write};
+
+    use tempfile::tempdir;
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    #[test]
+    fn relationship_target_and_path_helpers_cover_edge_cases() {
+        let rels = HashMap::from([
+            ("rId1".to_string(), "slides/slide2.xml".to_string()),
+            ("rId2".to_string(), "slides/slide1.xml".to_string()),
+            (
+                "rId3".to_string(),
+                "slideLayouts/slideLayout1.xml".to_string(),
+            ),
+            (
+                "rId4".to_string(),
+                "slideMasters/slideMaster1.xml".to_string(),
+            ),
+            ("rId5".to_string(), "theme/theme1.xml".to_string()),
+        ]);
+
+        assert_eq!(
+            collect_targets_by_type(&rels, "slide"),
+            vec![
+                "slides/slide1.xml".to_string(),
+                "slides/slide2.xml".to_string()
+            ]
+        );
+        assert_eq!(
+            collect_targets_by_type(&rels, "slideLayout"),
+            vec!["slideLayouts/slideLayout1.xml".to_string()]
+        );
+        assert_eq!(
+            find_target_by_type(&rels, "theme"),
+            Some("theme/theme1.xml".to_string())
+        );
+        assert_eq!(find_target_by_type(&rels, "missing"), None);
+
+        assert_eq!(
+            PptxParser::rels_path_for("ppt/slides/slide1.xml"),
+            "ppt/slides/_rels/slide1.xml.rels"
+        );
+        assert_eq!(
+            PptxParser::rels_path_for("slide1.xml"),
+            "_rels/slide1.xml.rels"
+        );
+        assert_eq!(
+            normalize_ppt_path("slides/slide1.xml"),
+            "ppt/slides/slide1.xml"
+        );
+        assert_eq!(
+            normalize_ppt_path("ppt/slides/slide1.xml"),
+            "ppt/slides/slide1.xml"
+        );
+        assert_eq!(
+            resolve_relative_path(
+                "ppt/slideMasters/slideMaster1.xml",
+                "../slideLayouts/slideLayout1.xml"
+            ),
+            "ppt/slideLayouts/slideLayout1.xml"
+        );
+        assert_eq!(
+            resolve_relative_path("ppt/slides/slide1.xml", "media/image1.png"),
+            "ppt/slides/media/image1.png"
+        );
+        assert_eq!(canonical_part_name("ppt/slides/Slide1.XML"), "slide1.xml");
+        assert_eq!(canonical_part_name("slide1.xml"), "slide1.xml");
+    }
+
+    #[test]
+    fn parse_core_title_handles_present_empty_and_invalid_titles() {
+        assert_eq!(
+            PptxParser::parse_core_title(
+                r#"<cp:coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+                    <dc:title>Quarterly Review</dc:title>
+                </cp:coreProperties>"#
+            ),
+            Some("Quarterly Review".to_string())
+        );
+        assert_eq!(
+            PptxParser::parse_core_title(
+                r#"<cp:coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+                    <dc:title></dc:title>
+                </cp:coreProperties>"#
+            ),
+            None
+        );
+        assert_eq!(
+            PptxParser::parse_core_title(
+                r#"<cp:coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+                    <dc:title>&invalid;</dc:title>
+                </cp:coreProperties>"#
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn parse_presentation_xml_reads_hidden_slides_and_default_text_style() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+    <p:sldId id="257" r:id="rId2" show="0"/>
+  </p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:defaultTextStyle>
+    <a:lvl1pPr algn="ctr" marL="457200" indent="-228600">
+      <a:lnSpc><a:spcPct val="90000"/></a:lnSpc>
+      <a:spcBef><a:spcPts val="1200"/></a:spcBef>
+      <a:defRPr sz="2400" spc="200" baseline="30000" cap="all" u="dbl" strike="sngStrike" b="1" i="1">
+        <a:latin typeface="Aptos"/>
+        <a:ea typeface="Yu Gothic"/>
+        <a:cs typeface="Noto Sans Devanagari"/>
+        <a:schemeClr val="accent2"/>
+      </a:defRPr>
+    </a:lvl1pPr>
+    <a:lvl2pPr algn="r"/>
+  </p:defaultTextStyle>
+</p:presentation>"#;
+
+        let (slide_size, slide_refs, default_text_style) =
+            PptxParser::parse_presentation_xml(xml).expect("presentation xml should parse");
+
+        assert_eq!(slide_size.width.to_px(), Emu::parse_emu("9144000").to_px());
+        assert_eq!(slide_size.height.to_px(), Emu::parse_emu("6858000").to_px());
+        assert_eq!(slide_refs.len(), 2);
+        assert_eq!(slide_refs[0].rel_id, "rId1");
+        assert!(!slide_refs[0].hidden);
+        assert!(slide_refs[1].hidden);
+
+        let style = default_text_style.expect("default text style should exist");
+        let lvl1 = style.levels[0].as_ref().expect("level 1 defaults");
+        assert!(matches!(
+            lvl1.alignment,
+            Some(crate::model::Alignment::Center)
+        ));
+        assert_eq!(lvl1.margin_left, Some(36.0));
+        assert_eq!(lvl1.indent, Some(-18.0));
+        assert!(matches!(
+            lvl1.line_spacing,
+            Some(crate::model::SpacingValue::Percent(v)) if (v - 0.9).abs() < 1e-6
+        ));
+        assert!(matches!(
+            lvl1.space_before,
+            Some(crate::model::SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+        ));
+        let run = lvl1.def_run_props.as_ref().expect("default run properties");
+        assert_eq!(run.font_size, Some(24.0));
+        assert_eq!(run.letter_spacing, Some(2.0));
+        assert_eq!(run.baseline, Some(30000));
+        assert_eq!(run.bold, Some(true));
+        assert_eq!(run.italic, Some(true));
+        assert_eq!(run.font_latin.as_deref(), Some("Aptos"));
+        assert_eq!(run.font_ea.as_deref(), Some("Yu Gothic"));
+        assert_eq!(run.font_cs.as_deref(), Some("Noto Sans Devanagari"));
+        assert_eq!(
+            run.color.as_ref().and_then(|c| c.to_css()).as_deref(),
+            Some("#ED7D31")
+        );
+        assert!(matches!(
+            style.levels[1]
+                .as_ref()
+                .and_then(|lvl| lvl.alignment.clone()),
+            Some(crate::model::Alignment::Right)
+        ));
+    }
+
+    #[test]
+    fn parse_bytes_detects_encrypted_packages() {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        zip.start_file("EncryptedPackage", options).unwrap();
+        zip.write_all(b"secret").unwrap();
+        let bytes = zip.finish().unwrap().into_inner();
+
+        let err = PptxParser::parse_bytes(&bytes).expect_err("encrypted pptx should fail");
+        assert!(
+            matches!(err, PptxError::UnsupportedFormat(msg) if msg == "password-protected PPTX")
+        );
+    }
+
+    #[test]
+    fn parse_file_reads_minimal_fixture_from_disk() {
+        let tmp = tempdir().expect("tempdir");
+        let path = tmp.path().join("minimal.pptx");
+        std::fs::write(&path, build_minimal_pptx()).expect("write pptx");
+
+        let presentation = PptxParser::parse_file(&path).expect("parse_file should succeed");
+        assert_eq!(presentation.slides.len(), 1);
+        assert_eq!(
+            presentation.slide_size.width.to_px(),
+            Emu::parse_emu("9144000").to_px()
+        );
+    }
+
+    fn build_minimal_pptx() -> Vec<u8> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("[Content_Types].xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#,
+        )
+        .unwrap();
+
+        zip.start_file("_rels/.rels", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/presentation.xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst/>
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+  </p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/_rels/presentation.xml.rels", options)
+            .unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/slides/slide1.xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/slides/_rels/slide1.xml.rels", options)
+            .unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/theme/theme1.xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TestTheme">
+  <a:themeElements>
+    <a:clrScheme name="TestColors">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="1F1F1F"/></a:dk2>
+      <a:lt2><a:srgbClr val="F7F7F7"/></a:lt2>
+      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent3><a:srgbClr val="A5A5A5"/></a:accent3>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+      <a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+      <a:accent6><a:srgbClr val="70AD47"/></a:accent6>
+      <a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+      <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="TestFonts">
+      <a:majorFont><a:latin typeface="Calibri"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#,
+        )
+        .unwrap();
+
+        zip.finish().unwrap().into_inner()
+    }
+}

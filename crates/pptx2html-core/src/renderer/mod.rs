@@ -732,19 +732,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         ChartType::OfPie => {
                             spec.series.len() == 1
                                 && spec.data_labels.is_none()
-                                && matches!(spec.of_pie_type, Some(crate::model::ChartOfPieType::Pie))
-                                && matches!(spec.split_type, Some(crate::model::ChartSplitType::Pos))
+                                && matches!(
+                                    spec.of_pie_type,
+                                    Some(crate::model::ChartOfPieType::Pie)
+                                )
+                                && matches!(
+                                    spec.split_type,
+                                    Some(crate::model::ChartSplitType::Pos)
+                                )
                                 && spec.split_pos.is_some_and(|value| value >= 1.0)
                         }
-                        ChartType::Radar => {
-                            !spec.series.is_empty() && spec.data_labels.is_none()
-                        }
+                        ChartType::Radar => !spec.series.is_empty() && spec.data_labels.is_none(),
                         ChartType::Pie | ChartType::Doughnut => spec.series.len() == 1,
                         _ => true,
                     };
 
                 if direct_chart_supported {
-                    let palette = ["#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47"];
+                    let palette = [
+                        "#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5", "#70AD47",
+                    ];
                     let max_value = spec
                         .series
                         .iter()
@@ -756,47 +762,62 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     let gap_width = spec.gap_width.unwrap_or(150).clamp(0, 500);
                     let overlap = spec.overlap.unwrap_or(0).clamp(-100, 100);
                     let overlap_ratio = (overlap as f64 + 100.0) / 200.0;
-                    let build_bar_data_label = |series_name: Option<&str>, category: Option<&str>, value: f64, percent: Option<f64>| {
-                        spec.data_labels.as_ref().and_then(|labels| {
-                            let mut parts = Vec::new();
-                            if labels.show_series_name && let Some(series_name) = series_name {
-                                parts.push(escape_html(series_name));
-                            }
-                            if labels.show_category_name && let Some(category) = category {
-                                parts.push(escape_html(category));
-                            }
-                            if labels.show_value {
-                                parts.push(format!("{value}"));
-                            }
-                            if labels.show_percent && let Some(percent) = percent {
-                                parts.push(format!("{:.0}%", percent * 100.0));
-                            }
-                            if parts.is_empty() {
-                                None
-                            } else {
-                                Some(parts.join(": "))
-                            }
-                        })
-                    };
-                    let build_point_data_label = |series_name: Option<&str>, category: Option<&str>, value: f64| {
-                        spec.data_labels.as_ref().and_then(|labels| {
-                            let mut parts = Vec::new();
-                            if labels.show_series_name && let Some(series_name) = series_name {
-                                parts.push(escape_html(series_name));
-                            }
-                            if labels.show_category_name && let Some(category) = category {
-                                parts.push(escape_html(category));
-                            }
-                            if labels.show_value {
-                                parts.push(format!("{value}"));
-                            }
-                            if parts.is_empty() {
-                                None
-                            } else {
-                                Some(parts.join(": "))
-                            }
-                        })
-                    };
+                    let build_bar_data_label =
+                        |series_name: Option<&str>,
+                         category: Option<&str>,
+                         value: f64,
+                         percent: Option<f64>| {
+                            spec.data_labels.as_ref().and_then(|labels| {
+                                let mut parts = Vec::new();
+                                if labels.show_series_name
+                                    && let Some(series_name) = series_name
+                                {
+                                    parts.push(escape_html(series_name));
+                                }
+                                if labels.show_category_name
+                                    && let Some(category) = category
+                                {
+                                    parts.push(escape_html(category));
+                                }
+                                if labels.show_value {
+                                    parts.push(format!("{value}"));
+                                }
+                                if labels.show_percent
+                                    && let Some(percent) = percent
+                                {
+                                    parts.push(format!("{:.0}%", percent * 100.0));
+                                }
+                                if parts.is_empty() {
+                                    None
+                                } else {
+                                    Some(parts.join(": "))
+                                }
+                            })
+                        };
+                    let build_point_data_label =
+                        |series_name: Option<&str>, category: Option<&str>, value: f64| {
+                            spec.data_labels.as_ref().and_then(|labels| {
+                                let mut parts = Vec::new();
+                                if labels.show_series_name
+                                    && let Some(series_name) = series_name
+                                {
+                                    parts.push(escape_html(series_name));
+                                }
+                                if labels.show_category_name
+                                    && let Some(category) = category
+                                {
+                                    parts.push(escape_html(category));
+                                }
+                                if labels.show_value {
+                                    parts.push(format!("{value}"));
+                                }
+                                if parts.is_empty() {
+                                    None
+                                } else {
+                                    Some(parts.join(": "))
+                                }
+                            })
+                        };
                     let resolve_bar_label_position = || {
                         spec.data_labels
                             .as_ref()
@@ -836,7 +857,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         );
                     }
                     html.push_str("<div class=\"chart-plot-main\">\n");
-                    let _ = writeln!(html, "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">");
+                    let _ = writeln!(
+                        html,
+                        "<svg viewBox=\"0 0 {w:.1} {chart_height:.1}\" class=\"chart-svg\" preserveAspectRatio=\"none\">"
+                    );
                     let grouping_attr = match spec.grouping {
                         ChartGrouping::Clustered => "clustered",
                         ChartGrouping::Stacked => "stacked",
@@ -854,27 +878,45 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     match spec.chart_type {
                         ChartType::Column => {
                             let slot_width = (w / category_count as f64).max(24.0);
-                            let group_width = (slot_width * (100.0 / (100.0 + gap_width as f64))).max(8.0);
+                            let group_width =
+                                (slot_width * (100.0 / (100.0 + gap_width as f64))).max(8.0);
                             let outer_gap = ((slot_width - group_width) / 2.0).max(2.0);
                             match spec.grouping {
                                 ChartGrouping::Stacked | ChartGrouping::PercentStacked => {
                                     let bar_width = group_width.max(8.0);
                                     let mut category_totals = vec![0.0; category_count];
                                     if matches!(spec.grouping, ChartGrouping::PercentStacked) {
-                                        for (idx, total) in category_totals.iter_mut().enumerate().take(category_count) {
-                                            *total = spec.series.iter().map(|s| s.values[idx].max(0.0)).sum::<f64>().max(1.0);
+                                        for (idx, total) in category_totals
+                                            .iter_mut()
+                                            .enumerate()
+                                            .take(category_count)
+                                        {
+                                            *total = spec
+                                                .series
+                                                .iter()
+                                                .map(|s| s.values[idx].max(0.0))
+                                                .sum::<f64>()
+                                                .max(1.0);
                                         }
                                     }
                                     let mut accumulated = vec![0.0; category_count];
                                     for (series_idx, series) in spec.series.iter().enumerate() {
                                         let color = palette[series_idx % palette.len()];
                                         for (idx, value) in series.values.iter().enumerate() {
-                                            let normalized = if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                            let normalized = if matches!(
+                                                spec.grouping,
+                                                ChartGrouping::PercentStacked
+                                            ) {
                                                 value.max(0.0) / category_totals[idx]
                                             } else {
                                                 *value
                                             };
-                                            let bar_height = if normalized <= 0.0 { 0.0 } else if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                            let bar_height = if normalized <= 0.0 {
+                                                0.0
+                                            } else if matches!(
+                                                spec.grouping,
+                                                ChartGrouping::PercentStacked
+                                            ) {
                                                 normalized * (chart_height - 8.0)
                                             } else {
                                                 (normalized / max_value) * (chart_height - 8.0)
@@ -882,32 +924,55 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let x = idx as f64 * slot_width + outer_gap;
                                             let y = chart_height - accumulated[idx] - bar_height;
                                             accumulated[idx] += bar_height;
-                                            let _ = writeln!(html, "<rect class=\"chart-bar-stacked\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                            let _ = writeln!(
+                                                html,
+                                                "<rect class=\"chart-bar-stacked\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />"
+                                            );
                                             if let Some(label_text) = build_bar_data_label(
                                                 series.name.as_deref(),
-                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                first_series
+                                                    .categories
+                                                    .get(idx)
+                                                    .map(|s| s.as_str()),
                                                 *value,
-                                                matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
-                                            ) && *value > 0.0 {
+                                                matches!(
+                                                    spec.grouping,
+                                                    ChartGrouping::PercentStacked
+                                                )
+                                                .then_some(normalized),
+                                            ) && *value > 0.0
+                                            {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = match label_position {
-                                                    ChartDataLabelPosition::Center => y + bar_height / 2.0,
-                                                    ChartDataLabelPosition::InEnd => (y + 12.0).min(y + bar_height - 6.0),
-                                                    ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
+                                                    ChartDataLabelPosition::Center => {
+                                                        y + bar_height / 2.0
+                                                    }
+                                                    ChartDataLabelPosition::InEnd => {
+                                                        (y + 12.0).min(y + bar_height - 6.0)
+                                                    }
+                                                    ChartDataLabelPosition::OutEnd => {
+                                                        (y - 6.0).max(10.0)
+                                                    }
                                                 };
                                                 let label_position_attr = match label_position {
                                                     ChartDataLabelPosition::Center => "ctr",
                                                     ChartDataLabelPosition::InEnd => "inEnd",
                                                     ChartDataLabelPosition::OutEnd => "outEnd",
                                                 };
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let _ = writeln!(
+                                                    html,
+                                                    "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                    label_text
+                                                );
                                             }
                                         }
                                     }
                                 }
                                 _ => {
-                                    let clustered_divisor = (series_count - (series_count - 1.0) * overlap_ratio).max(1.0);
+                                    let clustered_divisor = (series_count
+                                        - (series_count - 1.0) * overlap_ratio)
+                                        .max(1.0);
                                     let bar_width = (group_width / clustered_divisor).max(4.0);
                                     let step = if series_count > 1.0 {
                                         bar_width * (1.0 - overlap_ratio)
@@ -917,29 +982,52 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     for (series_idx, series) in spec.series.iter().enumerate() {
                                         let color = palette[series_idx % palette.len()];
                                         for (idx, value) in series.values.iter().enumerate() {
-                                            let bar_height = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (chart_height - 8.0) };
-                                            let x = idx as f64 * slot_width + outer_gap + series_idx as f64 * step;
+                                            let bar_height = if *value <= 0.0 {
+                                                0.0
+                                            } else {
+                                                (*value / max_value) * (chart_height - 8.0)
+                                            };
+                                            let x = idx as f64 * slot_width
+                                                + outer_gap
+                                                + series_idx as f64 * step;
                                             let y = chart_height - bar_height;
-                                            let _ = writeln!(html, "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                            let _ = writeln!(
+                                                html,
+                                                "<rect class=\"chart-bar\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{bar_width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />"
+                                            );
                                             if let Some(label_text) = build_bar_data_label(
                                                 series.name.as_deref(),
-                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                first_series
+                                                    .categories
+                                                    .get(idx)
+                                                    .map(|s| s.as_str()),
                                                 *value,
                                                 None,
-                                            ) && *value > 0.0 {
+                                            ) && *value > 0.0
+                                            {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = x + bar_width / 2.0;
                                                 let label_y = match label_position {
-                                                    ChartDataLabelPosition::Center => y + bar_height / 2.0,
-                                                    ChartDataLabelPosition::InEnd => (y + 12.0).min(y + bar_height - 6.0),
-                                                    ChartDataLabelPosition::OutEnd => (y - 6.0).max(10.0),
+                                                    ChartDataLabelPosition::Center => {
+                                                        y + bar_height / 2.0
+                                                    }
+                                                    ChartDataLabelPosition::InEnd => {
+                                                        (y + 12.0).min(y + bar_height - 6.0)
+                                                    }
+                                                    ChartDataLabelPosition::OutEnd => {
+                                                        (y - 6.0).max(10.0)
+                                                    }
                                                 };
                                                 let label_position_attr = match label_position {
                                                     ChartDataLabelPosition::Center => "ctr",
                                                     ChartDataLabelPosition::InEnd => "inEnd",
                                                     ChartDataLabelPosition::OutEnd => "outEnd",
                                                 };
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let _ = writeln!(
+                                                    html,
+                                                    "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                    label_text
+                                                );
                                             }
                                         }
                                     }
@@ -948,27 +1036,45 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         }
                         ChartType::Bar => {
                             let slot_height = (chart_height / category_count as f64).max(24.0);
-                            let group_height = (slot_height * (100.0 / (100.0 + gap_width as f64))).max(8.0);
+                            let group_height =
+                                (slot_height * (100.0 / (100.0 + gap_width as f64))).max(8.0);
                             let outer_gap = ((slot_height - group_height) / 2.0).max(2.0);
                             match spec.grouping {
                                 ChartGrouping::Stacked | ChartGrouping::PercentStacked => {
                                     let bar_height = group_height.max(8.0);
                                     let mut category_totals = vec![0.0; category_count];
                                     if matches!(spec.grouping, ChartGrouping::PercentStacked) {
-                                        for (idx, total) in category_totals.iter_mut().enumerate().take(category_count) {
-                                            *total = spec.series.iter().map(|s| s.values[idx].max(0.0)).sum::<f64>().max(1.0);
+                                        for (idx, total) in category_totals
+                                            .iter_mut()
+                                            .enumerate()
+                                            .take(category_count)
+                                        {
+                                            *total = spec
+                                                .series
+                                                .iter()
+                                                .map(|s| s.values[idx].max(0.0))
+                                                .sum::<f64>()
+                                                .max(1.0);
                                         }
                                     }
                                     let mut accumulated = vec![0.0; category_count];
                                     for (series_idx, series) in spec.series.iter().enumerate() {
                                         let color = palette[series_idx % palette.len()];
                                         for (idx, value) in series.values.iter().enumerate() {
-                                            let normalized = if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                            let normalized = if matches!(
+                                                spec.grouping,
+                                                ChartGrouping::PercentStacked
+                                            ) {
                                                 value.max(0.0) / category_totals[idx]
                                             } else {
                                                 *value
                                             };
-                                            let width = if normalized <= 0.0 { 0.0 } else if matches!(spec.grouping, ChartGrouping::PercentStacked) {
+                                            let width = if normalized <= 0.0 {
+                                                0.0
+                                            } else if matches!(
+                                                spec.grouping,
+                                                ChartGrouping::PercentStacked
+                                            ) {
                                                 normalized * (w - 8.0)
                                             } else {
                                                 (normalized / max_value) * (w - 8.0)
@@ -976,18 +1082,35 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             let x = accumulated[idx];
                                             let y = idx as f64 * slot_height + outer_gap;
                                             accumulated[idx] += width;
-                                            let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                            let _ = writeln!(
+                                                html,
+                                                "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"{x:.1}\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />"
+                                            );
                                             if let Some(label_text) = build_bar_data_label(
                                                 series.name.as_deref(),
-                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                first_series
+                                                    .categories
+                                                    .get(idx)
+                                                    .map(|s| s.as_str()),
                                                 *value,
-                                                matches!(spec.grouping, ChartGrouping::PercentStacked).then_some(normalized),
-                                            ) && *value > 0.0 {
+                                                matches!(
+                                                    spec.grouping,
+                                                    ChartGrouping::PercentStacked
+                                                )
+                                                .then_some(normalized),
+                                            ) && *value > 0.0
+                                            {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = match label_position {
-                                                    ChartDataLabelPosition::Center => x + width / 2.0,
-                                                    ChartDataLabelPosition::InEnd => (x + width - 10.0).max(x + 6.0),
-                                                    ChartDataLabelPosition::OutEnd => (x + width + 10.0).min(w - 6.0),
+                                                    ChartDataLabelPosition::Center => {
+                                                        x + width / 2.0
+                                                    }
+                                                    ChartDataLabelPosition::InEnd => {
+                                                        (x + width - 10.0).max(x + 6.0)
+                                                    }
+                                                    ChartDataLabelPosition::OutEnd => {
+                                                        (x + width + 10.0).min(w - 6.0)
+                                                    }
                                                 };
                                                 let label_y = y + bar_height / 2.0;
                                                 let label_position_attr = match label_position {
@@ -995,13 +1118,19 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                     ChartDataLabelPosition::InEnd => "inEnd",
                                                     ChartDataLabelPosition::OutEnd => "outEnd",
                                                 };
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let _ = writeln!(
+                                                    html,
+                                                    "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                    label_text
+                                                );
                                             }
                                         }
                                     }
                                 }
                                 _ => {
-                                    let clustered_divisor = (series_count - (series_count - 1.0) * overlap_ratio).max(1.0);
+                                    let clustered_divisor = (series_count
+                                        - (series_count - 1.0) * overlap_ratio)
+                                        .max(1.0);
                                     let bar_height = (group_height / clustered_divisor).max(4.0);
                                     let step = if series_count > 1.0 {
                                         bar_height * (1.0 - overlap_ratio)
@@ -1011,20 +1140,37 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     for (series_idx, series) in spec.series.iter().enumerate() {
                                         let color = palette[series_idx % palette.len()];
                                         for (idx, value) in series.values.iter().enumerate() {
-                                            let width = if *value <= 0.0 { 0.0 } else { (*value / max_value) * (w - 8.0) };
-                                            let y = idx as f64 * slot_height + outer_gap + series_idx as f64 * step;
-                                            let _ = writeln!(html, "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />");
+                                            let width = if *value <= 0.0 {
+                                                0.0
+                                            } else {
+                                                (*value / max_value) * (w - 8.0)
+                                            };
+                                            let y = idx as f64 * slot_height
+                                                + outer_gap
+                                                + series_idx as f64 * step;
+                                            let _ = writeln!(
+                                                html,
+                                                "<rect class=\"chart-bar-horizontal\" style=\"fill:{color}\" x=\"0.0\" y=\"{y:.1}\" width=\"{width:.1}\" height=\"{bar_height:.1}\" rx=\"2\" />"
+                                            );
                                             if let Some(label_text) = build_bar_data_label(
                                                 series.name.as_deref(),
-                                                first_series.categories.get(idx).map(|s| s.as_str()),
+                                                first_series
+                                                    .categories
+                                                    .get(idx)
+                                                    .map(|s| s.as_str()),
                                                 *value,
                                                 None,
-                                            ) && *value > 0.0 {
+                                            ) && *value > 0.0
+                                            {
                                                 let label_position = resolve_bar_label_position();
                                                 let label_x = match label_position {
                                                     ChartDataLabelPosition::Center => width / 2.0,
-                                                    ChartDataLabelPosition::InEnd => (width - 10.0).max(6.0),
-                                                    ChartDataLabelPosition::OutEnd => (width + 10.0).min(w - 6.0),
+                                                    ChartDataLabelPosition::InEnd => {
+                                                        (width - 10.0).max(6.0)
+                                                    }
+                                                    ChartDataLabelPosition::OutEnd => {
+                                                        (width + 10.0).min(w - 6.0)
+                                                    }
                                                 };
                                                 let label_y = y + bar_height / 2.0;
                                                 let label_position_attr = match label_position {
@@ -1032,7 +1178,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                                     ChartDataLabelPosition::InEnd => "inEnd",
                                                     ChartDataLabelPosition::OutEnd => "outEnd",
                                                 };
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let _ = writeln!(
+                                                    html,
+                                                    "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{label_x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                    label_text
+                                                );
                                             }
                                         }
                                     }
@@ -1044,20 +1194,25 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let center_y = chart_height / 2.0;
                             let radius = (chart_height.min(w) / 2.0 - 18.0).max(24.0);
                             let radar_style = spec.radar_style.unwrap_or_default();
-                            let filled = matches!(radar_style, crate::model::ChartRadarStyle::Filled);
+                            let filled =
+                                matches!(radar_style, crate::model::ChartRadarStyle::Filled);
 
                             for ring in [0.25_f64, 0.5, 0.75, 1.0] {
                                 let ring_points = (0..category_count)
                                     .map(|idx| {
                                         let angle = -std::f64::consts::FRAC_PI_2
-                                            + idx as f64 * std::f64::consts::TAU / category_count as f64;
+                                            + idx as f64 * std::f64::consts::TAU
+                                                / category_count as f64;
                                         let x = center_x + radius * ring * angle.cos();
                                         let y = center_y + radius * ring * angle.sin();
                                         format!("{x:.1},{y:.1}")
                                     })
                                     .collect::<Vec<_>>()
                                     .join(" ");
-                                let _ = writeln!(html, "<polygon class=\"chart-radar-grid\" points=\"{ring_points}\" fill=\"none\" stroke=\"#ddd\" stroke-width=\"1\" />");
+                                let _ = writeln!(
+                                    html,
+                                    "<polygon class=\"chart-radar-grid\" points=\"{ring_points}\" fill=\"none\" stroke=\"#ddd\" stroke-width=\"1\" />"
+                                );
                             }
 
                             for idx in 0..category_count {
@@ -1065,7 +1220,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     + idx as f64 * std::f64::consts::TAU / category_count as f64;
                                 let x = center_x + radius * angle.cos();
                                 let y = center_y + radius * angle.sin();
-                                let _ = writeln!(html, "<line class=\"chart-radar-spoke\" x1=\"{center_x:.1}\" y1=\"{center_y:.1}\" x2=\"{x:.1}\" y2=\"{y:.1}\" stroke=\"#e2e2e2\" stroke-width=\"1\" />");
+                                let _ = writeln!(
+                                    html,
+                                    "<line class=\"chart-radar-spoke\" x1=\"{center_x:.1}\" y1=\"{center_y:.1}\" x2=\"{x:.1}\" y2=\"{y:.1}\" stroke=\"#e2e2e2\" stroke-width=\"1\" />"
+                                );
                             }
 
                             for (series_idx, series) in spec.series.iter().enumerate() {
@@ -1081,15 +1239,17 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .and_then(|marker| marker.size)
                                     .map(|size| (size as f64 / 2.0).clamp(2.0, 18.0))
                                     .unwrap_or(3.0);
-                                let render_markers = matches!(radar_style, crate::model::ChartRadarStyle::Marker)
-                                    && marker_symbol != "none";
+                                let render_markers =
+                                    matches!(radar_style, crate::model::ChartRadarStyle::Marker)
+                                        && marker_symbol != "none";
                                 let points = series
                                     .values
                                     .iter()
                                     .enumerate()
                                     .map(|(idx, value)| {
                                         let angle = -std::f64::consts::FRAC_PI_2
-                                            + idx as f64 * std::f64::consts::TAU / category_count as f64;
+                                            + idx as f64 * std::f64::consts::TAU
+                                                / category_count as f64;
                                         let scaled_radius = if *value <= 0.0 {
                                             0.0
                                         } else {
@@ -1106,12 +1266,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .collect::<Vec<_>>()
                                     .join(" ");
                                 if filled {
-                                    let _ = writeln!(html, "<polygon class=\"chart-radar-fill\" style=\"fill:{color};opacity:0.30\" points=\"{polygon_points}\" />");
+                                    let _ = writeln!(
+                                        html,
+                                        "<polygon class=\"chart-radar-fill\" style=\"fill:{color};opacity:0.30\" points=\"{polygon_points}\" />"
+                                    );
                                 }
-                                let _ = writeln!(html, "<polygon class=\"chart-radar-line\" style=\"fill:none;stroke:{color};stroke-width:2\" points=\"{polygon_points}\" />");
+                                let _ = writeln!(
+                                    html,
+                                    "<polygon class=\"chart-radar-line\" style=\"fill:none;stroke:{color};stroke-width:2\" points=\"{polygon_points}\" />"
+                                );
                                 if render_markers {
                                     for (x, y) in &points {
-                                        let _ = writeln!(html, "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />", escape_html(marker_symbol));
+                                        let _ = writeln!(
+                                            html,
+                                            "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
+                                            escape_html(marker_symbol)
+                                        );
                                     }
                                 }
                             }
@@ -1165,9 +1335,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .map(|(x, y)| format!("{x:.1},{y:.1}"))
                                     .collect::<Vec<_>>()
                                     .join(" ");
-                                let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
+                                let _ = writeln!(
+                                    html,
+                                    "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />"
+                                );
                                 if marker_symbol != "none" {
-                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
+                                    for (idx, ((x, y), value)) in
+                                        points.iter().copied().zip(series.values.iter()).enumerate()
+                                    {
                                         let _ = writeln!(
                                             html,
                                             "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
@@ -1176,41 +1351,61 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = match point_label_position {
                                                 ChartDataLabelPosition::Center => y,
-                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
-                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                ChartDataLabelPosition::InEnd => {
+                                                    (y + 10.0).min(chart_height - 6.0)
+                                                }
+                                                ChartDataLabelPosition::OutEnd => {
+                                                    (y - 10.0).max(10.0)
+                                                }
                                             };
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
-                                            ).unwrap_or_else(|| value.to_string());
+                                            )
+                                            .unwrap_or_else(|| value.to_string());
                                             let label_position_attr = match point_label_position {
                                                 ChartDataLabelPosition::Center => "ctr",
                                                 ChartDataLabelPosition::InEnd => "inEnd",
                                                 ChartDataLabelPosition::OutEnd => "outEnd",
                                             };
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let _ = writeln!(
+                                                html,
+                                                "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                label_text
+                                            );
                                         }
                                     }
                                 } else if render_value_labels {
-                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
+                                    for (idx, ((x, y), value)) in
+                                        points.iter().copied().zip(series.values.iter()).enumerate()
+                                    {
                                         if *value > 0.0 {
                                             let label_y = match point_label_position {
                                                 ChartDataLabelPosition::Center => y,
-                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
-                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                ChartDataLabelPosition::InEnd => {
+                                                    (y + 10.0).min(chart_height - 6.0)
+                                                }
+                                                ChartDataLabelPosition::OutEnd => {
+                                                    (y - 10.0).max(10.0)
+                                                }
                                             };
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 series.categories.get(idx).map(|s| s.as_str()),
                                                 *value,
-                                            ).unwrap_or_else(|| value.to_string());
+                                            )
+                                            .unwrap_or_else(|| value.to_string());
                                             let label_position_attr = match point_label_position {
                                                 ChartDataLabelPosition::Center => "ctr",
                                                 ChartDataLabelPosition::InEnd => "inEnd",
                                                 ChartDataLabelPosition::OutEnd => "outEnd",
                                             };
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let _ = writeln!(
+                                                html,
+                                                "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                label_text
+                                            );
                                         }
                                     }
                                 }
@@ -1285,9 +1480,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             | ChartScatterStyle::SmoothMarker
                                     );
                                 let mut points = Vec::new();
-                                for (x_value, y_value) in series.x_values.iter().zip(series.values.iter()) {
+                                for (x_value, y_value) in
+                                    series.x_values.iter().zip(series.values.iter())
+                                {
                                     let x = left_pad + ((*x_value - min_x) / x_span) * usable_width;
-                                    let y = chart_height - bottom_pad - ((*y_value - min_y) / y_span) * usable_height;
+                                    let y = chart_height
+                                        - bottom_pad
+                                        - ((*y_value - min_y) / y_span) * usable_height;
                                     points.push((x, y));
                                 }
                                 if render_line {
@@ -1296,10 +1495,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         .map(|(x, y)| format!("{x:.1},{y:.1}"))
                                         .collect::<Vec<_>>()
                                         .join(" ");
-                                    let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />");
+                                    let _ = writeln!(
+                                        html,
+                                        "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{polyline_points}\" />"
+                                    );
                                 }
                                 if render_markers {
-                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
+                                    for (idx, ((x, y), value)) in
+                                        points.iter().copied().zip(series.values.iter()).enumerate()
+                                    {
                                         let _ = writeln!(
                                             html,
                                             "<circle class=\"chart-point\" data-marker-symbol=\"{}\" style=\"fill:{color}\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{marker_radius:.1}\" />",
@@ -1308,43 +1512,69 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         if render_value_labels && *value > 0.0 {
                                             let label_y = match scatter_label_position {
                                                 ChartDataLabelPosition::Center => y,
-                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
-                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                ChartDataLabelPosition::InEnd => {
+                                                    (y + 10.0).min(chart_height - 6.0)
+                                                }
+                                                ChartDataLabelPosition::OutEnd => {
+                                                    (y - 10.0).max(10.0)
+                                                }
                                             };
-                                            let category_text = series.x_values.get(idx).map(|value| value.to_string());
+                                            let category_text = series
+                                                .x_values
+                                                .get(idx)
+                                                .map(|value| value.to_string());
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 category_text.as_deref(),
                                                 *value,
-                                            ).unwrap_or_else(|| value.to_string());
+                                            )
+                                            .unwrap_or_else(|| value.to_string());
                                             let label_position_attr = match scatter_label_position {
                                                 ChartDataLabelPosition::Center => "ctr",
                                                 ChartDataLabelPosition::InEnd => "inEnd",
                                                 ChartDataLabelPosition::OutEnd => "outEnd",
                                             };
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let _ = writeln!(
+                                                html,
+                                                "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                label_text
+                                            );
                                         }
                                     }
                                 } else if render_value_labels {
-                                    for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
+                                    for (idx, ((x, y), value)) in
+                                        points.iter().copied().zip(series.values.iter()).enumerate()
+                                    {
                                         if *value > 0.0 {
                                             let label_y = match scatter_label_position {
                                                 ChartDataLabelPosition::Center => y,
-                                                ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
-                                                ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                ChartDataLabelPosition::InEnd => {
+                                                    (y + 10.0).min(chart_height - 6.0)
+                                                }
+                                                ChartDataLabelPosition::OutEnd => {
+                                                    (y - 10.0).max(10.0)
+                                                }
                                             };
-                                            let category_text = series.x_values.get(idx).map(|value| value.to_string());
+                                            let category_text = series
+                                                .x_values
+                                                .get(idx)
+                                                .map(|value| value.to_string());
                                             let label_text = build_point_data_label(
                                                 series.name.as_deref(),
                                                 category_text.as_deref(),
                                                 *value,
-                                            ).unwrap_or_else(|| value.to_string());
+                                            )
+                                            .unwrap_or_else(|| value.to_string());
                                             let label_position_attr = match scatter_label_position {
                                                 ChartDataLabelPosition::Center => "ctr",
                                                 ChartDataLabelPosition::InEnd => "inEnd",
                                                 ChartDataLabelPosition::OutEnd => "outEnd",
                                             };
-                                            let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                            let _ = writeln!(
+                                                html,
+                                                "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                label_text
+                                            );
                                         }
                                     }
                                 }
@@ -1372,7 +1602,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             let min_y = all_y_values.clone().fold(f64::INFINITY, f64::min);
                             let max_y = all_y_values.fold(f64::NEG_INFINITY, f64::max);
                             let max_bubble = all_bubble_sizes.fold(0.0_f64, f64::max).max(1.0);
-                            let bubble_scale = (spec.bubble_scale.unwrap_or(100.0) / 100.0).clamp(0.0, 3.0);
+                            let bubble_scale =
+                                (spec.bubble_scale.unwrap_or(100.0) / 100.0).clamp(0.0, 3.0);
                             let x_span = if min_x.is_finite() && max_x.is_finite() {
                                 (max_x - min_x).abs().max(1.0)
                             } else {
@@ -1395,10 +1626,16 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     .zip(series.bubble_sizes.iter())
                                 {
                                     let x = left_pad + ((*x_value - min_x) / x_span) * usable_width;
-                                    let y = chart_height - bottom_pad - ((*y_value - min_y) / y_span) * usable_height;
-                                    let radius = ((4.0 + (*bubble_size / max_bubble) * 14.0) * bubble_scale)
+                                    let y = chart_height
+                                        - bottom_pad
+                                        - ((*y_value - min_y) / y_span) * usable_height;
+                                    let radius = ((4.0 + (*bubble_size / max_bubble) * 14.0)
+                                        * bubble_scale)
                                         .clamp(4.0, 24.0);
-                                    let _ = writeln!(html, "<circle class=\"chart-bubble\" style=\"fill:{color};opacity:0.45;stroke:{color};stroke-width:1\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{radius:.1}\" />");
+                                    let _ = writeln!(
+                                        html,
+                                        "<circle class=\"chart-bubble\" style=\"fill:{color};opacity:0.45;stroke:{color};stroke-width:1\" cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"{radius:.1}\" />"
+                                    );
                                 }
                             }
                         }
@@ -1451,27 +1688,48 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                         .map(|(x, y)| format!("{x:.1},{y:.1}"))
                                         .collect::<Vec<_>>()
                                         .join(" ");
-                                    let _ = writeln!(html, "<polygon class=\"chart-area\" style=\"fill:{color}\" points=\"{area_points}\" />");
-                                    let _ = writeln!(html, "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{line_points}\" />");
+                                    let _ = writeln!(
+                                        html,
+                                        "<polygon class=\"chart-area\" style=\"fill:{color}\" points=\"{area_points}\" />"
+                                    );
+                                    let _ = writeln!(
+                                        html,
+                                        "<polyline class=\"chart-line\" style=\"stroke:{color}\" points=\"{line_points}\" />"
+                                    );
                                     if render_value_labels {
-                                        for (idx, ((x, y), value)) in points.iter().copied().zip(series.values.iter()).enumerate() {
+                                        for (idx, ((x, y), value)) in points
+                                            .iter()
+                                            .copied()
+                                            .zip(series.values.iter())
+                                            .enumerate()
+                                        {
                                             if *value > 0.0 {
                                                 let label_y = match point_label_position {
                                                     ChartDataLabelPosition::Center => y,
-                                                    ChartDataLabelPosition::InEnd => (y + 10.0).min(chart_height - 6.0),
-                                                    ChartDataLabelPosition::OutEnd => (y - 10.0).max(10.0),
+                                                    ChartDataLabelPosition::InEnd => {
+                                                        (y + 10.0).min(chart_height - 6.0)
+                                                    }
+                                                    ChartDataLabelPosition::OutEnd => {
+                                                        (y - 10.0).max(10.0)
+                                                    }
                                                 };
                                                 let label_text = build_point_data_label(
                                                     series.name.as_deref(),
                                                     series.categories.get(idx).map(|s| s.as_str()),
                                                     *value,
-                                                ).unwrap_or_else(|| value.to_string());
-                                                let label_position_attr = match point_label_position {
+                                                )
+                                                .unwrap_or_else(|| value.to_string());
+                                                let label_position_attr = match point_label_position
+                                                {
                                                     ChartDataLabelPosition::Center => "ctr",
                                                     ChartDataLabelPosition::InEnd => "inEnd",
                                                     ChartDataLabelPosition::OutEnd => "outEnd",
                                                 };
-                                                let _ = writeln!(html, "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>", label_text);
+                                                let _ = writeln!(
+                                                    html,
+                                                    "<text class=\"chart-data-label\" data-label-position=\"{label_position_attr}\" x=\"{x:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                                    label_text
+                                                );
                                             }
                                         }
                                     }
@@ -1487,46 +1745,57 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                 .min(values.len().saturating_sub(1));
                             let primary_len = values.len().saturating_sub(split_count);
                             let (primary_values, secondary_values) = values.split_at(primary_len);
-                            let (primary_categories, secondary_categories) = first_series.categories.split_at(primary_len.min(first_series.categories.len()));
-                            let primary_radius = (chart_height.min(w * 0.58) / 2.0 - 10.0).max(12.0);
-                            let secondary_radius = (primary_radius * (spec.second_pie_size.unwrap_or(75) as f64 / 100.0)).clamp(10.0, primary_radius);
+                            let (primary_categories, secondary_categories) = first_series
+                                .categories
+                                .split_at(primary_len.min(first_series.categories.len()));
+                            let primary_radius =
+                                (chart_height.min(w * 0.58) / 2.0 - 10.0).max(12.0);
+                            let secondary_radius = (primary_radius
+                                * (spec.second_pie_size.unwrap_or(75) as f64 / 100.0))
+                                .clamp(10.0, primary_radius);
                             let primary_center_x = w * 0.33;
                             let secondary_center_x = w * 0.77;
                             let center_y = chart_height / 2.0;
 
-                            let render_cluster = |html: &mut String,
-                                                  class_name: &str,
-                                                  center_x: f64,
-                                                  center_y: f64,
-                                                  radius: f64,
-                                                  values: &[f64],
-                                                  color_offset: usize| {
-                                let total = values.iter().copied().filter(|v| *v > 0.0).sum::<f64>();
-                                if total <= 0.0 {
-                                    return;
-                                }
-                                let _ = writeln!(html, "<g class=\"{class_name}\">");
-                                let mut start_angle = -std::f64::consts::FRAC_PI_2;
-                                for (idx, value) in values.iter().enumerate() {
-                                    if *value <= 0.0 {
-                                        continue;
+                            let render_cluster =
+                                |html: &mut String,
+                                 class_name: &str,
+                                 center_x: f64,
+                                 center_y: f64,
+                                 radius: f64,
+                                 values: &[f64],
+                                 color_offset: usize| {
+                                    let total =
+                                        values.iter().copied().filter(|v| *v > 0.0).sum::<f64>();
+                                    if total <= 0.0 {
+                                        return;
                                     }
-                                    let color = palette[(color_offset + idx) % palette.len()];
-                                    let sweep = (*value / total) * std::f64::consts::TAU;
-                                    let end_angle = start_angle + sweep;
-                                    let x1 = center_x + radius * start_angle.cos();
-                                    let y1 = center_y + radius * start_angle.sin();
-                                    let x2 = center_x + radius * end_angle.cos();
-                                    let y2 = center_y + radius * end_angle.sin();
-                                    let large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 };
-                                    let path = format!(
-                                        "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
-                                    );
-                                    let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
-                                    start_angle = end_angle;
-                                }
-                                let _ = writeln!(html, "</g>");
-                            };
+                                    let _ = writeln!(html, "<g class=\"{class_name}\">");
+                                    let mut start_angle = -std::f64::consts::FRAC_PI_2;
+                                    for (idx, value) in values.iter().enumerate() {
+                                        if *value <= 0.0 {
+                                            continue;
+                                        }
+                                        let color = palette[(color_offset + idx) % palette.len()];
+                                        let sweep = (*value / total) * std::f64::consts::TAU;
+                                        let end_angle = start_angle + sweep;
+                                        let x1 = center_x + radius * start_angle.cos();
+                                        let y1 = center_y + radius * start_angle.sin();
+                                        let x2 = center_x + radius * end_angle.cos();
+                                        let y2 = center_y + radius * end_angle.sin();
+                                        let large_arc =
+                                            if sweep > std::f64::consts::PI { 1 } else { 0 };
+                                        let path = format!(
+                                            "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
+                                        );
+                                        let _ = writeln!(
+                                            html,
+                                            "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />"
+                                        );
+                                        start_angle = end_angle;
+                                    }
+                                    let _ = writeln!(html, "</g>");
+                                };
 
                             render_cluster(
                                 html,
@@ -1548,8 +1817,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                             );
 
                             let mut label_y = chart_height - 10.0;
-                            for category in primary_categories.iter().chain(secondary_categories.iter()) {
-                                let _ = writeln!(html, "<text class=\"chart-data-label\" x=\"{:.1}\" y=\"{label_y:.1}\">{}</text>", w / 2.0, escape_html(category));
+                            for category in
+                                primary_categories.iter().chain(secondary_categories.iter())
+                            {
+                                let _ = writeln!(
+                                    html,
+                                    "<text class=\"chart-data-label\" x=\"{:.1}\" y=\"{label_y:.1}\">{}</text>",
+                                    w / 2.0,
+                                    escape_html(category)
+                                );
                                 label_y -= 12.0;
                             }
                         }
@@ -1583,7 +1859,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                     let y1 = center_y + radius * start_angle.sin();
                                     let x2 = center_x + radius * end_angle.cos();
                                     let y2 = center_y + radius * end_angle.sin();
-                                    let large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 };
+                                    let large_arc =
+                                        if sweep > std::f64::consts::PI { 1 } else { 0 };
                                     let path = if inner_radius > 0.0 {
                                         let ix2 = center_x + inner_radius * end_angle.cos();
                                         let iy2 = center_y + inner_radius * end_angle.sin();
@@ -1597,7 +1874,10 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             "M {center_x:.1} {center_y:.1} L {x1:.1} {y1:.1} A {radius:.1} {radius:.1} 0 {large_arc} 1 {x2:.1} {y2:.1} Z"
                                         )
                                     };
-                                    let _ = writeln!(html, "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />");
+                                    let _ = writeln!(
+                                        html,
+                                        "<path class=\"chart-pie-slice\" style=\"fill:{color}\" d=\"{path}\" />"
+                                    );
                                     if let Some(data_labels) = spec.data_labels.as_ref() {
                                         let mut label_parts = Vec::new();
                                         if data_labels.show_category_name
@@ -1609,13 +1889,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                                             label_parts.push(format!("{}", value));
                                         }
                                         if data_labels.show_percent {
-                                            label_parts.push(format!("{:.0}%", (*value / total) * 100.0));
+                                            label_parts
+                                                .push(format!("{:.0}%", (*value / total) * 100.0));
                                         }
                                         if !label_parts.is_empty() {
                                             let mid_angle = start_angle + sweep / 2.0;
                                             let label_radius = match pie_label_position {
                                                 ChartDataLabelPosition::OutEnd => radius + 16.0,
-                                                ChartDataLabelPosition::Center | ChartDataLabelPosition::InEnd => {
+                                                ChartDataLabelPosition::Center
+                                                | ChartDataLabelPosition::InEnd => {
                                                     if inner_radius > 0.0 {
                                                         inner_radius + (radius - inner_radius) * 0.5
                                                     } else {
@@ -1662,7 +1944,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 }
             }
 
-            if let Some(ref img_data) = chart_data.preview_image && !img_data.is_empty() {
+            if let Some(ref img_data) = chart_data.preview_image
+                && !img_data.is_empty()
+            {
                 let mime = chart_data.preview_mime.as_deref().unwrap_or("image/png");
                 let src = if ctx.embed_images {
                     let b64 = base64::engine::general_purpose::STANDARD.encode(img_data);
@@ -1950,9 +2234,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                      {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}/>",
                     path_svg.d
                 );
-                    }
-                    html.push_str("</g>\n");
-                    html.push_str("</svg>\n");
+            }
+            html.push_str("</g>\n");
+            html.push_str("</svg>\n");
         }
 
         // Image
@@ -2096,22 +2380,22 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 if matches!(effective_auto_fit, AutoFit::Shrink) {
                     TextWrapPolicy::Normal
                 } else {
-                let inherited_font_sizes: Vec<Option<f64>> = text_body
-                    .paragraphs
-                    .iter()
-                    .map(|para| {
-                        text_style_ctx
-                            .get_level_defaults(para.level as usize)
-                            .and_then(|defaults| defaults.def_run_props.as_ref())
-                            .and_then(|run_defaults| run_defaults.font_size)
-                    })
-                    .collect();
-                classify_wrap_policy(
-                    &text_body.paragraphs,
-                    &inherited_font_sizes,
-                    content_width_px,
-                    font_scale,
-                )
+                    let inherited_font_sizes: Vec<Option<f64>> = text_body
+                        .paragraphs
+                        .iter()
+                        .map(|para| {
+                            text_style_ctx
+                                .get_level_defaults(para.level as usize)
+                                .and_then(|defaults| defaults.def_run_props.as_ref())
+                                .and_then(|run_defaults| run_defaults.font_size)
+                        })
+                        .collect();
+                    classify_wrap_policy(
+                        &text_body.paragraphs,
+                        &inherited_font_sizes,
+                        content_width_px,
+                        font_scale,
+                    )
                 }
             } else {
                 TextWrapPolicy::Normal
@@ -3049,7 +3333,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         pd.font_ea.as_deref(),
                         pd.font_cs.as_deref(),
                     )
-                        .map(|f| (Some(f), FontResolutionSource::ParagraphDefaults))
+                    .map(|f| (Some(f), FontResolutionSource::ParagraphDefaults))
                 })
             })
             .or_else(|| {
@@ -3060,7 +3344,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                         rd.font_ea.as_deref(),
                         rd.font_cs.as_deref(),
                     )
-                        .map(|f| (Some(f), FontResolutionSource::InheritedDefaults))
+                    .map(|f| (Some(f), FontResolutionSource::InheritedDefaults))
                 })
             })
             .or_else(|| {
@@ -3947,4 +4231,315 @@ fn emit_marker_def(
          <path d=\"{path}\" fill=\"{fill_attr}\" stroke=\"{color}\" stroke-width=\"0.5\"/>\
          </marker>"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::presentation::{ColorScheme, Presentation, Theme};
+
+    fn test_ctx(_embed_images: bool) -> (Presentation, RefCell<UnresolvedCollector>) {
+        let mut pres = Presentation::default();
+        pres.themes.push(Theme {
+            name: "Theme".to_string(),
+            color_scheme: ColorScheme {
+                accent1: "4472C4".to_string(),
+                accent2: "ED7D31".to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        let collector = RefCell::new(UnresolvedCollector {
+            elements: Vec::new(),
+            external_assets: Vec::new(),
+            font_resolution_entries: Vec::new(),
+            provenance_entries: Vec::new(),
+            counter: 0,
+            current_slide_index: 0,
+            gradient_counter: 0,
+            marker_counter: 0,
+            asset_counter: 0,
+        });
+        (pres, collector)
+    }
+
+    #[test]
+    fn global_css_and_helper_formatters_cover_supported_variants() {
+        let css = HtmlRenderer::global_css(960.0, 540.0);
+        assert!(css.contains(".pptx-container"));
+        assert!(css.contains("width: 960.0px"));
+        assert!(css.contains("height: 540.0px"));
+
+        assert_eq!(format_auto_num("arabicPeriod", 3), "3.");
+        assert_eq!(format_auto_num("alphaLcParenBoth", 27), "(aa)");
+        assert_eq!(format_auto_num("alphaUcParenR", 2), "B)");
+        assert_eq!(format_auto_num("romanLcPeriod", 14), "xiv.");
+        assert_eq!(format_auto_num("romanUcParenBoth", 9), "(IX)");
+        assert_eq!(format_auto_num("unknown", 5), "5.");
+        assert_eq!(to_alpha_lc(0), "a");
+        assert_eq!(to_alpha_uc(28), "AB");
+        assert_eq!(to_roman_lc(4), "iv");
+        assert_eq!(to_roman_uc(4000), "4000");
+        assert_eq!(
+            escape_html("<tag attr=\"1\">&"),
+            "&lt;tag attr=&quot;1&quot;&gt;&amp;"
+        );
+    }
+
+    #[test]
+    fn dash_cap_join_miter_and_marker_helpers_cover_variants() {
+        assert_eq!(dash_style_to_svg(&DashStyle::Solid, 2.0), "");
+        assert!(dash_style_to_svg(&DashStyle::Dash, 2.0).contains("16.0 8.0"));
+        assert!(dash_style_to_svg(&DashStyle::Dot, 2.0).contains("4.0 4.0"));
+        assert!(dash_style_to_svg(&DashStyle::DashDot, 1.0).contains("8.0 4.0 2.0 4.0"));
+        assert!(dash_style_to_svg(&DashStyle::LongDash, 1.0).contains("12.0 4.0"));
+        assert!(dash_style_to_svg(&DashStyle::LongDashDot, 1.0).contains("12.0 4.0 2.0 4.0"));
+        assert!(
+            dash_style_to_svg(&DashStyle::LongDashDotDot, 1.0).contains("12.0 4.0 2.0 4.0 2.0 4.0")
+        );
+        assert!(dash_style_to_svg(&DashStyle::SystemDash, 1.0).contains("6.0 3.0"));
+        assert!(dash_style_to_svg(&DashStyle::SystemDot, 1.0).contains("1.0 2.0"));
+        assert!(dash_style_to_svg(&DashStyle::SystemDashDot, 1.0).contains("3.0 1.0 1.0 1.0"));
+        assert!(
+            dash_style_to_svg(&DashStyle::SystemDashDotDot, 1.0)
+                .contains("3.0 1.0 1.0 1.0 1.0 1.0")
+        );
+
+        assert_eq!(dash_style_to_css(&DashStyle::Solid), "solid");
+        assert_eq!(dash_style_to_css(&DashStyle::Dash), "dashed");
+        assert_eq!(dash_style_to_css(&DashStyle::Dot), "dotted");
+        assert_eq!(dash_style_to_css(&DashStyle::SystemDashDotDot), "dashed");
+
+        assert_eq!(line_cap_to_svg(&LineCap::Flat), "");
+        assert_eq!(
+            line_cap_to_svg(&LineCap::Square),
+            " stroke-linecap=\"square\""
+        );
+        assert_eq!(
+            line_cap_to_svg(&LineCap::Round),
+            " stroke-linecap=\"round\""
+        );
+        assert_eq!(line_join_to_svg(&LineJoin::Miter), "");
+        assert_eq!(
+            line_join_to_svg(&LineJoin::Bevel),
+            " stroke-linejoin=\"bevel\""
+        );
+        assert_eq!(
+            line_join_to_svg(&LineJoin::Round),
+            " stroke-linejoin=\"round\""
+        );
+
+        let border = Border {
+            join: LineJoin::Miter,
+            miter_limit: Some(2.5),
+            ..Default::default()
+        };
+        assert_eq!(
+            line_miter_limit_to_svg(&border),
+            " stroke-miterlimit=\"2.5\""
+        );
+        assert_eq!(line_miter_limit_to_svg(&Border::default()), "");
+
+        let mut html = String::new();
+        for (suffix, end_type) in [
+            ("arrow", LineEndType::Arrow),
+            ("triangle", LineEndType::Triangle),
+            ("stealth", LineEndType::Stealth),
+            ("diamond", LineEndType::Diamond),
+            ("oval", LineEndType::Oval),
+        ] {
+            emit_marker_def(
+                &mut html,
+                suffix,
+                &LineEnd {
+                    end_type,
+                    width: LineEndSize::Medium,
+                    length: LineEndSize::Large,
+                },
+                "#112233",
+                2.0,
+                suffix == "arrow",
+            );
+        }
+        assert!(html.contains("marker id=\"arrow\""));
+        assert!(html.contains("marker id=\"triangle\""));
+        assert!(html.contains("marker id=\"stealth\""));
+        assert!(html.contains("marker id=\"diamond\""));
+        assert!(html.contains("marker id=\"oval\""));
+    }
+
+    #[test]
+    fn fill_helpers_cover_gradient_and_image_branches() {
+        let gradient_fill = Fill::Gradient(GradientFill {
+            gradient_type: GradientType::Linear,
+            stops: vec![
+                GradientStop {
+                    position: 0.0,
+                    color: Color::theme("accent1"),
+                },
+                GradientStop {
+                    position: 1.0,
+                    color: Color::rgb("00FF00"),
+                },
+            ],
+            angle: 135.0,
+        });
+
+        let (pres_embed, collector_embed) = test_ctx(true);
+        let ctx_embed = RenderCtx {
+            pres: &pres_embed,
+            slide: None,
+            scheme: pres_embed.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector_embed,
+        };
+        let mut buf = String::new();
+        HtmlRenderer::fill_to_css_buf(&gradient_fill, &ctx_embed, &mut buf);
+        assert!(buf.contains("linear-gradient(135deg"));
+        assert!(HtmlRenderer::fill_to_css(&gradient_fill, &ctx_embed).contains("linear-gradient"));
+
+        let mut defs = String::new();
+        let fill_attr = svg_gradient_def(&gradient_fill, "grad-test", &ctx_embed, &mut defs)
+            .expect("svg gradient should be emitted");
+        assert_eq!(fill_attr, "url(#grad-test)");
+        assert!(defs.contains("<linearGradient id=\"grad-test\""));
+
+        let image_fill = Fill::Image(ImageFill {
+            rel_id: "rId1".to_string(),
+            data: vec![1, 2, 3, 4],
+            content_type: "image/png".to_string(),
+        });
+        let mut embed_buf = String::new();
+        HtmlRenderer::fill_to_css_buf(&image_fill, &ctx_embed, &mut embed_buf);
+        assert!(embed_buf.contains("background-image: url(data:image/png;base64,"));
+
+        let (pres_external, collector_external) = test_ctx(false);
+        let ctx_external = RenderCtx {
+            pres: &pres_external,
+            slide: None,
+            scheme: pres_external.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: false,
+            collector: &collector_external,
+        };
+        let mut external_buf = String::new();
+        HtmlRenderer::fill_to_css_buf(&image_fill, &ctx_external, &mut external_buf);
+        assert!(external_buf.contains("background-image: url(images/slide-1/background-0.png)"));
+        let assets = &collector_external.borrow().external_assets;
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].relative_path, "images/slide-1/background-0.png");
+    }
+
+    #[test]
+    fn render_table_and_paragraph_cover_borders_spans_and_bullets() {
+        let (pres, collector) = test_ctx(true);
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+
+        let paragraph = TextParagraph {
+            runs: vec![TextRun {
+                text: "Cell Text".to_string(),
+                ..Default::default()
+            }],
+            bullet: Some(Bullet::AutoNum(BulletAutoNum {
+                num_type: "romanUcPeriod".to_string(),
+                start_at: Some(1),
+                font: Some("Calibri".to_string()),
+                size_pct: Some(1.2),
+                color: Some(Color::rgb("FF0000")),
+            })),
+            ..Default::default()
+        };
+        let char_bullet_para = TextParagraph {
+            runs: vec![TextRun {
+                text: "Bullet Text".to_string(),
+                ..Default::default()
+            }],
+            bullet: Some(Bullet::Char(BulletChar {
+                char: "•".to_string(),
+                font: Some("Symbol".to_string()),
+                size_pct: Some(0.9),
+                color: Some(Color::theme("accent2")),
+            })),
+            ..Default::default()
+        };
+        let mut para_html = String::new();
+        let mut counters = [0; 9];
+        HtmlRenderer::render_paragraph(&paragraph, &ctx, &mut counters, &mut para_html);
+        HtmlRenderer::render_paragraph(&char_bullet_para, &ctx, &mut counters, &mut para_html);
+        assert!(para_html.contains("I."));
+        assert!(para_html.contains("•"));
+        assert!(para_html.contains("Cell Text"));
+        assert!(para_html.contains("Bullet Text"));
+
+        let table = TableData {
+            rows: vec![TableRow {
+                height: 24.0,
+                cells: vec![TableCell {
+                    text_body: Some(TextBody {
+                        paragraphs: vec![paragraph],
+                        ..Default::default()
+                    }),
+                    fill: Fill::Solid(SolidFill {
+                        color: Color::rgb("00FF00"),
+                    }),
+                    border_left: Border {
+                        width: 1.0,
+                        color: Color::rgb("FF0000"),
+                        dash_style: DashStyle::Dash,
+                        ..Default::default()
+                    },
+                    border_right: Border {
+                        width: 1.0,
+                        color: Color::rgb("0000FF"),
+                        dash_style: DashStyle::Dot,
+                        ..Default::default()
+                    },
+                    border_top: Border {
+                        width: 1.0,
+                        color: Color::rgb("123456"),
+                        dash_style: DashStyle::Solid,
+                        ..Default::default()
+                    },
+                    border_bottom: Border {
+                        width: 1.0,
+                        color: Color::rgb("654321"),
+                        dash_style: DashStyle::SystemDash,
+                        ..Default::default()
+                    },
+                    col_span: 2,
+                    row_span: 3,
+                    v_merge: false,
+                    margin_left: 7.2,
+                    margin_right: 7.2,
+                    margin_top: 3.6,
+                    margin_bottom: 3.6,
+                    vertical_align: VerticalAlign::Middle,
+                }],
+            }],
+            col_widths: vec![120.0],
+            band_row: true,
+            band_col: false,
+            first_row: true,
+            last_row: false,
+            first_col: true,
+            last_col: false,
+        };
+        let mut html = String::new();
+        HtmlRenderer::render_table(&table, &ctx, &mut html);
+        assert!(html.contains("<table"));
+        assert!(html.contains("colspan=\"2\""));
+        assert!(html.contains("rowspan=\"3\""));
+        assert!(html.contains("background-color: #00FF00"));
+        assert!(html.contains("border-left: 1.0pt dashed #FF0000"));
+        assert!(html.contains("border-right: 1.0pt dotted #0000FF"));
+        assert!(html.contains("vertical-align: middle"));
+    }
 }

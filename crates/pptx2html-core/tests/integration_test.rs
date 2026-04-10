@@ -158,7 +158,8 @@ fn build_column_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -202,7 +203,8 @@ fn build_column_chart_pptx() -> Vec<u8> {
       </c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -227,15 +229,19 @@ fn build_column_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -244,7 +250,8 @@ fn build_column_chart_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -305,7 +312,8 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -367,7 +375,8 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
       </c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -392,15 +401,19 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -409,7 +422,8 @@ fn build_chart_with_axis_titles_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -559,15 +573,19 @@ fn build_line_chart_pptx(series_count: usize) -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -576,7 +594,8 @@ fn build_line_chart_pptx(series_count: usize) -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -652,7 +671,8 @@ fn build_line_chart_with_label_flags_pptx(
     let label_position_xml = label_position
         .map(|value| format!("<c:dLblPos val=\"{value}\"/>"))
         .unwrap_or_default();
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -676,7 +696,8 @@ fn build_line_chart_with_label_flags_pptx(
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -691,14 +712,24 @@ fn build_line_chart_with_label_flags_pptx(
   <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
-    zip.start_file("[Content_Types].xml", opts).unwrap(); zip.write_all(content_types.as_bytes()).unwrap();
-    zip.start_file("_rels/.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/presentation.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap(); zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap(); zip.write_all(slide_rels.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/chart1.xml", opts).unwrap(); zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
     zip.finish().unwrap().into_inner()
 }
 
@@ -749,7 +780,8 @@ fn build_area_chart_with_label_flags_pptx(
     let label_position_xml = label_position
         .map(|value| format!("<c:dLblPos val=\"{value}\"/>"))
         .unwrap_or_default();
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -773,7 +805,8 @@ fn build_area_chart_with_label_flags_pptx(
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -788,14 +821,24 @@ fn build_area_chart_with_label_flags_pptx(
   <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
-    zip.start_file("[Content_Types].xml", opts).unwrap(); zip.write_all(content_types.as_bytes()).unwrap();
-    zip.start_file("_rels/.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/presentation.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap(); zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap(); zip.write_all(slide_rels.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/chart1.xml", opts).unwrap(); zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
     zip.finish().unwrap().into_inner()
 }
 
@@ -831,7 +874,8 @@ fn build_area_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -868,7 +912,8 @@ fn build_area_chart_pptx() -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -893,15 +938,19 @@ fn build_area_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -910,7 +959,8 @@ fn build_area_chart_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -979,7 +1029,8 @@ fn build_area_chart_variant_pptx(chart_tag: &str, grouping: &str) -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1016,7 +1067,8 @@ fn build_area_chart_variant_pptx(chart_tag: &str, grouping: &str) -> Vec<u8> {
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -1041,12 +1093,14 @@ fn build_area_chart_variant_pptx(chart_tag: &str, grouping: &str) -> Vec<u8> {
     zip.start_file("ppt/presentation.xml", opts).unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1130,7 +1184,8 @@ fn build_scatter_chart_with_label_flags_pptx(
     } else {
         String::new()
     };
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1172,7 +1227,8 @@ fn build_scatter_chart_with_label_flags_pptx(
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -1197,15 +1253,19 @@ fn build_scatter_chart_with_label_flags_pptx(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1214,7 +1274,8 @@ fn build_scatter_chart_with_label_flags_pptx(
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1346,15 +1407,19 @@ fn build_line_chart_with_marker_pptx(symbol: &str, size: Option<i32>) -> Vec<u8>
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1363,7 +1428,8 @@ fn build_line_chart_with_marker_pptx(symbol: &str, size: Option<i32>) -> Vec<u8>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1424,7 +1490,8 @@ fn build_pie_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
 </Relationships>"#;
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -1459,7 +1526,8 @@ fn build_pie_chart_pptx() -> Vec<u8> {
     </c:plotArea>
     <c:legend><c:legendPos val="r"/></c:legend>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -1484,15 +1552,19 @@ fn build_pie_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1501,7 +1573,8 @@ fn build_pie_chart_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1639,15 +1712,19 @@ fn build_pie_chart_with_dlabels_pptx(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1656,7 +1733,8 @@ fn build_pie_chart_with_dlabels_pptx(
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1795,15 +1873,19 @@ fn build_doughnut_chart_with_dlabels_pptx(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1812,7 +1894,8 @@ fn build_doughnut_chart_with_dlabels_pptx(
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -1934,15 +2017,19 @@ fn build_doughnut_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -1951,7 +2038,8 @@ fn build_doughnut_chart_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2063,15 +2151,19 @@ fn build_multi_series_pie_chart_pptx() -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -2080,7 +2172,8 @@ fn build_multi_series_pie_chart_pptx() -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2175,17 +2268,27 @@ fn build_pie3d_chart_pptx() -> Vec<u8> {
   <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
-    zip.start_file("[Content_Types].xml", opts).unwrap(); zip.write_all(content_types.as_bytes()).unwrap();
-    zip.start_file("_rels/.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/presentation.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap(); zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap(); zip.write_all(slide_rels.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/chart1.xml", opts).unwrap(); zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
     zip.finish().unwrap().into_inner()
 }
@@ -2240,7 +2343,8 @@ fn build_of_pie_chart_variant_pptx(
         ""
     };
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -2281,7 +2385,8 @@ fn build_of_pie_chart_variant_pptx(
       </c:ofPieChart>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -2305,12 +2410,14 @@ fn build_of_pie_chart_variant_pptx(
     zip.start_file("ppt/presentation.xml", opts).unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2373,11 +2480,11 @@ fn build_chart_preview_fallback_pptx() -> Vec<u8> {
 </Relationships>"#;
 
     let png_data: Vec<u8> = vec![
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00,
-        0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08,
-        0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
-        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
+        0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x63, 0xF8,
+        0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33, 0x00, 0x00, 0x00,
+        0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ];
 
     let buf = Vec::new();
@@ -2403,16 +2510,19 @@ fn build_chart_preview_fallback_pptx() -> Vec<u8> {
     zip.start_file("ppt/presentation.xml", opts).unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/_rels/chart1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/charts/_rels/chart1.xml.rels", opts)
+        .unwrap();
     zip.write_all(chart_rels.as_bytes()).unwrap();
     zip.start_file("ppt/media/chart-preview.png", opts).unwrap();
     zip.write_all(&png_data).unwrap();
@@ -2489,12 +2599,11 @@ fn build_radar_chart_variant_pptx(
                 let marker_size_xml = marker_size
                     .map(|value| format!("<c:size val=\"{value}\"/>"))
                     .unwrap_or_default();
-                format!(
-                    "<c:marker><c:symbol val=\"{symbol}\"/>{marker_size_xml}</c:marker>"
-                )
+                format!("<c:marker><c:symbol val=\"{symbol}\"/>{marker_size_xml}</c:marker>")
             })
             .unwrap_or_default();
-        series_xml.push_str(&format!(r#"
+        series_xml.push_str(&format!(
+            r#"
         <c:ser>
           <c:idx val="{idx}"/>
           <c:order val="{idx}"/>
@@ -2518,7 +2627,9 @@ fn build_radar_chart_variant_pptx(
               <c:pt idx="3"><c:v>{}</c:v></c:pt>
             </c:numLit>
           </c:val>
-        </c:ser>"#, values[0], values[1], values[2], values[3]));
+        </c:ser>"#,
+            values[0], values[1], values[2], values[3]
+        ));
     }
     let d_lbls_xml = if show_value_labels {
         "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
@@ -2526,7 +2637,8 @@ fn build_radar_chart_variant_pptx(
         ""
     };
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -2550,7 +2662,8 @@ fn build_radar_chart_variant_pptx(
       </c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -2574,12 +2687,14 @@ fn build_radar_chart_variant_pptx(
     zip.start_file("ppt/presentation.xml", opts).unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2611,11 +2726,25 @@ fn build_bubble_chart_with_width_semantics_pptx() -> Vec<u8> {
 }
 
 fn build_bubble_chart_with_negative_sizes_pptx() -> Vec<u8> {
-    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("area"), Some("0"), Some(&[[-6.0, 14.0, 10.0]]))
+    build_bubble_chart_semantics_pptx(
+        1,
+        false,
+        Some("100"),
+        Some("area"),
+        Some("0"),
+        Some(&[[-6.0, 14.0, 10.0]]),
+    )
 }
 
 fn build_bubble_chart_with_show_neg_bubbles_pptx(show_neg_bubbles: &str) -> Vec<u8> {
-    build_bubble_chart_semantics_pptx(1, false, Some("100"), Some("area"), Some(show_neg_bubbles), None)
+    build_bubble_chart_semantics_pptx(
+        1,
+        false,
+        Some("100"),
+        Some("area"),
+        Some(show_neg_bubbles),
+        None,
+    )
 }
 
 fn build_bubble_chart_semantics_pptx(
@@ -2661,13 +2790,18 @@ fn build_bubble_chart_semantics_pptx(
     for idx in 0..series_count {
         let bubble_sizes = bubble_size_sets
             .and_then(|sets| sets.get(idx).copied())
-            .unwrap_or(if idx == 0 { [6.0, 14.0, 10.0] } else { [8.0, 12.0, 9.0] });
+            .unwrap_or(if idx == 0 {
+                [6.0, 14.0, 10.0]
+            } else {
+                [8.0, 12.0, 9.0]
+            });
         let (name, x_values, y_values) = if idx == 0 {
             ("Pipeline", [10, 20, 35], [15, 28, 12])
         } else {
             ("Forecast", [14, 26, 32], [18, 20, 26])
         };
-        series_xml.push_str(&format!(r#"
+        series_xml.push_str(&format!(
+            r#"
         <c:ser>
           <c:idx val="{idx}"/>
           <c:order val="{idx}"/>
@@ -2696,7 +2830,17 @@ fn build_bubble_chart_semantics_pptx(
               <c:pt idx="2"><c:v>{}</c:v></c:pt>
             </c:numLit>
           </c:bubbleSize>
-        </c:ser>"#, x_values[0], x_values[1], x_values[2], y_values[0], y_values[1], y_values[2], bubble_sizes[0], bubble_sizes[1], bubble_sizes[2]));
+        </c:ser>"#,
+            x_values[0],
+            x_values[1],
+            x_values[2],
+            y_values[0],
+            y_values[1],
+            y_values[2],
+            bubble_sizes[0],
+            bubble_sizes[1],
+            bubble_sizes[2]
+        ));
     }
     let d_lbls_xml = if show_value_labels {
         "<c:dLbls><c:showVal val=\"1\"/></c:dLbls>"
@@ -2713,7 +2857,8 @@ fn build_bubble_chart_semantics_pptx(
         .map(|value| format!("<c:showNegBubbles val=\"{value}\"/>"))
         .unwrap_or_default();
 
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -2734,7 +2879,8 @@ fn build_bubble_chart_semantics_pptx(
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -2758,12 +2904,14 @@ fn build_bubble_chart_semantics_pptx(
     zip.start_file("ppt/presentation.xml", opts).unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2888,15 +3036,19 @@ fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -2905,7 +3057,8 @@ fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -2934,7 +3087,11 @@ fn build_chart_pptx(bar_dir: &str, series_count: usize) -> Vec<u8> {
     zip.finish().unwrap().into_inner()
 }
 
-fn build_chart_with_value_labels_pptx(bar_dir: &str, show_value: bool, show_category_name: bool) -> Vec<u8> {
+fn build_chart_with_value_labels_pptx(
+    bar_dir: &str,
+    show_value: bool,
+    show_category_name: bool,
+) -> Vec<u8> {
     build_chart_with_label_flags_pptx(bar_dir, show_value, show_category_name, false, None)
 }
 
@@ -2976,7 +3133,8 @@ fn build_multi_series_chart_with_label_flags_pptx(
 
     let show_value = if show_value { 1 } else { 0 };
     let show_series_name = if show_series_name { 1 } else { 0 };
-    let chart_xml = format!(r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    let chart_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
               xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -3011,7 +3169,8 @@ fn build_multi_series_chart_with_label_flags_pptx(
       <c:valAx><c:axId val="456"/><c:crossAx val="123"/></c:valAx>
     </c:plotArea>
   </c:chart>
-</c:chartSpace>"#);
+</c:chartSpace>"#
+    );
 
     let buf = Vec::new();
     let cursor = Cursor::new(buf);
@@ -3026,14 +3185,24 @@ fn build_multi_series_chart_with_label_flags_pptx(
   <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
-    zip.start_file("[Content_Types].xml", opts).unwrap(); zip.write_all(content_types.as_bytes()).unwrap();
-    zip.start_file("_rels/.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/presentation.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap(); zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap(); zip.write_all(slide_rels.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/chart1.xml", opts).unwrap(); zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
     zip.finish().unwrap().into_inner()
 }
 
@@ -3152,15 +3321,19 @@ fn build_chart_with_label_flags_pptx(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -3169,7 +3342,8 @@ fn build_chart_with_label_flags_pptx(
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -3319,15 +3493,19 @@ fn build_chart_spacing_pptx(
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
 </Relationships>"#).unwrap();
     zip.start_file("ppt/presentation.xml", opts).unwrap();
-    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
                 xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst>
   <p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap();
+</p:presentation>"#,
+    )
+    .unwrap();
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
     zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
@@ -3336,7 +3514,8 @@ fn build_chart_spacing_pptx(
 </Relationships>"#).unwrap();
     zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
     zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
     zip.write_all(slide_rels.as_bytes()).unwrap();
     zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
     zip.write_all(chart_xml.as_bytes()).unwrap();
@@ -3375,7 +3554,14 @@ fn build_stacked_chart_with_value_labels_pptx(
     series_count: usize,
     show_value_labels: bool,
 ) -> Vec<u8> {
-    build_stacked_chart_with_label_flags_pptx(bar_dir, grouping, series_count, show_value_labels, false, false)
+    build_stacked_chart_with_label_flags_pptx(
+        bar_dir,
+        grouping,
+        series_count,
+        show_value_labels,
+        false,
+        false,
+    )
 }
 
 fn build_stacked_chart_with_label_flags_pptx(
@@ -3495,17 +3681,27 @@ fn build_stacked_chart_with_label_flags_pptx(
   <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 </Types>"#;
-    zip.start_file("[Content_Types].xml", opts).unwrap(); zip.write_all(content_types.as_bytes()).unwrap();
-    zip.start_file("_rels/.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(content_types.as_bytes()).unwrap();
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/presentation.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/presentation.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>"#).unwrap();
-    zip.start_file("ppt/_rels/presentation.xml.rels", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/_rels/presentation.xml.rels", opts)
+        .unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#).unwrap();
-    zip.start_file("ppt/slides/slide1.xml", opts).unwrap(); zip.write_all(slide_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts).unwrap(); zip.write_all(slide_rels.as_bytes()).unwrap();
-    zip.start_file("ppt/charts/chart1.xml", opts).unwrap(); zip.write_all(chart_xml.as_bytes()).unwrap();
-    zip.start_file("ppt/theme/theme1.xml", opts).unwrap(); zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    zip.start_file("ppt/slides/slide1.xml", opts).unwrap();
+    zip.write_all(slide_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/slides/_rels/slide1.xml.rels", opts)
+        .unwrap();
+    zip.write_all(slide_rels.as_bytes()).unwrap();
+    zip.start_file("ppt/charts/chart1.xml", opts).unwrap();
+    zip.write_all(chart_xml.as_bytes()).unwrap();
+    zip.start_file("ppt/theme/theme1.xml", opts).unwrap();
+    zip.write_all(br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="T"><a:themeElements><a:clrScheme name="O"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="O"><a:majorFont><a:latin typeface="Calibri"/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/></a:minorFont></a:fontScheme></a:themeElements></a:theme>"#).unwrap();
     zip.finish().unwrap().into_inner()
 }
@@ -4357,16 +4553,31 @@ fn test_chart_uses_preview_image_fallback_when_chart_part_exposes_image() {
 
     match &shape.shape_type {
         ShapeType::Chart(chart) => {
-            assert!(chart.direct_spec.is_none(), "Unsupported radar chart fixture should stay off the direct renderer path");
-            assert!(chart.preview_image.as_ref().is_some_and(|bytes| !bytes.is_empty()), "Chart preview image bytes should be captured from chart part relationships");
+            assert!(
+                chart.direct_spec.is_none(),
+                "Unsupported radar chart fixture should stay off the direct renderer path"
+            );
+            assert!(
+                chart
+                    .preview_image
+                    .as_ref()
+                    .is_some_and(|bytes| !bytes.is_empty()),
+                "Chart preview image bytes should be captured from chart part relationships"
+            );
             assert_eq!(chart.preview_mime.as_deref(), Some("image/png"));
         }
         _ => panic!("Expected Chart shape type"),
     }
 
     let html = render_html(&pptx);
-    assert!(html.contains("<img class=\"shape-image\""), "Chart preview fallback should render as an image when available: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Chart preview fallback should replace the generic placeholder when preview bytes exist: {html}");
+    assert!(
+        html.contains("<img class=\"shape-image\""),
+        "Chart preview fallback should render as an image when available: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Chart preview fallback should replace the generic placeholder when preview bytes exist: {html}"
+    );
 }
 
 #[test]
@@ -4411,11 +4622,26 @@ fn test_chart_renders_direct_column_chart() {
     let pptx = build_column_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-direct"), "Should render direct chart container: {html}");
-    assert!(html.contains("Revenue"), "Should render series label: {html}");
-    assert!(html.contains("chart-bar"), "Should render bar elements: {html}");
-    assert!(html.contains(">Q1<") && html.contains(">Q2<") && html.contains(">Q3<"), "Should render category labels: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Direct-renderable chart should not fall back to placeholder markup: {html}");
+    assert!(
+        html.contains("chart-direct"),
+        "Should render direct chart container: {html}"
+    );
+    assert!(
+        html.contains("Revenue"),
+        "Should render series label: {html}"
+    );
+    assert!(
+        html.contains("chart-bar"),
+        "Should render bar elements: {html}"
+    );
+    assert!(
+        html.contains(">Q1<") && html.contains(">Q2<") && html.contains(">Q3<"),
+        "Should render category labels: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Direct-renderable chart should not fall back to placeholder markup: {html}"
+    );
 }
 
 #[test]
@@ -4423,9 +4649,18 @@ fn test_chart_renders_direct_bar_chart_horizontally() {
     let pptx = build_bar_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-direct"), "Should render direct chart container: {html}");
-    assert!(html.contains("chart-bar-horizontal"), "Horizontal bar charts should emit horizontal bar class: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Renderable bar chart should not use placeholder: {html}");
+    assert!(
+        html.contains("chart-direct"),
+        "Should render direct chart container: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-horizontal"),
+        "Horizontal bar charts should emit horizontal bar class: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Renderable bar chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -4465,8 +4700,14 @@ fn test_column_chart_renders_value_labels() {
     let pptx = build_chart_with_value_labels_pptx("col", true, false);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Column chart should render value labels: {html}");
-    assert!(html.contains(">10<"), "Column chart value label should include the first value: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Column chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">10<"),
+        "Column chart value label should include the first value: {html}"
+    );
 }
 
 #[test]
@@ -4474,8 +4715,14 @@ fn test_horizontal_bar_chart_renders_value_labels() {
     let pptx = build_chart_with_value_labels_pptx("bar", true, false);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Horizontal bar chart should render value labels: {html}");
-    assert!(html.contains(">20<"), "Horizontal bar chart value label should include bar values: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Horizontal bar chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">20<"),
+        "Horizontal bar chart value label should include bar values: {html}"
+    );
 }
 
 #[test]
@@ -4483,7 +4730,10 @@ fn test_column_chart_renders_category_and_value_labels() {
     let pptx = build_chart_with_value_labels_pptx("col", true, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Q1: 10<"), "Column chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+    assert!(
+        html.contains(">Q1: 10<"),
+        "Column chart should combine category and value label text when showCatName and showVal are enabled: {html}"
+    );
 }
 
 #[test]
@@ -4491,7 +4741,10 @@ fn test_horizontal_bar_chart_renders_category_and_value_labels() {
     let pptx = build_chart_with_value_labels_pptx("bar", true, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Q2: 20<"), "Horizontal bar chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+    assert!(
+        html.contains(">Q2: 20<"),
+        "Horizontal bar chart should combine category and value label text when showCatName and showVal are enabled: {html}"
+    );
 }
 
 #[test]
@@ -4515,8 +4768,14 @@ fn test_column_chart_renders_centered_value_labels() {
     let pptx = build_chart_with_label_flags_pptx("col", true, false, false, Some("ctr"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"ctr\""), "Centered column labels should expose ctr label position: {html}");
-    assert!(html.contains("y=\"220.5\">10</text>"), "Centered column label should move into the bar center: {html}");
+    assert!(
+        html.contains("data-label-position=\"ctr\""),
+        "Centered column labels should expose ctr label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"220.5\">10</text>"),
+        "Centered column label should move into the bar center: {html}"
+    );
 }
 
 #[test]
@@ -4524,7 +4783,10 @@ fn test_horizontal_bar_chart_renders_explicit_out_end_labels() {
     let pptx = build_chart_with_label_flags_pptx("bar", true, false, false, Some("outEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"outEnd\""), "Explicit outEnd bar labels should expose outEnd label position: {html}");
+    assert!(
+        html.contains("data-label-position=\"outEnd\""),
+        "Explicit outEnd bar labels should expose outEnd label position: {html}"
+    );
 }
 
 #[test]
@@ -4548,8 +4810,14 @@ fn test_multi_series_column_chart_renders_series_name_and_value_labels() {
     let pptx = build_multi_series_chart_with_label_flags_pptx("col", true, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Revenue: 10<"), "Column chart should include series name in direct data labels: {html}");
-    assert!(html.contains(">Profit: 5<"), "Column chart should include each series name in direct data labels: {html}");
+    assert!(
+        html.contains(">Revenue: 10<"),
+        "Column chart should include series name in direct data labels: {html}"
+    );
+    assert!(
+        html.contains(">Profit: 5<"),
+        "Column chart should include each series name in direct data labels: {html}"
+    );
 }
 
 #[test]
@@ -4557,8 +4825,14 @@ fn test_multi_series_bar_chart_renders_series_name_and_value_labels() {
     let pptx = build_multi_series_chart_with_label_flags_pptx("bar", true, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Revenue: 20<") || html.contains(">Revenue: 10<"), "Bar chart should include series name in direct data labels: {html}");
-    assert!(html.contains(">Profit: 7<") || html.contains(">Profit: 5<"), "Bar chart should include each series name in direct data labels: {html}");
+    assert!(
+        html.contains(">Revenue: 20<") || html.contains(">Revenue: 10<"),
+        "Bar chart should include series name in direct data labels: {html}"
+    );
+    assert!(
+        html.contains(">Profit: 7<") || html.contains(">Profit: 5<"),
+        "Bar chart should include each series name in direct data labels: {html}"
+    );
 }
 
 #[test]
@@ -4566,8 +4840,14 @@ fn test_column_chart_renders_in_end_value_labels() {
     let pptx = build_chart_with_label_flags_pptx("col", true, false, false, Some("inEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"inEnd\""), "In-end column labels should expose inEnd label position: {html}");
-    assert!(html.contains("y=\"190.0\">10</text>"), "In-end column label should move inside the bar near its end: {html}");
+    assert!(
+        html.contains("data-label-position=\"inEnd\""),
+        "In-end column labels should expose inEnd label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"190.0\">10</text>"),
+        "In-end column label should move inside the bar near its end: {html}"
+    );
 }
 
 #[test]
@@ -4575,8 +4855,14 @@ fn test_horizontal_bar_chart_renders_in_end_value_labels() {
     let pptx = build_chart_with_label_flags_pptx("bar", true, false, false, Some("inEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"inEnd\""), "In-end horizontal bar labels should expose inEnd label position: {html}");
-    assert!(html.contains("x=\"162.3\"") || html.contains("x=\"162.2\""), "In-end horizontal bar label should move inside the bar near its end: {html}");
+    assert!(
+        html.contains("data-label-position=\"inEnd\""),
+        "In-end horizontal bar labels should expose inEnd label position: {html}"
+    );
+    assert!(
+        html.contains("x=\"162.3\"") || html.contains("x=\"162.2\""),
+        "In-end horizontal bar label should move inside the bar near its end: {html}"
+    );
 }
 
 #[test]
@@ -4600,10 +4886,22 @@ fn test_chart_renders_axis_titles() {
     let pptx = build_chart_with_axis_titles_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-axis-title-x"), "X axis title should render with dedicated class: {html}");
-    assert!(html.contains("chart-axis-title-y"), "Y axis title should render with dedicated class: {html}");
-    assert!(html.contains("Quarter"), "X axis title text should appear in HTML: {html}");
-    assert!(html.contains("Revenue ($M)"), "Y axis title text should appear in HTML: {html}");
+    assert!(
+        html.contains("chart-axis-title-x"),
+        "X axis title should render with dedicated class: {html}"
+    );
+    assert!(
+        html.contains("chart-axis-title-y"),
+        "Y axis title should render with dedicated class: {html}"
+    );
+    assert!(
+        html.contains("Quarter"),
+        "X axis title text should appear in HTML: {html}"
+    );
+    assert!(
+        html.contains("Revenue ($M)"),
+        "Y axis title text should appear in HTML: {html}"
+    );
 }
 
 #[test]
@@ -4611,8 +4909,14 @@ fn test_chart_renders_gap_width_and_overlap_attributes() {
     let pptx = build_chart_spacing_pptx("col", 2, 50, 100);
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-chart-gap-width=\"50\""), "Custom gap width should be exposed in chart markup: {html}");
-    assert!(html.contains("data-chart-overlap=\"100\""), "Custom overlap should be exposed in chart markup: {html}");
+    assert!(
+        html.contains("data-chart-gap-width=\"50\""),
+        "Custom gap width should be exposed in chart markup: {html}"
+    );
+    assert!(
+        html.contains("data-chart-overlap=\"100\""),
+        "Custom overlap should be exposed in chart markup: {html}"
+    );
 }
 
 #[test]
@@ -4620,10 +4924,22 @@ fn test_multi_series_column_chart_renders_grouped_directly() {
     let pptx = build_multi_series_column_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series chart should render directly once grouped rendering is supported: {html}");
-    assert!(html.contains("chart-bar"), "Multi-series column chart should render bar elements: {html}");
-    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series legend/labels should include both series names: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series chart should not fall back once grouped rendering is supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series chart should render directly once grouped rendering is supported: {html}"
+    );
+    assert!(
+        html.contains("chart-bar"),
+        "Multi-series column chart should render bar elements: {html}"
+    );
+    assert!(
+        html.contains("Revenue") && html.contains("Profit"),
+        "Multi-series legend/labels should include both series names: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series chart should not fall back once grouped rendering is supported: {html}"
+    );
 }
 
 #[test]
@@ -4631,10 +4947,22 @@ fn test_multi_series_bar_chart_renders_grouped_horizontal_bars() {
     let pptx = build_chart_pptx("bar", 2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series bar chart should render directly: {html}");
-    assert!(html.contains("chart-bar-horizontal"), "Multi-series bar chart should render horizontal bars: {html}");
-    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series legend/labels should include both series names: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series bar chart should not use placeholder once grouped rendering is supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series bar chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-horizontal"),
+        "Multi-series bar chart should render horizontal bars: {html}"
+    );
+    assert!(
+        html.contains("Revenue") && html.contains("Profit"),
+        "Multi-series legend/labels should include both series names: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series bar chart should not use placeholder once grouped rendering is supported: {html}"
+    );
 }
 
 #[test]
@@ -4659,10 +4987,22 @@ fn test_line_chart_renders_directly() {
     let pptx = build_line_chart_pptx(1);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Line chart should render directly: {html}");
-    assert!(html.contains("chart-line"), "Line chart should render a line path/polyline: {html}");
-    assert!(html.contains("chart-point"), "Line chart should render point markers: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Line chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Line chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-line"),
+        "Line chart should render a line path/polyline: {html}"
+    );
+    assert!(
+        html.contains("chart-point"),
+        "Line chart should render point markers: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Line chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -4703,8 +5043,14 @@ fn test_line_chart_renders_value_labels() {
     let pptx = build_line_chart_with_value_labels_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Line chart should render value labels: {html}");
-    assert!(html.contains(">20<"), "Line chart should render point values as labels: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Line chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">20<"),
+        "Line chart should render point values as labels: {html}"
+    );
 }
 
 #[test]
@@ -4712,8 +5058,14 @@ fn test_area_chart_renders_value_labels() {
     let pptx = build_area_chart_with_value_labels_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Area chart should render value labels: {html}");
-    assert!(html.contains(">30<"), "Area chart should render point values as labels: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Area chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">30<"),
+        "Area chart should render point values as labels: {html}"
+    );
 }
 
 #[test]
@@ -4721,7 +5073,10 @@ fn test_line_chart_renders_category_and_value_labels() {
     let pptx = build_line_chart_with_label_flags_pptx(true, true, false, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Q2: 20<"), "Line chart should combine category and value label text when showCatName and showVal are enabled: {html}");
+    assert!(
+        html.contains(">Q2: 20<"),
+        "Line chart should combine category and value label text when showCatName and showVal are enabled: {html}"
+    );
 }
 
 #[test]
@@ -4729,7 +5084,10 @@ fn test_area_chart_renders_series_and_value_labels() {
     let pptx = build_area_chart_with_label_flags_pptx(true, false, true, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Revenue: 30<"), "Area chart should combine series name and value label text when showSerName and showVal are enabled: {html}");
+    assert!(
+        html.contains(">Revenue: 30<"),
+        "Area chart should combine series name and value label text when showSerName and showVal are enabled: {html}"
+    );
 }
 
 #[test]
@@ -4737,8 +5095,14 @@ fn test_line_chart_renders_centered_value_labels() {
     let pptx = build_line_chart_with_label_flags_pptx(true, false, false, Some("ctr"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"ctr\""), "Centered line labels should expose ctr label position: {html}");
-    assert!(html.contains("y=\"93.0\">20</text>"), "Centered line label should sit on the point center: {html}");
+    assert!(
+        html.contains("data-label-position=\"ctr\""),
+        "Centered line labels should expose ctr label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"93.0\">20</text>"),
+        "Centered line label should sit on the point center: {html}"
+    );
 }
 
 #[test]
@@ -4746,8 +5110,14 @@ fn test_line_chart_renders_in_end_value_labels() {
     let pptx = build_line_chart_with_label_flags_pptx(true, false, false, Some("inEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"inEnd\""), "Line inEnd labels should expose inEnd label position: {html}");
-    assert!(html.contains("y=\"103.0\">20</text>"), "Line inEnd label should move below the point: {html}");
+    assert!(
+        html.contains("data-label-position=\"inEnd\""),
+        "Line inEnd labels should expose inEnd label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"103.0\">20</text>"),
+        "Line inEnd label should move below the point: {html}"
+    );
 }
 
 #[test]
@@ -4755,7 +5125,10 @@ fn test_area_chart_renders_explicit_out_end_labels() {
     let pptx = build_area_chart_with_label_flags_pptx(true, false, false, Some("outEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"outEnd\""), "Area outEnd labels should expose outEnd label position: {html}");
+    assert!(
+        html.contains("data-label-position=\"outEnd\""),
+        "Area outEnd labels should expose outEnd label position: {html}"
+    );
 }
 
 #[test]
@@ -4763,8 +5136,14 @@ fn test_area_chart_renders_in_end_value_labels() {
     let pptx = build_area_chart_with_label_flags_pptx(true, false, false, Some("inEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"inEnd\""), "Area inEnd labels should expose inEnd label position: {html}");
-    assert!(html.contains("y=\"103.0\">20</text>"), "Area inEnd label should move below the point: {html}");
+    assert!(
+        html.contains("data-label-position=\"inEnd\""),
+        "Area inEnd labels should expose inEnd label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"103.0\">20</text>"),
+        "Area inEnd label should move below the point: {html}"
+    );
 }
 
 #[test]
@@ -4793,10 +5172,22 @@ fn test_scatter_chart_renders_directly() {
     let pptx = build_scatter_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Scatter chart should render directly: {html}");
-    assert!(html.contains("<circle class=\"chart-point\""), "Scatter chart should render points: {html}");
-    assert!(!html.contains("<polyline class=\"chart-line\""), "Scatter chart should not render a line path in marker-only mode: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Scatter chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Scatter chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("<circle class=\"chart-point\""),
+        "Scatter chart should render points: {html}"
+    );
+    assert!(
+        !html.contains("<polyline class=\"chart-line\""),
+        "Scatter chart should not render a line path in marker-only mode: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Scatter chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -4820,8 +5211,14 @@ fn test_scatter_chart_renders_value_labels() {
     let pptx = build_scatter_chart_with_flags_pptx("marker", true, false, false);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Scatter chart should render value labels: {html}");
-    assert!(html.contains(">20<"), "Scatter chart should render point values as labels: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Scatter chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">20<"),
+        "Scatter chart should render point values as labels: {html}"
+    );
 }
 
 #[test]
@@ -4829,7 +5226,10 @@ fn test_scatter_chart_renders_category_and_value_labels() {
     let pptx = build_scatter_chart_with_flags_pptx("marker", true, true, false);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">2: 20<"), "Scatter chart should combine x-value category text and point value labels: {html}");
+    assert!(
+        html.contains(">2: 20<"),
+        "Scatter chart should combine x-value category text and point value labels: {html}"
+    );
 }
 
 #[test]
@@ -4837,7 +5237,10 @@ fn test_scatter_chart_renders_series_and_value_labels() {
     let pptx = build_scatter_chart_with_flags_pptx("marker", true, false, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains(">Revenue: 20<"), "Scatter chart should combine series name and value labels: {html}");
+    assert!(
+        html.contains(">Revenue: 20<"),
+        "Scatter chart should combine series name and value labels: {html}"
+    );
 }
 
 #[test]
@@ -4845,25 +5248,42 @@ fn test_scatter_chart_renders_centered_value_labels() {
     let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("ctr"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"ctr\""), "Centered scatter labels should expose ctr label position: {html}");
-    assert!(html.contains("y=\"8.0\">20</text>"), "Centered scatter label should sit on the point center: {html}");
+    assert!(
+        html.contains("data-label-position=\"ctr\""),
+        "Centered scatter labels should expose ctr label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"8.0\">20</text>"),
+        "Centered scatter label should sit on the point center: {html}"
+    );
 }
 
 #[test]
 fn test_scatter_chart_renders_explicit_out_end_labels() {
-    let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("outEnd"));
+    let pptx =
+        build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("outEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"outEnd\""), "Scatter outEnd labels should expose outEnd label position: {html}");
+    assert!(
+        html.contains("data-label-position=\"outEnd\""),
+        "Scatter outEnd labels should expose outEnd label position: {html}"
+    );
 }
 
 #[test]
 fn test_scatter_chart_renders_in_end_value_labels() {
-    let pptx = build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("inEnd"));
+    let pptx =
+        build_scatter_chart_with_label_flags_pptx("marker", true, false, false, Some("inEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"inEnd\""), "Scatter inEnd labels should expose inEnd label position: {html}");
-    assert!(html.contains("y=\"18.0\">20</text>"), "Scatter inEnd label should move below the point: {html}");
+    assert!(
+        html.contains("data-label-position=\"inEnd\""),
+        "Scatter inEnd labels should expose inEnd label position: {html}"
+    );
+    assert!(
+        html.contains("y=\"18.0\">20</text>"),
+        "Scatter inEnd label should move below the point: {html}"
+    );
 }
 
 #[test]
@@ -4886,8 +5306,14 @@ fn test_scatter_line_marker_renders_line_and_points() {
     let pptx = build_scatter_chart_with_style_pptx("lineMarker");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<polyline class=\"chart-line\""), "Scatter lineMarker should render a line path: {html}");
-    assert!(html.contains("<circle class=\"chart-point\""), "Scatter lineMarker should render points: {html}");
+    assert!(
+        html.contains("<polyline class=\"chart-line\""),
+        "Scatter lineMarker should render a line path: {html}"
+    );
+    assert!(
+        html.contains("<circle class=\"chart-point\""),
+        "Scatter lineMarker should render points: {html}"
+    );
 }
 
 #[test]
@@ -4895,8 +5321,14 @@ fn test_scatter_line_style_suppresses_points() {
     let pptx = build_scatter_chart_with_style_pptx("line");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<polyline class=\"chart-line\""), "Scatter line style should render a line path: {html}");
-    assert!(!html.contains("<circle class=\"chart-point\""), "Scatter line style should suppress point markers: {html}");
+    assert!(
+        html.contains("<polyline class=\"chart-line\""),
+        "Scatter line style should render a line path: {html}"
+    );
+    assert!(
+        !html.contains("<circle class=\"chart-point\""),
+        "Scatter line style should suppress point markers: {html}"
+    );
 }
 
 #[test]
@@ -5053,18 +5485,36 @@ fn test_bubble_chart_renders_directly() {
     let pptx = build_bubble_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Bubble chart should render directly once bubble support is available: {html}");
-    assert!(html.contains("class=\"chart-bubble\""), "Bubble chart should emit bubble circles rather than fallback markers: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Bubble chart should not use the generic placeholder once supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Bubble chart should render directly once bubble support is available: {html}"
+    );
+    assert!(
+        html.contains("class=\"chart-bubble\""),
+        "Bubble chart should emit bubble circles rather than fallback markers: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Bubble chart should not use the generic placeholder once supported: {html}"
+    );
 }
 
 #[test]
 fn test_positive_bubble_chart_with_show_neg_bubbles_true_still_renders_directly() {
     let html = render_html(&build_bubble_chart_with_show_neg_bubbles_pptx("1"));
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "showNegBubbles on positive-only bubble data should not disable direct rendering: {html}");
-    assert!(html.contains("class=\"chart-bubble\""), "showNegBubbles on positive-only bubble data should still render bubbles directly: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "showNegBubbles on positive-only bubble data should not force fallback: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "showNegBubbles on positive-only bubble data should not disable direct rendering: {html}"
+    );
+    assert!(
+        html.contains("class=\"chart-bubble\""),
+        "showNegBubbles on positive-only bubble data should still render bubbles directly: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "showNegBubbles on positive-only bubble data should not force fallback: {html}"
+    );
 }
 
 #[test]
@@ -5078,8 +5528,14 @@ fn test_negative_bubble_chart_with_show_neg_bubbles_true_still_falls_back() {
         Some(&[[-6.0, 14.0, 10.0]]),
     ));
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "showNegBubbles should not bypass the current negative-size fallback contract: {html}");
-    assert!(!html.contains("class=\"chart-bubble\""), "negative-size bubbles should remain off the direct renderer even when showNegBubbles is true: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "showNegBubbles should not bypass the current negative-size fallback contract: {html}"
+    );
+    assert!(
+        !html.contains("class=\"chart-bubble\""),
+        "negative-size bubbles should remain off the direct renderer even when showNegBubbles is true: {html}"
+    );
 }
 
 #[test]
@@ -5087,10 +5543,22 @@ fn test_bubble_scale_changes_rendered_radius() {
     let default_html = render_html(&build_bubble_chart_with_scale_pptx("100"));
     let scaled_html = render_html(&build_bubble_chart_with_scale_pptx("200"));
 
-    assert!(default_html.contains("class=\"chart-bubble\""), "Default-scale bubble chart should render directly: {default_html}");
-    assert!(scaled_html.contains("class=\"chart-bubble\""), "Scaled bubble chart should render directly: {scaled_html}");
-    assert!(default_html.contains("r=\"10.0\""), "Default bubble scale should preserve the baseline radius for the smallest bubble: {default_html}");
-    assert!(scaled_html.contains("r=\"20.0\""), "bubbleScale=200 should enlarge the same bubble radius relative to the baseline chart: {scaled_html}");
+    assert!(
+        default_html.contains("class=\"chart-bubble\""),
+        "Default-scale bubble chart should render directly: {default_html}"
+    );
+    assert!(
+        scaled_html.contains("class=\"chart-bubble\""),
+        "Scaled bubble chart should render directly: {scaled_html}"
+    );
+    assert!(
+        default_html.contains("r=\"10.0\""),
+        "Default bubble scale should preserve the baseline radius for the smallest bubble: {default_html}"
+    );
+    assert!(
+        scaled_html.contains("r=\"20.0\""),
+        "bubbleScale=200 should enlarge the same bubble radius relative to the baseline chart: {scaled_html}"
+    );
 }
 
 #[test]
@@ -5098,8 +5566,14 @@ fn test_bubble_chart_with_width_semantics_falls_back_to_placeholder() {
     let pptx = build_bubble_chart_with_width_semantics_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Width-semantics bubble charts should stay on fallback until width-based sizing is implemented: {html}");
-    assert!(!html.contains("class=\"chart-bubble\""), "Width-semantics bubble charts should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Width-semantics bubble charts should stay on fallback until width-based sizing is implemented: {html}"
+    );
+    assert!(
+        !html.contains("class=\"chart-bubble\""),
+        "Width-semantics bubble charts should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5107,8 +5581,14 @@ fn test_bubble_chart_with_negative_sizes_falls_back_to_placeholder() {
     let pptx = build_bubble_chart_with_negative_sizes_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Negative-size bubble charts should stay on fallback until negative-bubble semantics are implemented: {html}");
-    assert!(!html.contains("class=\"chart-bubble\""), "Negative-size bubble charts should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Negative-size bubble charts should stay on fallback until negative-bubble semantics are implemented: {html}"
+    );
+    assert!(
+        !html.contains("class=\"chart-bubble\""),
+        "Negative-size bubble charts should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5116,8 +5596,14 @@ fn test_multi_series_bubble_chart_falls_back_to_placeholder() {
     let pptx = build_multi_series_bubble_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series bubble should stay on the safe fallback path for now: {html}");
-    assert!(!html.contains("class=\"chart-bubble\""), "Multi-series bubble should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series bubble should stay on the safe fallback path for now: {html}"
+    );
+    assert!(
+        !html.contains("class=\"chart-bubble\""),
+        "Multi-series bubble should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5125,8 +5611,14 @@ fn test_bubble_chart_with_value_labels_falls_back_to_placeholder() {
     let pptx = build_bubble_chart_with_value_labels_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Bubble charts with data labels should stay on fallback until label rendering is implemented: {html}");
-    assert!(!html.contains("class=\"chart-bubble\""), "Bubble charts with data labels should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Bubble charts with data labels should stay on fallback until label rendering is implemented: {html}"
+    );
+    assert!(
+        !html.contains("class=\"chart-bubble\""),
+        "Bubble charts with data labels should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5134,10 +5626,22 @@ fn test_area_chart_renders_directly() {
     let pptx = build_area_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Area chart should render directly: {html}");
-    assert!(html.contains("chart-area"), "Area chart should render a filled area path: {html}");
-    assert!(html.contains("chart-line"), "Area chart should render an outline line path: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Area chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Area chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-area"),
+        "Area chart should render a filled area path: {html}"
+    );
+    assert!(
+        html.contains("chart-line"),
+        "Area chart should render an outline line path: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Area chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5145,9 +5649,18 @@ fn test_area3d_chart_renders_directly_as_flat_area() {
     let pptx = build_area3d_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "3D area chart should reuse the direct chart renderer when the series shape matches a flat area: {html}");
-    assert!(html.contains("chart-area"), "3D area chart should emit a flat area polygon through the existing area renderer: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "3D area chart should not use placeholder once flattening is supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "3D area chart should reuse the direct chart renderer when the series shape matches a flat area: {html}"
+    );
+    assert!(
+        html.contains("chart-area"),
+        "3D area chart should emit a flat area polygon through the existing area renderer: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "3D area chart should not use placeholder once flattening is supported: {html}"
+    );
 }
 
 #[test]
@@ -5155,8 +5668,14 @@ fn test_stacked_area3d_chart_falls_back_to_placeholder() {
     let pptx = build_area3d_chart_with_grouping_pptx("stacked");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Stacked area3D should stay on fallback until stacked flattening is explicitly supported: {html}");
-    assert!(!html.contains("<div class=\"chart-direct\">"), "Stacked area3D should not enter the direct chart path yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Stacked area3D should stay on fallback until stacked flattening is explicitly supported: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-direct\">"),
+        "Stacked area3D should not enter the direct chart path yet: {html}"
+    );
 }
 
 #[test]
@@ -5164,10 +5683,22 @@ fn test_radar_chart_renders_directly() {
     let pptx = build_radar_chart_pptx("standard");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Radar chart should render directly once radar support is available: {html}");
-    assert!(html.contains("chart-radar-line"), "Radar chart should emit a radar line path: {html}");
-    assert!(html.contains("Q1") && html.contains("Q2") && html.contains("Q3") && html.contains("Q4"), "Radar chart should render category labels: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Radar chart should no longer use the generic placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Radar chart should render directly once radar support is available: {html}"
+    );
+    assert!(
+        html.contains("chart-radar-line"),
+        "Radar chart should emit a radar line path: {html}"
+    );
+    assert!(
+        html.contains("Q1") && html.contains("Q2") && html.contains("Q3") && html.contains("Q4"),
+        "Radar chart should render category labels: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Radar chart should no longer use the generic placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5193,9 +5724,18 @@ fn test_radar_marker_style_uses_series_marker_symbol_and_size() {
     let pptx = build_radar_chart_with_marker_pptx("diamond", Some(12));
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Marker-style radar should still render directly: {html}");
-    assert!(html.contains("data-marker-symbol=\"diamond\""), "Radar marker style should expose the parsed marker symbol on rendered points: {html}");
-    assert!(html.contains("r=\"6.0\""), "Radar marker style should scale point radius from the parsed marker size: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Marker-style radar should still render directly: {html}"
+    );
+    assert!(
+        html.contains("data-marker-symbol=\"diamond\""),
+        "Radar marker style should expose the parsed marker symbol on rendered points: {html}"
+    );
+    assert!(
+        html.contains("r=\"6.0\""),
+        "Radar marker style should scale point radius from the parsed marker size: {html}"
+    );
 }
 
 #[test]
@@ -5203,8 +5743,14 @@ fn test_radar_marker_symbol_none_suppresses_points() {
     let pptx = build_radar_chart_with_marker_pptx("none", None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-radar-line"), "Radar marker style with symbol none should still render the radar path: {html}");
-    assert!(!html.contains("<circle class=\"chart-point\""), "Radar marker symbol none should suppress point rendering: {html}");
+    assert!(
+        html.contains("chart-radar-line"),
+        "Radar marker style with symbol none should still render the radar path: {html}"
+    );
+    assert!(
+        !html.contains("<circle class=\"chart-point\""),
+        "Radar marker symbol none should suppress point rendering: {html}"
+    );
 }
 
 #[test]
@@ -5212,8 +5758,14 @@ fn test_radar_filled_style_renders_fill_without_markers() {
     let pptx = build_radar_chart_pptx("filled");
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-radar-fill"), "Filled radar should emit a filled radar polygon: {html}");
-    assert!(!html.contains("<circle class=\"chart-point\""), "Filled radar should not render marker points: {html}");
+    assert!(
+        html.contains("chart-radar-fill"),
+        "Filled radar should emit a filled radar polygon: {html}"
+    );
+    assert!(
+        !html.contains("<circle class=\"chart-point\""),
+        "Filled radar should not render marker points: {html}"
+    );
 }
 
 #[test]
@@ -5221,9 +5773,18 @@ fn test_multi_series_radar_chart_renders_directly() {
     let pptx = build_multi_series_radar_chart_pptx("standard");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series radar should render directly once bounded multi-series radar support is enabled: {html}");
-    assert!(html.matches("chart-radar-line").count() >= 2, "Multi-series radar should emit one radar line per series: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar should no longer use the generic placeholder when the bounded multi-series slice is supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series radar should render directly once bounded multi-series radar support is enabled: {html}"
+    );
+    assert!(
+        html.matches("chart-radar-line").count() >= 2,
+        "Multi-series radar should emit one radar line per series: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series radar should no longer use the generic placeholder when the bounded multi-series slice is supported: {html}"
+    );
 }
 
 #[test]
@@ -5231,8 +5792,14 @@ fn test_multi_series_radar_chart_with_value_labels_falls_back_to_placeholder() {
     let pptx = build_radar_chart_variant_pptx("standard", 2, true, None, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series radar with data labels should stay on fallback until bounded radar label support is implemented: {html}");
-    assert!(!html.contains("<div class=\"chart-direct\">"), "Multi-series radar with data labels should not enter the direct chart path yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series radar with data labels should stay on fallback until bounded radar label support is implemented: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-direct\">"),
+        "Multi-series radar with data labels should not enter the direct chart path yet: {html}"
+    );
 }
 
 #[test]
@@ -5240,9 +5807,18 @@ fn test_multi_series_radar_marker_style_renders_markers_for_each_series() {
     let pptx = build_radar_chart_variant_pptx("marker", 2, false, Some("diamond"), Some(12));
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series marker radar should render directly: {html}");
-    assert!(html.matches("chart-radar-line").count() >= 2, "Multi-series marker radar should emit one radar line per series: {html}");
-    assert!(html.matches("data-marker-symbol=\"diamond\"").count() >= 8, "Multi-series marker radar should render markers for each point in each series: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series marker radar should render directly: {html}"
+    );
+    assert!(
+        html.matches("chart-radar-line").count() >= 2,
+        "Multi-series marker radar should emit one radar line per series: {html}"
+    );
+    assert!(
+        html.matches("data-marker-symbol=\"diamond\"").count() >= 8,
+        "Multi-series marker radar should render markers for each point in each series: {html}"
+    );
 }
 
 #[test]
@@ -5250,9 +5826,18 @@ fn test_multi_series_radar_filled_style_renders_fill_for_each_series() {
     let pptx = build_radar_chart_variant_pptx("filled", 2, false, None, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series filled radar should render directly: {html}");
-    assert!(html.matches("chart-radar-fill").count() >= 2, "Multi-series filled radar should emit one fill polygon per series: {html}");
-    assert!(!html.contains("<circle class=\"chart-point\""), "Filled multi-series radar should not render marker points: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series filled radar should render directly: {html}"
+    );
+    assert!(
+        html.matches("chart-radar-fill").count() >= 2,
+        "Multi-series filled radar should emit one fill polygon per series: {html}"
+    );
+    assert!(
+        !html.contains("<circle class=\"chart-point\""),
+        "Filled multi-series radar should not render marker points: {html}"
+    );
 }
 
 #[test]
@@ -5260,8 +5845,14 @@ fn test_radar_chart_with_value_labels_falls_back_to_placeholder() {
     let pptx = build_radar_chart_with_value_labels_pptx("standard");
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Radar charts with data labels should stay on fallback until label rendering is implemented: {html}");
-    assert!(!html.contains("chart-radar-line"), "Radar charts with data labels should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Radar charts with data labels should stay on fallback until label rendering is implemented: {html}"
+    );
+    assert!(
+        !html.contains("chart-radar-line"),
+        "Radar charts with data labels should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5269,8 +5860,14 @@ fn test_line_chart_marker_none_suppresses_points() {
     let pptx = build_line_chart_with_marker_pptx("none", None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-line"), "Line chart should still render the line path: {html}");
-    assert!(!html.contains("<circle class=\"chart-point\""), "Marker symbol none should suppress point rendering: {html}");
+    assert!(
+        html.contains("chart-line"),
+        "Line chart should still render the line path: {html}"
+    );
+    assert!(
+        !html.contains("<circle class=\"chart-point\""),
+        "Marker symbol none should suppress point rendering: {html}"
+    );
 }
 
 #[test]
@@ -5278,10 +5875,22 @@ fn test_multi_series_line_chart_renders_directly() {
     let pptx = build_line_chart_pptx(2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Multi-series line chart should render directly: {html}");
-    assert!(html.contains("Revenue") && html.contains("Profit"), "Multi-series line chart should render legend labels: {html}");
-    assert!(html.matches("chart-line").count() >= 2, "Multi-series line chart should render one line per series: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Multi-series line chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Multi-series line chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("Revenue") && html.contains("Profit"),
+        "Multi-series line chart should render legend labels: {html}"
+    );
+    assert!(
+        html.matches("chart-line").count() >= 2,
+        "Multi-series line chart should render one line per series: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series line chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5289,10 +5898,22 @@ fn test_stacked_column_chart_renders_directly() {
     let pptx = build_stacked_chart_pptx("col", "stacked", 2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Stacked column chart should render directly: {html}");
-    assert!(html.contains("Revenue") && html.contains("Profit"), "Stacked chart should render legend labels: {html}");
-    assert!(html.contains("chart-bar-stacked"), "Stacked column chart should emit stacked bar segments: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Stacked column chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Stacked column chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("Revenue") && html.contains("Profit"),
+        "Stacked chart should render legend labels: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-stacked"),
+        "Stacked column chart should emit stacked bar segments: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Stacked column chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5300,10 +5921,22 @@ fn test_percent_stacked_column_chart_normalizes_to_full_height() {
     let pptx = build_stacked_chart_pptx("col", "percentStacked", 2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "100% stacked chart should render directly: {html}");
-    assert!(html.contains("chart-bar-stacked"), "100% stacked chart should render stacked bars: {html}");
-    assert!(html.contains("data-chart-grouping=\"percent-stacked\""), "100% stacked chart should expose percent-stacked grouping marker: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "100% stacked chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "100% stacked chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-stacked"),
+        "100% stacked chart should render stacked bars: {html}"
+    );
+    assert!(
+        html.contains("data-chart-grouping=\"percent-stacked\""),
+        "100% stacked chart should expose percent-stacked grouping marker: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "100% stacked chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5311,11 +5944,26 @@ fn test_stacked_bar_chart_renders_directly() {
     let pptx = build_stacked_chart_pptx("bar", "stacked", 2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Stacked bar chart should render directly: {html}");
-    assert!(html.contains("Revenue") && html.contains("Profit"), "Stacked bar chart should render legend labels: {html}");
-    assert!(html.contains("chart-bar-horizontal"), "Stacked bar chart should emit horizontal bar segments: {html}");
-    assert!(html.contains("data-chart-grouping=\"stacked\""), "Stacked bar chart should expose stacked grouping marker: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Stacked bar chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Stacked bar chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("Revenue") && html.contains("Profit"),
+        "Stacked bar chart should render legend labels: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-horizontal"),
+        "Stacked bar chart should emit horizontal bar segments: {html}"
+    );
+    assert!(
+        html.contains("data-chart-grouping=\"stacked\""),
+        "Stacked bar chart should expose stacked grouping marker: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Stacked bar chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5323,10 +5971,22 @@ fn test_percent_stacked_bar_chart_normalizes_to_full_width() {
     let pptx = build_stacked_chart_pptx("bar", "percentStacked", 2);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "100% stacked bar chart should render directly: {html}");
-    assert!(html.contains("chart-bar-horizontal"), "100% stacked bar chart should render horizontal bar segments: {html}");
-    assert!(html.contains("data-chart-grouping=\"percent-stacked\""), "100% stacked bar chart should expose percent-stacked grouping marker: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "100% stacked bar chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "100% stacked bar chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-bar-horizontal"),
+        "100% stacked bar chart should render horizontal bar segments: {html}"
+    );
+    assert!(
+        html.contains("data-chart-grouping=\"percent-stacked\""),
+        "100% stacked bar chart should expose percent-stacked grouping marker: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "100% stacked bar chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5334,8 +5994,14 @@ fn test_stacked_column_chart_renders_value_labels() {
     let pptx = build_stacked_chart_with_value_labels_pptx("col", "stacked", 2, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Stacked column chart should render value labels: {html}");
-    assert!(html.contains(">15<") || html.contains(">20<"), "Stacked column chart should expose stacked segment values as labels: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Stacked column chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">15<") || html.contains(">20<"),
+        "Stacked column chart should expose stacked segment values as labels: {html}"
+    );
 }
 
 #[test]
@@ -5343,26 +6009,46 @@ fn test_percent_stacked_bar_chart_renders_value_labels() {
     let pptx = build_stacked_chart_with_value_labels_pptx("bar", "percentStacked", 2, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Percent-stacked bar chart should render value labels: {html}");
-    assert!(html.contains(">5<") || html.contains(">10<"), "Percent-stacked bar chart should keep raw point values in labels: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Percent-stacked bar chart should render value labels: {html}"
+    );
+    assert!(
+        html.contains(">5<") || html.contains(">10<"),
+        "Percent-stacked bar chart should keep raw point values in labels: {html}"
+    );
 }
 
 #[test]
 fn test_percent_stacked_column_renders_percent_labels() {
-    let pptx = build_stacked_chart_with_label_flags_pptx("col", "percentStacked", 2, false, false, true);
+    let pptx =
+        build_stacked_chart_with_label_flags_pptx("col", "percentStacked", 2, false, false, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<text class=\"chart-data-label\""), "Percent-stacked column chart should render percent labels: {html}");
-    assert!(html.contains("67%") || html.contains("57%"), "Percent-stacked column chart should render rounded percentage labels: {html}");
-    assert!(!html.contains(">10<"), "Percent-only labels should not render raw values: {html}");
+    assert!(
+        html.contains("<text class=\"chart-data-label\""),
+        "Percent-stacked column chart should render percent labels: {html}"
+    );
+    assert!(
+        html.contains("67%") || html.contains("57%"),
+        "Percent-stacked column chart should render rounded percentage labels: {html}"
+    );
+    assert!(
+        !html.contains(">10<"),
+        "Percent-only labels should not render raw values: {html}"
+    );
 }
 
 #[test]
 fn test_percent_stacked_bar_renders_category_and_percent_labels() {
-    let pptx = build_stacked_chart_with_label_flags_pptx("bar", "percentStacked", 2, false, true, true);
+    let pptx =
+        build_stacked_chart_with_label_flags_pptx("bar", "percentStacked", 2, false, true, true);
     let html = render_html(&pptx);
 
-    assert!(html.contains("Q1: 67%") || html.contains("Q2: 57%"), "Percent-stacked bar chart should combine category and percent labels: {html}");
+    assert!(
+        html.contains("Q1: 67%") || html.contains("Q2: 57%"),
+        "Percent-stacked bar chart should combine category and percent labels: {html}"
+    );
 }
 
 #[test]
@@ -5423,8 +6109,14 @@ fn test_pie_chart_renders_value_and_category_labels() {
     let pptx = build_pie_chart_with_dlabels_pptx(true, true, false, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-data-label"), "Pie chart should render data labels when enabled: {html}");
-    assert!(html.contains("North: 30"), "Pie chart should render category and value label text: {html}");
+    assert!(
+        html.contains("chart-data-label"),
+        "Pie chart should render data labels when enabled: {html}"
+    );
+    assert!(
+        html.contains("North: 30"),
+        "Pie chart should render category and value label text: {html}"
+    );
 }
 
 #[test]
@@ -5432,9 +6124,18 @@ fn test_doughnut_chart_renders_value_only_labels() {
     let pptx = build_doughnut_chart_with_dlabels_pptx(true, false, false, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-data-label"), "Doughnut chart should render data labels when enabled: {html}");
-    assert!(html.contains(">30<"), "Doughnut chart should render value-only label text: {html}");
-    assert!(!html.contains("North: 30"), "Value-only doughnut labels should not include category text: {html}");
+    assert!(
+        html.contains("chart-data-label"),
+        "Doughnut chart should render data labels when enabled: {html}"
+    );
+    assert!(
+        html.contains(">30<"),
+        "Doughnut chart should render value-only label text: {html}"
+    );
+    assert!(
+        !html.contains("North: 30"),
+        "Value-only doughnut labels should not include category text: {html}"
+    );
 }
 
 #[test]
@@ -5460,9 +6161,18 @@ fn test_pie_chart_renders_percent_only_labels() {
     let pptx = build_pie_chart_with_dlabels_pptx(false, false, true, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("30%"), "Pie chart should render percent-only label text: {html}");
-    assert!(!html.contains(">30<"), "Percent-only labels should not render raw values: {html}");
-    assert!(!html.contains("North: 30"), "Percent-only labels should not render category/value text: {html}");
+    assert!(
+        html.contains("30%"),
+        "Pie chart should render percent-only label text: {html}"
+    );
+    assert!(
+        !html.contains(">30<"),
+        "Percent-only labels should not render raw values: {html}"
+    );
+    assert!(
+        !html.contains("North: 30"),
+        "Percent-only labels should not render category/value text: {html}"
+    );
 }
 
 #[test]
@@ -5470,7 +6180,10 @@ fn test_doughnut_chart_renders_value_and_percent_labels() {
     let pptx = build_doughnut_chart_with_dlabels_pptx(true, false, true, None);
     let html = render_html(&pptx);
 
-    assert!(html.contains("30: 30%"), "Doughnut labels should combine value and percent when both are enabled: {html}");
+    assert!(
+        html.contains("30: 30%"),
+        "Doughnut labels should combine value and percent when both are enabled: {html}"
+    );
 }
 
 #[test]
@@ -5478,7 +6191,10 @@ fn test_pie_chart_renders_centered_labels() {
     let pptx = build_pie_chart_with_dlabels_pptx(true, false, false, Some("ctr"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"ctr\""), "Centered pie labels should expose ctr label position: {html}");
+    assert!(
+        html.contains("data-label-position=\"ctr\""),
+        "Centered pie labels should expose ctr label position: {html}"
+    );
 }
 
 #[test]
@@ -5486,7 +6202,10 @@ fn test_doughnut_chart_renders_out_end_labels() {
     let pptx = build_doughnut_chart_with_dlabels_pptx(true, false, false, Some("outEnd"));
     let html = render_html(&pptx);
 
-    assert!(html.contains("data-label-position=\"outEnd\""), "Doughnut outEnd labels should expose outEnd label position: {html}");
+    assert!(
+        html.contains("data-label-position=\"outEnd\""),
+        "Doughnut outEnd labels should expose outEnd label position: {html}"
+    );
 }
 
 #[test]
@@ -5494,7 +6213,10 @@ fn test_pie_chart_without_dlabels_does_not_render_data_labels() {
     let pptx = build_pie_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(!html.contains("<text class=\"chart-data-label\""), "Pie chart without dLbls should not render data labels: {html}");
+    assert!(
+        !html.contains("<text class=\"chart-data-label\""),
+        "Pie chart without dLbls should not render data labels: {html}"
+    );
 }
 
 #[test]
@@ -5502,10 +6224,22 @@ fn test_doughnut_chart_renders_directly() {
     let pptx = build_doughnut_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Doughnut chart should render directly: {html}");
-    assert!(html.contains("chart-pie-slice"), "Doughnut chart should render slice paths: {html}");
-    assert!(html.contains("data-chart-hole-size=\"60\""), "Doughnut chart should expose hole size metadata: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Doughnut chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Doughnut chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-pie-slice"),
+        "Doughnut chart should render slice paths: {html}"
+    );
+    assert!(
+        html.contains("data-chart-hole-size=\"60\""),
+        "Doughnut chart should expose hole size metadata: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Doughnut chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5513,10 +6247,22 @@ fn test_pie_chart_renders_directly() {
     let pptx = build_pie_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "Pie chart should render directly: {html}");
-    assert!(html.contains("chart-pie-slice"), "Pie chart should render slice paths: {html}");
-    assert!(html.contains("North") && html.contains("South") && html.contains("West"), "Pie chart should render category legend labels: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "Pie chart should not use placeholder: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "Pie chart should render directly: {html}"
+    );
+    assert!(
+        html.contains("chart-pie-slice"),
+        "Pie chart should render slice paths: {html}"
+    );
+    assert!(
+        html.contains("North") && html.contains("South") && html.contains("West"),
+        "Pie chart should render category legend labels: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "Pie chart should not use placeholder: {html}"
+    );
 }
 
 #[test]
@@ -5524,9 +6270,18 @@ fn test_pie_chart_renders_category_legend_items() {
     let pptx = build_pie_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("chart-legend-item"), "Pie chart should render legend items: {html}");
-    assert!(html.matches("chart-legend-item").count() >= 3, "Pie chart should render one legend item per category: {html}");
-    assert!(html.contains("North") && html.contains("South") && html.contains("West"), "Pie legend should use category labels: {html}");
+    assert!(
+        html.contains("chart-legend-item"),
+        "Pie chart should render legend items: {html}"
+    );
+    assert!(
+        html.matches("chart-legend-item").count() >= 3,
+        "Pie chart should render one legend item per category: {html}"
+    );
+    assert!(
+        html.contains("North") && html.contains("South") && html.contains("West"),
+        "Pie legend should use category labels: {html}"
+    );
 }
 
 #[test]
@@ -5534,8 +6289,14 @@ fn test_multi_series_pie_chart_falls_back_to_placeholder() {
     let pptx = build_multi_series_pie_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Multi-series pie should stay on safe fallback path: {html}");
-    assert!(!html.contains("<path class=\"chart-pie-slice\""), "Multi-series pie should not partially direct-render slices: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Multi-series pie should stay on safe fallback path: {html}"
+    );
+    assert!(
+        !html.contains("<path class=\"chart-pie-slice\""),
+        "Multi-series pie should not partially direct-render slices: {html}"
+    );
 }
 
 #[test]
@@ -5543,10 +6304,22 @@ fn test_pie3d_chart_renders_directly_as_flat_pie() {
     let pptx = build_pie3d_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "3D pie chart should reuse the direct chart renderer when the series shape matches a flat pie: {html}");
-    assert!(html.contains("<path class=\"chart-pie-slice\""), "3D pie chart should emit pie slices through the existing flat pie renderer: {html}");
-    assert!(html.contains("North") && html.contains("South"), "3D pie chart should preserve category labels in the flat direct render path: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "3D pie chart should no longer fall back to the generic chart placeholder when a flat pie render is possible: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "3D pie chart should reuse the direct chart renderer when the series shape matches a flat pie: {html}"
+    );
+    assert!(
+        html.contains("<path class=\"chart-pie-slice\""),
+        "3D pie chart should emit pie slices through the existing flat pie renderer: {html}"
+    );
+    assert!(
+        html.contains("North") && html.contains("South"),
+        "3D pie chart should preserve category labels in the flat direct render path: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "3D pie chart should no longer fall back to the generic chart placeholder when a flat pie render is possible: {html}"
+    );
 }
 
 #[test]
@@ -5554,11 +6327,26 @@ fn test_of_pie_chart_renders_directly() {
     let pptx = build_of_pie_chart_pptx();
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-direct\">"), "ofPie chart should render directly once bounded ofPie support is available: {html}");
-    assert!(html.contains("chart-of-pie-primary"), "ofPie chart should render a primary pie cluster: {html}");
-    assert!(html.contains("chart-of-pie-secondary"), "ofPie chart should render a secondary pie cluster: {html}");
-    assert!(html.contains("North") && html.contains("West"), "ofPie chart should preserve category labels across both clusters: {html}");
-    assert!(!html.contains("<div class=\"chart-placeholder\">"), "ofPie chart should not use the generic placeholder once the bounded slice is supported: {html}");
+    assert!(
+        html.contains("<div class=\"chart-direct\">"),
+        "ofPie chart should render directly once bounded ofPie support is available: {html}"
+    );
+    assert!(
+        html.contains("chart-of-pie-primary"),
+        "ofPie chart should render a primary pie cluster: {html}"
+    );
+    assert!(
+        html.contains("chart-of-pie-secondary"),
+        "ofPie chart should render a secondary pie cluster: {html}"
+    );
+    assert!(
+        html.contains("North") && html.contains("West"),
+        "ofPie chart should preserve category labels across both clusters: {html}"
+    );
+    assert!(
+        !html.contains("<div class=\"chart-placeholder\">"),
+        "ofPie chart should not use the generic placeholder once the bounded slice is supported: {html}"
+    );
 }
 
 #[test]
@@ -5585,8 +6373,14 @@ fn test_of_pie_chart_with_bar_type_falls_back_to_placeholder() {
     let pptx = build_of_pie_chart_variant_pptx("bar", "pos", Some("2"), false);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Bar-of-pie should stay on fallback until bar secondary rendering is implemented: {html}");
-    assert!(!html.contains("chart-of-pie-primary"), "Bar-of-pie should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Bar-of-pie should stay on fallback until bar secondary rendering is implemented: {html}"
+    );
+    assert!(
+        !html.contains("chart-of-pie-primary"),
+        "Bar-of-pie should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5594,8 +6388,14 @@ fn test_of_pie_chart_with_value_split_falls_back_to_placeholder() {
     let pptx = build_of_pie_chart_variant_pptx("pie", "val", Some("15"), false);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "Value-split ofPie should stay on fallback until value-based partitioning is implemented: {html}");
-    assert!(!html.contains("chart-of-pie-primary"), "Value-split ofPie should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "Value-split ofPie should stay on fallback until value-based partitioning is implemented: {html}"
+    );
+    assert!(
+        !html.contains("chart-of-pie-primary"),
+        "Value-split ofPie should not partially direct render yet: {html}"
+    );
 }
 
 #[test]
@@ -5603,8 +6403,14 @@ fn test_of_pie_chart_with_data_labels_falls_back_to_placeholder() {
     let pptx = build_of_pie_chart_variant_pptx("pie", "pos", Some("2"), true);
     let html = render_html(&pptx);
 
-    assert!(html.contains("<div class=\"chart-placeholder\">"), "ofPie with data labels should stay on fallback until bounded label support is implemented: {html}");
-    assert!(!html.contains("chart-of-pie-primary"), "ofPie with data labels should not partially direct render yet: {html}");
+    assert!(
+        html.contains("<div class=\"chart-placeholder\">"),
+        "ofPie with data labels should stay on fallback until bounded label support is implemented: {html}"
+    );
+    assert!(
+        !html.contains("chart-of-pie-primary"),
+        "ofPie with data labels should not partially direct render yet: {html}"
+    );
 }
 
 // ── Shape effect tests (outerShdw / glow) ──
