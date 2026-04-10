@@ -17,3 +17,4 @@ evaluate/.venv/
 .claude/
 .serena/
 .worktrees/
+.omx/
