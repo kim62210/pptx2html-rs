@@ -5191,6 +5191,58 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn helper_edge_cases_cover_absent_builders_and_defaults() {
+        assert_eq!(rels_path_for("chart1.xml"), "_rels/chart1.xml.rels");
+        assert_eq!(
+            hyperlink_rel_id(&bytes_start("a:hlinkClick", &[("id", "rIdPlain")])),
+            None
+        );
+
+        let mut missing_style_ref = None;
+        assign_style_ref_color("lnRef", "1", Color::rgb("112233"), &mut missing_style_ref);
+        ensure_style_ref("fillRef", "1", &mut missing_style_ref);
+        assign_style_ref_no_color("effectRef", "2", &mut missing_style_ref);
+
+        let mut style_ref = Some(ShapeStyleRef::default());
+        ensure_style_ref("fontRef", "minor", &mut style_ref);
+        assign_style_ref_color("unknownRef", "9", Color::rgb("445566"), &mut style_ref);
+        assign_style_ref_no_color("unknownRef", "9", &mut style_ref);
+        let font_ref = style_ref
+            .as_ref()
+            .and_then(|style| style.font_ref.as_ref())
+            .expect("font ref");
+        assert_eq!(font_ref.idx, "minor");
+        assert!(font_ref.color.is_none());
+
+        let default_cell = TableCellBuilder::default().build();
+        assert_eq!(default_cell.margin_left, TableCell::default().margin_left);
+
+        let mut missing_cell = None;
+        assign_tc_color(Color::rgb("778899"), &None, &mut missing_cell);
+        let mut cell = Some(TableCellBuilder::default());
+        assign_tc_color(Color::rgb("AABBCC"), &Some("lnDiag".to_string()), &mut cell);
+        assert!(matches!(cell.expect("cell").fill, Fill::None));
+
+        let mut missing_shape = None;
+        store_shape_level_defaults(&mut missing_shape, 9, ParagraphDefaults::default());
+        let mut shape = Some(ShapeBuilder::default());
+        store_shape_level_defaults(&mut shape, 10, ParagraphDefaults::default());
+        assert!(
+            shape
+                .as_ref()
+                .and_then(|shape| shape.text_list_style.as_ref())
+                .is_none()
+        );
+
+        let mut archive = archive_with_entries(&[]);
+        let malformed = "<p:sld xmlns:p=\"p\"><p:cSld><";
+        assert!(matches!(
+            parse_slide(malformed, &HashMap::new(), &mut archive),
+            Err(PptxError::Xml(_))
+        ));
+    }
+
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
         let mut start = BytesStart::new(name);
         for (key, value) in attrs {

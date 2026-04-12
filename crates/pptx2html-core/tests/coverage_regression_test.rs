@@ -2213,6 +2213,48 @@ fn parses_grouped_chart_table_unsupported_and_image_fill_branches_through_public
 }
 
 #[test]
+fn parses_unsupported_graphic_raw_text_fallthrough_through_public_parser() {
+    let slide = r#"
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="170" name="Raw Text Unsupported"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/officeDocument/2006/math">
+            <a:txBody>
+              <a:bodyPr/>
+              <a:p><a:r><a:t>Captured Shape Text</a:t></a:r></a:p>
+            </a:txBody>
+            <a:tbl>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody><a:bodyPr/><a:p><a:r><a:t>Captured Cell Text</a:t></a:r></a:p></a:txBody>
+                  <a:tcPr/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let unsupported = presentation.slides[0]
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Unsupported(data) => Some(data),
+            _ => None,
+        })
+        .expect("unsupported math placeholder");
+
+    let raw_xml = unsupported.raw_xml.as_deref().expect("captured raw XML");
+    assert!(raw_xml.contains("Captured Shape Text"));
+    assert!(raw_xml.contains("Captured Cell Text"));
+}
+
+#[test]
 fn parses_start_tag_color_context_matrix_through_public_parser() {
     let slide = r#"
       <p:bg>
