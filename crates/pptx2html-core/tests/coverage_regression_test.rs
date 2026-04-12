@@ -1,5 +1,6 @@
 mod fixtures;
 
+use pptx2html_core::ConversionOptions;
 use pptx2html_core::ProvenanceSource;
 use pptx2html_core::model::presentation::{ClrMap, ColorScheme};
 use pptx2html_core::model::{
@@ -8,8 +9,9 @@ use pptx2html_core::model::{
     ChartType, ClrMapOverride, Color, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
     FmtScheme, GradientType, ImageFill, LineAlignment, LineCap, LineEnd, LineEndSize, LineEndType,
     LineJoin, PathFill, PictureData, PlaceholderType, Presentation, Shape, ShapeStyleRef,
-    ShapeType, Size, Slide, SlideLayout, SlideMaster, SolidFill, StrikethroughType, StyleRef,
-    TextCapitalization, UnderlineType, VerticalAlign,
+    ShapeType, Size, Slide, SlideLayout, SlideMaster, SolidFill, SpacingValue, StrikethroughType,
+    StyleRef, TableCell, TableData, TableRow, TextBody, TextCapitalization, TextParagraph, TextRun,
+    UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 use pptx2html_core::renderer::HtmlRenderer;
@@ -393,6 +395,156 @@ fn renders_swapped_connector_path_variants_through_public_renderer() {
     assert!(html.contains("shape-svg"));
     assert!(html.contains("transform=\"translate"));
     assert!(html.contains("M0,0 L0,"));
+}
+
+#[test]
+fn renders_table_paragraph_and_external_picture_fallbacks_through_public_renderer() {
+    fn text_run(text: &str) -> TextRun {
+        TextRun {
+            text: text.to_string(),
+            ..Default::default()
+        }
+    }
+    fn paragraph(text: &str, level: u32, bullet: Option<Bullet>) -> TextParagraph {
+        TextParagraph {
+            runs: vec![text_run(text)],
+            level,
+            bullet,
+            space_after: Some(SpacingValue::Percent(1.2)),
+            ..Default::default()
+        }
+    }
+    fn cell(vertical_align: VerticalAlign, text_body: TextBody) -> TableCell {
+        TableCell {
+            text_body: Some(text_body),
+            vertical_align,
+            margin_left: 1.0,
+            margin_right: 2.0,
+            margin_top: 3.0,
+            margin_bottom: 4.0,
+            ..Default::default()
+        }
+    }
+
+    let table_shape = Shape {
+        shape_type: ShapeType::Table(TableData {
+            col_widths: vec![0.0, 0.0],
+            band_row: true,
+            band_col: true,
+            first_col: true,
+            last_col: true,
+            rows: vec![
+                TableRow {
+                    height: 20.0,
+                    cells: vec![
+                        cell(
+                            VerticalAlign::Top,
+                            TextBody {
+                                paragraphs: vec![
+                                    paragraph(
+                                        "Char bullet",
+                                        2,
+                                        Some(Bullet::Char(pptx2html_core::model::BulletChar {
+                                            char: "•".to_string(),
+                                            font: Some("Symbol".to_string()),
+                                            size_pct: Some(-14.0),
+                                            color: Some(Color::rgb("FF0000")),
+                                        })),
+                                    ),
+                                    paragraph(
+                                        "Auto bullet",
+                                        1,
+                                        Some(Bullet::AutoNum(
+                                            pptx2html_core::model::BulletAutoNum {
+                                                num_type: "arabicPeriod".to_string(),
+                                                start_at: Some(3),
+                                                font: Some("Arial".to_string()),
+                                                size_pct: Some(-10.0),
+                                                color: Some(Color::rgb("00AA00")),
+                                            },
+                                        )),
+                                    ),
+                                    paragraph("No bullet", 1, Some(Bullet::None)),
+                                    TextParagraph::default(),
+                                ],
+                                ..Default::default()
+                            },
+                        ),
+                        cell(
+                            VerticalAlign::Bottom,
+                            TextBody {
+                                paragraphs: vec![paragraph("Bottom cell", 0, None)],
+                                ..Default::default()
+                            },
+                        ),
+                    ],
+                },
+                TableRow {
+                    height: 24.0,
+                    cells: vec![
+                        cell(
+                            VerticalAlign::Middle,
+                            TextBody {
+                                paragraphs: vec![paragraph("Band row", 0, None)],
+                                ..Default::default()
+                            },
+                        ),
+                        TableCell {
+                            v_merge: true,
+                            ..Default::default()
+                        },
+                    ],
+                },
+            ],
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(1_828_800),
+            height: Emu(914_400),
+        },
+        ..Default::default()
+    };
+
+    let picture_shape = Shape {
+        shape_type: ShapeType::Picture(PictureData {
+            rel_id: "rIdExternalPicture".to_string(),
+            content_type: "image/png".to_string(),
+            data: b"external-picture".to_vec(),
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.slides.push(Slide {
+        shapes: vec![table_shape, picture_shape],
+        ..Default::default()
+    });
+    let html = HtmlRenderer::render_with_options(
+        &presentation,
+        &ConversionOptions {
+            embed_images: false,
+            ..Default::default()
+        },
+    )
+    .expect("renderer table matrix should render");
+
+    assert!(html.contains("font-size: 14.0pt"));
+    assert!(html.contains("font-size: 10.0pt"));
+    assert!(html.contains("padding-left: 72.0pt"));
+    assert!(html.contains("margin-bottom: 1.2em"));
+    assert!(html.contains("vertical-align: top"));
+    assert!(html.contains("vertical-align: bottom"));
+    assert!(html.contains("&nbsp;"));
+    assert!(html.contains("images/slide-1/image-0.png"));
 }
 
 #[test]
