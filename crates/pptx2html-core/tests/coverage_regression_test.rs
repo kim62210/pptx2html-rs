@@ -7,11 +7,12 @@ use pptx2html_core::model::{
     Alignment, AutoFit, Border, BorderStyle, Bullet, ChartData, ChartDataLabelPosition,
     ChartDataLabelSettings, ChartGrouping, ChartOfPieType, ChartSeries, ChartSpec, ChartSplitType,
     ChartType, ClrMapOverride, Color, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
-    FmtScheme, GradientType, ImageFill, LineAlignment, LineCap, LineEnd, LineEndSize, LineEndType,
-    LineJoin, PathFill, PictureData, PlaceholderType, Presentation, Shape, ShapeStyleRef,
+    FmtScheme, GradientFill, GradientStop, GradientType, ImageFill, LineAlignment, LineCap,
+    LineEnd, LineEndSize, LineEndType, LineJoin, ListStyle, ParagraphDefaults, PathFill,
+    PictureData, PlaceholderInfo, PlaceholderType, Presentation, RunDefaults, Shape, ShapeStyleRef,
     ShapeType, Size, Slide, SlideLayout, SlideMaster, SolidFill, SpacingValue, StrikethroughType,
-    StyleRef, TableCell, TableData, TableRow, TextBody, TextCapitalization, TextParagraph, TextRun,
-    UnderlineType, VerticalAlign,
+    StyleRef, TableCell, TableData, TableRow, TextBody, TextCapitalization, TextMargins,
+    TextParagraph, TextRun, UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 use pptx2html_core::renderer::HtmlRenderer;
@@ -545,6 +546,247 @@ fn renders_table_paragraph_and_external_picture_fallbacks_through_public_rendere
     assert!(html.contains("vertical-align: bottom"));
     assert!(html.contains("&nbsp;"));
     assert!(html.contains("images/slide-1/image-0.png"));
+}
+
+#[test]
+fn renders_remaining_chart_label_and_gradient_branches_through_public_renderer() {
+    let labels = |position| ChartDataLabelSettings {
+        show_value: true,
+        position: Some(position),
+        ..Default::default()
+    };
+    let series = |values: Vec<f64>| ChartSeries {
+        name: Some("Series".to_string()),
+        categories: vec!["A".to_string(), "B".to_string()],
+        x_values: vec![1.0, 2.0],
+        values,
+        ..Default::default()
+    };
+    let marker_none_series = |values: Vec<f64>| ChartSeries {
+        marker: Some(pptx2html_core::model::ChartMarkerSpec {
+            symbol: Some("none".to_string()),
+            size: Some(6),
+        }),
+        ..series(values)
+    };
+    let gradient_fill = |gradient_type| {
+        Fill::Gradient(GradientFill {
+            gradient_type,
+            stops: vec![
+                GradientStop {
+                    position: 0.0,
+                    color: Color::rgb("112233"),
+                },
+                GradientStop {
+                    position: 1.0,
+                    color: Color::rgb("445566"),
+                },
+            ],
+            angle: 45.0,
+        })
+    };
+    let gradient_shape = |gradient_type| Shape {
+        shape_type: ShapeType::TextBox,
+        fill: gradient_fill(gradient_type),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.slides.push(Slide {
+        background: Some(gradient_fill(GradientType::Radial)),
+        shapes: vec![
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Column,
+                grouping: ChartGrouping::PercentStacked,
+                data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+                series: vec![series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Bar,
+                grouping: ChartGrouping::PercentStacked,
+                data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+                series: vec![series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Radar,
+                radar_style: Some(pptx2html_core::model::ChartRadarStyle::Marker),
+                series: vec![series(vec![0.0, 3.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Line,
+                data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+                series: vec![marker_none_series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Line,
+                data_labels: Some(labels(ChartDataLabelPosition::OutEnd)),
+                series: vec![marker_none_series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Scatter,
+                scatter_style: Some(pptx2html_core::model::ChartScatterStyle::Marker),
+                data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+                series: vec![marker_none_series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            renderer_chart_shape(ChartSpec {
+                chart_type: ChartType::Scatter,
+                scatter_style: Some(pptx2html_core::model::ChartScatterStyle::Marker),
+                data_labels: Some(labels(ChartDataLabelPosition::OutEnd)),
+                series: vec![marker_none_series(vec![2.0, 1.0])],
+                ..Default::default()
+            }),
+            gradient_shape(GradientType::Radial),
+            gradient_shape(GradientType::Rectangular),
+            gradient_shape(GradientType::Shape),
+            Shape {
+                shape_type: ShapeType::TextBox,
+                fill: Fill::Image(ImageFill {
+                    rel_id: "rIdDefaultMime".to_string(),
+                    data: b"image-data".to_vec(),
+                    ..Default::default()
+                }),
+                size: Size {
+                    width: Emu(914_400),
+                    height: Emu(457_200),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        background: Some(gradient_fill(GradientType::Rectangular)),
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        background: Some(gradient_fill(GradientType::Shape)),
+        ..Default::default()
+    });
+
+    let html = HtmlRenderer::render(&presentation).expect("chart/gradient matrix should render");
+    assert!(html.contains("data-label-position=\"inEnd\""));
+    assert!(html.contains("data-label-position=\"outEnd\""));
+    assert!(html.contains("radial-gradient(circle"));
+    assert!(html.contains("radial-gradient(ellipse"));
+    assert!(html.contains("radial-gradient(closest-side"));
+    assert!(html.contains("data:image/png;base64"));
+}
+
+#[test]
+fn renders_master_text_body_inheritance_paths_through_public_renderer() {
+    let placeholder = PlaceholderInfo {
+        ph_type: Some(PlaceholderType::Body),
+        idx: Some(7),
+    };
+    let mut inherited_levels = ListStyle::default();
+    inherited_levels.levels[0] = Some(ParagraphDefaults {
+        def_run_props: Some(RunDefaults {
+            font_size: Some(22.0),
+            bold: Some(true),
+            font_latin: Some("".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let master_text = TextBody {
+        vertical_align: VerticalAlign::Bottom,
+        vertical_align_explicit: true,
+        word_wrap: false,
+        word_wrap_explicit: true,
+        anchor_center: true,
+        text_rotation_deg: 22.0,
+        margin_top_explicit: true,
+        margins: TextMargins {
+            top: 12.0,
+            ..Default::default()
+        },
+        list_style: Some(inherited_levels),
+        ..Default::default()
+    };
+    let master_shape = Shape {
+        placeholder: Some(placeholder.clone()),
+        text_body: Some(master_text),
+        vertical_text: Some("mongolianVert".to_string()),
+        vertical_text_explicit: true,
+        ..Default::default()
+    };
+    let slide_shape = Shape {
+        placeholder: Some(placeholder),
+        text_body: Some(TextBody {
+            paragraphs: vec![TextParagraph {
+                runs: vec![TextRun {
+                    text: "Inherited text".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(1_828_800),
+            height: Emu(914_400),
+        },
+        ..Default::default()
+    };
+    let unknown_vertical = Shape {
+        text_body: Some(TextBody {
+            paragraphs: vec![TextParagraph {
+                runs: vec![TextRun {
+                    text: "Unknown vertical".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        vertical_text: Some("mysteryVerticalMode".to_string()),
+        vertical_text_explicit: true,
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.masters.push(SlideMaster {
+        shapes: vec![master_shape],
+        ..Default::default()
+    });
+    presentation.layouts.push(SlideLayout {
+        master_idx: 0,
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        layout_idx: Some(0),
+        shapes: vec![slide_shape, unknown_vertical],
+        ..Default::default()
+    });
+
+    let html = HtmlRenderer::render(&presentation).expect("master text inheritance should render");
+    assert!(html.contains("writing-mode: vertical-lr"));
+    assert!(html.contains("transform: rotate(22.0deg)"));
+    assert!(html.contains("font-size: 22.0pt"));
+    assert!(html.contains("font-weight: bold"));
+    assert!(html.contains("h-center"));
 }
 
 #[test]
