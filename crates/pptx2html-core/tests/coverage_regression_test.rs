@@ -1,15 +1,19 @@
 mod fixtures;
 
+use pptx2html_core::ProvenanceSource;
+use pptx2html_core::model::presentation::{ClrMap, ColorScheme};
 use pptx2html_core::model::{
-    Alignment, AutoFit, BorderStyle, Bullet, ChartData, ChartDataLabelPosition,
+    Alignment, AutoFit, Border, BorderStyle, Bullet, ChartData, ChartDataLabelPosition,
     ChartDataLabelSettings, ChartGrouping, ChartOfPieType, ChartSeries, ChartSpec, ChartSplitType,
-    ChartType, ClrMapOverride, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
-    GradientType, ImageFill, LineAlignment, LineCap, LineEndSize, LineJoin, PathFill, PictureData,
-    PlaceholderType, Presentation, Shape, ShapeType, Size, Slide, StrikethroughType,
+    ChartType, ClrMapOverride, Color, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
+    FmtScheme, GradientType, ImageFill, LineAlignment, LineCap, LineEnd, LineEndSize, LineEndType,
+    LineJoin, PathFill, PictureData, PlaceholderType, Presentation, Shape, ShapeStyleRef,
+    ShapeType, Size, Slide, SlideLayout, SlideMaster, SolidFill, StrikethroughType, StyleRef,
     TextCapitalization, UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
 use pptx2html_core::renderer::HtmlRenderer;
+use pptx2html_core::resolver::inheritance;
 
 fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
     PptxParser::parse_bytes(data).expect("PPTX parsing failed")
@@ -48,6 +52,196 @@ fn renderer_chart_shape(spec: ChartSpec) -> Shape {
         },
         ..Default::default()
     }
+}
+
+#[test]
+fn covers_hierarchy_and_inheritance_edge_paths_through_public_api() {
+    assert!(matches!(
+        PlaceholderType::from_ooxml("sldNum"),
+        Some(PlaceholderType::SldNum)
+    ));
+    assert!(matches!(
+        PlaceholderType::from_ooxml("hdr"),
+        Some(PlaceholderType::Hdr)
+    ));
+    assert!(matches!(
+        PlaceholderType::from_ooxml("sldImg"),
+        Some(PlaceholderType::SldImg)
+    ));
+    assert!(PlaceholderType::from_ooxml("unknown-placeholder").is_none());
+
+    let red = Fill::Solid(SolidFill {
+        color: Color::rgb("FF0000"),
+    });
+    let green = Fill::Solid(SolidFill {
+        color: Color::rgb("00FF00"),
+    });
+    let layout = SlideLayout {
+        background: Some(red.clone()),
+        ..Default::default()
+    };
+    let master = SlideMaster {
+        background: Some(green.clone()),
+        ..Default::default()
+    };
+    assert!(matches!(
+        inheritance::background_source(&Slide::default(), Some(&layout), None),
+        ProvenanceSource::LayoutBackground
+    ));
+    assert!(matches!(
+        inheritance::background_source(&Slide::default(), None, Some(&master)),
+        ProvenanceSource::MasterBackground
+    ));
+
+    let no_fill_shape = Shape {
+        fill: Fill::NoFill,
+        ..Default::default()
+    };
+    assert!(matches!(
+        inheritance::resolve_shape_fill(&no_fill_shape, None, None),
+        Fill::NoFill
+    ));
+    let no_fill_layout = Shape {
+        fill: Fill::NoFill,
+        ..Default::default()
+    };
+    assert!(matches!(
+        inheritance::resolve_shape_fill(&Shape::default(), Some(&no_fill_layout), None),
+        Fill::NoFill
+    ));
+    let no_fill_master = Shape {
+        fill: Fill::NoFill,
+        ..Default::default()
+    };
+    assert!(matches!(
+        inheritance::resolve_shape_fill(
+            &Shape::default(),
+            Some(&Shape::default()),
+            Some(&no_fill_master)
+        ),
+        Fill::NoFill
+    ));
+    assert!(matches!(
+        inheritance::resolve_shape_fill_with_theme(&no_fill_shape, None, None, None, None, None),
+        Fill::NoFill
+    ));
+    assert!(matches!(
+        inheritance::shape_fill_source(&Shape::default(), Some(&no_fill_layout), None, false),
+        Some(ProvenanceSource::LayoutPlaceholder)
+    ));
+    assert!(matches!(
+        inheritance::shape_fill_source(
+            &Shape::default(),
+            Some(&Shape::default()),
+            Some(&no_fill_master),
+            false
+        ),
+        Some(ProvenanceSource::MasterPlaceholder)
+    ));
+
+    let shape_with_style_line = Shape {
+        style_ref: Some(ShapeStyleRef {
+            ln_ref: Some(StyleRef {
+                idx: 1,
+                color: Color::rgb("123456"),
+            }),
+            ..Default::default()
+        }),
+        border: Border {
+            dash_style: DashStyle::DashDot,
+            cap: LineCap::Round,
+            compound: CompoundLine::Double,
+            alignment: LineAlignment::Inset,
+            join: LineJoin::Bevel,
+            miter_limit: Some(2.5),
+            head_end: Some(LineEnd {
+                end_type: LineEndType::Triangle,
+                width: LineEndSize::Large,
+                length: LineEndSize::Small,
+            }),
+            tail_end: Some(LineEnd {
+                end_type: LineEndType::Oval,
+                width: LineEndSize::Small,
+                length: LineEndSize::Large,
+            }),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let fmt = FmtScheme {
+        ln_style_lst: vec![Border {
+            width: 2.0,
+            color: Color::none(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let scheme = ColorScheme::default();
+    let clr_map = ClrMap::default();
+    let resolved_border = inheritance::resolve_border_with_theme(
+        &shape_with_style_line,
+        None,
+        None,
+        Some(&fmt),
+        Some(&scheme),
+        Some(&clr_map),
+    );
+    assert_eq!(resolved_border.color.to_css().as_deref(), Some("#123456"));
+    assert_eq!(resolved_border.width, 2.0);
+    assert!(matches!(resolved_border.dash_style, DashStyle::DashDot));
+    assert!(matches!(resolved_border.cap, LineCap::Round));
+    assert!(matches!(resolved_border.compound, CompoundLine::Double));
+    assert!(matches!(resolved_border.alignment, LineAlignment::Inset));
+    assert!(matches!(resolved_border.join, LineJoin::Bevel));
+    assert_eq!(resolved_border.miter_limit, Some(2.5));
+
+    let layout_no_border = Shape {
+        border: Border {
+            no_fill: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let master_no_border = layout_no_border.clone();
+    assert!(matches!(
+        inheritance::resolve_border_with_theme(
+            &Shape::default(),
+            Some(&layout_no_border),
+            None,
+            None,
+            None,
+            None
+        )
+        .style,
+        BorderStyle::None
+    ));
+    assert!(matches!(
+        inheritance::resolve_border_with_theme(
+            &Shape::default(),
+            Some(&Shape::default()),
+            Some(&master_no_border),
+            None,
+            None,
+            None
+        )
+        .style,
+        BorderStyle::None
+    ));
+
+    let mut master_map = ClrMap::default();
+    master_map.set("tx1", "dk1");
+    let layout = SlideLayout {
+        clr_map_ovr: Some(ClrMapOverride::UseMaster),
+        ..Default::default()
+    };
+    let master = SlideMaster {
+        clr_map: master_map,
+        ..Default::default()
+    };
+    assert_eq!(
+        inheritance::resolve_clr_map(&Slide::default(), Some(&layout), &master).get("tx1"),
+        Some(&"dk1".to_string())
+    );
 }
 
 #[test]
