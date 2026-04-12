@@ -2255,6 +2255,65 @@ fn parses_unsupported_graphic_raw_text_fallthrough_through_public_parser() {
 }
 
 #[test]
+fn parses_unknown_dash_defaults_through_public_parser() {
+    let slide = r#"
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="180" name="Unknown Dash Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rect"/>
+          <a:ln w="12700"><a:prstDash val="mysteryDash"/></a:ln>
+        </p:spPr>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="181" name="Unknown Dash Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody><a:bodyPr/><a:p><a:r><a:t>Dash</a:t></a:r></a:p></a:txBody>
+                  <a:tcPr><a:lnL w="12700"><a:prstDash val="mysteryDash"></a:prstDash></a:lnL></a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Unknown Dash Shape")
+        .expect("shape with unknown dash");
+    assert!(matches!(shape.border.dash_style, DashStyle::Solid));
+    assert!(matches!(shape.border.style, BorderStyle::Solid));
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    assert!(matches!(
+        table.rows[0].cells[0].border_left.dash_style,
+        DashStyle::Solid
+    ));
+    assert!(matches!(
+        table.rows[0].cells[0].border_left.style,
+        BorderStyle::Solid
+    ));
+}
+
+#[test]
 fn parses_start_tag_color_context_matrix_through_public_parser() {
     let slide = r#"
       <p:bg>

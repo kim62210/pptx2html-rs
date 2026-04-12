@@ -4458,10 +4458,14 @@ mod tests {
                     && data.raw_xml.as_deref().is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
         ));
 
-        let table = match &slide.shapes[1].shape_type {
-            ShapeType::Table(table) => table,
-            other => panic!("expected table shape, got {other:?}"),
-        };
+        let table = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::Table(table) => Some(table),
+                _ => None,
+            })
+            .expect("table shape");
         assert!(table.band_row && table.band_col && table.first_row && table.last_row);
         assert!(table.first_col && table.last_col);
         assert_eq!(table.col_widths.len(), 2);
@@ -4598,6 +4602,7 @@ mod tests {
         let chart = slide
             .shapes
             .iter()
+            .rev()
             .find_map(|shape| match &shape.shape_type {
                 ShapeType::Chart(chart) => Some(chart),
                 _ => None,
@@ -4944,6 +4949,7 @@ mod tests {
         let table = slide
             .shapes
             .iter()
+            .rev()
             .find_map(|shape| match &shape.shape_type {
                 ShapeType::Table(table) => Some(table),
                 _ => None,
@@ -5002,10 +5008,14 @@ mod tests {
                 line_spacing_reduction: Some(lsr)
             }) if (*v - 0.7).abs() < 1e-6 && (*lsr - 0.15).abs() < 1e-6
         ));
-        let custom_geom = match &shape.shape_type {
-            ShapeType::CustomGeom(geom) => geom,
-            other => panic!("expected custom geometry, got {other:?}"),
-        };
+        let custom_geom = slide
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape_type {
+                ShapeType::CustomGeom(geom) => Some(geom),
+                _ => None,
+            })
+            .expect("custom geometry");
         assert_eq!(custom_geom.paths.len(), 3);
         assert!(matches!(custom_geom.paths[0].fill, PathFill::Lighten));
         assert!(matches!(custom_geom.paths[1].fill, PathFill::Darken));
@@ -5125,6 +5135,7 @@ mod tests {
         let table = slide
             .shapes
             .iter()
+            .rev()
             .find_map(|shape| match &shape.shape_type {
                 ShapeType::Table(table) => Some(table),
                 _ => None,
