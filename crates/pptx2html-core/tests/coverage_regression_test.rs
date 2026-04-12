@@ -367,6 +367,35 @@ fn renders_chart_zero_label_and_crop_fallback_matrix_through_public_renderer() {
 }
 
 #[test]
+fn renders_swapped_connector_path_variants_through_public_renderer() {
+    let connector = |name: &str, rotation: f64, flip_h: bool, flip_v: bool| Shape {
+        shape_type: ShapeType::Custom(name.to_string()),
+        rotation,
+        flip_h,
+        flip_v,
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let html = render_model_shapes(vec![
+        connector("straightConnector1", 90.0, true, false),
+        connector("bentConnector2", 270.0, true, false),
+        connector("bentConnector2", 270.0, false, true),
+        connector("bentConnector2", 270.0, false, false),
+        connector("bentConnector3", 270.0, true, false),
+        connector("bentConnector3", 270.0, false, false),
+        connector("curvedConnector2", 270.0, true, false),
+    ]);
+
+    assert!(html.contains("shape-svg"));
+    assert!(html.contains("transform=\"translate"));
+    assert!(html.contains("M0,0 L0,"));
+}
+
+#[test]
 fn parses_theme_master_and_layout_branches_through_public_parser() {
     let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="CoverageTheme">
