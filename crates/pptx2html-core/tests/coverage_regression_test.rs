@@ -1,22 +1,28 @@
 mod fixtures;
 
+use std::io::{Cursor, Write};
+
 use pptx2html_core::ConversionOptions;
 use pptx2html_core::ProvenanceSource;
 use pptx2html_core::model::presentation::{ClrMap, ColorScheme};
 use pptx2html_core::model::{
     Alignment, AutoFit, Border, BorderStyle, Bullet, ChartData, ChartDataLabelPosition,
     ChartDataLabelSettings, ChartGrouping, ChartOfPieType, ChartSeries, ChartSpec, ChartSplitType,
-    ChartType, ClrMapOverride, Color, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
-    FmtScheme, GradientFill, GradientStop, GradientType, ImageFill, LineAlignment, LineCap,
+    ChartType, ClrMapOverride, Color, ColorKind, CompoundLine, ConnectionRef, ConnectionSite,
+    CropRect, CustomGeometry, DashStyle, Emu, Fill, FmtScheme, GeomRect, GeometryPath,
+    GradientFill, GradientStop, GradientType, GroupData, ImageFill, LineAlignment, LineCap,
     LineEnd, LineEndSize, LineEndType, LineJoin, ListStyle, ParagraphDefaults, PathFill,
     PictureData, PlaceholderInfo, PlaceholderType, Presentation, RunDefaults, Shape, ShapeStyleRef,
     ShapeType, Size, Slide, SlideLayout, SlideMaster, SolidFill, SpacingValue, StrikethroughType,
     StyleRef, TableCell, TableData, TableRow, TextBody, TextCapitalization, TextMargins,
-    TextParagraph, TextRun, UnderlineType, VerticalAlign,
+    TextParagraph, TextRun, TextStyle, UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
+use pptx2html_core::parser::master_parser;
 use pptx2html_core::renderer::HtmlRenderer;
 use pptx2html_core::resolver::inheritance;
+use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
     PptxParser::parse_bytes(data).expect("PPTX parsing failed")
@@ -55,6 +61,160 @@ fn renderer_chart_shape(spec: ChartSpec) -> Shape {
         },
         ..Default::default()
     }
+}
+
+fn zip_entries(entries: &[(&str, String)]) -> Vec<u8> {
+    let cursor = Cursor::new(Vec::new());
+    let mut zip = ZipWriter::new(cursor);
+    let options = SimpleFileOptions::default();
+    for (path, xml) in entries {
+        zip.start_file(path, options).expect("start zip entry");
+        zip.write_all(xml.as_bytes()).expect("write zip entry");
+    }
+    zip.finish().expect("finish zip").into_inner()
+}
+
+#[test]
+fn parses_presentation_relationship_fallbacks_through_public_parser() {
+    let many_shapes = (0..105)
+        .map(|idx| {
+            format!(
+                r#"<p:sp><p:nvSpPr><p:cNvPr id="{}" name="Shape {}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr></p:sp>"#,
+                idx + 10,
+                idx
+            )
+        })
+        .collect::<String>();
+    let presentation_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rIdMaster"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:defaultTextStyle>
+    <a:lvl1pPr><a:defRPr sz="1800"><a:srgbClr val="123456"></a:srgbClr></a:defRPr></a:lvl1pPr>
+  </p:defaultTextStyle>
+</p:presentation>"#
+        .to_string();
+    let presentation_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#
+        .to_string();
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#
+        .to_string();
+    let master_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="ppt/theme/theme1.xml"/>
+  <Relationship Id="rIdLayout1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+  <Relationship Id="rIdLayoutDuplicate" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+  <Relationship Id="rIdLayoutMissing" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/missingLayout.xml"/>
+</Relationships>"#
+        .to_string();
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sldLayout>"#
+        .to_string();
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Theme">
+  <a:themeElements>
+    <a:clrScheme name="Scheme"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1></a:clrScheme>
+    <a:fontScheme name="Fonts"><a:majorFont><a:latin typeface="Aptos"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme>
+  </a:themeElements>
+</a:theme>"#
+        .to_string();
+    let slide_xml = format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>{many_shapes}</p:spTree></p:cSld>
+</p:sld>"#
+    );
+
+    let pptx = zip_entries(&[
+        ("ppt/presentation.xml", presentation_xml),
+        ("ppt/_rels/presentation.xml.rels", presentation_rels),
+        ("ppt/slideMasters/slideMaster1.xml", master_xml),
+        ("ppt/slideMasters/_rels/slideMaster1.xml.rels", master_rels),
+        ("ppt/slideLayouts/slideLayout1.xml", layout_xml),
+        ("ppt/theme/theme1.xml", theme_xml),
+        ("ppt/slides/slide1.xml", slide_xml),
+    ]);
+
+    let presentation = parse_pptx(&pptx);
+    assert_eq!(presentation.slides.len(), 1);
+    assert_eq!(presentation.slides[0].shapes.len(), 105);
+    assert!(presentation.default_text_style.is_some());
+}
+
+#[test]
+fn parses_master_remaining_start_tag_and_error_paths_through_public_parser() {
+    let mut empty_archive = zip::ZipArchive::new(Cursor::new(zip_entries(&[]))).expect("empty zip");
+    let start_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:schemeClr val="accent2"></a:schemeClr></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Master Shape"/><p:cNvSpPr/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
+        <p:spPr><a:ln w="12700"><a:prstDash val="unknownDash"/></a:ln></p:spPr>
+        <p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr><a:spcAft><a:spcPts val="400"></a:spcPts></a:spcAft><a:defRPr><a:srgbClr val="111111"></a:srgbClr></a:defRPr></a:lvl1pPr></a:lstStyle></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+  <p:txStyles><p:titleStyle><a:lvl1pPr><a:spcAft><a:spcPts val="800"></a:spcPts></a:spcAft><a:defRPr><a:srgbClr val="222222"></a:srgbClr></a:defRPr></a:lvl1pPr></p:titleStyle></p:txStyles>
+</p:sldMaster>"#;
+    let master = master_parser::parse_slide_master(
+        start_xml,
+        &std::collections::HashMap::new(),
+        &mut empty_archive,
+    )
+    .expect("master start-tag matrix parses");
+    assert_eq!(master.shapes.len(), 1);
+    assert!(matches!(
+        master.shapes[0].border.dash_style,
+        DashStyle::Solid
+    ));
+    assert!(master.tx_styles.title_style.is_some());
+
+    let mut empty_archive = zip::ZipArchive::new(Cursor::new(zip_entries(&[]))).expect("empty zip");
+    let empty_bg_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:bg><p:bgPr><a:srgbClr val="ABCDEF"/></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sldMaster>"#;
+    let master = master_parser::parse_slide_master(
+        empty_bg_xml,
+        &std::collections::HashMap::new(),
+        &mut empty_archive,
+    )
+    .expect("master empty bg parses");
+    assert!(matches!(
+        master.background,
+        Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#ABCDEF")
+    ));
+
+    let mut empty_archive = zip::ZipArchive::new(Cursor::new(zip_entries(&[]))).expect("empty zip");
+    assert!(
+        master_parser::parse_slide_master(
+            "<p:sldMaster xmlns:p=\"p\"><p:cSld><",
+            &std::collections::HashMap::new(),
+            &mut empty_archive,
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -787,6 +947,405 @@ fn renders_master_text_body_inheritance_paths_through_public_renderer() {
     assert!(html.contains("font-size: 22.0pt"));
     assert!(html.contains("font-weight: bold"));
     assert!(html.contains("h-center"));
+}
+
+#[test]
+fn renders_anchor_geometry_and_fill_fallbacks_through_public_renderer() {
+    let connection_shape = |id, x, y, flip_h, flip_v, rotation| Shape {
+        id,
+        shape_type: ShapeType::CustomGeom(CustomGeometry {
+            paths: vec![GeometryPath {
+                width: 100_000.0,
+                height: 100_000.0,
+                commands: Vec::new(),
+                fill: PathFill::Norm,
+            }],
+            text_rect: Some(GeomRect {
+                left: 10_000.0,
+                top: 10_000.0,
+                right: 90_000.0,
+                bottom: 90_000.0,
+            }),
+            adjust_handles: Vec::new(),
+            connection_sites: vec![ConnectionSite {
+                x: 25_000.0,
+                y: 75_000.0,
+                angle: 0.0,
+            }],
+        }),
+        position: pptx2html_core::model::Position {
+            x: Emu(x),
+            y: Emu(y),
+        },
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        flip_h,
+        flip_v,
+        rotation,
+        ..Default::default()
+    };
+
+    let anchored_connector = Shape {
+        shape_type: ShapeType::Custom("bentConnector3".to_string()),
+        start_connection: Some(ConnectionRef {
+            shape_id: 301,
+            site_idx: 0,
+        }),
+        end_connection: Some(ConnectionRef {
+            shape_id: 302,
+            site_idx: 0,
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.slides.push(Slide {
+        background: Some(Fill::Solid(SolidFill {
+            color: Color::none(),
+        })),
+        shapes: vec![
+            connection_shape(301, 0, 0, true, false, 90.0),
+            connection_shape(302, 914_400, 914_400, false, true, 180.0),
+            anchored_connector,
+            Shape {
+                shape_type: ShapeType::TextBox,
+                fill: Fill::None,
+                size: Size {
+                    width: Emu(457_200),
+                    height: Emu(228_600),
+                },
+                ..Default::default()
+            },
+            Shape {
+                shape_type: ShapeType::TextBox,
+                fill: Fill::Gradient(GradientFill {
+                    gradient_type: GradientType::Linear,
+                    stops: Vec::new(),
+                    angle: 0.0,
+                }),
+                size: Size {
+                    width: Emu(457_200),
+                    height: Emu(228_600),
+                },
+                ..Default::default()
+            },
+            Shape {
+                shape_type: ShapeType::TextBox,
+                fill: Fill::Image(ImageFill {
+                    rel_id: "rIdEmptyImage".to_string(),
+                    data: Vec::new(),
+                    ..Default::default()
+                }),
+                size: Size {
+                    width: Emu(457_200),
+                    height: Emu(228_600),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        background: Some(Fill::Gradient(GradientFill {
+            gradient_type: GradientType::Linear,
+            stops: Vec::new(),
+            angle: 0.0,
+        })),
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        background: Some(Fill::Image(ImageFill {
+            rel_id: "rIdEmptyBackground".to_string(),
+            data: Vec::new(),
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+
+    let html = HtmlRenderer::render(&presentation).expect("anchor geometry should render");
+    assert!(html.contains("shape-svg"));
+    assert!(html.contains("M0,0 L0,"));
+}
+
+#[test]
+fn renders_renderer_none_label_marker_and_group_skip_paths_through_public_renderer() {
+    let empty_labels = ChartDataLabelSettings {
+        show_value: false,
+        show_category_name: false,
+        show_series_name: false,
+        show_percent: false,
+        position: Some(ChartDataLabelPosition::Center),
+    };
+    let series = ChartSeries {
+        name: Some("No Labels".to_string()),
+        categories: vec!["A".to_string()],
+        values: vec![4.0],
+        ..Default::default()
+    };
+    let no_marker_line = Shape {
+        shape_type: ShapeType::Custom("line".to_string()),
+        border: Border {
+            width: 1.0,
+            head_end: Some(LineEnd {
+                end_type: LineEndType::None,
+                width: LineEndSize::Medium,
+                length: LineEndSize::Medium,
+            }),
+            ..Default::default()
+        },
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(0),
+        },
+        ..Default::default()
+    };
+    let no_rect_custom_geom = Shape {
+        shape_type: ShapeType::CustomGeom(CustomGeometry {
+            paths: Vec::new(),
+            text_rect: Some(GeomRect {
+                left: 0.0,
+                top: 0.0,
+                right: 0.0,
+                bottom: 0.0,
+            }),
+            adjust_handles: Vec::new(),
+            connection_sites: Vec::new(),
+        }),
+        text_body: Some(TextBody {
+            paragraphs: vec![TextParagraph {
+                runs: vec![TextRun {
+                    text: "custom".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+    let hidden_group = Shape {
+        shape_type: ShapeType::Group(
+            vec![
+                Shape {
+                    hidden: true,
+                    shape_type: ShapeType::TextBox,
+                    ..Default::default()
+                },
+                Shape {
+                    shape_type: ShapeType::TextBox,
+                    size: Size {
+                        width: Emu(457_200),
+                        height: Emu(228_600),
+                    },
+                    ..Default::default()
+                },
+            ],
+            GroupData {
+                child_offset: pptx2html_core::model::Position {
+                    x: Emu(0),
+                    y: Emu(0),
+                },
+                child_extent: Size {
+                    width: Emu(0),
+                    height: Emu(0),
+                },
+            },
+        ),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+    let inline_style_text = Shape {
+        shape_type: ShapeType::TextBox,
+        text_body: Some(TextBody {
+            paragraphs: vec![TextParagraph {
+                runs: vec![TextRun {
+                    text: "inline styled".to_string(),
+                    style: TextStyle {
+                        italic: true,
+                        underline: UnderlineType::Single,
+                        strikethrough: StrikethroughType::Single,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+
+    let html = render_model_shapes(vec![
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Column,
+            data_labels: Some(empty_labels.clone()),
+            series: vec![series.clone()],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Line,
+            data_labels: Some(empty_labels),
+            series: vec![series],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Scatter,
+            scatter_style: Some(pptx2html_core::model::ChartScatterStyle::Marker),
+            series: vec![ChartSeries {
+                name: Some("No finite X".to_string()),
+                categories: Vec::new(),
+                x_values: Vec::new(),
+                values: vec![4.0],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        no_marker_line,
+        no_rect_custom_geom,
+        hidden_group,
+        inline_style_text,
+    ]);
+
+    assert!(html.contains("shape-svg"));
+    assert!(html.contains("custom"));
+    assert!(html.contains("font-style: italic"));
+    assert!(!html.contains("chart-data-label\">4</text>"));
+}
+
+#[test]
+fn renders_last_renderer_fallback_edges_through_public_renderer() {
+    let band_col_table = Shape {
+        shape_type: ShapeType::Table(TableData {
+            band_col: true,
+            last_col: true,
+            col_widths: vec![1.0, 1.0],
+            rows: vec![TableRow {
+                height: 20.0,
+                cells: vec![
+                    TableCell {
+                        text_body: Some(TextBody {
+                            paragraphs: vec![TextParagraph {
+                                runs: vec![TextRun {
+                                    text: "A".to_string(),
+                                    ..Default::default()
+                                }],
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    TableCell {
+                        text_body: Some(TextBody {
+                            paragraphs: vec![TextParagraph {
+                                runs: vec![TextRun {
+                                    text: "B".to_string(),
+                                    ..Default::default()
+                                }],
+                                ..Default::default()
+                            }],
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }],
+            ..Default::default()
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+    let ellipse_empty_gradient = Shape {
+        shape_type: ShapeType::Ellipse,
+        fill: Fill::Gradient(GradientFill {
+            gradient_type: GradientType::Linear,
+            stops: Vec::new(),
+            angle: 0.0,
+        }),
+        size: Size {
+            width: Emu(457_200),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+    let non_custom_anchor = Shape {
+        id: 401,
+        shape_type: ShapeType::TextBox,
+        size: Size {
+            width: Emu(457_200),
+            height: Emu(457_200),
+        },
+        ..Default::default()
+    };
+    let connector_to_non_custom = Shape {
+        shape_type: ShapeType::Custom("line".to_string()),
+        start_connection: Some(ConnectionRef {
+            shape_id: 401,
+            site_idx: 0,
+        }),
+        end_connection: Some(ConnectionRef {
+            shape_id: 401,
+            site_idx: 0,
+        }),
+        size: Size {
+            width: Emu(914_400),
+            height: Emu(0),
+        },
+        ..Default::default()
+    };
+
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.slides.push(Slide {
+        background: Some(Fill::None),
+        shapes: vec![
+            band_col_table,
+            ellipse_empty_gradient,
+            non_custom_anchor,
+            connector_to_non_custom,
+        ],
+        ..Default::default()
+    });
+    presentation.slides.push(Slide {
+        background: Some(Fill::Image(ImageFill {
+            rel_id: "rIdBgDefaultMime".to_string(),
+            data: b"bg".to_vec(),
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+
+    let html = HtmlRenderer::render(&presentation).expect("last renderer edges should render");
+    assert!(html.contains("background-color: rgba(0,0,0,0.04)"));
+    assert!(html.contains("data:image/png;base64"));
+    assert!(html.contains("shape-svg"));
 }
 
 #[test]

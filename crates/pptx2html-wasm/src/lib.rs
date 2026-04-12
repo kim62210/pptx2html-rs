@@ -334,20 +334,54 @@ mod tests {
 
     #[test]
     fn serialize_unresolved_escapes_placeholder_id_control_characters() {
-        let json = serialize_unresolved(&[UnresolvedElement {
-            slide_index: 0,
-            element_type: UnresolvedType::SmartArt,
-            placeholder_id: "placeholder\n\t\u{8}\"\\id".to_string(),
-            position: None,
-            size: None,
-            raw_xml: Some("<node>line\nvalue</node>".to_string()),
-            data_model: Some("{\"line\":\"value\r\"}".to_string()),
-        }]);
+        let json = serialize_unresolved(&[
+            UnresolvedElement {
+                slide_index: 0,
+                element_type: UnresolvedType::SmartArt,
+                placeholder_id: "placeholder\n\t\u{8}\"\\id".to_string(),
+                position: None,
+                size: None,
+                raw_xml: Some("<node>line\nvalue</node>".to_string()),
+                data_model: Some("{\"line\":\"value\r\"}".to_string()),
+            },
+            UnresolvedElement {
+                slide_index: 1,
+                element_type: UnresolvedType::OleObject,
+                placeholder_id: "ole\u{01}".to_string(),
+                position: None,
+                size: None,
+                raw_xml: None,
+                data_model: None,
+            },
+            UnresolvedElement {
+                slide_index: 2,
+                element_type: UnresolvedType::MathEquation,
+                placeholder_id: "math".to_string(),
+                position: None,
+                size: None,
+                raw_xml: None,
+                data_model: None,
+            },
+            UnresolvedElement {
+                slide_index: 3,
+                element_type: UnresolvedType::CustomGeometry,
+                placeholder_id: "custom".to_string(),
+                position: None,
+                size: None,
+                raw_xml: None,
+                data_model: None,
+            },
+        ]);
 
         assert!(json.contains("placeholder\\n\\t\\b\\\"\\\\id"));
         assert!(!json.contains("placeholder\n\t\u{8}\"\\id"));
         assert!(json.contains("<node>line\\nvalue</node>"));
         assert!(json.contains("{\\\"line\\\":\\\"value\\r\\\"}"));
+        assert!(json.contains("\"elementType\":\"OleObject\""));
+        assert!(json.contains("\"elementType\":\"MathEquation\""));
+        assert!(json.contains("\"elementType\":\"CustomGeometry\""));
+        assert!(json.contains("ole\\u0001"));
+        assert!(json.contains("\"rawXml\":null"));
     }
 
     #[test]
