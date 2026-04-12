@@ -1,12 +1,15 @@
 mod fixtures;
 
 use pptx2html_core::model::{
-    Alignment, AutoFit, BorderStyle, Bullet, ClrMapOverride, ColorKind, CompoundLine, DashStyle,
-    Emu, Fill, GradientType, ImageFill, LineAlignment, LineCap, LineEndSize, LineJoin, PathFill,
-    PlaceholderType, ShapeType, StrikethroughType, TextCapitalization, UnderlineType,
-    VerticalAlign,
+    Alignment, AutoFit, BorderStyle, Bullet, ChartData, ChartDataLabelPosition,
+    ChartDataLabelSettings, ChartGrouping, ChartOfPieType, ChartSeries, ChartSpec, ChartSplitType,
+    ChartType, ClrMapOverride, ColorKind, CompoundLine, CropRect, DashStyle, Emu, Fill,
+    GradientType, ImageFill, LineAlignment, LineCap, LineEndSize, LineJoin, PathFill, PictureData,
+    PlaceholderType, Presentation, Shape, ShapeType, Size, Slide, StrikethroughType,
+    TextCapitalization, UnderlineType, VerticalAlign,
 };
 use pptx2html_core::parser::PptxParser;
+use pptx2html_core::renderer::HtmlRenderer;
 
 fn parse_pptx(data: &[u8]) -> pptx2html_core::model::Presentation {
     PptxParser::parse_bytes(data).expect("PPTX parsing failed")
@@ -16,6 +19,157 @@ fn render_with_metadata(
     data: &[u8],
 ) -> pptx2html_core::error::PptxResult<pptx2html_core::ConversionResult> {
     pptx2html_core::convert_bytes_with_metadata(data)
+}
+
+fn render_model_shapes(shapes: Vec<Shape>) -> String {
+    let mut presentation = Presentation::default();
+    presentation.slide_size = Size {
+        width: Emu(9_144_000),
+        height: Emu(6_858_000),
+    };
+    presentation.slides.push(Slide {
+        shapes,
+        ..Default::default()
+    });
+    HtmlRenderer::render(&presentation).expect("HTML rendering should succeed")
+}
+
+fn renderer_chart_shape(spec: ChartSpec) -> Shape {
+    Shape {
+        shape_type: ShapeType::Chart(ChartData {
+            rel_id: "rIdChart".to_string(),
+            preview_image: None,
+            preview_mime: None,
+            direct_spec: Some(spec),
+        }),
+        size: Size {
+            width: Emu(1_828_800),
+            height: Emu(914_400),
+        },
+        ..Default::default()
+    }
+}
+
+#[test]
+fn renders_chart_zero_label_and_crop_fallback_matrix_through_public_renderer() {
+    let labels = |position| ChartDataLabelSettings {
+        show_value: true,
+        position: Some(position),
+        ..Default::default()
+    };
+    let empty_labels = ChartDataLabelSettings {
+        show_value: false,
+        show_category_name: false,
+        show_series_name: false,
+        show_percent: false,
+        position: Some(ChartDataLabelPosition::Center),
+    };
+    let series = |name: &str, values: Vec<f64>| ChartSeries {
+        name: Some(name.to_string()),
+        categories: vec![
+            "Zero".to_string(),
+            "Positive".to_string(),
+            "Tail".to_string(),
+        ],
+        values,
+        x_values: vec![1.0, 2.0, 3.0],
+        ..Default::default()
+    };
+
+    let html = render_model_shapes(vec![
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Column,
+            grouping: ChartGrouping::PercentStacked,
+            data_labels: Some(labels(ChartDataLabelPosition::Center)),
+            series: vec![series("ColumnStacked", vec![0.0, 5.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Column,
+            grouping: ChartGrouping::Clustered,
+            data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+            series: vec![series("ColumnClustered", vec![0.0, 4.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Bar,
+            grouping: ChartGrouping::PercentStacked,
+            data_labels: Some(labels(ChartDataLabelPosition::Center)),
+            series: vec![series("BarStacked", vec![0.0, 5.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Bar,
+            grouping: ChartGrouping::Clustered,
+            data_labels: Some(labels(ChartDataLabelPosition::Center)),
+            series: vec![series("BarClustered", vec![0.0, 4.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Line,
+            data_labels: Some(labels(ChartDataLabelPosition::InEnd)),
+            series: vec![series("LineInEnd", vec![0.0, 3.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Scatter,
+            data_labels: Some(labels(ChartDataLabelPosition::OutEnd)),
+            series: vec![series("ScatterOutEnd", vec![0.0, 2.0, 1.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::OfPie,
+            of_pie_type: Some(ChartOfPieType::Pie),
+            split_type: Some(ChartSplitType::Pos),
+            split_pos: Some(2.0),
+            series: vec![series("OfPieSkip", vec![5.0, 0.0, 3.0])],
+            ..Default::default()
+        }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Pie,
+            data_labels: Some(empty_labels),
+            series: vec![series("PieSkip", vec![5.0, 0.0, 3.0])],
+            ..Default::default()
+        }),
+        Shape {
+            shape_type: ShapeType::Picture(PictureData {
+                rel_id: "rIdDegenerateCrop".to_string(),
+                data: b"degenerate".to_vec(),
+                crop: Some(CropRect {
+                    left: 0.6,
+                    top: 0.0,
+                    right: 0.6,
+                    bottom: 0.0,
+                }),
+                ..Default::default()
+            }),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            ..Default::default()
+        },
+        Shape {
+            shape_type: ShapeType::Picture(PictureData {
+                rel_id: "rIdNoCrop".to_string(),
+                content_type: "image/png".to_string(),
+                data: b"plain".to_vec(),
+                ..Default::default()
+            }),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            ..Default::default()
+        },
+    ]);
+
+    assert!(html.contains("data-label-position=\"ctr\""));
+    assert!(html.contains("data-label-position=\"inEnd\""));
+    assert!(html.contains("data-label-position=\"outEnd\""));
+    assert!(html.contains("chart-of-pie-secondary"));
+    assert!(html.contains("data:image/png;base64"));
+    assert!(html.contains("shape-image"));
 }
 
 #[test]
