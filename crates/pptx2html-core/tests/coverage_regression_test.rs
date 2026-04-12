@@ -2468,6 +2468,146 @@ fn parses_unknown_dash_defaults_through_public_parser() {
 }
 
 #[test]
+fn parses_start_tag_cell_hyperlink_defrpr_and_nonimage_chart_preview_through_public_parser() {
+    let slide = r#"
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="190" name="Non Image Preview Chart"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <chart r:id="rIdChart"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="191" name="DefRPr Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+        <p:txBody>
+          <a:bodyPr/>
+          <a:p>
+            <a:defRPr sz="2000"><a:srgbClr val="112233"></a:srgbClr></a:defRPr>
+            <a:r><a:t>Shape</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="192" name="Start Hyperlink Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:p>
+                      <a:defRPr sz="1800"><a:srgbClr val="445566"></a:srgbClr></a:defRPr>
+                      <a:r>
+                        <a:rPr><a:hlinkClick r:id="rIdCell"></a:hlinkClick></a:rPr>
+                        <a:t>Cell Link</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr/>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+    "#;
+    let chart_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <c:chart>
+    <c:plotArea>
+      <c:layout/>
+      <c:pieChart>
+        <c:ser>
+          <c:idx val="0"/><c:order val="0"/>
+          <c:cat><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+          <c:val><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>
+        </c:ser>
+      </c:pieChart>
+    </c:plotArea>
+  </c:chart>
+</c:chartSpace>"#;
+    let chart_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdWorkbook" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/workbook.bin"/>
+</Relationships>"#;
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart-nonimage.xml"/>
+  <Relationship Id="rIdCell" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/cell-start" TargetMode="External"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide)
+        .with_slide_rels(slide_rels)
+        .with_extra_file("ppt/charts/chart-nonimage.xml", chart_xml.as_bytes())
+        .with_extra_file(
+            "ppt/charts/_rels/chart-nonimage.xml.rels",
+            chart_rels.as_bytes(),
+        )
+        .with_extra_file("ppt/embeddings/workbook.bin", b"not-an-image")
+        .build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    let chart = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Chart(chart) => Some(chart),
+            _ => None,
+        })
+        .expect("chart shape");
+    assert!(chart.direct_spec.is_some());
+    assert!(chart.preview_image.is_none());
+
+    let shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "DefRPr Shape")
+        .expect("defRPr shape");
+    assert_eq!(
+        shape.text_body.as_ref().expect("shape text").paragraphs[0]
+            .def_rpr
+            .as_ref()
+            .and_then(|def_rpr| def_rpr.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#112233")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("table shape");
+    let para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text")
+        .paragraphs[0];
+    assert_eq!(
+        para.def_rpr
+            .as_ref()
+            .and_then(|def_rpr| def_rpr.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#445566")
+    );
+    assert_eq!(
+        para.runs[0].hyperlink.as_deref(),
+        Some("https://example.com/cell-start")
+    );
+}
+
+#[test]
 fn parses_start_tag_color_context_matrix_through_public_parser() {
     let slide = r#"
       <p:bg>

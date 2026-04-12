@@ -349,12 +349,14 @@ pub fn parse_slide<R: Read + Seek>(
                         if let Some(w) = xml_utils::attr_str(e, "w") {
                             let width = Emu::parse_emu(&w).to_pt();
                             if let Some(ref mut cell) = current_cell {
-                                match local.as_str() {
-                                    "lnL" => cell.border_left.width = width,
-                                    "lnR" => cell.border_right.width = width,
-                                    "lnT" => cell.border_top.width = width,
-                                    "lnB" => cell.border_bottom.width = width,
-                                    _ => {}
+                                if local == "lnL" {
+                                    cell.border_left.width = width;
+                                } else if local == "lnR" {
+                                    cell.border_right.width = width;
+                                } else if local == "lnT" {
+                                    cell.border_top.width = width;
+                                } else if local == "lnB" {
+                                    cell.border_bottom.width = width;
                                 }
                             }
                         }
@@ -384,24 +386,20 @@ pub fn parse_slide<R: Read + Seek>(
                                 "sysDot" => DashStyle::SystemDot,
                                 _ => DashStyle::Solid,
                             };
-                            match tc_border_side.as_deref() {
-                                Some("lnL") => {
+                            if let Some(border_side) = tc_border_side.as_deref() {
+                                if border_side == "lnL" {
                                     cell.border_left.style = border_style;
                                     cell.border_left.dash_style = dash;
-                                }
-                                Some("lnR") => {
+                                } else if border_side == "lnR" {
                                     cell.border_right.style = border_style;
                                     cell.border_right.dash_style = dash;
-                                }
-                                Some("lnT") => {
+                                } else if border_side == "lnT" {
                                     cell.border_top.style = border_style;
                                     cell.border_top.dash_style = dash;
-                                }
-                                Some("lnB") => {
+                                } else if border_side == "lnB" {
                                     cell.border_bottom.style = border_style;
                                     cell.border_bottom.dash_style = dash;
                                 }
-                                _ => {}
                             }
                         }
                     }
@@ -486,9 +484,6 @@ pub fn parse_slide<R: Read + Seek>(
                                 sb.is_connector = true;
                             }
                         }
-                    }
-                    "cNvPr" if current_shape.is_some() => {
-                        parse_shape_identity(e, &mut current_shape)
                     }
                     // Non-visual properties (contains placeholder)
                     "nvPr" if current_shape.is_some() => {
@@ -673,7 +668,7 @@ pub fn parse_slide<R: Read + Seek>(
                         in_r_pr = true;
                         parse_run_props(e, &mut current_run);
                     }
-                    "hlinkClick" if in_r_pr => {
+                    "hlinkClick" if in_r_pr || in_cell_r_pr => {
                         if let Some(rel_id) = hyperlink_rel_id(e) {
                             let target = rels.get(&rel_id).cloned();
                             if let Some(rb) = current_run.as_mut() {
@@ -2195,11 +2190,28 @@ pub fn parse_slide<R: Read + Seek>(
                                                     &path,
                                                     preview_target,
                                                 );
-                                                let preview_mime =
-                                                    mime_from_extension(&preview_path);
-                                                if !preview_mime.starts_with("image/") {
+                                                let preview_ext = preview_path
+                                                    .rsplit('.')
+                                                    .next()
+                                                    .unwrap_or("")
+                                                    .to_lowercase();
+                                                if !matches!(
+                                                    preview_ext.as_str(),
+                                                    "png"
+                                                        | "jpg"
+                                                        | "jpeg"
+                                                        | "gif"
+                                                        | "bmp"
+                                                        | "tif"
+                                                        | "tiff"
+                                                        | "svg"
+                                                        | "emf"
+                                                        | "wmf"
+                                                ) {
                                                     continue;
                                                 }
+                                                let preview_mime =
+                                                    mime_from_extension(&preview_path);
                                                 if let Ok(preview_bytes) =
                                                     read_archive_bytes(archive, &preview_path)
                                                     && !preview_bytes.is_empty()
@@ -2537,6 +2549,9 @@ pub fn parse_slide<R: Read + Seek>(
                             } else if in_shape_outer_shdw || in_shape_glow {
                                 // Shape effect color: store for End handler
                                 shape_effect_color = Some(color);
+                            } else if in_para_def_rpr {
+                                // Paragraph default run color is applied when defRPr closes.
+                                current_color = Some(color);
                             } else if in_cell_bu_clr {
                                 if let Some(pb) = cell_paragraph.as_mut() {
                                     pb.bu_color = Some(color);
