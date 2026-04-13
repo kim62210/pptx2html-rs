@@ -43,16 +43,14 @@ fn parse_slide_selection(s: &str) -> Result<Vec<usize>, String> {
     for part in s.split(',') {
         let part = part.trim();
         if part.contains('-') {
-            let mut parts = part.splitn(2, '-');
-            let start: usize = parts
-                .next()
-                .ok_or_else(|| format!("invalid range: {part}"))?
+            let (start_raw, end_raw) = part
+                .split_once('-')
+                .expect("range parsing is guarded by contains('-')");
+            let start: usize = start_raw
                 .trim()
                 .parse()
                 .map_err(|_| format!("invalid number in range: {part}"))?;
-            let end: usize = parts
-                .next()
-                .ok_or_else(|| format!("invalid range: {part}"))?
+            let end: usize = end_raw
                 .trim()
                 .parse()
                 .map_err(|_| format!("invalid number in range: {part}"))?;
@@ -138,7 +136,7 @@ fn main() {
 
     if cli.format == "multi" {
         // Multi-file output: one HTML per slide
-        let output_dir = cli.output.unwrap_or_else(|| cli.input.with_extension(""));
+        let output_dir = cli.output.unwrap_or(cli.input.with_extension(""));
         if let Err(e) = std::fs::create_dir_all(&output_dir) {
             eprintln!("Failed to create output directory: {e}");
             std::process::exit(1);
@@ -203,8 +201,8 @@ fn main() {
                 }
                 let asset_base = output
                     .parent()
-                    .map(std::path::Path::to_path_buf)
-                    .unwrap_or_else(|| PathBuf::from("."));
+                    .unwrap_or(std::path::Path::new("."))
+                    .to_path_buf();
                 if let Err(e) = write_external_assets(&asset_base, &result.external_assets) {
                     eprintln!("Failed to write external assets: {e}");
                     std::process::exit(1);
@@ -271,10 +269,7 @@ mod tests {
     fn test_write_external_assets_creates_nested_files() {
         let tmpdir =
             std::env::temp_dir().join(format!("pptx2html-cli-test-{}", std::process::id()));
-        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
-        if tmpdir.exists() {
-            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
-        }
+        let _ = std::fs::remove_dir_all(&tmpdir);
         std::fs::create_dir_all(&tmpdir).expect("create tempdir");
         let assets = vec![ExternalAsset {
             relative_path: "images/slide-1/image-0.png".to_string(),
@@ -296,10 +291,7 @@ mod tests {
             "pptx2html-cli-test-create-dir-error-{}",
             std::process::id()
         ));
-        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
-        if tmpdir.exists() {
-            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
-        }
+        let _ = std::fs::remove_dir_all(&tmpdir);
         std::fs::create_dir_all(&tmpdir).expect("create tempdir");
         std::fs::write(tmpdir.join("images"), b"not a directory").expect("create blocking file");
 
@@ -322,10 +314,7 @@ mod tests {
             "pptx2html-cli-test-write-error-{}",
             std::process::id()
         ));
-        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
-        if tmpdir.exists() {
-            std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
-        }
+        let _ = std::fs::remove_dir_all(&tmpdir);
         std::fs::create_dir_all(tmpdir.join("images")).expect("create images dir");
 
         let assets = vec![ExternalAsset {
