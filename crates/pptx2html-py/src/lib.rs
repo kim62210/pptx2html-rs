@@ -71,26 +71,9 @@ fn convert_with_metadata(
     let result = pptx2html_core::convert_file_with_options_metadata(Path::new(path), &opts)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-    let elements: Vec<PyUnresolvedElement> = result
-        .unresolved_elements
-        .into_iter()
-        .map(|e| PyUnresolvedElement {
-            slide_index: e.slide_index,
-            element_type: match e.element_type {
-                UnresolvedType::SmartArt => "smartart".to_string(),
-                UnresolvedType::OleObject => "ole".to_string(),
-                UnresolvedType::MathEquation => "math".to_string(),
-                UnresolvedType::CustomGeometry => "custom-geometry".to_string(),
-            },
-            placeholder_id: e.placeholder_id,
-            raw_xml: e.raw_xml,
-            data_model: e.data_model,
-        })
-        .collect();
-
     Ok(PyConversionResult {
         html: result.html,
-        unresolved_elements: elements,
+        unresolved_elements: map_unresolved_elements(result.unresolved_elements),
         slide_count: result.slide_count,
     })
 }
@@ -122,28 +105,38 @@ fn convert_bytes_with_metadata(
     let result = pptx2html_core::convert_bytes_with_options_metadata(data, &opts)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
-    let elements: Vec<PyUnresolvedElement> = result
-        .unresolved_elements
-        .into_iter()
-        .map(|e| PyUnresolvedElement {
-            slide_index: e.slide_index,
-            element_type: match e.element_type {
-                UnresolvedType::SmartArt => "smartart".to_string(),
-                UnresolvedType::OleObject => "ole".to_string(),
-                UnresolvedType::MathEquation => "math".to_string(),
-                UnresolvedType::CustomGeometry => "custom-geometry".to_string(),
-            },
-            placeholder_id: e.placeholder_id,
-            raw_xml: e.raw_xml,
-            data_model: e.data_model,
-        })
-        .collect();
-
     Ok(PyConversionResult {
         html: result.html,
-        unresolved_elements: elements,
+        unresolved_elements: map_unresolved_elements(result.unresolved_elements),
         slide_count: result.slide_count,
     })
+}
+
+fn map_unresolved_elements(
+    elements: Vec<pptx2html_core::model::slide::UnresolvedElement>,
+) -> Vec<PyUnresolvedElement> {
+    elements.into_iter().map(map_unresolved_element).collect()
+}
+
+fn map_unresolved_element(
+    element: pptx2html_core::model::slide::UnresolvedElement,
+) -> PyUnresolvedElement {
+    PyUnresolvedElement {
+        slide_index: element.slide_index,
+        element_type: unresolved_type_name(&element.element_type).to_string(),
+        placeholder_id: element.placeholder_id,
+        raw_xml: element.raw_xml,
+        data_model: element.data_model,
+    }
+}
+
+fn unresolved_type_name(element_type: &UnresolvedType) -> &'static str {
+    match element_type {
+        UnresolvedType::SmartArt => "smartart",
+        UnresolvedType::OleObject => "ole",
+        UnresolvedType::MathEquation => "math",
+        UnresolvedType::CustomGeometry => "custom-geometry",
+    }
 }
 
 /// Get presentation metadata (slide count, size, title)
@@ -261,9 +254,10 @@ mod tests {
 
     use super::{
         PresentationInfo, PyConversionResult, PyUnresolvedElement, convert, convert_bytes,
-        convert_bytes_with_metadata, convert_file, convert_with_metadata, get_info, pptx2html,
+        convert_bytes_with_metadata, convert_file, convert_with_metadata, get_info,
+        map_unresolved_elements, pptx2html,
     };
-    use pptx2html_core::model::slide::UnresolvedType;
+    use pptx2html_core::model::slide::{UnresolvedElement, UnresolvedType};
 
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -400,6 +394,10 @@ mod tests {
         Python::with_gil(|py| {
             let module = PyModule::new(py, "pptx2html").expect("create module");
             pptx2html(&module).expect("register module contents");
+            let py_info = pyo3::Py::new(py, info.clone()).expect("create PresentationInfo");
+            let py_result = pyo3::Py::new(py, result.clone()).expect("create ConversionResult");
+            let py_unresolved =
+                pyo3::Py::new(py, unresolved.clone()).expect("create UnresolvedElement");
 
             assert!(module.getattr("convert_file").is_ok());
             assert!(module.getattr("convert_bytes").is_ok());
@@ -410,14 +408,93 @@ mod tests {
             assert!(module.getattr("PresentationInfo").is_ok());
             assert!(module.getattr("ConversionResult").is_ok());
             assert!(module.getattr("UnresolvedElement").is_ok());
-        });
 
-        let _all_unresolved_types = [
-            UnresolvedType::SmartArt,
-            UnresolvedType::OleObject,
-            UnresolvedType::MathEquation,
-            UnresolvedType::CustomGeometry,
-        ];
+            assert_eq!(
+                py_info.bind(py).repr().expect("repr").to_string(),
+                "PresentationInfo(slide_count=2, width_px=960.0, height_px=540.0, title=Some(\"Deck\"))"
+            );
+            assert_eq!(
+                py_info
+                    .bind(py)
+                    .getattr("slide_count")
+                    .expect("slide_count getter")
+                    .extract::<usize>()
+                    .expect("slide_count value"),
+                2
+            );
+            assert_eq!(
+                py_result.bind(py).repr().expect("repr").to_string(),
+                "ConversionResult(slide_count=1, unresolved_elements=1)"
+            );
+            assert_eq!(
+                py_result
+                    .bind(py)
+                    .getattr("slide_count")
+                    .expect("slide_count getter")
+                    .extract::<usize>()
+                    .expect("slide_count value"),
+                1
+            );
+            assert_eq!(
+                py_unresolved.bind(py).repr().expect("repr").to_string(),
+                "UnresolvedElement(slide=1, type='smartart', id='ph-1')"
+            );
+            assert_eq!(
+                py_unresolved
+                    .bind(py)
+                    .getattr("element_type")
+                    .expect("element_type getter")
+                    .extract::<String>()
+                    .expect("element_type value"),
+                "smartart"
+            );
+        });
+        let mapped = map_unresolved_elements(vec![
+            UnresolvedElement {
+                slide_index: 0,
+                element_type: UnresolvedType::SmartArt,
+                placeholder_id: "smartart".to_string(),
+                position: None,
+                size: None,
+                raw_xml: Some("<dgm/>".to_string()),
+                data_model: Some("{\"kind\":\"smartart\"}".to_string()),
+            },
+            UnresolvedElement {
+                slide_index: 1,
+                element_type: UnresolvedType::OleObject,
+                placeholder_id: "ole".to_string(),
+                position: None,
+                size: None,
+                raw_xml: Some("<oleObj/>".to_string()),
+                data_model: Some("{\"kind\":\"ole\"}".to_string()),
+            },
+            UnresolvedElement {
+                slide_index: 2,
+                element_type: UnresolvedType::MathEquation,
+                placeholder_id: "math".to_string(),
+                position: None,
+                size: None,
+                raw_xml: Some("<m:oMath/>".to_string()),
+                data_model: Some("{\"kind\":\"math\"}".to_string()),
+            },
+            UnresolvedElement {
+                slide_index: 3,
+                element_type: UnresolvedType::CustomGeometry,
+                placeholder_id: "custgeom".to_string(),
+                position: None,
+                size: None,
+                raw_xml: Some("<a:custGeom/>".to_string()),
+                data_model: Some("{\"kind\":\"custom-geometry\"}".to_string()),
+            },
+        ]);
+        assert_eq!(
+            mapped
+                .iter()
+                .map(|item| item.element_type.as_str())
+                .collect::<Vec<_>>(),
+            vec!["smartart", "ole", "math", "custom-geometry"]
+        );
+        assert_eq!(mapped[3].raw_xml.as_deref(), Some("<a:custGeom/>"));
     }
 
     fn write_temp_pptx(bytes: Vec<u8>) -> PathBuf {

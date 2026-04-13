@@ -1,10 +1,10 @@
+use pptx2html_core::ConversionOptions;
+use pptx2html_core::model::presentation::{ColorScheme, Presentation, Theme};
 use pptx2html_core::model::{
     ChartBubbleSizeRepresents, ChartData, ChartDataLabelPosition, ChartDataLabelSettings,
     ChartMarkerSpec, ChartOfPieType, ChartScatterStyle, ChartSeries, ChartSpec, ChartSplitType,
     ChartType, Emu, Fill, ImageFill, Shape, ShapeType, Size, Slide,
 };
-use pptx2html_core::model::presentation::{ColorScheme, Presentation, Theme};
-use pptx2html_core::ConversionOptions;
 use pptx2html_core::renderer::HtmlRenderer;
 
 fn chart_shape(spec: ChartSpec) -> Shape {

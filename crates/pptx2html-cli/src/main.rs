@@ -271,6 +271,7 @@ mod tests {
     fn test_write_external_assets_creates_nested_files() {
         let tmpdir =
             std::env::temp_dir().join(format!("pptx2html-cli-test-{}", std::process::id()));
+        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
         if tmpdir.exists() {
             std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
         }
@@ -295,6 +296,7 @@ mod tests {
             "pptx2html-cli-test-create-dir-error-{}",
             std::process::id()
         ));
+        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
         if tmpdir.exists() {
             std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
         }
@@ -320,6 +322,7 @@ mod tests {
             "pptx2html-cli-test-write-error-{}",
             std::process::id()
         ));
+        std::fs::create_dir_all(&tmpdir).expect("seed tempdir");
         if tmpdir.exists() {
             std::fs::remove_dir_all(&tmpdir).expect("cleanup old tempdir");
         }

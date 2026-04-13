@@ -726,9 +726,6 @@ fn store_shape_level_defaults(
     pd: ParagraphDefaults,
 ) {
     let lvl = parse_lvl_index(lvl_tag);
-    if lvl >= 9 {
-        return;
-    }
     let list_style = shape.list_style.get_or_insert_with(ListStyle::default);
     list_style.levels[lvl] = Some(pd);
 }
@@ -1050,7 +1047,6 @@ mod tests {
     use std::collections::HashMap;
     use std::io::{Cursor, Write};
 
-    use quick_xml::events::BytesStart;
     use zip::ZipArchive;
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -1129,12 +1125,10 @@ mod tests {
                 .expect("gradient layout parses");
         assert_eq!(gradient_layout.layout_type.as_deref(), Some("title"));
         assert!(!gradient_layout.show_master_sp);
-        match &gradient_layout.background {
-            Some(Fill::Gradient(fill)) => {
-                assert_eq!(fill.stops.len(), 2);
-            }
-            other => panic!("expected gradient background, got {other:?}"),
-        }
+        assert!(matches!(
+            &gradient_layout.background,
+            Some(Fill::Gradient(fill)) if fill.stops.len() == 2
+        ));
 
         let image_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -1226,6 +1220,16 @@ mod tests {
         assert!(text_body.anchor_center);
         assert!(!text_body.word_wrap);
         assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
+
+        let mut invalid_archive = empty_archive();
+        assert!(
+            parse_slide_layout(
+                "<p:sldLayout xmlns:p=\"p\"><p:cSld><",
+                &HashMap::new(),
+                &mut invalid_archive,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1242,15 +1246,6 @@ mod tests {
             layout.clr_map_ovr,
             Some(ClrMapOverride::UseMaster)
         ));
-    }
-
-    #[allow(dead_code)]
-    fn _bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
-        let mut start = BytesStart::new(name);
-        for (key, value) in attrs {
-            start.push_attribute((*key, *value));
-        }
-        start
     }
 
     fn empty_archive() -> ZipArchive<Cursor<Vec<u8>>> {

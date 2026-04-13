@@ -1164,7 +1164,18 @@ mod coverage_tests {
         assert_eq!(bg_mime_from_ext("bg.wmf"), "image/x-wmf");
         assert_eq!(bg_mime_from_ext("bg.unknown"), "image/png");
 
+        let mut tx_styles = TxStyles::default();
+        store_level_defaults(
+            &Some(TxStyleKind::Title),
+            &mut tx_styles,
+            9,
+            ParagraphDefaults::default(),
+        );
+        store_level_defaults(&None, &mut tx_styles, 0, ParagraphDefaults::default());
+        assert!(tx_styles.title_style.is_none());
+
         let mut shape = Some(MasterShapeBuilder::default());
+        store_shape_level_defaults(&mut shape, 9, ParagraphDefaults::default());
         store_shape_level_defaults(
             &mut shape,
             0,
@@ -1566,12 +1577,10 @@ mod more_tests {
         let gradient_master =
             parse_slide_master(gradient_xml, &HashMap::new(), &mut gradient_archive)
                 .expect("gradient master should parse");
-        match &gradient_master.background {
-            Some(Fill::Gradient(fill)) => {
-                assert_eq!(fill.stops.len(), 2);
-            }
-            other => panic!("expected gradient background, got {other:?}"),
-        }
+        assert!(matches!(
+            &gradient_master.background,
+            Some(Fill::Gradient(fill)) if fill.stops.len() == 2
+        ));
 
         let image_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
