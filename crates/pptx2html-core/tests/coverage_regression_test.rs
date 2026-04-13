@@ -7238,3 +7238,293 @@ fn parses_core_title_fallbacks_through_public_parser() {
     assert!(parse_pptx(&empty_title_pptx).title.is_none());
     assert!(parse_pptx(&invalid_title_pptx).title.is_none());
 }
+
+#[test]
+fn parse_slide_directly_covers_graphic_frame_table_and_shape_contexts() {
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram"
+       xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:gradFill>
+          <a:gsLst>
+            <a:gs pos="25000"><a:srgbClr val="010203"></a:srgbClr></a:gs>
+            <a:gs pos="100000"><a:schemeClr val="accent2"></a:schemeClr></a:gs>
+          </a:gsLst>
+          <a:path path="rect"></a:path>
+          <a:lin ang="1800000"></a:lin>
+        </a:gradFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="2" name="SmartArt"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram">
+            <dgm:relIds r:dm="1"/>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="3" name="Math"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/officeDocument/2006/math">
+            <m:oMath><m:r><m:t>x</m:t></m:r></m:oMath>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="4" name="Direct Table"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr bandRow="1" bandCol="1" firstRow="1" lastRow="1" firstCol="1" lastCol="1"></a:tblPr>
+              <a:tblGrid>
+                <a:gridCol w="914400"/>
+              </a:tblGrid>
+              <a:tr h="457200">
+                <a:tc gridSpan="2" rowSpan="2" vMerge="1">
+                  <a:txBody>
+                    <a:bodyPr/>
+                    <a:lstStyle/>
+                    <a:p>
+                      <a:pPr algn="ctr"/>
+                      <a:defRPr sz="1800" spc="50" baseline="5000" cap="small" u="dashLong" strike="dblStrike" b="1" i="true"/>
+                      <a:buClr><a:srgbClr val="00AA00"/></a:buClr>
+                      <a:r>
+                        <a:rPr><a:hlinkClick r:id="rIdLink"/></a:rPr>
+                        <a:t>Cell</a:t>
+                      </a:r>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr anchor="b">
+                    <a:lnB w="12700"><a:prstDash val="dashDot"></a:prstDash><a:srgbClr val="123456"></a:srgbClr></a:lnB>
+                  </a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:grpSp>
+        <p:nvGrpSpPr><p:cNvPr id="5" name="Outer Group"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+        <p:grpSpPr>
+          <a:xfrm>
+            <a:off x="100000" y="200000"/>
+            <a:ext cx="3000000" cy="2000000"/>
+            <a:chOff><a:off x="10000" y="20000"/></a:chOff>
+            <a:chExt><a:ext cx="1500000" cy="800000"/></a:chExt>
+          </a:xfrm>
+        </p:grpSpPr>
+        <p:sp>
+          <p:nvSpPr><p:cNvPr id="6" name="Grouped Child"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+          <p:spPr>
+            <a:xfrm><a:off x="500000" y="500000"/><a:ext cx="400000" cy="200000"/></a:xfrm>
+            <a:prstGeom prst="rect"></a:prstGeom>
+          </p:spPr>
+        </p:sp>
+      </p:grpSp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="7" name="Direct Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm rot="120000" flipH="1" flipV="true"/>
+          <a:prstGeom prst="rect"></a:prstGeom>
+          <a:noFill/>
+          <a:gradFill>
+            <a:gsLst>
+              <a:gs pos="0"><a:schemeClr val="accent4"></a:schemeClr></a:gs>
+            </a:gsLst>
+            <a:path path="shape"></a:path>
+            <a:lin ang="60000"></a:lin>
+          </a:gradFill>
+          <a:ln w="12700" cap="flat" cmpd="thickThin">
+            <a:prstDash val="dashDot"></a:prstDash>
+            <a:bevel/>
+            <a:headEnd type="triangle" w="sm" len="lg"/>
+            <a:tailEnd type="stealth" w="lg" len="sm"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr"/>
+          <a:noAutofit/>
+          <a:lstStyle>
+            <a:lvl1pPr>
+              <a:defRPr sz="1900"><a:srgbClr val="334455"></a:srgbClr></a:defRPr>
+            </a:lvl1pPr>
+          </a:lstStyle>
+          <a:p>
+            <a:pPr algn="ctr"/>
+            <a:defRPr sz="2000" spc="100" baseline="10000" cap="all" u="dbl" strike="sngStrike" b="1" i="true"/>
+            <a:buClr><a:srgbClr val="AA5500"></a:srgbClr></a:buClr>
+            <a:r>
+              <a:rPr>
+                <a:hlinkClick r:id="rIdLink"/>
+                <a:highlight><a:srgbClr val="FFFF00"></a:srgbClr></a:highlight>
+              </a:rPr>
+              <a:t>Linked</a:t>
+            </a:r>
+            <a:br/>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="8" name="Direct Picture"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="rIdPic"></a:blip></p:blipFill>
+        <p:spPr>
+          <a:xfrm rot="60000" flipH="1" flipV="true"/>
+          <a:prstGeom prst="rect"></a:prstGeom>
+        </p:spPr>
+      </p:pic>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="9" name="Shrink Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="228600" cy="114300"/></a:xfrm></p:spPr>
+        <p:txBody><a:bodyPr/><a:spAutoFit/><a:p/></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/direct" TargetMode="External"/>
+  <Relationship Id="rIdPic" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/direct-pic.png"/>
+</Relationships>"#,
+        )
+        .with_extra_file("ppt/media/direct-pic.png", b"png-data")
+        .build();
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    assert!(matches!(
+        &slide.background,
+        Some(Fill::Gradient(fill))
+            if !fill.stops.is_empty()
+    ));
+
+    let unsupported_labels = slide
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape_type {
+            ShapeType::Unsupported(data) => Some(data.label.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(unsupported_labels.iter().any(|label| label == "SmartArt"));
+    assert!(
+        unsupported_labels
+            .iter()
+            .any(|label| label == "Math Equation")
+    );
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("direct table");
+    assert!(table.band_row && table.band_col && table.first_row && table.last_row);
+    assert!(table.first_col && table.last_col);
+    let cell = &table.rows[0].cells[0];
+    assert_eq!(cell.col_span, 2);
+    assert_eq!(cell.row_span, 2);
+    assert!(cell.v_merge);
+    assert!(matches!(cell.vertical_align, VerticalAlign::Bottom));
+    assert!(matches!(cell.border_bottom.dash_style, DashStyle::DashDot));
+    assert_eq!(
+        cell.text_body
+            .as_ref()
+            .and_then(|body| body.paragraphs.first())
+            .and_then(|paragraph| paragraph.runs.first())
+            .and_then(|run| run.hyperlink.as_deref()),
+        Some("https://example.com/direct")
+    );
+
+    let group = slide
+        .shapes
+        .iter()
+        .find(|shape| matches!(shape.shape_type, ShapeType::Group(_, _)))
+        .expect("group shape");
+    match &group.shape_type {
+        ShapeType::Group(children, group_data) => {
+            assert_eq!(children.len(), 1);
+            assert_eq!(
+                group_data.child_offset.x.to_pt(),
+                Emu::parse_emu("10000").to_pt()
+            );
+            assert_eq!(
+                group_data.child_extent.width.to_pt(),
+                Emu::parse_emu("1500000").to_pt()
+            );
+        }
+        other => panic!("expected group, got {other:?}"),
+    }
+
+    let direct_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Direct Shape")
+        .expect("direct shape");
+    assert!(matches!(direct_shape.fill, Fill::Gradient(_)));
+    assert!(matches!(direct_shape.border.join, LineJoin::Bevel));
+    let text_body = direct_shape.text_body.as_ref().expect("direct text body");
+    assert!(matches!(text_body.auto_fit, AutoFit::NoAutoFit));
+    assert_eq!(text_body.paragraphs[0].runs.len(), 2);
+    assert_eq!(
+        text_body.paragraphs[0].runs[0]
+            .style
+            .highlight
+            .as_ref()
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#FFFF00")
+    );
+    assert_eq!(
+        text_body.paragraphs[0].runs[0].hyperlink.as_deref(),
+        Some("https://example.com/direct")
+    );
+    assert!(text_body.paragraphs[0].runs[1].is_break);
+    let lvl1 = text_body
+        .list_style
+        .as_ref()
+        .and_then(|style| style.levels[0].as_ref())
+        .and_then(|level| level.def_run_props.as_ref())
+        .expect("direct shape defaults");
+    assert_eq!(lvl1.font_size, Some(19.0));
+
+    let picture = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Picture(pic) => Some((shape, pic)),
+            _ => None,
+        })
+        .expect("direct picture");
+    assert!((picture.0.rotation - 1.0).abs() < 1e-6);
+    assert!(picture.0.flip_h);
+    assert!(picture.0.flip_v);
+    assert_eq!(picture.1.data, b"png-data");
+
+    let shrink_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Shrink Shape")
+        .expect("shrink shape");
+    assert!(matches!(
+        shrink_shape.text_body.as_ref().map(|body| &body.auto_fit),
+        Some(AutoFit::Shrink)
+    ));
+}
