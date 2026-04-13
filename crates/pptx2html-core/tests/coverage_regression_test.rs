@@ -6987,3 +6987,254 @@ fn parses_without_master_or_slide_relationship_parts_through_public_parser() {
     assert_eq!(presentation.slides.len(), 1);
     assert_eq!(presentation.slides[0].shapes.len(), 1);
 }
+
+#[test]
+fn parses_presentation_default_text_style_font_and_color_variants_through_public_parser() {
+    let presentation_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rIdMaster"/></p:sldMasterIdLst>
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rIdSlide1"/>
+    <p:sldId id="257" r:id="rIdSlide2" show="false"/>
+  </p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:defaultTextStyle>
+    <a:lvl1pPr algn="ctr">
+      <a:lnSpc><a:spcPct val="150000"/></a:lnSpc>
+      <a:spcBef><a:spcPts val="200"/></a:spcBef>
+      <a:spcAft><a:spcPct val="50000"/></a:spcAft>
+      <a:defRPr sz="1800"><a:srgbClr val="111111"></a:srgbClr></a:defRPr>
+    </a:lvl1pPr>
+    <a:lvl2pPr algn="just">
+      <a:spcAft><a:spcPts val="300"/></a:spcAft>
+      <a:defRPr sz="1600"><a:schemeClr val="accent2"></a:schemeClr></a:defRPr>
+    </a:lvl2pPr>
+    <a:lvl3pPr algn="r"/>
+    <a:lvl4pPr algn="l">
+      <a:defRPr sz="1400">
+        <a:latin typeface="Latin Face"/>
+        <a:ea typeface="East Face"/>
+        <a:cs typeface="CS Face"/>
+        <a:srgbClr val="223344"/>
+      </a:defRPr>
+    </a:lvl4pPr>
+    <a:lvl5pPr algn="just">
+      <a:defRPr sz="1500">
+        <a:latin typeface="Latin Theme"/>
+        <a:ea typeface="EA Theme"/>
+        <a:cs typeface="CS Theme"/>
+        <a:schemeClr val="accent4"/>
+      </a:defRPr>
+    </a:lvl5pPr>
+    <a:lvl6pPr algn="ctr">
+      <a:defRPr sz="1700"/>
+    </a:lvl6pPr>
+  </p:defaultTextStyle>
+</p:presentation>"#;
+    let presentation_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rIdSlide1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rIdSlide2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#;
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Theme">
+  <a:themeElements>
+    <a:clrScheme name="Scheme">
+      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+      <a:accent2><a:srgbClr val="ED7D31"/></a:accent2>
+      <a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+    </a:clrScheme>
+    <a:fontScheme name="Fonts">
+      <a:majorFont><a:latin typeface="Aptos"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Aptos"/></a:minorFont>
+    </a:fontScheme>
+  </a:themeElements>
+</a:theme>"#;
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = zip_entries(&[
+        ("ppt/presentation.xml", presentation_xml.to_string()),
+        (
+            "ppt/_rels/presentation.xml.rels",
+            presentation_rels.to_string(),
+        ),
+        ("ppt/slideMasters/slideMaster1.xml", master_xml.to_string()),
+        ("ppt/theme/theme1.xml", theme_xml.to_string()),
+        ("ppt/slides/slide1.xml", slide_xml.to_string()),
+        ("ppt/slides/slide2.xml", slide_xml.to_string()),
+    ]);
+
+    let presentation = parse_pptx(&pptx);
+    assert_eq!(presentation.slides.len(), 2);
+    assert!(!presentation.slides[0].hidden);
+    assert!(presentation.slides[1].hidden);
+
+    let defaults = presentation
+        .default_text_style
+        .as_ref()
+        .expect("default text style should parse");
+    let lvl1 = defaults.levels[0].as_ref().expect("level 1 defaults");
+    assert!(matches!(
+        lvl1.space_after,
+        Some(SpacingValue::Percent(v)) if (v - 0.5).abs() < 1e-6
+    ));
+    assert_eq!(
+        lvl1.def_run_props
+            .as_ref()
+            .and_then(|run| run.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#111111")
+    );
+
+    let lvl2 = defaults.levels[1].as_ref().expect("level 2 defaults");
+    assert!(matches!(
+        lvl2.space_after,
+        Some(SpacingValue::Points(v)) if (v - 3.0).abs() < 1e-6
+    ));
+    assert_eq!(
+        lvl2.def_run_props
+            .as_ref()
+            .and_then(|run| run.color.as_ref())
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#ED7D31")
+    );
+
+    assert_eq!(
+        defaults.levels[2]
+            .as_ref()
+            .and_then(|level| level.alignment.as_ref())
+            .map(|alignment| alignment.to_css()),
+        Some("right")
+    );
+
+    let lvl4 = defaults.levels[3]
+        .as_ref()
+        .and_then(|level| level.def_run_props.as_ref())
+        .expect("level 4 run defaults");
+    assert_eq!(lvl4.font_latin.as_deref(), Some("Latin Face"));
+    assert_eq!(lvl4.font_ea.as_deref(), Some("East Face"));
+    assert_eq!(lvl4.font_cs.as_deref(), Some("CS Face"));
+    assert_eq!(
+        lvl4.color
+            .as_ref()
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#223344")
+    );
+
+    let lvl5 = defaults.levels[4]
+        .as_ref()
+        .and_then(|level| level.def_run_props.as_ref())
+        .expect("level 5 run defaults");
+    assert_eq!(lvl5.font_latin.as_deref(), Some("Latin Theme"));
+    assert_eq!(lvl5.font_ea.as_deref(), Some("EA Theme"));
+    assert_eq!(lvl5.font_cs.as_deref(), Some("CS Theme"));
+    assert_eq!(
+        lvl5.color
+            .as_ref()
+            .and_then(|color| color.to_css())
+            .as_deref(),
+        Some("#FFC000")
+    );
+
+    assert_eq!(
+        defaults.levels[5]
+            .as_ref()
+            .and_then(|level| level.def_run_props.as_ref())
+            .and_then(|run| run.font_size),
+        Some(17.0)
+    );
+}
+
+#[test]
+fn parses_core_title_fallbacks_through_public_parser() {
+    let presentation_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rIdMaster"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#;
+    let presentation_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>"#;
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#;
+
+    let empty_title_pptx = zip_entries(&[
+        ("ppt/presentation.xml", presentation_xml.to_string()),
+        (
+            "ppt/_rels/presentation.xml.rels",
+            presentation_rels.to_string(),
+        ),
+        ("ppt/slideMasters/slideMaster1.xml", master_xml.to_string()),
+        ("ppt/slides/slide1.xml", slide_xml.to_string()),
+        (
+            "docProps/core.xml",
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:title></dc:title>
+</cp:coreProperties>"#
+                .to_string(),
+        ),
+    ]);
+    let invalid_title_pptx = zip_entries(&[
+        ("ppt/presentation.xml", presentation_xml.to_string()),
+        (
+            "ppt/_rels/presentation.xml.rels",
+            presentation_rels.to_string(),
+        ),
+        ("ppt/slideMasters/slideMaster1.xml", master_xml.to_string()),
+        ("ppt/slides/slide1.xml", slide_xml.to_string()),
+        (
+            "docProps/core.xml",
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:title>"#
+                .to_string(),
+        ),
+    ]);
+
+    assert!(parse_pptx(&empty_title_pptx).title.is_none());
+    assert!(parse_pptx(&invalid_title_pptx).title.is_none());
+}

@@ -786,10 +786,10 @@ mod tests {
 
         let style = default_text_style.expect("default text style should exist");
         let lvl1 = style.levels[0].as_ref().expect("level 1 defaults");
-        assert!(matches!(
-            lvl1.alignment,
-            Some(crate::model::Alignment::Center)
-        ));
+        assert_eq!(
+            lvl1.alignment.as_ref().map(|alignment| alignment.to_css()),
+            Some("center")
+        );
         assert_eq!(lvl1.margin_left, Some(36.0));
         assert_eq!(lvl1.indent, Some(-18.0));
         assert!(matches!(
@@ -813,12 +813,13 @@ mod tests {
             run.color.as_ref().and_then(|c| c.to_css()).as_deref(),
             Some("#ED7D31")
         );
-        assert!(matches!(
+        assert_eq!(
             style.levels[1]
                 .as_ref()
-                .and_then(|lvl| lvl.alignment.clone()),
-            Some(crate::model::Alignment::Right)
-        ));
+                .and_then(|lvl| lvl.alignment.as_ref())
+                .map(|alignment| alignment.to_css()),
+            Some("right")
+        );
     }
 
     #[test]
