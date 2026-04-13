@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 /// Convert PPTX bytes to an HTML string.
 #[wasm_bindgen]
 pub fn convert(data: &[u8]) -> Result<String, JsError> {
-    pptx2html_core::convert_bytes(data).map_err(|e| JsError::new(&e.to_string()))
+    pptx2html_core::convert_bytes(data).map_err(to_js_error)
 }
 
 /// Convert PPTX bytes to HTML with slide filtering (0-based indices).
@@ -15,25 +15,20 @@ pub fn convert(data: &[u8]) -> Result<String, JsError> {
 pub fn convert_slides(data: &[u8], slides: &[usize]) -> Result<String, JsError> {
     let slide_indices = slides
         .iter()
-        .map(|index| {
-            index
-                .checked_add(1)
-                .ok_or_else(|| JsError::new("slide index overflow"))
-        })
+        .copied()
+        .map(to_one_based_index)
         .collect::<Result<Vec<_>, _>>()?;
     let opts = pptx2html_core::ConversionOptions {
         slide_indices: Some(slide_indices),
         ..Default::default()
     };
-    pptx2html_core::convert_bytes_with_options(data, &opts)
-        .map_err(|e| JsError::new(&e.to_string()))
+    pptx2html_core::convert_bytes_with_options(data, &opts).map_err(to_js_error)
 }
 
 /// Get the number of slides in a PPTX file.
 #[wasm_bindgen]
 pub fn get_slide_count(data: &[u8]) -> Result<usize, JsError> {
-    let info =
-        pptx2html_core::get_info_from_bytes(data).map_err(|e| JsError::new(&e.to_string()))?;
+    let info = pptx2html_core::get_info_from_bytes(data).map_err(to_js_error)?;
     Ok(info.slide_count)
 }
 
@@ -42,8 +37,7 @@ pub fn get_slide_count(data: &[u8]) -> Result<usize, JsError> {
 /// Kept for backward compatibility. Prefer `get_presentation_info()` for typed access.
 #[wasm_bindgen]
 pub fn get_info(data: &[u8]) -> Result<String, JsError> {
-    let info =
-        pptx2html_core::get_info_from_bytes(data).map_err(|e| JsError::new(&e.to_string()))?;
+    let info = pptx2html_core::get_info_from_bytes(data).map_err(to_js_error)?;
     Ok(format!(
         r#"{{"slide_count":{},"width_px":{:.1},"height_px":{:.1},"title":{}}}"#,
         info.slide_count,
@@ -100,8 +94,7 @@ impl PresentationInfo {
 /// ```
 #[wasm_bindgen]
 pub fn get_presentation_info(data: &[u8]) -> Result<PresentationInfo, JsError> {
-    let info =
-        pptx2html_core::get_info_from_bytes(data).map_err(|e| JsError::new(&e.to_string()))?;
+    let info = pptx2html_core::get_info_from_bytes(data).map_err(to_js_error)?;
     Ok(PresentationInfo {
         slide_count: info.slide_count,
         width_px: info.width_px,
@@ -163,15 +156,10 @@ pub fn convert_with_options(
     let opts = pptx2html_core::ConversionOptions {
         embed_images,
         include_hidden,
-        slide_indices: if slide_indices.is_empty() {
-            None
-        } else {
-            Some(slide_indices.to_vec())
-        },
+        slide_indices: optional_slide_indices(slide_indices),
         ..Default::default()
     };
-    pptx2html_core::convert_bytes_with_options(data, &opts)
-        .map_err(|e| JsError::new(&e.to_string()))
+    pptx2html_core::convert_bytes_with_options(data, &opts).map_err(to_js_error)
 }
 
 /// Convert PPTX and return both HTML and metadata about unresolved elements.
@@ -183,8 +171,7 @@ pub fn convert_with_options(
 /// ```
 #[wasm_bindgen]
 pub fn convert_with_metadata(data: &[u8]) -> Result<ConversionResult, JsError> {
-    let result = pptx2html_core::convert_bytes_with_metadata(data)
-        .map_err(|e| JsError::new(&e.to_string()))?;
+    let result = pptx2html_core::convert_bytes_with_metadata(data).map_err(to_js_error)?;
     Ok(ConversionResult {
         html: result.html,
         unresolved_json: serialize_unresolved(&result.unresolved_elements),
@@ -212,15 +199,11 @@ pub fn convert_with_options_metadata(
     let opts = pptx2html_core::ConversionOptions {
         embed_images,
         include_hidden,
-        slide_indices: if slide_indices.is_empty() {
-            None
-        } else {
-            Some(slide_indices.to_vec())
-        },
+        slide_indices: optional_slide_indices(slide_indices),
         ..Default::default()
     };
-    let result = pptx2html_core::convert_bytes_with_options_metadata(data, &opts)
-        .map_err(|e| JsError::new(&e.to_string()))?;
+    let result =
+        pptx2html_core::convert_bytes_with_options_metadata(data, &opts).map_err(to_js_error)?;
     Ok(ConversionResult {
         html: result.html,
         unresolved_json: serialize_unresolved(&result.unresolved_elements),
@@ -231,6 +214,20 @@ pub fn convert_with_options_metadata(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+fn to_js_error(error: impl std::fmt::Display) -> JsError {
+    JsError::new(&error.to_string())
+}
+
+fn to_one_based_index(index: usize) -> Result<usize, JsError> {
+    index
+        .checked_add(1)
+        .ok_or_else(|| JsError::new("slide index overflow"))
+}
+
+fn optional_slide_indices(slide_indices: &[usize]) -> Option<Vec<usize>> {
+    (!slide_indices.is_empty()).then(|| slide_indices.to_vec())
+}
 
 fn serialize_unresolved(elements: &[pptx2html_core::model::UnresolvedElement]) -> String {
     let mut json = String::from("[");
@@ -296,7 +293,7 @@ mod tests {
     use super::{
         ConversionResult, PresentationInfo, convert, convert_slides, convert_with_metadata,
         convert_with_options, convert_with_options_metadata, escape_json_string, get_info,
-        get_presentation_info, get_slide_count, serialize_unresolved,
+        get_presentation_info, get_slide_count, optional_slide_indices, serialize_unresolved,
     };
 
     #[test]
@@ -418,6 +415,29 @@ mod tests {
     }
 
     #[test]
+    fn wasm_public_apis_cover_title_and_empty_selection_paths() {
+        let data = build_titled_single_slide_pptx("Quarterly \"Deck\"");
+
+        let info_json = get_info(&data).expect("titled info should succeed");
+        assert!(info_json.contains("\"title\":\"Quarterly \\\"Deck\\\"\""));
+
+        let info = get_presentation_info(&data).expect("typed titled info should succeed");
+        assert_eq!(info.title(), Some("Quarterly \"Deck\"".to_string()));
+
+        let html =
+            convert_with_options(&data, true, false, &[]).expect("empty selection keeps slides");
+        assert!(html.contains("Slide One"));
+
+        let metadata = convert_with_options_metadata(&data, true, false, &[])
+            .expect("empty selection metadata keeps slides");
+        assert!(metadata.html().contains("Slide One"));
+        assert_eq!(metadata.slide_count(), 1);
+
+        assert_eq!(optional_slide_indices(&[]), None);
+        assert_eq!(optional_slide_indices(&[1, 3]), Some(vec![1, 3]));
+    }
+
+    #[test]
     fn wasm_struct_getters_and_escape_helper_cover_remaining_paths() {
         let info = PresentationInfo {
             slide_count: 3,
@@ -479,6 +499,80 @@ mod tests {
 
         zip.start_file("ppt/theme/theme1.xml", options).unwrap();
         zip.write_all(theme_xml().as_bytes()).unwrap();
+
+        zip.finish().unwrap().into_inner()
+    }
+
+    fn build_titled_single_slide_pptx(title: &str) -> Vec<u8> {
+        let cursor = Cursor::new(Vec::new());
+        let mut zip = ZipWriter::new(cursor);
+        let options = SimpleFileOptions::default();
+
+        zip.start_file("[Content_Types].xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>"#,
+        )
+        .unwrap();
+
+        zip.start_file("_rels/.rels", options).unwrap();
+        zip.write_all(root_rels().as_bytes()).unwrap();
+
+        zip.start_file("ppt/presentation.xml", options).unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst/>
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+  </p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/_rels/presentation.xml.rels", options)
+            .unwrap();
+        zip.write_all(
+            br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#,
+        )
+        .unwrap();
+
+        zip.start_file("ppt/slides/slide1.xml", options).unwrap();
+        zip.write_all(slide_xml("Slide One").as_bytes()).unwrap();
+
+        zip.start_file("ppt/slides/_rels/slide1.xml.rels", options)
+            .unwrap();
+        zip.write_all(empty_relationships().as_bytes()).unwrap();
+
+        zip.start_file("ppt/theme/theme1.xml", options).unwrap();
+        zip.write_all(theme_xml().as_bytes()).unwrap();
+
+        zip.start_file("docProps/core.xml", options).unwrap();
+        zip.write_all(
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <dc:title>{title}</dc:title>
+</cp:coreProperties>"#
+            )
+            .as_bytes(),
+        )
+        .unwrap();
 
         zip.finish().unwrap().into_inner()
     }
