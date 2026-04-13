@@ -944,6 +944,266 @@ mod tests {
         assert!(presentation.layouts.is_empty());
     }
 
+    #[test]
+    fn parse_bytes_reports_missing_presentation_relationships() {
+        let bytes = build_zip(&[
+            (
+                "[Content_Types].xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+</Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/presentation.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+            ),
+            (
+                "ppt/slides/slide1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#,
+            ),
+        ]);
+
+        let err = PptxParser::parse_bytes(&bytes)
+            .expect_err("missing presentation relationships should fail");
+        assert!(matches!(
+            err,
+            PptxError::MissingFile(path) if path == "ppt/_rels/presentation.xml.rels"
+        ));
+    }
+
+    #[test]
+    fn parse_bytes_reports_invalid_relationship_and_theme_xml() {
+        let invalid_rels = build_zip(&[
+            (
+                "[Content_Types].xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+</Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/presentation.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+            ),
+            ("ppt/_rels/presentation.xml.rels", b"<Relationships"),
+            (
+                "ppt/slides/slide1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#,
+            ),
+        ]);
+        assert!(matches!(
+            PptxParser::parse_bytes(&invalid_rels),
+            Err(PptxError::Xml(_))
+        ));
+
+        let invalid_theme = build_zip(&[
+            (
+                "[Content_Types].xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+</Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/presentation.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+            ),
+            (
+                "ppt/_rels/presentation.xml.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/slides/slide1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#,
+            ),
+            ("ppt/theme/theme1.xml", b"<a:theme"),
+        ]);
+        assert!(matches!(
+            PptxParser::parse_bytes(&invalid_theme),
+            Err(PptxError::Xml(_))
+        ));
+    }
+
+    #[test]
+    fn parse_bytes_reports_invalid_master_and_slide_relationship_xml() {
+        let invalid_master_rels = build_zip(&[
+            (
+                "[Content_Types].xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+</Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/presentation.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldMasterIdLst><p:sldMasterId r:id="rIdMaster"/></p:sldMasterIdLst>
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+            ),
+            (
+                "ppt/_rels/presentation.xml.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/slideMasters/slideMaster1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sldMaster>"#,
+            ),
+            ("ppt/slideMasters/_rels/slideMaster1.xml.rels", b"<Relationships"),
+            (
+                "ppt/slides/slide1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#,
+            ),
+        ]);
+        assert!(matches!(
+            PptxParser::parse_bytes(&invalid_master_rels),
+            Err(PptxError::Xml(_))
+        ));
+
+        let invalid_slide_rels = build_zip(&[
+            (
+                "[Content_Types].xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+</Types>"#,
+            ),
+            (
+                "_rels/.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/presentation.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:sldIdLst><p:sldId id="256" r:id="rIdSlide"/></p:sldIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+</p:presentation>"#,
+            ),
+            (
+                "ppt/_rels/presentation.xml.rels",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdSlide" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>"#,
+            ),
+            (
+                "ppt/slides/slide1.xml",
+                br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+</p:sld>"#,
+            ),
+            ("ppt/slides/_rels/slide1.xml.rels", b"<Relationships"),
+        ]);
+        assert!(matches!(
+            PptxParser::parse_bytes(&invalid_slide_rels),
+            Err(PptxError::Xml(_))
+        ));
+    }
+
     fn build_minimal_pptx() -> Vec<u8> {
         let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
         let options = SimpleFileOptions::default();
@@ -1048,5 +1308,15 @@ mod tests {
         .unwrap();
 
         zip.finish().unwrap().into_inner()
+    }
+
+    fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let options = SimpleFileOptions::default();
+        for (path, bytes) in entries {
+            zip.start_file(path, options).expect("start file");
+            zip.write_all(bytes).expect("write file");
+        }
+        zip.finish().expect("finish zip").into_inner()
     }
 }
