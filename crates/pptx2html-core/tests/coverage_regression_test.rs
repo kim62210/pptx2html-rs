@@ -115,6 +115,7 @@ fn parses_presentation_relationship_fallbacks_through_public_parser() {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="ppt/theme/theme1.xml"/>
   <Relationship Id="rIdLayout1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+  <Relationship Id="rIdLayout2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout2.xml"/>
   <Relationship Id="rIdLayoutDuplicate" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
   <Relationship Id="rIdLayoutMissing" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/missingLayout.xml"/>
 </Relationships>"#
@@ -122,7 +123,26 @@ fn parses_presentation_relationship_fallbacks_through_public_parser() {
     let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
              xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+  <p:cSld>
+    <p:bg><p:bgPr><a:srgbClr val="ABCDEF"></a:srgbClr></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="Layout Edge Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:ln w="12700"><a:prstDash val="unknownDash"/></a:ln></p:spPr>
+        <p:txBody><a:bodyPr/><a:lstStyle><a:lvl1pPr><a:spcBef><a:spcPct val="70000"/></a:spcBef><a:lnSpc><a:spcPts val="600"/></a:lnSpc><a:spcAft><a:spcPts val="300"/></a:spcAft></a:lvl1pPr></a:lstStyle></p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sldLayout>"#
+        .to_string();
+    let layout2_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:schemeClr val="accent1"></a:schemeClr></p:bgPr></p:bg>
+    <p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree>
+  </p:cSld>
 </p:sldLayout>"#
         .to_string();
     let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -147,12 +167,14 @@ fn parses_presentation_relationship_fallbacks_through_public_parser() {
         ("ppt/slideMasters/slideMaster1.xml", master_xml),
         ("ppt/slideMasters/_rels/slideMaster1.xml.rels", master_rels),
         ("ppt/slideLayouts/slideLayout1.xml", layout_xml),
+        ("ppt/slideLayouts/slideLayout2.xml", layout2_xml),
         ("ppt/theme/theme1.xml", theme_xml),
         ("ppt/slides/slide1.xml", slide_xml),
     ]);
 
     let presentation = parse_pptx(&pptx);
     assert_eq!(presentation.slides.len(), 1);
+    assert_eq!(presentation.layouts.len(), 2);
     assert_eq!(presentation.slides[0].shapes.len(), 105);
     assert!(presentation.default_text_style.is_some());
 }
@@ -1221,6 +1243,34 @@ fn renders_renderer_none_label_marker_and_group_skip_paths_through_public_render
             }],
             ..Default::default()
         }),
+        renderer_chart_shape(ChartSpec {
+            chart_type: ChartType::Scatter,
+            scatter_style: Some(pptx2html_core::model::ChartScatterStyle::Marker),
+            series: vec![ChartSeries {
+                name: Some("NaN scatter".to_string()),
+                x_values: vec![f64::NAN],
+                values: vec![f64::NAN],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        Shape {
+            shape_type: ShapeType::Table(TableData {
+                band_col: true,
+                last_col: true,
+                col_widths: vec![1.0, 1.0],
+                rows: vec![TableRow {
+                    height: 20.0,
+                    cells: vec![TableCell::default(), TableCell::default()],
+                }],
+                ..Default::default()
+            }),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            ..Default::default()
+        },
         no_marker_line,
         no_rect_custom_geom,
         hidden_group,
