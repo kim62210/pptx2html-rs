@@ -365,6 +365,34 @@ mod tests {
         })
     }
 
+    fn test_color_scheme() -> ColorScheme {
+        ColorScheme {
+            accent1: "4472C4".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn test_fmt_scheme() -> FmtScheme {
+        FmtScheme {
+            fill_style_lst: vec![Fill::None],
+            ln_style_lst: vec![Border {
+                width: 1.25,
+                color: Color::rgb("112233"),
+                style: BorderStyle::Solid,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    fn arrow_end() -> LineEnd {
+        LineEnd {
+            end_type: LineEndType::Arrow,
+            width: LineEndSize::Medium,
+            length: LineEndSize::Large,
+        }
+    }
+
     // -- resolve_background tests --
 
     #[test]
@@ -438,6 +466,63 @@ mod tests {
         );
     }
 
+    #[test]
+    fn background_source_reports_slide_layout_master_and_default() {
+        let layout = SlideLayout {
+            background: Some(blue_fill()),
+            ..Default::default()
+        };
+        let master = SlideMaster {
+            background: Some(green_fill()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            background_source(
+                &Slide {
+                    background: Some(red_fill()),
+                    ..Default::default()
+                },
+                Some(&layout),
+                Some(&master)
+            ),
+            ProvenanceSource::Slide
+        );
+        assert_eq!(
+            background_source(&Slide::default(), Some(&layout), Some(&master)),
+            ProvenanceSource::LayoutBackground
+        );
+        assert_eq!(
+            background_source(&Slide::default(), None, Some(&master)),
+            ProvenanceSource::MasterBackground
+        );
+        assert_eq!(
+            background_source(&Slide::default(), None, None),
+            ProvenanceSource::HardcodedDefault
+        );
+    }
+
+    #[test]
+    fn background_source_skips_fill_none_before_falling_back() {
+        let slide = Slide {
+            background: Some(Fill::None),
+            ..Default::default()
+        };
+        let layout = SlideLayout {
+            background: Some(Fill::None),
+            ..Default::default()
+        };
+        let master = SlideMaster {
+            background: Some(green_fill()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            background_source(&slide, Some(&layout), Some(&master)),
+            ProvenanceSource::MasterBackground
+        );
+    }
+
     // -- resolve_shape_fill tests --
 
     #[test]
@@ -484,6 +569,149 @@ mod tests {
         let shape = Shape::default();
         let fill = resolve_shape_fill(&shape, None, None);
         assert!(matches!(fill, Fill::None));
+    }
+
+    #[test]
+    fn resolve_shape_fill_with_theme_uses_style_ref_when_inheritance_is_empty() {
+        let shape = Shape {
+            style_ref: Some(ShapeStyleRef {
+                fill_ref: Some(StyleRef {
+                    idx: 1,
+                    color: Color::rgb("ABCDEF"),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let fill = resolve_shape_fill_with_theme(
+            &shape,
+            None,
+            None,
+            Some(&test_fmt_scheme()),
+            Some(&test_color_scheme()),
+            Some(&ClrMap::default()),
+        );
+
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref s) if s == "ABCDEF"))
+        );
+    }
+
+    #[test]
+    fn shape_fill_source_reports_layout_master_style_ref_and_none() {
+        let layout_match = Shape {
+            fill: blue_fill(),
+            ..Default::default()
+        };
+        let master_match = Shape {
+            fill: green_fill(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            shape_fill_source(&Shape::default(), Some(&layout_match), None, false),
+            Some(ProvenanceSource::LayoutPlaceholder)
+        );
+        assert_eq!(
+            shape_fill_source(&Shape::default(), None, Some(&master_match), false),
+            Some(ProvenanceSource::MasterPlaceholder)
+        );
+        assert_eq!(
+            shape_fill_source(&Shape::default(), None, None, true),
+            Some(ProvenanceSource::StyleRef)
+        );
+        assert_eq!(
+            shape_fill_source(&Shape::default(), None, None, false),
+            None
+        );
+    }
+
+    #[test]
+    fn resolve_border_with_theme_backfills_shape_marker_border_from_ln_ref() {
+        let shape = Shape {
+            border: Border {
+                head_end: Some(arrow_end()),
+                ..Default::default()
+            },
+            style_ref: Some(ShapeStyleRef {
+                ln_ref: Some(StyleRef {
+                    idx: 1,
+                    color: Color::none(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let border = resolve_border_with_theme(
+            &shape,
+            None,
+            None,
+            Some(&test_fmt_scheme()),
+            Some(&test_color_scheme()),
+            Some(&ClrMap::default()),
+        );
+
+        assert_eq!(border.width, 1.25);
+        assert!(matches!(border.color.kind, ColorKind::Rgb(ref s) if s == "112233"));
+        assert!(border.head_end.is_some());
+    }
+
+    #[test]
+    fn border_source_reports_layout_master_style_ref_and_none() {
+        let layout_match = Shape {
+            border: Border {
+                dash_style: DashStyle::Dash,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let master_match = Shape {
+            border: Border {
+                cap: LineCap::Round,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            border_source(&Shape::default(), Some(&layout_match), None, false),
+            Some(ProvenanceSource::LayoutPlaceholder)
+        );
+        assert_eq!(
+            border_source(&Shape::default(), None, Some(&master_match), false),
+            Some(ProvenanceSource::MasterPlaceholder)
+        );
+        assert_eq!(
+            border_source(&Shape::default(), None, None, true),
+            Some(ProvenanceSource::StyleRef)
+        );
+        assert_eq!(border_source(&Shape::default(), None, None, false), None);
+    }
+
+    #[test]
+    fn has_border_properties_detects_each_nondefault_branch() {
+        assert!(has_border_properties(&Border {
+            dash_style: DashStyle::Dash,
+            ..Default::default()
+        }));
+        assert!(has_border_properties(&Border {
+            cap: LineCap::Round,
+            ..Default::default()
+        }));
+        assert!(has_border_properties(&Border {
+            compound: CompoundLine::Double,
+            ..Default::default()
+        }));
+        assert!(has_border_properties(&Border {
+            alignment: LineAlignment::Inset,
+            ..Default::default()
+        }));
+        assert!(has_border_properties(&Border {
+            join: LineJoin::Round,
+            ..Default::default()
+        }));
     }
 
     // -- resolve_position tests --
