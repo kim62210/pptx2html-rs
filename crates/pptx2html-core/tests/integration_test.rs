@@ -6906,6 +6906,70 @@ fn test_bent_connector_anchors_to_custom_geometry_connection_sites() {
 }
 
 #[test]
+fn test_bent_connector5_adjust_values_are_parsed_and_rendered() {
+    let slide = r#"
+    <p:cxnSp>
+      <p:nvCxnSpPr><p:cNvPr id="2" name="Bent Connector 5"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1200000"/></a:xfrm>
+        <a:prstGeom prst="bentConnector5">
+          <a:avLst>
+            <a:gd name="adj1" fmla="val 20000"/>
+            <a:gd name="adj2" fmla="val 35000"/>
+            <a:gd name="adj3" fmla="val 80000"/>
+          </a:avLst>
+        </a:prstGeom>
+        <a:ln w="9525"><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln>
+      </p:spPr>
+    </p:cxnSp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    let shape = &pres.slides[0].shapes[0];
+
+    assert!(matches!(
+        shape.shape_type,
+        ShapeType::Custom(ref name) if name == "bentConnector5"
+    ));
+    assert_eq!(
+        shape
+            .adjust_values
+            .as_ref()
+            .and_then(|values| values.get("adj1"))
+            .copied(),
+        Some(20_000.0)
+    );
+    assert_eq!(
+        shape
+            .adjust_values
+            .as_ref()
+            .and_then(|values| values.get("adj2"))
+            .copied(),
+        Some(35_000.0)
+    );
+    assert_eq!(
+        shape
+            .adjust_values
+            .as_ref()
+            .and_then(|values| values.get("adj3"))
+            .copied(),
+        Some(80_000.0)
+    );
+
+    let html = render_html(&pptx);
+    assert!(
+        html.contains(
+            "M0,0 L42.0,0 L42.0,44.1 L105.0,44.1 L105.0,72.4 L168.0,72.4 L168.0,126.0 L210.0,126.0"
+        ),
+        "bentConnector5 should render the adjusted multi-bend path: {html}"
+    );
+    assert!(
+        html.contains("stroke=\"#4472C4\""),
+        "bentConnector5 should keep its inline stroke color: {html}"
+    );
+}
+
+#[test]
 fn test_connector_border_color_srgb() {
     // Connector with inline srgbClr in <a:ln> — must parse border color
     let slide = r#"

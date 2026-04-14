@@ -3113,6 +3113,14 @@ mod tests {
     }
 
     #[test]
+    fn test_action_button_unknown_icon_falls_back_to_blank_frame() {
+        let blank = action_button_blank_path(100.0, 100.0);
+        let unknown = action_button_icon_path(100.0, 100.0, "mystery");
+
+        assert_eq!(unknown, format!("{blank} "));
+    }
+
+    #[test]
     fn test_star_variants() {
         let adj = HashMap::new();
         for name in [
@@ -3204,6 +3212,25 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "circularArrow adj values should change the path"
+        );
+    }
+
+    #[test]
+    fn test_circular_arrow_negative_adjust_flips_large_arc_flag() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), -40_000.0);
+
+        let default_path = preset_shape_svg("circularArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("circularArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert!(
+            default_path.contains("A60.0,50.0 0 1,1"),
+            "default circularArrow should keep large-arc sweep: {default_path}"
+        );
+        assert!(
+            custom_path.contains("A60.0,50.0 0 0,1"),
+            "negative adj1 should flip the sweep below π: {custom_path}"
         );
     }
 
@@ -3425,6 +3452,23 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "mathNotEqual adj2 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_bent_connector5_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let mut custom_adj = HashMap::new();
+        custom_adj.insert("adj1".to_string(), 20_000.0);
+        custom_adj.insert("adj2".to_string(), 35_000.0);
+        custom_adj.insert("adj3".to_string(), 80_000.0);
+
+        let default_path = preset_shape_svg("bentConnector5", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("bentConnector5", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "bentConnector5 adj1/adj2/adj3 should change the path"
         );
     }
 
