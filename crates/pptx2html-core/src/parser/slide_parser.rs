@@ -1762,10 +1762,10 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // ── Chart reference inside graphicData ──
                     "chart" if in_graphic_data && graphic_data_is_chart => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            if let Some(rel_id) = xml_utils::attr_str(e, "id") {
-                                sb.chart_rel_id = Some(rel_id);
-                            }
+                        if let Some(sb) = current_shape.as_mut()
+                            && let Some(rel_id) = xml_utils::attr_str(e, "id")
+                        {
+                            sb.chart_rel_id = Some(rel_id);
                         }
                     }
                     // ── Text break (Empty variant) ──
@@ -3096,6 +3096,7 @@ fn assign_typeface_to_paragraph(paragraph: &mut ParagraphBuilder, local: &str, t
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn assign_typeface(
     local: &str,
     e: &quick_xml::events::BytesStart<'_>,
