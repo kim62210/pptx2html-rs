@@ -34,6 +34,7 @@ const filtered = convert_with_options(
   true,
   false,
   new Uint32Array([1, 3]),
+  1.0,
 );
 
 const info = get_presentation_info(data);
@@ -47,6 +48,7 @@ const filteredWithMetadata = convert_with_options_metadata(
   true,
   false,
   new Uint32Array([1, 3]),
+  1.0,
 );
 </script>
 ```
@@ -55,9 +57,9 @@ const filteredWithMetadata = convert_with_options_metadata(
 
 - `init()` — initialize the WASM module
 - `convert(data)` — convert PPTX bytes to HTML
-- `convert_with_options(data, embedImages, includeHidden, slideIndices)`
+- `convert_with_options(data, embedImages, includeHidden, slideIndices, scale)`
 - `convert_with_metadata(data)` — convert and return unresolved-element metadata
-- `convert_with_options_metadata(data, embedImages, includeHidden, slideIndices)`
+- `convert_with_options_metadata(data, embedImages, includeHidden, slideIndices, scale)`
 - `get_presentation_info(data)` — typed presentation metadata
 - `get_info(data)` / `get_slide_count(data)` — backward-compatible helpers
 
@@ -65,6 +67,12 @@ const filteredWithMetadata = convert_with_options_metadata(
 
 - `convert_slides(data, slides)` uses **0-based** slide indices.
 - `convert_with_options(..., slideIndices)` and `convert_with_options_metadata(..., slideIndices)` use **1-based** slide indices.
+
+### Slide Scale
+
+- `scale` defaults to `1.0`.
+- Values like `2.0` enlarge the whole slide canvas uniformly without recomputing coordinates or reflowing text.
+- The included browser demo exposes this as an image-like zoom control.
 
 ## Package Scope
 

@@ -11,6 +11,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .header h1 { font-size: 20px; font-weight: 600; }
 .header p { font-size: 14px; color: #666; margin-top: 4px; }
 .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.controls {
+  display: none;
+  grid-template-columns: 120px minmax(180px, 1fr) 96px;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.controls label { font-size: 14px; font-weight: 600; color: #444; }
+.controls input[type="range"] { width: 100%; }
+.controls input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.controls .hint {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #666;
+}
 .drop-zone {
   border: 2px dashed #ccc; border-radius: 8px; padding: 48px; text-align: center;
   cursor: pointer; transition: border-color 0.2s, background 0.2s;
@@ -55,21 +80,76 @@ input[type="file"] {
   </label>
   <input type="file" id="fileInput" accept=".pptx">
   <div class="status" id="status"></div>
+  <div class="controls" id="controls">
+    <label for="scaleRange">Slide zoom</label>
+    <input type="range" id="scaleRange" min="0.5" max="3" step="0.1" value="1">
+    <input type="number" id="scaleNumber" min="0.5" max="3" step="0.1" value="1.0">
+    <div class="hint">Layout-preserving whole-slide scale. The output grows like an image without changing coordinates or reflowing text.</div>
+  </div>
   <div class="meta" id="meta"></div>
   <iframe class="output-frame" id="output" sandbox="allow-same-origin"></iframe>
 </div>
 <script type="module">
-import init, { convert, get_slide_count, get_info } from './pkg/pptx2html_wasm.js';
+import init, { convert_with_options, get_info } from './pkg/pptx2html_wasm.js';
 
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const status = document.getElementById('status');
+const controls = document.getElementById('controls');
+const scaleRange = document.getElementById('scaleRange');
+const scaleNumber = document.getElementById('scaleNumber');
 const meta = document.getElementById('meta');
 const output = document.getElementById('output');
+let currentBuffer = null;
+let currentInfo = null;
 
 function setStatus(msg, type) {
   status.textContent = msg;
   status.className = 'status ' + type;
+}
+
+function clampScale(value) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return 1.0;
+  return Math.min(3.0, Math.max(0.5, parsed));
+}
+
+function syncScaleInputs(value) {
+  const scale = clampScale(value);
+  scaleRange.value = scale.toFixed(1);
+  scaleNumber.value = scale.toFixed(1);
+  return scale;
+}
+
+function updateMeta() {
+  if (!currentInfo) return;
+  const scale = clampScale(scaleNumber.value);
+  meta.innerHTML =
+    '<span>Slides: ' + currentInfo.slide_count + '</span>' +
+    '<span>Original: ' + currentInfo.width_px.toFixed(0) + ' x ' + currentInfo.height_px.toFixed(0) + ' px</span>' +
+    '<span>Rendered: ' + (currentInfo.width_px * scale).toFixed(0) + ' x ' + (currentInfo.height_px * scale).toFixed(0) + ' px</span>' +
+    '<span>Zoom: ' + scale.toFixed(1) + 'x</span>' +
+    (currentInfo.title ? '<span>Title: ' + currentInfo.title + '</span>' : '');
+}
+
+async function renderCurrentBuffer() {
+  if (!currentBuffer) return;
+  const scale = clampScale(scaleNumber.value);
+  syncScaleInputs(scale);
+  updateMeta();
+  setStatus('Converting at ' + scale.toFixed(1) + 'x…', 'info');
+
+  try {
+    const t0 = performance.now();
+    const html = convert_with_options(currentBuffer, true, false, [], scale);
+    const elapsed = (performance.now() - t0).toFixed(0);
+
+    output.srcdoc = html;
+    output.style.display = 'block';
+    setStatus('Converted in ' + elapsed + ' ms (' + (html.length / 1024).toFixed(1) + ' KB HTML, ' + scale.toFixed(1) + 'x zoom)', 'success');
+  } catch (e) {
+    setStatus('Conversion failed: ' + e.message, 'error');
+  }
 }
 
 async function handleFile(file) {
@@ -77,26 +157,16 @@ async function handleFile(file) {
     setStatus('Please select a .pptx file.', 'error');
     return;
   }
-  setStatus('Converting...', 'info');
+  setStatus('Loading presentation…', 'info');
   meta.innerHTML = '';
   output.style.display = 'none';
 
   try {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const infoJson = get_info(buf);
-    const info = JSON.parse(infoJson);
-    meta.innerHTML =
-      '<span>Slides: ' + info.slide_count + '</span>' +
-      '<span>Size: ' + info.width_px.toFixed(0) + ' x ' + info.height_px.toFixed(0) + ' px</span>' +
-      (info.title ? '<span>Title: ' + info.title + '</span>' : '');
-
-    const t0 = performance.now();
-    const html = convert(buf);
-    const elapsed = (performance.now() - t0).toFixed(0);
-
-    output.srcdoc = html;
-    output.style.display = 'block';
-    setStatus('Converted in ' + elapsed + ' ms (' + (html.length / 1024).toFixed(1) + ' KB HTML)', 'success');
+    currentBuffer = new Uint8Array(await file.arrayBuffer());
+    currentInfo = JSON.parse(get_info(currentBuffer));
+    controls.style.display = 'grid';
+    syncScaleInputs(scaleNumber.value);
+    await renderCurrentBuffer();
   } catch (e) {
     setStatus('Conversion failed: ' + e.message, 'error');
   }
@@ -113,6 +183,16 @@ dropZone.addEventListener('drop', (e) => {
   dropZone.classList.remove('dragover');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
+scaleRange.addEventListener('input', () => {
+  syncScaleInputs(scaleRange.value);
+  updateMeta();
+});
+scaleRange.addEventListener('change', () => { void renderCurrentBuffer(); });
+scaleNumber.addEventListener('input', () => {
+  syncScaleInputs(scaleNumber.value);
+  updateMeta();
+});
+scaleNumber.addEventListener('change', () => { void renderCurrentBuffer(); });
 
 init().then(() => setStatus('WASM module loaded — ready to convert.', 'info'));
 </script>
