@@ -40,6 +40,8 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - All package manifests are aligned to the `1.1.0` version line so future tag validation stays deterministic.
 - `scripts/read_release_version.sh` remains the single version gate for release and npm publication workflows.
 - Existing CI/release packaging continues to validate the Rust workspace, Python wheel, and WASM package contract against the aligned manifest version.
+- GitHub Actions workflow dependencies are pinned to the current Node 24-compatible majors so CI, release, npm publish, and Pages deploy lanes do not carry forward the earlier Node 20 deprecation warnings.
+- The feature branch is allowed to run the shared CI workflow directly, so release-prep verification does not depend on opening a pull request first.
 
 ## Known Limits
 
@@ -54,6 +56,8 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - `cargo clippy --workspace -- -D warnings`
 - `cargo test --workspace`
 - `bash scripts/read_release_version.sh v1.1.0`
+- `bash scripts/prepare_wasm_release_package.sh 1.1.0`
+- `publish-npm.yml` workflow-dispatch dry run on `feature/slide-scale-output`
 
 Use [`pre-release-checklist.md`](./pre-release-checklist.md) to confirm the final release decision against the current tree.
 

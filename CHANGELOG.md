@@ -4,10 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Upcoming — 1.1.0 Preview
+### Upcoming — 1.1.0
 
-- Reserve the `1.1.0` package line for exact-layout whole-slide scale across the Rust core, CLI, Python bindings, and WASM/browser surface.
-- Keep the public GitHub Pages demo aligned to the stable `v1.0.5` release while the branch-local WASM demo exercises the upcoming slide-zoom controls.
+### Rendering / Public API
+- Add exact-layout whole-slide scale across the Rust core, CLI, Python bindings, and WASM/browser APIs
+- Keep scale image-like by enlarging the whole slide surface without recomputing coordinates or reflowing text
+- Expose the branch-local WASM demo as a `v1.1.0` preview with slider + numeric zoom controls that re-render from the original PPTX bytes
+
+### Release Prep / CI
+- Reserve the `1.1.0` package line across Cargo, Python, and WASM manifests so tag validation cannot drift back onto the published `1.0.5` line
+- Keep the public GitHub Pages demo aligned to the stable `v1.0.5` release while preview-only scale UX stays on the feature branch
+- Run CI on `feature/slide-scale-output` so the preview branch gets the same multi-platform verification signal before merge
+- Upgrade GitHub Actions workflow dependencies to Node 24-compatible major versions across CI, release, npm publish, and demo deploy lanes
 
 ## [1.0.5] - 2026-04-14
 
