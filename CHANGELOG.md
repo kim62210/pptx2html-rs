@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- No unreleased changes on the 1.0.5 release line.
+### Upcoming — 1.1.0 Preview
+
+- Reserve the `1.1.0` package line for exact-layout whole-slide scale across the Rust core, CLI, Python bindings, and WASM/browser surface.
+- Keep the public GitHub Pages demo aligned to the stable `v1.0.5` release while the branch-local WASM demo exercises the upcoming slide-zoom controls.
 
 ## [1.0.5] - 2026-04-14
 
