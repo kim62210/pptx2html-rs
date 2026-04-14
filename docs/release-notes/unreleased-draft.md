@@ -57,7 +57,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 - `cargo test --workspace`
 - `bash scripts/read_release_version.sh v1.1.0`
 - `bash scripts/prepare_wasm_release_package.sh 1.1.0`
-- `publish-npm.yml` workflow-dispatch dry run on `feature/slide-scale-output`
+- `publish-npm.yml` workflow-dispatch dry run on `feature/slide-scale-output` when repository permissions allow it, otherwise local `npm publish --dry-run` from `crates/pptx2html-wasm/pkg`
 
 Use [`pre-release-checklist.md`](./pre-release-checklist.md) to confirm the final release decision against the current tree.
 

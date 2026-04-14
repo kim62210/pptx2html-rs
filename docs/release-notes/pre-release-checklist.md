@@ -16,7 +16,7 @@ See [`README.md`](./README.md) for the intended release-note workflow and how th
 - [ ] Installed-wheel smoke tests pass for the published `pptx2html` API surface
 - [ ] WASM package preparation passes via `scripts/prepare_wasm_release_package.sh <version>`
 - [ ] WASM package contract, package-root import smoke, and runtime smoke all pass
-- [ ] `publish-npm.yml` succeeds in `workflow_dispatch` dry-run mode for the intended version line before the real tag is pushed
+- [ ] `publish-npm.yml` succeeds in `workflow_dispatch` dry-run mode for the intended version line before the real tag is pushed — or, if the current operator lacks dispatch/admin rights, the equivalent local `npm publish --dry-run` path is verified from `crates/pptx2html-wasm/pkg`
 
 ## 3. Evaluation Artifacts
 
