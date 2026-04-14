@@ -99,30 +99,24 @@ pub fn parse_slide_master<R: Read + Seek>(
                             .unwrap_or(0.0);
                     }
                     "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::rgb(val);
-                            if in_bg_grad_fill {
-                                bg_grad_stops.push(GradientStop {
-                                    position: bg_gs_pos,
-                                    color,
-                                });
-                            } else {
-                                bg_solid_color = Some(color);
-                            }
-                        }
+                        assign_background_color(
+                            &mut bg_solid_color,
+                            &mut bg_grad_stops,
+                            in_bg_grad_fill,
+                            bg_gs_pos,
+                            false,
+                            xml_utils::attr_str(e, "val"),
+                        );
                     }
                     "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::theme(val);
-                            if in_bg_grad_fill {
-                                bg_grad_stops.push(GradientStop {
-                                    position: bg_gs_pos,
-                                    color,
-                                });
-                            } else {
-                                bg_solid_color = Some(color);
-                            }
-                        }
+                        assign_background_color(
+                            &mut bg_solid_color,
+                            &mut bg_grad_stops,
+                            in_bg_grad_fill,
+                            bg_gs_pos,
+                            true,
+                            xml_utils::attr_str(e, "val"),
+                        );
                     }
                     "spTree" => in_sp_tree = true,
                     "txStyles" => in_tx_styles = true,
@@ -166,9 +160,7 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     "schemeClr" if in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            current_color = Some(Color::theme(val));
-                        }
+                        current_color = xml_utils::attr_str(e, "val").map(Color::theme);
                     }
                     // Shape in spTree
                     "sp" if in_sp_tree && !in_tx_styles => {
@@ -179,60 +171,14 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     "bodyPr" if current_shape.is_some() && in_shape_tx_body => {
                         if let Some(sb) = current_shape.as_mut() {
-                            if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
-                                sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
-                                sb.text_vertical_align_explicit = true;
-                            }
-                            if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
-                                sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
-                            }
-                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
-                                sb.text_rotation_deg = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
-                            }
-                            if let Some(vert) = xml_utils::attr_str(e, "vert") {
-                                sb.vertical_text_explicit = true;
-                                sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "lIns") {
-                                sb.text_margins.left = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_left_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "tIns") {
-                                sb.text_margins.top = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_top_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "rIns") {
-                                sb.text_margins.right = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_right_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "bIns") {
-                                sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_bottom_explicit = true;
-                            }
-                            if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
-                                sb.text_word_wrap = wrap != "none";
-                                sb.text_word_wrap_explicit = true;
-                            }
+                            apply_shape_body_pr(sb, e);
                         }
                     }
-                    "normAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                    s @ ("normAutofit" | "noAutofit" | "spAutoFit")
+                        if current_shape.is_some() && in_shape_tx_body =>
+                    {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = parse_autofit_ratio(e, "fontScale");
-                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
-                            sb.text_auto_fit = AutoFit::Normal {
-                                font_scale,
-                                line_spacing_reduction,
-                            };
-                        }
-                    }
-                    "noAutofit" if current_shape.is_some() && in_shape_tx_body => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::NoAutoFit;
-                        }
-                    }
-                    "spAutoFit" if current_shape.is_some() && in_shape_tx_body => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::Shrink;
+                            sb.text_auto_fit = parse_shape_auto_fit(s, e);
                         }
                     }
                     "lstStyle" if in_shape_tx_body => {
@@ -338,60 +284,14 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     "bodyPr" if current_shape.is_some() && in_shape_tx_body => {
                         if let Some(sb) = current_shape.as_mut() {
-                            if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
-                                sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
-                                sb.text_vertical_align_explicit = true;
-                            }
-                            if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
-                                sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
-                            }
-                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
-                                sb.text_rotation_deg = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
-                            }
-                            if let Some(vert) = xml_utils::attr_str(e, "vert") {
-                                sb.vertical_text_explicit = true;
-                                sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "lIns") {
-                                sb.text_margins.left = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_left_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "tIns") {
-                                sb.text_margins.top = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_top_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "rIns") {
-                                sb.text_margins.right = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_right_explicit = true;
-                            }
-                            if let Some(v) = xml_utils::attr_str(e, "bIns") {
-                                sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
-                                sb.text_margin_bottom_explicit = true;
-                            }
-                            if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
-                                sb.text_word_wrap = wrap != "none";
-                                sb.text_word_wrap_explicit = true;
-                            }
+                            apply_shape_body_pr(sb, e);
                         }
                     }
-                    "normAutofit" if current_shape.is_some() && in_shape_tx_body => {
+                    s @ ("normAutofit" | "noAutofit" | "spAutoFit")
+                        if current_shape.is_some() && in_shape_tx_body =>
+                    {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = parse_autofit_ratio(e, "fontScale");
-                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
-                            sb.text_auto_fit = AutoFit::Normal {
-                                font_scale,
-                                line_spacing_reduction,
-                            };
-                        }
-                    }
-                    "noAutofit" if current_shape.is_some() && in_shape_tx_body => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::NoAutoFit;
-                        }
-                    }
-                    "spAutoFit" if current_shape.is_some() && in_shape_tx_body => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::Shrink;
+                            sb.text_auto_fit = parse_shape_auto_fit(s, e);
                         }
                     }
                     // Background gradient path type (Empty variant)
@@ -402,30 +302,24 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     // Background solid/gradient color (Empty variant)
                     "srgbClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::rgb(val);
-                            if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
-                                bg_grad_stops.push(GradientStop {
-                                    position: bg_gs_pos,
-                                    color,
-                                });
-                            } else {
-                                bg_solid_color = Some(color);
-                            }
-                        }
+                        assign_background_color(
+                            &mut bg_solid_color,
+                            &mut bg_grad_stops,
+                            in_bg_grad_fill && depth.iter().any(|d| d == "gs"),
+                            bg_gs_pos,
+                            false,
+                            xml_utils::attr_str(e, "val"),
+                        );
                     }
                     "schemeClr" if in_bg_pr && !in_bg_blip_fill && !in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::theme(val);
-                            if in_bg_grad_fill && depth.iter().any(|d| d == "gs") {
-                                bg_grad_stops.push(GradientStop {
-                                    position: bg_gs_pos,
-                                    color,
-                                });
-                            } else {
-                                bg_solid_color = Some(color);
-                            }
-                        }
+                        assign_background_color(
+                            &mut bg_solid_color,
+                            &mut bg_grad_stops,
+                            in_bg_grad_fill && depth.iter().any(|d| d == "gs"),
+                            bg_gs_pos,
+                            true,
+                            xml_utils::attr_str(e, "val"),
+                        );
                     }
                     // ClrMap
                     "clrMap" => {
@@ -437,40 +331,11 @@ pub fn parse_slide_master<R: Read + Seek>(
                             sb.placeholder = Some(parse_placeholder_attrs(e));
                         }
                     }
-                    "latin" if in_shape_def_rpr => {
-                        if let Some(rd) = shape_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_latin = Some(typeface);
-                        }
+                    s @ ("latin" | "ea" | "cs") if in_shape_def_rpr => {
+                        set_run_default_typeface(shape_run_defaults.as_mut(), s, e);
                     }
-                    "ea" if in_shape_def_rpr => {
-                        if let Some(rd) = shape_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_ea = Some(typeface);
-                        }
-                    }
-                    "cs" if in_shape_def_rpr => {
-                        if let Some(rd) = shape_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_cs = Some(typeface);
-                        }
-                    }
-                    "srgbClr" if in_shape_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val")
-                            && let Some(rd) = shape_run_defaults.as_mut()
-                        {
-                            rd.color = Some(Color::rgb(val));
-                        }
-                    }
-                    "schemeClr" if in_shape_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val")
-                            && let Some(rd) = shape_run_defaults.as_mut()
-                        {
-                            rd.color = Some(Color::theme(val));
-                        }
+                    s @ ("srgbClr" | "schemeClr") if in_shape_def_rpr => {
+                        set_run_default_color(shape_run_defaults.as_mut(), s, e);
                     }
                     "spcPct"
                         if in_shape_lst_style
@@ -1085,13 +950,19 @@ mod coverage_tests {
         let mut archive = archive_with_entries(&[("ppt/media/background.png", b"pngdata")]);
         let master = parse_slide_master(xml, &rels, &mut archive).expect("master parses");
 
-        assert!(matches!(master.background, Some(Fill::Image(_))));
+        assert_eq!(
+            std::mem::discriminant(&master.background),
+            std::mem::discriminant(&Some(Fill::Image(ImageFill::default())))
+        );
         assert_eq!(master.shapes.len(), 2);
 
         let first = &master.shapes[0];
         assert_eq!(first.placeholder.as_ref().and_then(|p| p.idx), Some(2));
         let first_body = first.text_body.as_ref().expect("text body");
-        assert!(matches!(first_body.vertical_align, VerticalAlign::Middle));
+        assert_eq!(
+            std::mem::discriminant(&first_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
         assert!(first_body.anchor_center);
         assert_eq!(first_body.text_rotation_deg, 90.0);
         assert_eq!(first.vertical_text.as_deref(), Some("vert270"));
@@ -1103,28 +974,53 @@ mod coverage_tests {
                 line_spacing_reduction: Some(0.2)
             }
         ));
-        assert!(matches!(first.border.dash_style, DashStyle::LongDashDot));
-        assert!(matches!(first.border.join, LineJoin::Round));
-        assert!(matches!(
-            first.border.head_end.as_ref().map(|e| &e.end_type),
-            Some(LineEndType::Triangle)
-        ));
-        assert!(matches!(
-            first.border.tail_end.as_ref().map(|e| &e.end_type),
-            Some(LineEndType::Oval)
-        ));
+        assert_eq!(
+            std::mem::discriminant(&first.border.dash_style),
+            std::mem::discriminant(&DashStyle::LongDashDot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&first.border.join),
+            std::mem::discriminant(&LineJoin::Round)
+        );
+        assert_eq!(
+            first
+                .border
+                .head_end
+                .as_ref()
+                .map(|e| std::mem::discriminant(&e.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Triangle))
+        );
+        assert_eq!(
+            first
+                .border
+                .tail_end
+                .as_ref()
+                .map(|e| std::mem::discriminant(&e.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Oval))
+        );
 
         let second = &master.shapes[1];
         let second_body = second.text_body.as_ref().expect("second body");
-        assert!(matches!(second_body.vertical_align, VerticalAlign::Bottom));
-        assert!(matches!(second_body.auto_fit, AutoFit::Shrink));
+        assert_eq!(
+            std::mem::discriminant(&second_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Bottom)
+        );
+        assert_eq!(
+            std::mem::discriminant(&second_body.auto_fit),
+            std::mem::discriminant(&AutoFit::Shrink)
+        );
         assert_eq!(second_body.word_wrap, true);
         assert!(second.border.no_fill);
         assert_eq!(second.border.width, 0.0);
 
         let title_style = master.tx_styles.title_style.as_ref().expect("title style");
         let lvl1 = title_style.levels[0].as_ref().expect("lvl1");
-        assert!(matches!(lvl1.alignment, Some(Alignment::Center)));
+        assert_eq!(
+            lvl1.alignment
+                .as_ref()
+                .map(std::mem::discriminant::<Alignment>),
+            Some(std::mem::discriminant(&Alignment::Center))
+        );
         assert!(
             matches!(lvl1.line_spacing, Some(SpacingValue::Percent(v)) if (v - 0.9).abs() < 1e-6)
         );
@@ -1315,17 +1211,24 @@ mod tests {
         assert_eq!(master.shapes.len(), 3);
 
         let title_shape = &master.shapes[0];
-        assert!(matches!(
+        assert_eq!(
             title_shape
                 .placeholder
                 .as_ref()
-                .and_then(|ph| ph.ph_type.as_ref()),
-            Some(PlaceholderType::Title)
-        ));
+                .and_then(|ph| ph.ph_type.as_ref())
+                .map(std::mem::discriminant::<PlaceholderType>),
+            Some(std::mem::discriminant(&PlaceholderType::Title))
+        );
         let title_body = title_shape.text_body.as_ref().expect("title text body");
-        assert!(matches!(title_body.vertical_align, VerticalAlign::Middle));
+        assert_eq!(
+            std::mem::discriminant(&title_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
         assert!(title_body.anchor_center);
-        assert!(matches!(title_body.auto_fit, AutoFit::NoAutoFit));
+        assert_eq!(
+            std::mem::discriminant(&title_body.auto_fit),
+            std::mem::discriminant(&AutoFit::NoAutoFit)
+        );
         assert_eq!(title_shape.vertical_text.as_deref(), Some("vert270"));
         assert_eq!(
             title_shape.border.color.to_css().as_deref(),
@@ -1348,7 +1251,10 @@ mod tests {
             .text_body
             .as_ref()
             .expect("shrink autofit text body");
-        assert!(matches!(shrink_autofit.auto_fit, AutoFit::Shrink));
+        assert_eq!(
+            std::mem::discriminant(&shrink_autofit.auto_fit),
+            std::mem::discriminant(&AutoFit::Shrink)
+        );
         assert!(master.shapes[2].border.no_fill);
     }
 
@@ -1421,7 +1327,12 @@ mod more_tests {
         );
         let mut pd = ParagraphDefaults::default();
         parse_lvl_ppr_attrs(&lvl, &mut pd);
-        assert!(matches!(pd.alignment, Some(Alignment::Center)));
+        assert_eq!(
+            pd.alignment
+                .as_ref()
+                .map(std::mem::discriminant::<Alignment>),
+            Some(std::mem::discriminant(&Alignment::Center))
+        );
         assert_eq!(pd.margin_left, Some(36.0));
         assert_eq!(pd.indent, Some(-18.0));
 
@@ -1445,9 +1356,24 @@ mod more_tests {
         assert_eq!(rd.baseline, Some(30000));
         assert_eq!(rd.bold, Some(true));
         assert_eq!(rd.italic, Some(true));
-        assert!(matches!(rd.capitalization, Some(TextCapitalization::All)));
-        assert!(matches!(rd.underline, Some(UnderlineType::Double)));
-        assert!(matches!(rd.strikethrough, Some(StrikethroughType::Single)));
+        assert_eq!(
+            rd.capitalization
+                .as_ref()
+                .map(std::mem::discriminant::<TextCapitalization>),
+            Some(std::mem::discriminant(&TextCapitalization::All))
+        );
+        assert_eq!(
+            rd.underline
+                .as_ref()
+                .map(std::mem::discriminant::<UnderlineType>),
+            Some(std::mem::discriminant(&UnderlineType::Double))
+        );
+        assert_eq!(
+            rd.strikethrough
+                .as_ref()
+                .map(std::mem::discriminant::<StrikethroughType>),
+            Some(std::mem::discriminant(&StrikethroughType::Single))
+        );
 
         let clr_map = parse_clr_map_element(&bytes_start(
             "p:clrMap",
@@ -1459,10 +1385,13 @@ mod more_tests {
         let placeholder =
             parse_placeholder_attrs(&bytes_start("p:ph", &[("type", "body"), ("idx", "3")]));
         assert_eq!(placeholder.idx, Some(3));
-        assert!(matches!(
-            placeholder.ph_type.as_ref(),
-            Some(PlaceholderType::Body)
-        ));
+        assert_eq!(
+            placeholder
+                .ph_type
+                .as_ref()
+                .map(std::mem::discriminant::<PlaceholderType>),
+            Some(std::mem::discriminant(&PlaceholderType::Body))
+        );
 
         let mut tx_styles = TxStyles::default();
         store_level_defaults(
@@ -1521,10 +1450,16 @@ mod more_tests {
         store_shape_level_defaults(&mut builder, 0, ParagraphDefaults::default());
         let shape = builder.expect("builder").build();
         let text_body = shape.text_body.expect("shape text body");
-        assert!(matches!(text_body.vertical_align, VerticalAlign::Middle));
+        assert_eq!(
+            std::mem::discriminant(&text_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
         assert!(text_body.anchor_center);
         assert!(!text_body.word_wrap);
-        assert!(matches!(text_body.auto_fit, AutoFit::Shrink));
+        assert_eq!(
+            std::mem::discriminant(&text_body.auto_fit),
+            std::mem::discriminant(&AutoFit::Shrink)
+        );
         assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
 
         assert_eq!(
@@ -1654,34 +1589,277 @@ mod more_tests {
         assert_eq!(shape.size.width.to_pt(), 30.0);
         assert_eq!(shape.size.height.to_pt(), 20.0);
         assert_eq!(shape.placeholder.as_ref().and_then(|ph| ph.idx), Some(1));
-        assert!(matches!(
+        assert_eq!(
             shape
                 .placeholder
                 .as_ref()
-                .and_then(|ph| ph.ph_type.as_ref()),
-            Some(PlaceholderType::Body)
-        ));
-        assert!(matches!(shape.border.cap, LineCap::Round));
-        assert!(matches!(shape.border.compound, CompoundLine::Double));
-        assert!(matches!(shape.border.alignment, LineAlignment::Inset));
-        assert!(matches!(shape.border.join, LineJoin::Miter));
+                .and_then(|ph| ph.ph_type.as_ref())
+                .map(std::mem::discriminant::<PlaceholderType>),
+            Some(std::mem::discriminant(&PlaceholderType::Body))
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape.border.cap),
+            std::mem::discriminant(&LineCap::Round)
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape.border.compound),
+            std::mem::discriminant(&CompoundLine::Double)
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape.border.alignment),
+            std::mem::discriminant(&LineAlignment::Inset)
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape.border.join),
+            std::mem::discriminant(&LineJoin::Miter)
+        );
         assert_eq!(shape.border.miter_limit, Some(2.0));
-        assert!(matches!(shape.border.dash_style, DashStyle::LongDashDot));
+        assert_eq!(
+            std::mem::discriminant(&shape.border.dash_style),
+            std::mem::discriminant(&DashStyle::LongDashDot)
+        );
         assert_eq!(shape.border.color.to_css().as_deref(), Some("#A5A5A5"));
-        assert!(matches!(
-            shape.border.head_end.as_ref().map(|e| &e.end_type),
-            Some(LineEndType::Triangle)
-        ));
-        assert!(matches!(
-            shape.border.tail_end.as_ref().map(|e| &e.end_type),
-            Some(LineEndType::Stealth)
-        ));
+        assert_eq!(
+            shape
+                .border
+                .head_end
+                .as_ref()
+                .map(|e| std::mem::discriminant(&e.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Triangle))
+        );
+        assert_eq!(
+            shape
+                .border
+                .tail_end
+                .as_ref()
+                .map(|e| std::mem::discriminant(&e.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Stealth))
+        );
         let text_body = shape.text_body.as_ref().expect("shape text body");
-        assert!(matches!(text_body.vertical_align, VerticalAlign::Middle));
+        assert_eq!(
+            std::mem::discriminant(&text_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
         assert!(text_body.anchor_center);
         assert!((text_body.text_rotation_deg - 90.0).abs() < 1e-6);
         assert!(!text_body.word_wrap);
         assert_eq!(shape.vertical_text.as_deref(), Some("vert270"));
+    }
+
+    #[test]
+    fn parse_slide_master_covers_empty_txstyle_shape_spacing_and_line_variants() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="2" name="Shape A"/>
+          <p:cNvSpPr/>
+          <p:nvPr><p:ph type="body" idx="4"/></p:nvPr>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm>
+            <a:off x="12700" y="25400"/>
+            <a:ext cx="381000" cy="254000"/>
+          </a:xfrm>
+          <a:ln w="12700">
+            <a:noFill/>
+            <a:prstDash val="sysDashDotDot"/>
+            <a:round/>
+            <a:headEnd type="arrow" w="sm" len="lg"/>
+            <a:tailEnd type="diamond" w="lg" len="sm"/>
+          </a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchor="ctr" anchorCtr="1" rot="5400000" vert="horz" wrap="none"/>
+          <a:lstStyle>
+            <a:lvl1pPr><a:spcAft><a:spcPct val="30000"/></a:spcAft><a:defRPr sz="1800"><a:latin typeface="Shape Latin"/><a:ea typeface="Shape EA"/><a:cs typeface="Shape CS"/><a:srgbClr val="336699"/></a:defRPr></a:lvl1pPr>
+            <a:lvl2pPr><a:spcAft><a:spcPts val="1800"/></a:spcAft><a:defRPr sz="1600"><a:schemeClr val="accent4"/></a:defRPr></a:lvl2pPr>
+          </a:lstStyle>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="Shape B"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm><a:ln w="12700"><a:bevel/></a:ln></p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="Shape C"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="12700" cy="12700"/></a:xfrm><a:ln w="12700"><a:miter lim="300000"/></a:ln></p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+  <p:txStyles>
+    <p:titleStyle>
+      <a:lvl1pPr><a:defRPr sz="1500"/></a:lvl1pPr>
+    </p:titleStyle>
+    <p:bodyStyle>
+      <a:lvl1pPr><a:spcAft><a:spcPct val="25000"/></a:spcAft><a:defRPr sz="2000"><a:latin typeface="Body Latin"/><a:ea typeface="Body EA"/><a:cs typeface="Body CS"/><a:srgbClr val="112233"/></a:defRPr></a:lvl1pPr>
+    </p:bodyStyle>
+    <p:otherStyle>
+      <a:lvl2pPr><a:spcAft><a:spcPts val="2400"/></a:spcAft><a:defRPr sz="1600"><a:schemeClr val="accent2"/></a:defRPr></a:lvl2pPr>
+      <a:lvl3pPr algn="l"/>
+    </p:otherStyle>
+  </p:txStyles>
+</p:sldMaster>"#;
+
+        let mut archive = empty_archive();
+        let master = parse_slide_master(xml, &HashMap::new(), &mut archive)
+            .expect("master should parse empty spacing and line variants");
+
+        let title_lvl1 = master
+            .tx_styles
+            .title_style
+            .as_ref()
+            .and_then(|style| style.levels[0].as_ref())
+            .expect("title level 1");
+        assert_eq!(
+            title_lvl1
+                .def_run_props
+                .as_ref()
+                .and_then(|run| run.font_size),
+            Some(15.0)
+        );
+
+        let body_lvl1 = master
+            .tx_styles
+            .body_style
+            .as_ref()
+            .and_then(|style| style.levels[0].as_ref())
+            .expect("body level 1");
+        assert!(
+            matches!(body_lvl1.space_after, Some(SpacingValue::Percent(v)) if (v - 0.25).abs() < 1e-6)
+        );
+        let body_run = body_lvl1.def_run_props.as_ref().expect("body run defaults");
+        assert_eq!(body_run.font_latin.as_deref(), Some("Body Latin"));
+        assert_eq!(body_run.font_ea.as_deref(), Some("Body EA"));
+        assert_eq!(body_run.font_cs.as_deref(), Some("Body CS"));
+        assert_eq!(
+            body_run.color.as_ref().and_then(Color::to_css).as_deref(),
+            Some("#112233")
+        );
+
+        let other_lvl2 = master
+            .tx_styles
+            .other_style
+            .as_ref()
+            .and_then(|style| style.levels[1].as_ref())
+            .expect("other level 2");
+        assert!(
+            matches!(other_lvl2.space_after, Some(SpacingValue::Points(v)) if (v - 24.0).abs() < 1e-6)
+        );
+        assert_eq!(
+            other_lvl2
+                .def_run_props
+                .as_ref()
+                .map(|run| run.color.as_ref().map(|color| color.kind.clone())),
+            Some(Some(ColorKind::Theme("accent2".to_string())))
+        );
+        let other_lvl3 = master
+            .tx_styles
+            .other_style
+            .as_ref()
+            .and_then(|style| style.levels[2].as_ref())
+            .expect("other level 3");
+        assert_eq!(
+            other_lvl3
+                .alignment
+                .as_ref()
+                .map(std::mem::discriminant::<Alignment>),
+            Some(std::mem::discriminant(&Alignment::Left))
+        );
+
+        let shape_a = &master.shapes[0];
+        assert_eq!(shape_a.position.x.to_pt(), 1.0);
+        assert_eq!(shape_a.position.y.to_pt(), 2.0);
+        assert_eq!(shape_a.size.width.to_pt(), 30.0);
+        assert_eq!(shape_a.size.height.to_pt(), 20.0);
+        assert!(shape_a.border.no_fill);
+        assert_eq!(shape_a.border.width, 0.0);
+        assert_eq!(
+            std::mem::discriminant(&shape_a.border.dash_style),
+            std::mem::discriminant(&DashStyle::SystemDashDotDot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape_a.border.join),
+            std::mem::discriminant(&LineJoin::Round)
+        );
+        assert_eq!(
+            shape_a
+                .border
+                .head_end
+                .as_ref()
+                .map(|end| std::mem::discriminant(&end.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Arrow))
+        );
+        assert_eq!(
+            shape_a
+                .border
+                .tail_end
+                .as_ref()
+                .map(|end| std::mem::discriminant(&end.end_type)),
+            Some(std::mem::discriminant(&LineEndType::Diamond))
+        );
+
+        let shape_a_body = shape_a.text_body.as_ref().expect("shape a text body");
+        assert_eq!(
+            std::mem::discriminant(&shape_a_body.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
+        assert!(shape_a_body.anchor_center);
+        assert!(!shape_a_body.word_wrap);
+        assert_eq!(shape_a.vertical_text, None);
+        let shape_a_lvl1 = shape_a_body
+            .list_style
+            .as_ref()
+            .and_then(|style| style.levels[0].as_ref())
+            .expect("shape a lvl1");
+        assert!(
+            matches!(shape_a_lvl1.space_after, Some(SpacingValue::Percent(v)) if (v - 0.3).abs() < 1e-6)
+        );
+        let shape_a_lvl1_run = shape_a_lvl1
+            .def_run_props
+            .as_ref()
+            .expect("shape a lvl1 run");
+        assert_eq!(shape_a_lvl1_run.font_latin.as_deref(), Some("Shape Latin"));
+        assert_eq!(shape_a_lvl1_run.font_ea.as_deref(), Some("Shape EA"));
+        assert_eq!(shape_a_lvl1_run.font_cs.as_deref(), Some("Shape CS"));
+        assert_eq!(
+            shape_a_lvl1_run
+                .color
+                .as_ref()
+                .and_then(Color::to_css)
+                .as_deref(),
+            Some("#336699")
+        );
+        let shape_a_lvl2 = shape_a_body
+            .list_style
+            .as_ref()
+            .and_then(|style| style.levels[1].as_ref())
+            .expect("shape a lvl2");
+        assert!(
+            matches!(shape_a_lvl2.space_after, Some(SpacingValue::Points(v)) if (v - 18.0).abs() < 1e-6)
+        );
+        assert_eq!(
+            shape_a_lvl2
+                .def_run_props
+                .as_ref()
+                .map(|run| run.color.as_ref().map(|color| color.kind.clone())),
+            Some(Some(ColorKind::Theme("accent4".to_string())))
+        );
+
+        assert_eq!(
+            std::mem::discriminant(&master.shapes[1].border.join),
+            std::mem::discriminant(&LineJoin::Bevel)
+        );
+        assert_eq!(
+            std::mem::discriminant(&master.shapes[2].border.join),
+            std::mem::discriminant(&LineJoin::Miter)
+        );
+        assert_eq!(master.shapes[2].border.miter_limit, Some(3.0));
     }
 
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
