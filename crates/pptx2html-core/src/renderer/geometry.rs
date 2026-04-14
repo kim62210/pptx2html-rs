@@ -467,20 +467,24 @@ fn plaque_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 fn brace_pair_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let r = w.min(h) * adj.get("adj").copied().unwrap_or(8333.0) / 100_000.0;
     let cy = h / 2.0;
-    let i = r * 2.0;
+    let corner = (r * 1.6).max(w.min(h) * 0.08);
+    let pinch = r.max(w.min(h) * 0.05);
+    let x1 = w - corner;
+    let y1 = cy - r;
+    let y2 = cy + r;
+    let y3 = h - corner;
     format!(
-        "M{i:.1},0 Q0,0 0,{r:.1} L0,{y1:.1} Q0,{cy:.1} {n:.1},{cy:.1} Q0,{cy:.1} 0,{y2:.1} L0,{y3:.1} Q0,{h:.1} {i:.1},{h:.1} M{x1:.1},0 Q{w:.1},0 {w:.1},{r:.1} L{w:.1},{y1:.1} Q{w:.1},{cy:.1} {x2:.1},{cy:.1} Q{w:.1},{cy:.1} {w:.1},{y2:.1} L{w:.1},{y3:.1} Q{w:.1},{h:.1} {x1:.1},{h:.1}",
-        i = i,
-        r = r,
-        cy = cy,
-        y1 = cy - r,
-        n = -r * 0.5,
-        y2 = cy + r,
-        y3 = h - r,
-        h = h,
-        x1 = w - i,
+        "M{corner:.1},0 L{x1:.1},0 Q{w:.1},0 {w:.1},{corner:.1} L{w:.1},{y1:.1} Q{w:.1},{cy:.1} {x_in:.1},{cy:.1} Q{w:.1},{cy:.1} {w:.1},{y2:.1} L{w:.1},{y3:.1} Q{w:.1},{h:.1} {x1:.1},{h:.1} L{corner:.1},{h:.1} Q0,{h:.1} 0,{y3:.1} L0,{y2:.1} Q0,{cy:.1} {pinch:.1},{cy:.1} Q0,{cy:.1} 0,{y1:.1} L0,{corner:.1} Q0,0 {corner:.1},0 Z",
+        corner = corner,
+        x1 = x1,
         w = w,
-        x2 = w + r * 0.5
+        y1 = y1,
+        cy = cy,
+        x_in = w - pinch,
+        y2 = y2,
+        y3 = y3,
+        h = h,
+        pinch = pinch
     )
 }
 fn bracket_pair_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -2076,7 +2080,11 @@ fn pie_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         sy = sy,
         rx = rx,
         ry = ry,
-        large_arc = if sweep_angle.abs() > std::f64::consts::PI { 1 } else { 0 },
+        large_arc = if sweep_angle.abs() > std::f64::consts::PI {
+            1
+        } else {
+            0
+        },
         sweep_flag = if sweep_angle > 0.0 { 1 } else { 0 },
         ex = ex,
         ey = ey
@@ -2607,17 +2615,38 @@ fn horizontal_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
 }
 fn vertical_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let r = w.min(h) * adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
-    let r2 = r / 2.0;
-    let (y, yh, x1, x2) = (h - r, h - r2, w - r, w - r2);
+    let body_left = r * 0.8;
+    let body_top = r * 1.2;
+    let body_right = w - r * 0.4;
+    let body_bottom = h - r * 0.2;
+    let body_radius = r * 0.45;
+    let lip_left = r * 0.35;
+    let lip_right = w;
+    let lip_height = r * 1.1;
+    let curl_r = r * 0.45;
     format!(
-        "M{r:.1},{r:.1} L{r:.1},0 A{r2:.1},{r2:.1} 0 0,1 {r2:.1},0 A{r2:.1},{r2:.1} 0 0,1 {r:.1},{r:.1} L{r:.1},{y:.1} A{r2:.1},{r2:.1} 0 0,1 {r:.1},{yh:.1} A{r2:.1},{r2:.1} 0 0,1 0,{y:.1} L0,{r:.1} L{x1:.1},{r:.1} L{x1:.1},0 A{r2:.1},{r2:.1} 0 0,1 {x2:.1},0 A{r2:.1},{r2:.1} 0 0,1 {x1:.1},{r:.1} L{x1:.1},{y:.1} A{r2:.1},{r2:.1} 0 0,1 {x1:.1},{yh:.1} A{r2:.1},{r2:.1} 0 0,1 {w:.1},{y:.1} L{w:.1},{r:.1} Z",
-        r = r,
-        r2 = r2,
-        y = y,
-        yh = yh,
-        x1 = x1,
-        x2 = x2,
-        w = w
+        "M{body_left:.1},{body_top:.1} L{body_right_minus:.1},{body_top:.1} Q{body_right:.1},{body_top:.1} {body_right:.1},{body_top_plus:.1} L{body_right:.1},{body_bottom_minus:.1} Q{body_right:.1},{body_bottom:.1} {body_right_minus:.1},{body_bottom:.1} L{body_left:.1},{body_bottom:.1} Q0,{body_bottom:.1} 0,{body_bottom_minus:.1} L0,{body_top_plus:.1} Q0,{body_top:.1} {body_left:.1},{body_top:.1} Z \
+         M{lip_left_plus:.1},0 L{lip_right_minus:.1},0 Q{lip_right:.1},0 {lip_right:.1},{curl_r:.1} Q{lip_right:.1},{lip_height:.1} {lip_right_minus:.1},{lip_height:.1} L{lip_left_plus:.1},{lip_height:.1} Q{lip_left:.1},{lip_height:.1} {lip_left:.1},{curl_r:.1} Q{lip_left:.1},0 {lip_left_plus:.1},0 Z \
+         M{curl_center:.1},{curl_r:.1} A{curl_r:.1},{curl_r:.1} 0 1,1 {curl_center:.1},{lip_height_minus:.1} A{curl_r:.1},{curl_r:.1} 0 1,1 {curl_center:.1},{curl_r:.1} Z \
+         M{curl_center_bottom:.1},{body_bottom_minus_curl:.1} A{curl_r:.1},{curl_r:.1} 0 1,1 {curl_center_bottom:.1},{body_bottom_plus_curl:.1} A{curl_r:.1},{curl_r:.1} 0 1,1 {curl_center_bottom:.1},{body_bottom_minus_curl:.1} Z",
+        body_left = body_left,
+        body_right = body_right,
+        body_right_minus = body_right - body_radius,
+        body_top = body_top,
+        body_top_plus = body_top + body_radius,
+        body_bottom = body_bottom,
+        body_bottom_minus = body_bottom - body_radius,
+        lip_left = lip_left,
+        lip_left_plus = lip_left + curl_r,
+        lip_right = lip_right,
+        lip_right_minus = lip_right - curl_r,
+        lip_height = lip_height,
+        lip_height_minus = lip_height - curl_r,
+        curl_r = curl_r,
+        curl_center = lip_left + curl_r,
+        curl_center_bottom = curl_r,
+        body_bottom_minus_curl = body_bottom - curl_r * 2.0,
+        body_bottom_plus_curl = body_bottom
     )
 }
 
@@ -3277,6 +3306,28 @@ mod tests {
         assert_eq!(
             path,
             "M0,0 L120.0,0 L120.0,100.0 L0,100.0 Z M0,0 L12.5,12.5 M120.0,0 L107.5,12.5 M120.0,100.0 L107.5,87.5 M0,100.0 L12.5,87.5"
+        );
+    }
+
+    #[test]
+    fn test_brace_pair_default_path_keeps_center_fill_between_braces() {
+        let adj = HashMap::new();
+        let path = brace_pair_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M13.3,0 L106.7,0 Q120.0,0 120.0,13.3 L120.0,41.7 Q120.0,50.0 111.7,50.0 Q120.0,50.0 120.0,58.3 L120.0,86.7 Q120.0,100.0 106.7,100.0 L13.3,100.0 Q0,100.0 0,86.7 L0,58.3 Q0,50.0 8.3,50.0 Q0,50.0 0,41.7 L0,13.3 Q0,0 13.3,0 Z"
+        );
+    }
+
+    #[test]
+    fn test_vertical_scroll_default_path_keeps_filled_body_and_rolls() {
+        let adj = HashMap::new();
+        let path = vertical_scroll_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M10.0,15.0 L109.4,15.0 Q115.0,15.0 115.0,20.6 L115.0,91.9 Q115.0,97.5 109.4,97.5 L10.0,97.5 Q0,97.5 0,91.9 L0,20.6 Q0,15.0 10.0,15.0 Z M10.0,0 L114.4,0 Q120.0,0 120.0,5.6 Q120.0,13.8 114.4,13.8 L10.0,13.8 Q4.4,13.8 4.4,5.6 Q4.4,0 10.0,0 Z M10.0,5.6 A5.6,5.6 0 1,1 10.0,8.1 A5.6,5.6 0 1,1 10.0,5.6 Z M5.6,86.2 A5.6,5.6 0 1,1 5.6,97.5 A5.6,5.6 0 1,1 5.6,86.2 Z"
         );
     }
 
