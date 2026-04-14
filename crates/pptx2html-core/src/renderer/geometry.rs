@@ -498,7 +498,7 @@ fn line_path(w: f64, h: f64) -> String {
 }
 fn right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
+    let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
     let s = h * a1 / 100_000.0 / 2.0;
     let hw = w * a2 / 100_000.0;
     let cy = h / 2.0;
@@ -509,7 +509,7 @@ fn right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
+    let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
     let s = h * a1 / 100_000.0 / 2.0;
     let hw = w * a2 / 100_000.0;
     let cy = h / 2.0;
@@ -519,7 +519,7 @@ fn left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
+    let a1 = adj.get("adj1").copied().unwrap_or(75000.0);
     let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
     let s = w * a1 / 100_000.0 / 2.0;
     let hh = h * a2 / 100_000.0;
@@ -530,7 +530,7 @@ fn up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
+    let a1 = adj.get("adj1").copied().unwrap_or(75000.0);
     let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
     let s = w * a1 / 100_000.0 / 2.0;
     let hh = h * a2 / 100_000.0;
@@ -592,7 +592,7 @@ fn chevron_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn notched_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
+    let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
     let s = h * a1 / 100_000.0 / 2.0;
     let hw = w * a2 / 100_000.0;
     let cy = h / 2.0;
@@ -604,7 +604,7 @@ fn notched_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
 }
 fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0);
+    let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
     let s = h * a1 / 100_000.0 / 2.0;
     let hw = w * a2 / 100_000.0;
     let cy = h / 2.0;
@@ -3118,6 +3118,50 @@ mod tests {
         let unknown = action_button_icon_path(100.0, 100.0, "mystery");
 
         assert_eq!(unknown, format!("{blank} "));
+    }
+
+    #[test]
+    fn test_right_arrow_default_path_uses_narrower_head_length() {
+        let adj = HashMap::new();
+        let path = right_arrow_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M0,25.0 L80.0,25.0 L80.0,0 L120.0,50.0 L80.0,100.0 L80.0,75.0 L0,75.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_left_arrow_default_path_uses_narrower_head_length() {
+        let adj = HashMap::new();
+        let path = left_arrow_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M120.0,25.0 L40.0,25.0 L40.0,0 L0,50.0 L40.0,100.0 L40.0,75.0 L120.0,75.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_up_arrow_default_path_widens_the_shaft() {
+        let adj = HashMap::new();
+        let path = up_arrow_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M15.0,100.0 L15.0,50.0 L0,50.0 L60.0,0 L120.0,50.0 L105.0,50.0 L105.0,100.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_down_arrow_default_path_widens_the_shaft() {
+        let adj = HashMap::new();
+        let path = down_arrow_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M15.0,0 L105.0,0 L105.0,50.0 L120.0,50.0 L60.0,100.0 L0,50.0 L15.0,50.0 Z"
+        );
     }
 
     #[test]

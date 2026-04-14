@@ -4222,6 +4222,82 @@ fn test_preset_shape_svg_right_arrow() {
     );
     let html = render_html(&pptx);
     assert!(html.contains("shape-svg"));
+    assert!(
+        html.contains(
+            "M0,26.2 L140.0,26.2 L140.0,0 L210.0,52.5 L140.0,105.0 L140.0,78.7 L0,78.7 Z"
+        ),
+        "rightArrow should use the narrower default head length seen in Office decks: {html}"
+    );
+}
+
+#[test]
+fn test_preset_shape_svg_left_arrow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="leftArrow"/>
+        <a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let pres = parse_pptx(&pptx);
+    assert!(
+        matches!(&pres.slides[0].shapes[0].shape_type, ShapeType::Custom(name) if name == "leftArrow"),
+        "Should be Custom(leftArrow)"
+    );
+    let html = render_html(&pptx);
+    assert!(html.contains("shape-svg"));
+    assert!(
+        html.contains(
+            "M210.0,26.2 L70.0,26.2 L70.0,0 L0,52.5 L70.0,105.0 L70.0,78.7 L210.0,78.7 Z"
+        ),
+        "leftArrow should use the narrower default head length seen in Office decks: {html}"
+    );
+}
+
+#[test]
+fn test_preset_shape_svg_up_arrow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="upArrow"/>
+        <a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains(
+            "M26.2,105.0 L26.2,52.5 L0,52.5 L105.0,0 L210.0,52.5 L183.7,52.5 L183.7,105.0 Z"
+        ),
+        "upArrow should keep the wider default shaft from Office decks: {html}"
+    );
+}
+
+#[test]
+fn test_preset_shape_svg_down_arrow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="2000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="downArrow"/>
+        <a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(
+        html.contains("M26.2,0 L183.7,0 L183.7,52.5 L210.0,52.5 L105.0,105.0 L0,52.5 L26.2,52.5 Z"),
+        "downArrow should keep the wider default shaft from Office decks: {html}"
+    );
 }
 
 #[test]
