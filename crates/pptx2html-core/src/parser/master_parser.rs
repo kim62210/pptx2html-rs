@@ -5,7 +5,7 @@ use quick_xml::Reader;
 use quick_xml::events::Event;
 use zip::ZipArchive;
 
-use super::slide_parser::{parse_autofit_ratio, parse_line_end};
+use super::slide_parser::{parse_autofit_ratio, parse_guide_formula_value, parse_line_end};
 use super::xml_utils;
 use crate::error::{PptxError, PptxResult};
 use crate::model::presentation::ClrMap;
@@ -49,6 +49,7 @@ pub fn parse_slide_master<R: Read + Seek>(
     let mut in_shape_spc_bef = false;
     let mut in_shape_spc_aft = false;
     let mut in_shape_ln = false;
+    let mut in_shape_av_lst = false;
 
     // Background parsing state
     let mut in_bg_pr = false;
@@ -258,6 +259,24 @@ pub fn parse_slide_master<R: Read + Seek>(
                             sb.border.no_fill = false;
                         }
                     }
+                    "xfrm" if current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            apply_master_shape_transform(sb, e);
+                        }
+                    }
+                    "prstGeom" if current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            set_master_preset_geometry(sb, e);
+                        }
+                    }
+                    "avLst" if current_shape.is_some() => {
+                        in_shape_av_lst = true;
+                    }
+                    "gd" if in_shape_av_lst => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            store_master_adjust_value(sb, e);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -414,6 +433,21 @@ pub fn parse_slide_master<R: Read + Seek>(
                             set_shape_extent(sb, e);
                         }
                     }
+                    "xfrm" if current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            apply_master_shape_transform(sb, e);
+                        }
+                    }
+                    "prstGeom" if current_shape.is_some() => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            set_master_preset_geometry(sb, e);
+                        }
+                    }
+                    "gd" if in_shape_av_lst => {
+                        if let Some(sb) = current_shape.as_mut() {
+                            store_master_adjust_value(sb, e);
+                        }
+                    }
                     "noFill" if in_shape_ln => {
                         if let Some(sb) = current_shape.as_mut() {
                             sb.border.style = BorderStyle::None;
@@ -551,6 +585,9 @@ pub fn parse_slide_master<R: Read + Seek>(
                         {
                             sb.border.style = BorderStyle::Solid;
                         }
+                    }
+                    "avLst" if in_shape_av_lst => {
+                        in_shape_av_lst = false;
                     }
                     "sp" if current_shape.is_some() => {
                         if let Some(shape) = current_shape.take() {
@@ -902,6 +939,11 @@ fn store_level_defaults(
 
 #[derive(Default)]
 struct MasterShapeBuilder {
+    preset_geometry: Option<String>,
+    adjust_values: HashMap<String, f64>,
+    rotation: f64,
+    flip_h: bool,
+    flip_v: bool,
     position: Position,
     size: Size,
     placeholder: Option<PlaceholderInfo>,
@@ -930,13 +972,26 @@ impl MasterShapeBuilder {
         } else {
             true
         };
+        let shape_type = match self.preset_geometry.as_deref() {
+            Some("rect") | None => ShapeType::Rectangle,
+            Some("roundRect") => ShapeType::RoundedRectangle,
+            Some("ellipse") => ShapeType::Ellipse,
+            Some("triangle") | Some("rtTriangle") => ShapeType::Triangle,
+            Some(other) => ShapeType::Custom(other.to_string()),
+        };
+        let adjust_values = (!self.adjust_values.is_empty()).then_some(self.adjust_values);
         Shape {
+            shape_type,
             position: self.position,
             size: self.size,
+            rotation: self.rotation,
+            flip_h: self.flip_h,
+            flip_v: self.flip_v,
             placeholder: self.placeholder,
             vertical_text: self.vertical_text,
             vertical_text_explicit: self.vertical_text_explicit,
             border: self.border,
+            adjust_values,
             text_body: if self.list_style.is_some()
                 || self.text_vertical_align_explicit
                 || self.text_anchor_center
@@ -969,6 +1024,43 @@ impl MasterShapeBuilder {
             },
             ..Default::default()
         }
+    }
+}
+
+fn apply_master_shape_transform(
+    shape: &mut MasterShapeBuilder,
+    e: &quick_xml::events::BytesStart<'_>,
+) {
+    if let Some(rot) = xml_utils::attr_str(e, "rot") {
+        shape.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+    }
+    if let Some(flip_h) = xml_utils::attr_str(e, "flipH") {
+        shape.flip_h = flip_h == "1" || flip_h == "true";
+    }
+    if let Some(flip_v) = xml_utils::attr_str(e, "flipV") {
+        shape.flip_v = flip_v == "1" || flip_v == "true";
+    }
+}
+
+fn set_master_preset_geometry(
+    shape: &mut MasterShapeBuilder,
+    e: &quick_xml::events::BytesStart<'_>,
+) {
+    if let Some(prst) = xml_utils::attr_str(e, "prst") {
+        shape.preset_geometry = Some(prst);
+    }
+}
+
+fn store_master_adjust_value(
+    shape: &mut MasterShapeBuilder,
+    e: &quick_xml::events::BytesStart<'_>,
+) {
+    if let (Some(name), Some(fmla)) = (
+        xml_utils::attr_str(e, "name"),
+        xml_utils::attr_str(e, "fmla"),
+    ) {
+        let value = parse_guide_formula_value(&fmla, &HashMap::new());
+        shape.adjust_values.insert(name, value);
     }
 }
 
@@ -1952,6 +2044,58 @@ mod more_tests {
             std::mem::discriminant(&LineJoin::Miter)
         );
         assert_eq!(master.shapes[2].border.miter_limit, Some(3.0));
+    }
+
+    #[test]
+    fn parse_slide_master_preserves_preset_geometry_adjustments_and_transform() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Master Chevron"/>
+        <p:cNvSpPr/>
+        <p:nvPr/>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm rot="1800000" flipH="1" flipV="true">
+          <a:off x="12700" y="25400"/>
+          <a:ext cx="1828800" cy="914400"/>
+        </a:xfrm>
+        <a:prstGeom prst="chevron">
+          <a:avLst>
+            <a:gd name="adj" fmla="val 20000"/>
+          </a:avLst>
+        </a:prstGeom>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+        let mut archive = empty_archive();
+        let master =
+            parse_slide_master(xml, &HashMap::new(), &mut archive).expect("master should parse");
+        let shape = &master.shapes[0];
+
+        assert!(matches!(
+            shape.shape_type,
+            ShapeType::Custom(ref name) if name == "chevron"
+        ));
+        assert_eq!(
+            shape
+                .adjust_values
+                .as_ref()
+                .and_then(|values| values.get("adj"))
+                .copied(),
+            Some(20_000.0)
+        );
+        assert!((shape.rotation - 30.0).abs() < 1e-6);
+        assert!(shape.flip_h);
+        assert!(shape.flip_v);
     }
 
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {

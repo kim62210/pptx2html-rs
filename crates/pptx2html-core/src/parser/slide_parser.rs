@@ -2628,7 +2628,7 @@ pub(crate) fn parse_line_end(e: &quick_xml::events::BytesStart<'_>) -> Option<Li
     })
 }
 
-fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
+pub(crate) fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64>) -> f64 {
     let tokens: Vec<&str> = fmla.split_whitespace().collect();
     if tokens.is_empty() {
         return 0.0;
@@ -5060,6 +5060,65 @@ mod tests {
                 .as_ref()
                 .map(|body| (body.word_wrap, body.word_wrap_explicit)),
             Some((false, true))
+        );
+    }
+
+    #[test]
+    fn parse_slide_reads_empty_adjust_guides_for_preset_shapes() {
+        let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="7" name="Adjusted Arrow"/>
+          <p:cNvSpPr/>
+          <p:nvPr/>
+        </p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>
+          <a:prstGeom prst="rightArrow">
+            <a:avLst>
+              <a:gd name="adj1" fmla="val 25000"/>
+              <a:gd name="adj2" fmla="val 30000"/>
+            </a:avLst>
+          </a:prstGeom>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+        let mut archive = archive_with_entries(&[]);
+        let slide = parse_slide(slide_xml, &HashMap::new(), &mut archive).expect("slide parses");
+        let shape = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == "Adjusted Arrow")
+            .expect("adjusted preset shape");
+
+        assert!(matches!(
+            shape.shape_type,
+            ShapeType::Custom(ref name) if name == "rightArrow"
+        ));
+        assert_eq!(
+            shape
+                .adjust_values
+                .as_ref()
+                .and_then(|values| values.get("adj1"))
+                .copied(),
+            Some(25_000.0)
+        );
+        assert_eq!(
+            shape
+                .adjust_values
+                .as_ref()
+                .and_then(|values| values.get("adj2"))
+                .copied(),
+            Some(30_000.0)
         );
     }
 

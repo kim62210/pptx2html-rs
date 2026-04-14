@@ -125,6 +125,88 @@ fn test_title_placeholder_inherits_position() {
 }
 
 #[test]
+fn test_layout_placeholder_inherits_geometry_adjust_values_and_transform() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Body Shape"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm rot="1800000" flipH="1">
+          <a:off x="914400" y="914400"/>
+          <a:ext cx="1828800" cy="914400"/>
+        </a:xfrm>
+        <a:prstGeom prst="rightArrow">
+          <a:avLst>
+            <a:gd name="adj1" fmla="val 25000"/>
+            <a:gd name="adj2" fmla="val 30000"/>
+          </a:avLst>
+        </a:prstGeom>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let slide_body = r#"
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Body Placeholder"/>
+        <p:cNvSpPr/>
+        <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr/>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:p><a:r><a:t>Inherited Geometry</a:t></a:r></a:p>
+      </p:txBody>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide_body)
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("Inherited Geometry"),
+        "placeholder text missing: {html}"
+    );
+    assert!(
+        html.contains("class=\"shape-svg\""),
+        "expected inherited SVG geometry: {html}"
+    );
+    assert!(
+        html.contains(
+            "d=\"M0,36.0 L134.4,36.0 L134.4,0 L192.0,48.0 L134.4,96.0 L134.4,60.0 L0,60.0 Z\""
+        ),
+        "expected inherited rightArrow path with layout adjust values: {html}"
+    );
+    assert!(
+        html.contains("transform: scale(-1,1) rotate(30.0deg)"),
+        "expected inherited layout transform for placeholder geometry: {html}"
+    );
+}
+
+#[test]
 fn test_layout_placeholder_inherits_border_properties() {
     let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -451,6 +533,70 @@ fn test_show_master_sp_default_true() {
     assert_eq!(
         shape_count, 1,
         "Expected exactly 1 non-placeholder master shape rendered, got {shape_count}: {html}"
+    );
+}
+
+#[test]
+fn test_master_decorative_shape_preserves_geometry_adjust_values_and_transform() {
+    let master_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="20" name="Master Arrow"/>
+        <p:cNvSpPr/>
+        <p:nvPr/>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm rot="1800000" flipH="1">
+          <a:off x="914400" y="914400"/>
+          <a:ext cx="1828800" cy="914400"/>
+        </a:xfrm>
+        <a:prstGeom prst="rightArrow">
+          <a:avLst>
+            <a:gd name="adj1" fmla="val 25000"/>
+            <a:gd name="adj2" fmla="val 30000"/>
+          </a:avLst>
+        </a:prstGeom>
+      </p:spPr>
+    </p:sp>
+  </p:spTree></p:cSld>
+  <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+</p:sldMaster>"#;
+
+    let layout_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+  </p:spTree></p:cSld>
+</p:sldLayout>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_full_master(master_xml)
+        .with_layout(layout_xml)
+        .build();
+    let html = render_html(&pptx);
+
+    assert!(
+        html.contains("class=\"shape-svg\""),
+        "expected master decorative geometry SVG: {html}"
+    );
+    assert!(
+        html.contains(
+            "d=\"M0,36.0 L134.4,36.0 L134.4,0 L192.0,48.0 L134.4,96.0 L134.4,60.0 L0,60.0 Z\""
+        ),
+        "expected master decorative rightArrow path with adjust values: {html}"
+    );
+    assert!(
+        html.contains("transform: scale(-1,1) rotate(30.0deg)"),
+        "expected master decorative transform to survive parsing: {html}"
     );
 }
 

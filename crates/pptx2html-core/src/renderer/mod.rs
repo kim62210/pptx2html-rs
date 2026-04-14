@@ -409,6 +409,44 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         html.push_str("</div>\n</div>\n");
     }
 
+    fn same_shape_kind(lhs: &ShapeType, rhs: &ShapeType) -> bool {
+        use ShapeType::*;
+
+        match (lhs, rhs) {
+            (Custom(a), Custom(b)) => a == b,
+            (Picture(_), Picture(_))
+            | (Table(_), Table(_))
+            | (Group(_, _), Group(_, _))
+            | (Chart(_), Chart(_))
+            | (CustomGeom(_), CustomGeom(_))
+            | (Unsupported(_), Unsupported(_)) => true,
+            _ => std::mem::discriminant(lhs) == std::mem::discriminant(rhs),
+        }
+    }
+
+    fn inherited_geometry_source<'a>(
+        shape: &Shape,
+        layout_match: Option<&'a Shape>,
+        master_match: Option<&'a Shape>,
+    ) -> Option<&'a Shape> {
+        if shape.placeholder.is_none() {
+            return None;
+        }
+
+        [layout_match, master_match]
+            .into_iter()
+            .flatten()
+            .find(|candidate| {
+                !matches!(
+                    candidate.shape_type,
+                    ShapeType::Rectangle | ShapeType::TextBox
+                ) || candidate.adjust_values.is_some()
+                    || candidate.rotation != 0.0
+                    || candidate.flip_h
+                    || candidate.flip_v
+            })
+    }
+
     /// Render shape with resolved properties from inheritance cascade
     fn render_shape_resolved(
         shape: &Shape,
@@ -423,6 +461,56 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         let mut y = pos.y.to_px();
         let mut w = size.width.to_px();
         let mut h = size.height.to_px();
+        let inherited_geometry = Self::inherited_geometry_source(shape, layout_match, master_match);
+        let effective_shape_type = if matches!(shape.shape_type, ShapeType::TextBox) {
+            inherited_geometry
+                .map(|candidate| &candidate.shape_type)
+                .unwrap_or(&shape.shape_type)
+        } else {
+            &shape.shape_type
+        };
+        let geometry_matches_candidate = inherited_geometry.is_some_and(|candidate| {
+            Self::same_shape_kind(effective_shape_type, &candidate.shape_type)
+        });
+        let effective_adjust_values = shape.adjust_values.as_ref().or_else(|| {
+            inherited_geometry.and_then(|candidate| {
+                if matches!(shape.shape_type, ShapeType::TextBox) || geometry_matches_candidate {
+                    candidate.adjust_values.as_ref()
+                } else {
+                    None
+                }
+            })
+        });
+        let effective_rotation = if (matches!(shape.shape_type, ShapeType::TextBox)
+            || geometry_matches_candidate)
+            && shape.rotation == 0.0
+        {
+            inherited_geometry
+                .map(|candidate| candidate.rotation)
+                .unwrap_or(shape.rotation)
+        } else {
+            shape.rotation
+        };
+        let effective_flip_h = if (matches!(shape.shape_type, ShapeType::TextBox)
+            || geometry_matches_candidate)
+            && !shape.flip_h
+        {
+            inherited_geometry
+                .map(|candidate| candidate.flip_h)
+                .unwrap_or(shape.flip_h)
+        } else {
+            shape.flip_h
+        };
+        let effective_flip_v = if (matches!(shape.shape_type, ShapeType::TextBox)
+            || geometry_matches_candidate)
+            && !shape.flip_v
+        {
+            inherited_geometry
+                .map(|candidate| candidate.flip_v)
+                .unwrap_or(shape.flip_v)
+        } else {
+            shape.flip_v
+        };
 
         let anchored_connector = connector_anchor_geometry(shape, ctx);
         if let Some((ax1, ay1, ax2, ay2)) = anchored_connector {
@@ -439,7 +527,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         );
 
         // Determine SVG preset name early so we know whether to skip CSS fill/border
-        let svg_preset_name = match &shape.shape_type {
+        let svg_preset_name = match effective_shape_type {
             ShapeType::Ellipse => Some("ellipse"),
             ShapeType::RoundedRectangle => Some("roundRect"),
             ShapeType::Triangle => Some("triangle"),
@@ -469,7 +557,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             )
         });
         let connector_needs_swap = is_connector
-            && ((shape.rotation - 90.0).abs() < 1.0 || (shape.rotation - 270.0).abs() < 1.0);
+            && ((effective_rotation - 90.0).abs() < 1.0
+                || (effective_rotation - 270.0).abs() < 1.0);
 
         let (w, h) = if connector_needs_swap { (h, w) } else { (w, h) };
         if connector_needs_swap {
@@ -487,21 +576,27 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Build transform: flip + rotation (skip for connectors with swap)
-        if !connector_needs_swap && (shape.rotation != 0.0 || shape.flip_h || shape.flip_v) {
-            let sx = if shape.flip_h { -1 } else { 1 };
-            let sy = if shape.flip_v { -1 } else { 1 };
-            if shape.flip_h || shape.flip_v {
-                if shape.rotation != 0.0 {
+        if !connector_needs_swap
+            && (effective_rotation != 0.0 || effective_flip_h || effective_flip_v)
+        {
+            let sx = if effective_flip_h { -1 } else { 1 };
+            let sy = if effective_flip_v { -1 } else { 1 };
+            if effective_flip_h || effective_flip_v {
+                if effective_rotation != 0.0 {
                     let _ = write!(
                         style_buf,
                         "; transform: scale({sx},{sy}) rotate({:.1}deg)",
-                        shape.rotation
+                        effective_rotation
                     );
                 } else {
                     let _ = write!(style_buf, "; transform: scale({sx},{sy})");
                 }
             } else {
-                let _ = write!(style_buf, "; transform: rotate({:.1}deg)", shape.rotation);
+                let _ = write!(
+                    style_buf,
+                    "; transform: rotate({:.1}deg)",
+                    effective_rotation
+                );
             }
         }
 
@@ -543,7 +638,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             }
         }
         let uses_svg =
-            svg_preset_name.is_some() || matches!(shape.shape_type, ShapeType::CustomGeom(_));
+            svg_preset_name.is_some() || matches!(effective_shape_type, ShapeType::CustomGeom(_));
 
         // Resolve fill via inheritance (with style_ref fallback)
         let fmt_scheme = ctx.pres.primary_theme().map(|t| &t.fmt_scheme);
@@ -2000,7 +2095,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // SVG preset shape rendering
         if let Some(preset_name) = svg_preset_name {
             let empty_adj: HashMap<String, f64> = HashMap::new();
-            let adj_values = shape.adjust_values.as_ref().unwrap_or(&empty_adj);
+            let adj_values = effective_adjust_values.unwrap_or(&empty_adj);
             // Connector/line shapes need a default visible stroke
             let is_line_shape = matches!(
                 preset_name,
@@ -2123,21 +2218,23 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let mut defs_buf = String::new();
                 let gradient_fill_ref =
                     svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
-                // Emit marker defs for line endings (arrows) with unique IDs
+                // Emit marker defs for line endings with unique IDs.
+                // OOXML tailEnd decorates the start of the path and headEnd
+                // decorates the end of the path.
                 let mut marker_start_attr = String::new();
                 let mut marker_end_attr = String::new();
                 if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
-                    if let Some(ref he) = resolved_border.head_end {
-                        let mid = ctx.next_marker_id("head");
-                        emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width, true);
-                        marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
-                    }
                     if let Some(ref te) = resolved_border.tail_end {
                         let mid = ctx.next_marker_id("tail");
+                        emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, true);
+                        marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
+                    }
+                    if let Some(ref he) = resolved_border.head_end {
+                        let mid = ctx.next_marker_id("head");
                         emit_marker_def(
                             &mut defs_buf,
                             &mid,
-                            te,
+                            he,
                             &stroke_color,
                             stroke_width,
                             false,
@@ -2167,16 +2264,18 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 };
                 // For connectors with swapped dimensions where the path was NOT
                 // directly generated (fallback case), apply flip via SVG transform
-                let svg_transform =
-                    if connector_needs_swap && !has_override && (shape.flip_h || shape.flip_v) {
-                        let sx = if shape.flip_h { -1.0 } else { 1.0 };
-                        let sy = if shape.flip_v { -1.0 } else { 1.0 };
-                        let tx = if shape.flip_h { svg_w } else { 0.0 };
-                        let ty = if shape.flip_v { svg_h } else { 0.0 };
-                        format!(" transform=\"translate({tx:.1},{ty:.1}) scale({sx},{sy})\"")
-                    } else {
-                        String::new()
-                    };
+                let svg_transform = if connector_needs_swap
+                    && !has_override
+                    && (effective_flip_h || effective_flip_v)
+                {
+                    let sx = if effective_flip_h { -1.0 } else { 1.0 };
+                    let sy = if effective_flip_v { -1.0 } else { 1.0 };
+                    let tx = if effective_flip_h { svg_w } else { 0.0 };
+                    let ty = if effective_flip_v { svg_h } else { 0.0 };
+                    format!(" transform=\"translate({tx:.1},{ty:.1}) scale({sx},{sy})\"")
+                } else {
+                    String::new()
+                };
                 // non-scaling-stroke prevents stroke distortion when viewBox
                 // and CSS dimensions have different aspect ratios.
                 // Ensure minimum 1.5px for visibility at screen resolution.
@@ -2199,7 +2298,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
 
         // Custom geometry SVG rendering
-        if let ShapeType::CustomGeom(ref geom) = shape.shape_type
+        if let ShapeType::CustomGeom(geom) = effective_shape_type
             && let Some(svg_geom) = geometry::custom_geometry_svg(geom, w, h)
         {
             // Convert border width from pt to px for SVG (viewBox is in px)
@@ -2223,18 +2322,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             let grad_id = ctx.next_gradient_id();
             let mut defs_buf = String::new();
             let gradient_fill_ref = svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
-            // Emit marker defs for custom geometry arrows
+            // Emit marker defs for custom geometry arrows.
+            // OOXML tailEnd decorates the start of the path and headEnd
+            // decorates the end of the path.
             let mut marker_start_attr = String::new();
             let mut marker_end_attr = String::new();
             if resolved_border.head_end.is_some() || resolved_border.tail_end.is_some() {
-                if let Some(ref he) = resolved_border.head_end {
-                    let mid = ctx.next_marker_id("head");
-                    emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width, true);
-                    marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
-                }
                 if let Some(ref te) = resolved_border.tail_end {
                     let mid = ctx.next_marker_id("tail");
-                    emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, false);
+                    emit_marker_def(&mut defs_buf, &mid, te, &stroke_color, stroke_width, true);
+                    marker_start_attr = format!(" marker-start=\"url(#{mid})\"");
+                }
+                if let Some(ref he) = resolved_border.head_end {
+                    let mid = ctx.next_marker_id("head");
+                    emit_marker_def(&mut defs_buf, &mid, he, &stroke_color, stroke_width, false);
                     marker_end_attr = format!(" marker-end=\"url(#{mid})\"");
                 }
             }
@@ -5068,6 +5169,50 @@ mod tests {
         assert!(html.contains("width: 192.0px; height: 96.0px;"));
         assert!(html.contains("transform: scale(2.0000); transform-origin: top left"));
         assert!(html.contains("class=\"slide\""));
+    }
+
+    #[test]
+    fn render_line_shape_places_tail_marker_at_start_and_head_marker_at_end() {
+        let (pres, collector) = test_ctx(true);
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+        let shape = Shape {
+            shape_type: ShapeType::Custom("line".to_string()),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            border: Border {
+                width: 1.0,
+                color: Color::rgb("112233"),
+                head_end: Some(LineEnd {
+                    end_type: LineEndType::Triangle,
+                    width: LineEndSize::Large,
+                    length: LineEndSize::Small,
+                }),
+                tail_end: Some(LineEnd {
+                    end_type: LineEndType::Diamond,
+                    width: LineEndSize::Small,
+                    length: LineEndSize::Large,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("marker-start=\"url(#marker-tail-0)\""));
+        assert!(html.contains("marker-end=\"url(#marker-head-1)\""));
+        assert!(html.contains("marker id=\"marker-tail-0\""));
+        assert!(html.contains("marker id=\"marker-head-1\""));
     }
 
     #[test]
