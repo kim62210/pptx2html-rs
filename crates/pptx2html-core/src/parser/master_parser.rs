@@ -337,82 +337,28 @@ pub fn parse_slide_master<R: Read + Seek>(
                     s @ ("srgbClr" | "schemeClr") if in_shape_def_rpr => {
                         set_run_default_color(shape_run_defaults.as_mut(), s, e);
                     }
-                    "spcPct"
+                    s @ ("spcPct" | "spcPts")
                         if in_shape_lst_style
                             && shape_current_lvl.is_some()
                             && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) =>
                     {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Percent(val / 100_000.0);
-                            if let Some(pd) = shape_para_defaults.as_mut() {
-                                if in_shape_ln_spc {
-                                    pd.line_spacing = Some(spacing);
-                                } else if in_shape_spc_bef {
-                                    pd.space_before = Some(spacing);
-                                } else if in_shape_spc_aft {
-                                    pd.space_after = Some(spacing);
-                                }
-                            }
-                        }
-                    }
-                    "spcPts"
-                        if in_shape_lst_style
-                            && shape_current_lvl.is_some()
-                            && (in_shape_ln_spc || in_shape_spc_bef || in_shape_spc_aft) =>
-                    {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Points(val / 100.0);
-                            if let Some(pd) = shape_para_defaults.as_mut() {
-                                if in_shape_ln_spc {
-                                    pd.line_spacing = Some(spacing);
-                                } else if in_shape_spc_bef {
-                                    pd.space_before = Some(spacing);
-                                } else if in_shape_spc_aft {
-                                    pd.space_after = Some(spacing);
-                                }
-                            }
+                        if let Some(spacing) = parse_spacing_value(s, e) {
+                            assign_spacing_target(
+                                shape_para_defaults.as_mut(),
+                                spacing,
+                                in_shape_ln_spc,
+                                in_shape_spc_bef,
+                                in_shape_spc_aft,
+                            );
                         }
                     }
                     // Font in defRPr
-                    "latin" if in_def_rpr => {
-                        if let Some(rd) = current_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_latin = Some(typeface);
-                        }
-                    }
-                    "ea" if in_def_rpr => {
-                        if let Some(rd) = current_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_ea = Some(typeface);
-                        }
-                    }
-                    "cs" if in_def_rpr => {
-                        if let Some(rd) = current_run_defaults.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rd.font_cs = Some(typeface);
-                        }
+                    s @ ("latin" | "ea" | "cs") if in_def_rpr => {
+                        set_run_default_typeface(current_run_defaults.as_mut(), s, e);
                     }
                     // Color elements (Empty variant) inside defRPr
-                    "srgbClr" if in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val")
-                            && let Some(rd) = current_run_defaults.as_mut()
-                        {
-                            rd.color = Some(Color::rgb(val));
-                        }
-                    }
-                    "schemeClr" if in_def_rpr => {
-                        if let Some(val) = xml_utils::attr_str(e, "val")
-                            && let Some(rd) = current_run_defaults.as_mut()
-                        {
-                            rd.color = Some(Color::theme(val));
-                        }
+                    s @ ("srgbClr" | "schemeClr") if in_def_rpr => {
+                        set_run_default_color(current_run_defaults.as_mut(), s, e);
                     }
                     "srgbClr" if in_shape_ln => {
                         if let Some(val) = xml_utils::attr_str(e, "val")
@@ -429,40 +375,17 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     // Spacing percentage/points (inside lnSpc/spcBef/spcAft)
-                    "spcPct"
+                    s @ ("spcPct" | "spcPts")
                         if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) =>
                     {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Percent(val / 100_000.0);
-                            if let Some(pd) = current_para_defaults.as_mut() {
-                                if in_ln_spc {
-                                    pd.line_spacing = Some(spacing);
-                                } else if in_spc_bef {
-                                    pd.space_before = Some(spacing);
-                                } else if in_spc_aft {
-                                    pd.space_after = Some(spacing);
-                                }
-                            }
-                        }
-                    }
-                    "spcPts"
-                        if current_lvl.is_some() && (in_ln_spc || in_spc_bef || in_spc_aft) =>
-                    {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Points(val / 100.0);
-                            if let Some(pd) = current_para_defaults.as_mut() {
-                                if in_ln_spc {
-                                    pd.line_spacing = Some(spacing);
-                                } else if in_spc_bef {
-                                    pd.space_before = Some(spacing);
-                                } else if in_spc_aft {
-                                    pd.space_after = Some(spacing);
-                                }
-                            }
+                        if let Some(spacing) = parse_spacing_value(s, e) {
+                            assign_spacing_target(
+                                current_para_defaults.as_mut(),
+                                spacing,
+                                in_ln_spc,
+                                in_spc_bef,
+                                in_spc_aft,
+                            );
                         }
                     }
                     // Empty lvlNpPr (no children)
@@ -483,18 +406,12 @@ pub fn parse_slide_master<R: Read + Seek>(
                     // Position/size for shapes — only inside <a:xfrm>
                     "off" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.position.x =
-                                Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
-                            sb.position.y =
-                                Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
+                            set_shape_offset(sb, e);
                         }
                     }
                     "ext" if current_shape.is_some() && depth.iter().any(|d| d == "xfrm") => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.size.width =
-                                Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
-                            sb.size.height =
-                                Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+                            set_shape_extent(sb, e);
                         }
                     }
                     "noFill" if in_shape_ln => {
@@ -508,27 +425,7 @@ pub fn parse_slide_master<R: Read + Seek>(
                         if let Some(sb) = current_shape.as_mut()
                             && let Some(val) = xml_utils::attr_str(e, "val")
                         {
-                            sb.border.style = match val.as_str() {
-                                "solid" => BorderStyle::Solid,
-                                "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
-                                "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" | "sysDashDot"
-                                | "sysDashDotDot" => BorderStyle::Dotted,
-                                _ => BorderStyle::Solid,
-                            };
-                            sb.border.dash_style = match val.as_str() {
-                                "solid" => DashStyle::Solid,
-                                "dash" => DashStyle::Dash,
-                                "dot" => DashStyle::Dot,
-                                "dashDot" => DashStyle::DashDot,
-                                "lgDash" => DashStyle::LongDash,
-                                "lgDashDot" => DashStyle::LongDashDot,
-                                "lgDashDotDot" => DashStyle::LongDashDotDot,
-                                "sysDash" => DashStyle::SystemDash,
-                                "sysDot" => DashStyle::SystemDot,
-                                "sysDashDot" => DashStyle::SystemDashDot,
-                                "sysDashDotDot" => DashStyle::SystemDashDotDot,
-                                _ => DashStyle::Solid,
-                            };
+                            apply_shape_dash(&mut sb.border, &val);
                         }
                     }
                     "round" if in_shape_ln => {
@@ -573,31 +470,16 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     "bgPr" => {
                         in_bg_pr = false;
-                        if let Some(rel_id) = bg_blip_rel_id.take() {
-                            if let Some(target) = rels.get(&rel_id) {
-                                let path = resolve_master_rel_path("ppt/slideMasters", target);
-                                if let Ok(mut entry) = archive.by_name(&path) {
-                                    let mut buf = Vec::new();
-                                    let _ = std::io::Read::read_to_end(&mut entry, &mut buf);
-                                    if !buf.is_empty() {
-                                        let ct = bg_mime_from_ext(&path);
-                                        master.background = Some(Fill::Image(ImageFill {
-                                            rel_id,
-                                            data: buf,
-                                            content_type: ct,
-                                        }));
-                                    }
-                                }
-                            }
-                        } else if let Some(color) = bg_solid_color.take() {
-                            master.background = Some(Fill::Solid(SolidFill { color }));
-                        } else if !bg_grad_stops.is_empty() {
-                            master.background = Some(Fill::Gradient(GradientFill {
-                                gradient_type: std::mem::take(&mut bg_grad_type),
-                                stops: std::mem::take(&mut bg_grad_stops),
-                                angle: bg_grad_angle,
-                            }));
-                        }
+                        finalize_background(
+                            &mut master,
+                            rels,
+                            archive,
+                            &mut bg_blip_rel_id,
+                            &mut bg_solid_color,
+                            &mut bg_grad_stops,
+                            &mut bg_grad_type,
+                            bg_grad_angle,
+                        );
                     }
                     "txStyles" => {
                         in_tx_styles = false;
@@ -610,28 +492,19 @@ pub fn parse_slide_master<R: Read + Seek>(
                     }
                     "defRPr" if in_def_rpr => {
                         in_def_rpr = false;
-                        // Assign color from Start+child pattern
-                        if let (Some(color), Some(rd)) =
-                            (current_color.take(), current_run_defaults.as_mut())
-                            && rd.color.is_none()
-                        {
-                            rd.color = Some(color);
-                        }
-                        if let Some(pd) = current_para_defaults.as_mut() {
-                            pd.def_run_props = current_run_defaults.take();
-                        }
+                        finalize_run_defaults(
+                            &mut current_color,
+                            &mut current_run_defaults,
+                            current_para_defaults.as_mut(),
+                        );
                     }
                     "defRPr" if in_shape_def_rpr => {
                         in_shape_def_rpr = false;
-                        if let (Some(color), Some(rd)) =
-                            (shape_current_color.take(), shape_run_defaults.as_mut())
-                            && rd.color.is_none()
-                        {
-                            rd.color = Some(color);
-                        }
-                        if let Some(pd) = shape_para_defaults.as_mut() {
-                            pd.def_run_props = shape_run_defaults.take();
-                        }
+                        finalize_run_defaults(
+                            &mut shape_current_color,
+                            &mut shape_run_defaults,
+                            shape_para_defaults.as_mut(),
+                        );
                     }
                     s if is_lvl_ppr(s) && current_lvl.is_some() => {
                         if let (Some(pd), Some(lvl)) = (current_para_defaults.take(), current_lvl) {
@@ -680,9 +553,9 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     "sp" if current_shape.is_some() => {
-                        if let Some(sb) = current_shape.take() {
-                            master.shapes.push(sb.build());
-                        }
+                        current_shape
+                            .take()
+                            .map(|shape| master.shapes.push(shape.build()));
                     }
                     _ => {}
                 }
@@ -788,6 +661,224 @@ pub fn parse_placeholder_attrs(e: &quick_xml::events::BytesStart<'_>) -> Placeho
         info.idx = idx.parse::<u32>().ok();
     }
     info
+}
+
+fn apply_shape_body_pr(sb: &mut MasterShapeBuilder, e: &quick_xml::events::BytesStart<'_>) {
+    if let Some(anchor) = xml_utils::attr_str(e, "anchor") {
+        sb.text_vertical_align = VerticalAlign::from_ooxml(&anchor);
+        sb.text_vertical_align_explicit = true;
+    }
+    if let Some(anchor_ctr) = xml_utils::attr_str(e, "anchorCtr") {
+        sb.text_anchor_center = anchor_ctr == "1" || anchor_ctr == "true";
+    }
+    if let Some(rot) = xml_utils::attr_str(e, "rot") {
+        sb.text_rotation_deg = rot.parse::<f64>().unwrap_or(0.0) / 60_000.0;
+    }
+    if let Some(vert) = xml_utils::attr_str(e, "vert") {
+        sb.vertical_text_explicit = true;
+        sb.vertical_text = if vert == "horz" { None } else { Some(vert) };
+    }
+    if let Some(v) = xml_utils::attr_str(e, "lIns") {
+        sb.text_margins.left = Emu::parse_emu(&v).to_pt();
+        sb.text_margin_left_explicit = true;
+    }
+    if let Some(v) = xml_utils::attr_str(e, "tIns") {
+        sb.text_margins.top = Emu::parse_emu(&v).to_pt();
+        sb.text_margin_top_explicit = true;
+    }
+    if let Some(v) = xml_utils::attr_str(e, "rIns") {
+        sb.text_margins.right = Emu::parse_emu(&v).to_pt();
+        sb.text_margin_right_explicit = true;
+    }
+    if let Some(v) = xml_utils::attr_str(e, "bIns") {
+        sb.text_margins.bottom = Emu::parse_emu(&v).to_pt();
+        sb.text_margin_bottom_explicit = true;
+    }
+    if let Some(wrap) = xml_utils::attr_str(e, "wrap") {
+        sb.text_word_wrap = wrap != "none";
+        sb.text_word_wrap_explicit = true;
+    }
+}
+
+fn parse_shape_auto_fit(local: &str, e: &quick_xml::events::BytesStart<'_>) -> AutoFit {
+    match local {
+        "normAutofit" => AutoFit::Normal {
+            font_scale: parse_autofit_ratio(e, "fontScale"),
+            line_spacing_reduction: parse_autofit_ratio(e, "lnSpcReduction"),
+        },
+        "noAutofit" => AutoFit::NoAutoFit,
+        "spAutoFit" => AutoFit::Shrink,
+        _ => AutoFit::None,
+    }
+}
+
+fn assign_background_color(
+    solid_color: &mut Option<Color>,
+    grad_stops: &mut Vec<GradientStop>,
+    in_gradient_stop: bool,
+    position: f64,
+    themed: bool,
+    value: Option<String>,
+) {
+    if let Some(value) = value {
+        let color = if themed {
+            Color::theme(value)
+        } else {
+            Color::rgb(value)
+        };
+        if in_gradient_stop {
+            grad_stops.push(GradientStop { position, color });
+        } else {
+            *solid_color = Some(color);
+        }
+    }
+}
+
+fn set_run_default_typeface(
+    run_defaults: Option<&mut RunDefaults>,
+    local: &str,
+    e: &quick_xml::events::BytesStart<'_>,
+) {
+    if let Some(run_defaults) = run_defaults
+        && let Some(typeface) = xml_utils::attr_str(e, "typeface")
+    {
+        match local {
+            "latin" => run_defaults.font_latin = Some(typeface),
+            "ea" => run_defaults.font_ea = Some(typeface),
+            "cs" => run_defaults.font_cs = Some(typeface),
+            _ => {}
+        }
+    }
+}
+
+fn set_run_default_color(
+    run_defaults: Option<&mut RunDefaults>,
+    local: &str,
+    e: &quick_xml::events::BytesStart<'_>,
+) {
+    if let Some(run_defaults) = run_defaults
+        && let Some(value) = xml_utils::attr_str(e, "val")
+    {
+        run_defaults.color = Some(match local {
+            "srgbClr" => Color::rgb(value),
+            "schemeClr" => Color::theme(value),
+            _ => return,
+        });
+    }
+}
+
+fn parse_spacing_value(local: &str, e: &quick_xml::events::BytesStart<'_>) -> Option<SpacingValue> {
+    let value = xml_utils::attr_str(e, "val")?.parse::<f64>().ok()?;
+    Some(match local {
+        "spcPct" => SpacingValue::Percent(value / 100_000.0),
+        "spcPts" => SpacingValue::Points(value / 100.0),
+        _ => return None,
+    })
+}
+
+fn assign_spacing_target(
+    paragraph_defaults: Option<&mut ParagraphDefaults>,
+    spacing: SpacingValue,
+    in_ln_spc: bool,
+    in_spc_bef: bool,
+    in_spc_aft: bool,
+) {
+    if let Some(paragraph_defaults) = paragraph_defaults {
+        if in_ln_spc {
+            paragraph_defaults.line_spacing = Some(spacing);
+        } else if in_spc_bef {
+            paragraph_defaults.space_before = Some(spacing);
+        } else if in_spc_aft {
+            paragraph_defaults.space_after = Some(spacing);
+        }
+    }
+}
+
+fn set_shape_offset(sb: &mut MasterShapeBuilder, e: &quick_xml::events::BytesStart<'_>) {
+    sb.position.x = Emu::parse_emu(&xml_utils::attr_str(e, "x").unwrap_or_default());
+    sb.position.y = Emu::parse_emu(&xml_utils::attr_str(e, "y").unwrap_or_default());
+}
+
+fn set_shape_extent(sb: &mut MasterShapeBuilder, e: &quick_xml::events::BytesStart<'_>) {
+    sb.size.width = Emu::parse_emu(&xml_utils::attr_str(e, "cx").unwrap_or_default());
+    sb.size.height = Emu::parse_emu(&xml_utils::attr_str(e, "cy").unwrap_or_default());
+}
+
+fn apply_shape_dash(border: &mut Border, value: &str) {
+    border.style = match value {
+        "solid" => BorderStyle::Solid,
+        "dash" | "lgDash" | "sysDash" => BorderStyle::Dashed,
+        "dot" | "sysDot" | "lgDashDot" | "lgDashDotDot" | "sysDashDot" | "sysDashDotDot" => {
+            BorderStyle::Dotted
+        }
+        _ => BorderStyle::Solid,
+    };
+    border.dash_style = match value {
+        "solid" => DashStyle::Solid,
+        "dash" => DashStyle::Dash,
+        "dot" => DashStyle::Dot,
+        "dashDot" => DashStyle::DashDot,
+        "lgDash" => DashStyle::LongDash,
+        "lgDashDot" => DashStyle::LongDashDot,
+        "lgDashDotDot" => DashStyle::LongDashDotDot,
+        "sysDash" => DashStyle::SystemDash,
+        "sysDot" => DashStyle::SystemDot,
+        "sysDashDot" => DashStyle::SystemDashDot,
+        "sysDashDotDot" => DashStyle::SystemDashDotDot,
+        _ => DashStyle::Solid,
+    };
+}
+
+fn finalize_run_defaults(
+    current_color: &mut Option<Color>,
+    current_run_defaults: &mut Option<RunDefaults>,
+    paragraph_defaults: Option<&mut ParagraphDefaults>,
+) {
+    if let (Some(color), Some(run_defaults)) = (current_color.take(), current_run_defaults.as_mut())
+        && run_defaults.color.is_none()
+    {
+        run_defaults.color = Some(color);
+    }
+    if let Some(paragraph_defaults) = paragraph_defaults {
+        paragraph_defaults.def_run_props = current_run_defaults.take();
+    }
+}
+
+fn finalize_background<R: Read + Seek>(
+    master: &mut SlideMaster,
+    rels: &HashMap<String, String>,
+    archive: &mut ZipArchive<R>,
+    bg_blip_rel_id: &mut Option<String>,
+    bg_solid_color: &mut Option<Color>,
+    bg_grad_stops: &mut Vec<GradientStop>,
+    bg_grad_type: &mut GradientType,
+    bg_grad_angle: f64,
+) {
+    if let Some(rel_id) = bg_blip_rel_id.take() {
+        if let Some(target) = rels.get(&rel_id) {
+            let path = resolve_master_rel_path("ppt/slideMasters", target);
+            if let Ok(mut entry) = archive.by_name(&path) {
+                let mut buf = Vec::new();
+                let _ = std::io::Read::read_to_end(&mut entry, &mut buf);
+                if !buf.is_empty() {
+                    let ct = bg_mime_from_ext(&path);
+                    master.background = Some(Fill::Image(ImageFill {
+                        rel_id,
+                        data: buf,
+                        content_type: ct,
+                    }));
+                }
+            }
+        }
+    } else if let Some(color) = bg_solid_color.take() {
+        master.background = Some(Fill::Solid(SolidFill { color }));
+    } else if !bg_grad_stops.is_empty() {
+        master.background = Some(Fill::Gradient(GradientFill {
+            gradient_type: std::mem::take(bg_grad_type),
+            stops: std::mem::take(bg_grad_stops),
+            angle: bg_grad_angle,
+        }));
+    }
 }
 
 fn store_level_defaults(
