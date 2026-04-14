@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'feature/slide-scale-output']
   pull_request:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'feature/slide-scale-output']
 
 env:
   CARGO_TERM_COLOR: always
