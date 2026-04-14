@@ -53,6 +53,7 @@ pub use renderer::text_metrics::{FontResolutionEntry, FontResolutionSource};
 /// let opts = ConversionOptions {
 ///     embed_images: false,                 // external image refs
 ///     slide_indices: Some(vec![1, 3, 5]),  // specific slides only
+///     scale: 2.0,                          // whole-slide 2x zoom
 ///     ..Default::default()
 /// };
 /// ```
@@ -67,6 +68,9 @@ pub struct ConversionOptions {
     pub slide_range: Option<(usize, usize)>,
     /// Render only slides at these 1-based indices (e.g. `vec![1, 3, 5]`).
     pub slide_indices: Option<Vec<usize>>,
+    /// Uniform whole-slide scale factor. Keeps all coordinates, sizes, and ratios intact.
+    /// `1.0` means original size, `2.0` means 2x zoom.
+    pub scale: f64,
 }
 
 impl Default for ConversionOptions {
@@ -76,6 +80,7 @@ impl Default for ConversionOptions {
             include_hidden: false,
             slide_range: None,
             slide_indices: None,
+            scale: 1.0,
         }
     }
 }
@@ -93,6 +98,15 @@ impl ConversionOptions {
             return one_based_index >= start && one_based_index <= end;
         }
         true
+    }
+
+    /// Return a safe scale factor for rendering.
+    pub fn effective_scale(&self) -> f64 {
+        if self.scale.is_finite() && self.scale > 0.0 {
+            self.scale
+        } else {
+            1.0
+        }
     }
 }
 

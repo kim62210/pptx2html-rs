@@ -62,6 +62,30 @@ fn single_file_conversion_writes_requested_output() {
 }
 
 #[test]
+fn single_file_conversion_applies_uniform_slide_scale() {
+    let input = write_temp_file("single-scale", include_bytes!("fixtures/single-slide.pptx"));
+    let output_path = unique_temp_path("single-scale-output").with_extension("html");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_pptx2html"))
+        .arg(&input)
+        .arg("--scale")
+        .arg("2")
+        .arg("--output")
+        .arg(&output_path)
+        .output()
+        .expect("run cli");
+
+    assert!(output.status.success(), "{output:?}");
+    let html = fs::read_to_string(&output_path).expect("read scaled output html");
+    assert!(html.contains("class=\"slide-shell\""));
+    assert!(html.contains("width: 1920.0px; height: 1440.0px;"));
+    assert!(html.contains("transform: scale(2.0000);"));
+
+    fs::remove_file(input).ok();
+    fs::remove_file(output_path).ok();
+}
+
+#[test]
 fn multi_file_conversion_writes_per_slide_outputs() {
     let input = write_temp_file("multi", include_bytes!("fixtures/two-slides.pptx"));
     let output_dir = unique_temp_path("multi-output");

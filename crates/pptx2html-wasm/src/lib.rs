@@ -142,6 +142,7 @@ impl ConversionResult {
 ///   false,
 ///   true,
 ///   new Uint32Array([1, 3, 5]),
+///   2.0,
 /// );
 /// ```
 ///
@@ -152,11 +153,13 @@ pub fn convert_with_options(
     embed_images: bool,
     include_hidden: bool,
     slide_indices: &[usize],
+    scale: f64,
 ) -> Result<String, JsError> {
     let opts = pptx2html_core::ConversionOptions {
         embed_images,
         include_hidden,
         slide_indices: optional_slide_indices(slide_indices),
+        scale,
         ..Default::default()
     };
     pptx2html_core::convert_bytes_with_options(data, &opts).map_err(to_js_error)
@@ -187,6 +190,7 @@ pub fn convert_with_metadata(data: &[u8]) -> Result<ConversionResult, JsError> {
 ///   false,
 ///   true,
 ///   new Uint32Array([1, 3, 5]),
+///   2.0,
 /// );
 /// ```
 #[wasm_bindgen]
@@ -195,11 +199,13 @@ pub fn convert_with_options_metadata(
     embed_images: bool,
     include_hidden: bool,
     slide_indices: &[usize],
+    scale: f64,
 ) -> Result<ConversionResult, JsError> {
     let opts = pptx2html_core::ConversionOptions {
         embed_images,
         include_hidden,
         slide_indices: optional_slide_indices(slide_indices),
+        scale,
         ..Default::default()
     };
     let result =
@@ -316,8 +322,8 @@ mod tests {
     fn convert_with_options_keeps_one_based_indices() {
         let data = build_two_slide_pptx();
 
-        let html =
-            convert_with_options(&data, true, false, &[1]).expect("convert_with_options works");
+        let html = convert_with_options(&data, true, false, &[1], 1.0)
+            .expect("convert_with_options works");
 
         assert!(
             html.contains("Slide One"),
@@ -406,7 +412,7 @@ mod tests {
         assert_eq!(metadata.slide_count(), 2);
         assert_eq!(metadata.unresolved_elements(), "[]");
 
-        let filtered = convert_with_options_metadata(&data, true, false, &[2])
+        let filtered = convert_with_options_metadata(&data, true, false, &[2], 1.0)
             .expect("filtered conversion should succeed");
         assert!(filtered.html().contains("Slide Two"));
         assert!(!filtered.html().contains("Slide One"));
@@ -424,11 +430,11 @@ mod tests {
         let info = get_presentation_info(&data).expect("typed titled info should succeed");
         assert_eq!(info.title(), Some("Quarterly \"Deck\"".to_string()));
 
-        let html =
-            convert_with_options(&data, true, false, &[]).expect("empty selection keeps slides");
+        let html = convert_with_options(&data, true, false, &[], 1.0)
+            .expect("empty selection keeps slides");
         assert!(html.contains("Slide One"));
 
-        let metadata = convert_with_options_metadata(&data, true, false, &[])
+        let metadata = convert_with_options_metadata(&data, true, false, &[], 1.0)
             .expect("empty selection metadata keeps slides");
         assert!(metadata.html().contains("Slide One"));
         assert_eq!(metadata.slide_count(), 1);

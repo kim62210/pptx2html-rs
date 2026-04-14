@@ -35,6 +35,10 @@ struct Cli {
     /// Include hidden slides
     #[arg(long)]
     include_hidden: bool,
+
+    /// Whole-slide zoom factor (e.g. 2.0 = 2x). Keeps coordinates and ratios unchanged.
+    #[arg(long, default_value_t = 1.0)]
+    scale: f64,
 }
 
 /// Parse a slide selection string like "1,3,5-8" into a sorted list of 1-based indices
@@ -132,6 +136,7 @@ fn main() {
         include_hidden: cli.include_hidden,
         slide_range: None,
         slide_indices: slide_indices.clone(),
+        scale: cli.scale,
     };
 
     if cli.format == "multi" {
@@ -162,6 +167,7 @@ fn main() {
                 include_hidden: cli.include_hidden,
                 slide_range: None,
                 slide_indices: Some(vec![idx]),
+                scale: cli.scale,
             };
             match pptx2html_core::convert_file_with_options_metadata(&cli.input, &per_slide_opts) {
                 Ok(result) => {

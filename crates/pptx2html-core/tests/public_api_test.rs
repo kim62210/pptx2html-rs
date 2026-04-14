@@ -51,9 +51,9 @@ fn public_file_and_bytes_apis_delegate_consistently() {
 
     let opts = ConversionOptions {
         embed_images: false,
-        include_hidden: false,
-        slide_range: None,
         slide_indices: Some(vec![1]),
+        scale: 1.5,
+        ..Default::default()
     };
 
     let file_html = convert_file(&path).expect("convert_file");
@@ -68,9 +68,12 @@ fn public_file_and_bytes_apis_delegate_consistently() {
 
     assert!(file_html.contains("Public API"));
     assert!(file_html_with_opts.contains("Public API"));
+    assert!(file_html_with_opts.contains("class=\"slide-shell\""));
+    assert!(file_html_with_opts.contains("transform: scale(1.5000);"));
     assert!(file_result.html.contains("Public API"));
     assert!(bytes_html.contains("Public API"));
     assert!(bytes_html_with_opts.contains("Public API"));
+    assert!(bytes_html_with_opts.contains("width: 1440.0px; height: 1080.0px;"));
     assert!(bytes_result.html.contains("Public API"));
 
     assert_eq!(file_result.slide_count, 1);
@@ -111,4 +114,16 @@ fn should_include_slide_honors_hidden_indices_and_ranges() {
     assert!(range_opts.should_include_slide(2, false));
     assert!(range_opts.should_include_slide(4, false));
     assert!(!range_opts.should_include_slide(5, false));
+
+    let invalid_scale_opts = ConversionOptions {
+        scale: 0.0,
+        ..Default::default()
+    };
+    assert_eq!(invalid_scale_opts.effective_scale(), 1.0);
+
+    let scaled_opts = ConversionOptions {
+        scale: 2.0,
+        ..Default::default()
+    };
+    assert_eq!(scaled_opts.effective_scale(), 2.0);
 }
