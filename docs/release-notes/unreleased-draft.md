@@ -7,7 +7,7 @@ See [`pre-release-checklist.md`](./pre-release-checklist.md) before turning this
 
 ## Suggested Title
 
-`vNEXT - chart coverage expansion, text wrap fidelity, and release-validation hardening`
+`v1.0.5 - chart coverage expansion, text wrap fidelity, and release-validation hardening`
 
 ## Suggested Summary
 
@@ -91,5 +91,5 @@ Use [`pre-release-checklist.md`](./pre-release-checklist.md) to confirm the fina
 
 ## Publish Status
 
-- This draft reflects the current `Unreleased` state after the `1.0.4` tag.
+- This draft reflects the `1.0.5` release branch state after the `1.0.4` tag.
 - No release or deployment action has been performed as part of this draft.

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- No unreleased changes on the 1.0.5 release line.
+
+## [1.0.5] - 2026-04-14
+
 ### Rendering — Text Fidelity
 - Detect unbreakable tokens that span adjacent text runs before opting into emergency wrapping
 - Honor paragraph-level default font sizes when classifying narrow autofit text for emergency wrapping

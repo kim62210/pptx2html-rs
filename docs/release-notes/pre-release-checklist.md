@@ -40,5 +40,5 @@ See [`README.md`](./README.md) for the intended release-note workflow and how th
 
 ## 6. Tagging Decision
 
-- [ ] The intended release tag matches the package version(s) that will be published
+- [ ] `bash scripts/read_release_version.sh <tag>` succeeds for the intended release tag
 - [ ] Release artifacts are ready, but no deployment/publish step is triggered until a human approves the tag/publish action

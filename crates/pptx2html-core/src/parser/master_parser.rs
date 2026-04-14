@@ -553,9 +553,9 @@ pub fn parse_slide_master<R: Read + Seek>(
                         }
                     }
                     "sp" if current_shape.is_some() => {
-                        current_shape
-                            .take()
-                            .map(|shape| master.shapes.push(shape.build()));
+                        if let Some(shape) = current_shape.take() {
+                            master.shapes.push(shape.build());
+                        }
                     }
                     _ => {}
                 }
@@ -844,6 +844,7 @@ fn finalize_run_defaults(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn finalize_background<R: Read + Seek>(
     master: &mut SlideMaster,
     rels: &HashMap<String, String>,
