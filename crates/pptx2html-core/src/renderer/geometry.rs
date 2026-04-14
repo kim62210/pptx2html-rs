@@ -55,7 +55,7 @@ pub fn preset_shape_svg(
         "round1Rect" => Some(round1_rect_path(w, h, adjust_values)),
         "round2SameRect" => Some(round2_same_rect_path(w, h, adjust_values)),
         "round2DiagRect" => Some(round2_diag_rect_path(w, h, adjust_values)),
-        "foldCorner" => Some(fold_corner_path(w, h, adjust_values)),
+        "foldCorner" | "foldedCorner" => Some(fold_corner_path(w, h, adjust_values)),
         // Rectangles & related
         "diagStripe" => Some(diag_stripe_path(w, h, adjust_values)),
         "corner" => Some(corner_path(w, h, adjust_values)),
@@ -431,7 +431,15 @@ fn fold_corner_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn diag_stripe_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let ratio = adj.get("adj").copied().unwrap_or(50000.0) / 100_000.0;
-    format!("M0,0 L{:.1},0 L0,{:.1} Z", w * ratio, h * ratio)
+    let top_left_x = w * (0.2 + ratio.clamp(0.0, 1.0) * 0.3);
+    let left_y = h * (0.7 - ratio.clamp(0.0, 1.0) * 0.3);
+    format!(
+        "M0,{h:.1} L0,{left_y:.1} L{top_left_x:.1},0 L{w:.1},0 Z",
+        h = h,
+        left_y = left_y,
+        top_left_x = top_left_x,
+        w = w
+    )
 }
 fn corner_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let dx = w * adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
@@ -1967,16 +1975,19 @@ fn cube_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 fn moon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let ratio = adj.get("adj").copied().unwrap_or(50000.0) / 100_000.0;
-    let (rx, ry) = (w / 2.0, h / 2.0);
-    let x = w * (1.0 - ratio);
+    let tip_x = w;
+    let outer_rx = w * 0.95;
+    let outer_ry = h / 2.0;
+    let inner_rx = w * (0.45 + ratio.clamp(0.0, 1.0) * 0.20);
+    let inner_ry = h * (0.45 + ratio.clamp(0.0, 1.0) * 0.05);
     format!(
-        "M{x:.1},0 A{rx:.1},{ry:.1} 0 1,1 {x:.1},{h:.1} A{rx2:.1},{ry2:.1} 0 1,0 {x:.1},0 Z",
-        x = x,
-        rx = rx,
-        ry = ry,
+        "M{tip_x:.1},0 A{outer_rx:.1},{outer_ry:.1} 0 1,0 {tip_x:.1},{h:.1} A{inner_rx:.1},{inner_ry:.1} 0 1,1 {tip_x:.1},0 Z",
+        tip_x = tip_x,
+        outer_rx = outer_rx,
+        outer_ry = outer_ry,
         h = h,
-        rx2 = rx * ratio,
-        ry2 = ry * 0.85
+        inner_rx = inner_rx,
+        inner_ry = inner_ry
     )
 }
 fn sun_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -2012,7 +2023,7 @@ fn sun_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 fn bevel_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let t = w.min(h) * adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
     format!(
-        "M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M{t:.1},{t:.1} L{x:.1},{t:.1} L{x:.1},{y:.1} L{t:.1},{y:.1} Z M0,0 L{t:.1},{t:.1} M{w:.1},0 L{x:.1},{t:.1} M{w:.1},{h:.1} L{x:.1},{y:.1} M0,{h:.1} L{t:.1},{y:.1}",
+        "M0,0 L{w:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z M0,0 L{t:.1},{t:.1} M{w:.1},0 L{x:.1},{t:.1} M{w:.1},{h:.1} L{x:.1},{y:.1} M0,{h:.1} L{t:.1},{y:.1}",
         w = w,
         h = h,
         t = t,
@@ -2053,17 +2064,20 @@ fn pie_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let (rx, ry) = (w / 2.0, h / 2.0);
     let (cx, cy) = (rx, ry);
     let start_angle = -std::f64::consts::FRAC_PI_2 + adj1 / 21_600_000.0 * std::f64::consts::TAU;
-    let end_angle = (adj2 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
+    let sweep_angle = -(adj2 / 21_600_000.0 * std::f64::consts::TAU);
+    let end_angle = start_angle + sweep_angle;
     let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
     let (ex, ey) = ellipse_point(cx, cy, rx, ry, end_angle);
     format!(
-        "M{cx:.1},{cy:.1} L{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 1,1 {ex:.1},{ey:.1} Z",
+        "M{cx:.1},{cy:.1} L{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 {large_arc},{sweep_flag} {ex:.1},{ey:.1} Z",
         cx = cx,
         cy = cy,
         sx = sx,
         sy = sy,
         rx = rx,
         ry = ry,
+        large_arc = if sweep_angle.abs() > std::f64::consts::PI { 1 } else { 0 },
+        sweep_flag = if sweep_angle > 0.0 { 1 } else { 0 },
         ex = ex,
         ey = ey
     )
@@ -3214,6 +3228,55 @@ mod tests {
         assert_eq!(
             path,
             "M15.0,0 L105.0,0 L105.0,50.0 L120.0,50.0 L60.0,100.0 L0,50.0 L15.0,50.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_folded_corner_alias_uses_fold_corner_geometry() {
+        let adj = HashMap::new();
+        let path = preset_shape_svg("foldedCorner", 120.0, 100.0, &adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,0 L120.0,0 L120.0,83.3 L103.3,100.0 L0,100.0 Z M103.3,100.0 L120.0,83.3 L103.3,83.3 Z"
+        );
+    }
+
+    #[test]
+    fn test_diag_stripe_default_path_spans_full_diagonal_band() {
+        let adj = HashMap::new();
+        let path = diag_stripe_path(120.0, 100.0, &adj);
+
+        assert_eq!(path, "M0,100.0 L0,55.0 L42.0,0 L120.0,0 Z");
+    }
+
+    #[test]
+    fn test_pie_default_path_renders_three_quarter_sector() {
+        let adj = HashMap::new();
+        let path = pie_path(120.0, 100.0, &adj);
+
+        assert_eq!(path, "M60.0,50.0 L60.0,0.0 A60.0,50.0 0 1,0 120.0,50.0 Z");
+    }
+
+    #[test]
+    fn test_moon_default_path_faces_right_with_left_bulge() {
+        let adj = HashMap::new();
+        let path = moon_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M120.0,0 A114.0,50.0 0 1,0 120.0,100.0 A66.0,47.5 0 1,1 120.0,0 Z"
+        );
+    }
+
+    #[test]
+    fn test_bevel_default_path_keeps_filled_face() {
+        let adj = HashMap::new();
+        let path = bevel_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M0,0 L120.0,0 L120.0,100.0 L0,100.0 Z M0,0 L12.5,12.5 M120.0,0 L107.5,12.5 M120.0,100.0 L107.5,87.5 M0,100.0 L12.5,87.5"
         );
     }
 
