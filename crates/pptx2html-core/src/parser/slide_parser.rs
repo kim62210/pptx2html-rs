@@ -4004,6 +4004,347 @@ mod tests {
     }
 
     #[test]
+    fn helper_dispatch_spacing_and_typeface_paths_cover_remaining_branches() {
+        let mut shape = ShapeBuilder::default();
+        apply_shape_transform(
+            &mut shape,
+            &bytes_start(
+                "a:xfrm",
+                &[("rot", "1800000"), ("flipH", "true"), ("flipV", "1")],
+            ),
+        );
+        assert!((shape.rotation - 30.0).abs() < 1e-6);
+        assert!(shape.flip_h);
+        assert!(shape.flip_v);
+        assert_eq!(
+            std::mem::discriminant(&parse_shape_auto_fit(
+                "noAutofit",
+                &bytes_start("a:noAutofit", &[])
+            )),
+            std::mem::discriminant(&AutoFit::NoAutoFit)
+        );
+        assert_eq!(
+            std::mem::discriminant(&parse_shape_auto_fit(
+                "spAutoFit",
+                &bytes_start("a:spAutoFit", &[])
+            )),
+            std::mem::discriminant(&AutoFit::Shrink)
+        );
+        assert!(matches!(
+            parse_spacing_tag("spcPct", &bytes_start("a:spcPct", &[("val", "125000")])),
+            Some(SpacingValue::Percent(v)) if (v - 1.25).abs() < 1e-6
+        ));
+        assert!(matches!(
+            parse_spacing_tag("spcPts", &bytes_start("a:spcPts", &[("val", "600")])),
+            Some(SpacingValue::Points(v)) if (v - 6.0).abs() < 1e-6
+        ));
+        assert!(parse_spacing_tag("other", &bytes_start("a:other", &[])).is_none());
+
+        let mut defaults = ParagraphDefaults::default();
+        assign_spacing_defaults(
+            Some(&mut defaults),
+            SpacingValue::Percent(1.1),
+            true,
+            false,
+            false,
+        );
+        let mut paragraph = ParagraphBuilder::default();
+        assign_spacing_paragraph(
+            Some(&mut paragraph),
+            SpacingValue::Points(4.0),
+            false,
+            true,
+            false,
+        );
+        assert!(
+            matches!(defaults.line_spacing, Some(SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6)
+        );
+        assert!(
+            matches!(paragraph.space_before, Some(SpacingValue::Points(v)) if (v - 4.0).abs() < 1e-6)
+        );
+
+        let mut cell_run = Some(RunBuilder::default());
+        let mut current_run = Some(RunBuilder::default());
+        let mut shape_defaults = Some(RunDefaults::default());
+        let mut para = Some(ParagraphBuilder::default());
+        let mut empty_cell_run = None;
+        assign_typeface(
+            "latin",
+            &bytes_start("a:latin", &[("typeface", "Aptos")]),
+            &mut cell_run,
+            false,
+            &mut shape_defaults,
+            false,
+            para.as_mut(),
+            &mut current_run,
+        );
+        assign_typeface(
+            "ea",
+            &bytes_start("a:ea", &[("typeface", "Meiryo")]),
+            &mut empty_cell_run,
+            true,
+            &mut shape_defaults,
+            false,
+            None,
+            &mut current_run,
+        );
+        assign_typeface(
+            "cs",
+            &bytes_start("a:cs", &[("typeface", "Noto Sans Arabic")]),
+            &mut empty_cell_run,
+            false,
+            &mut shape_defaults,
+            true,
+            para.as_mut(),
+            &mut current_run,
+        );
+        assert_eq!(
+            cell_run.as_ref().and_then(|run| run.font_latin.as_deref()),
+            Some("Aptos")
+        );
+        assert_eq!(
+            shape_defaults
+                .as_ref()
+                .and_then(|run| run.font_ea.as_deref()),
+            Some("Meiryo")
+        );
+        assert_eq!(
+            para.as_ref().and_then(|pb| pb.def_rpr_font_cs.as_deref()),
+            Some("Noto Sans Arabic")
+        );
+
+        let mut shape_effect_color = None;
+        let mut current_color = None;
+        let mut cell_paragraph = Some(ParagraphBuilder::default());
+        let mut current_shape_run_defaults = Some(RunDefaults::default());
+        let mut current_cell = Some(default_table_cell_builder());
+        let mut current_paragraph = Some(ParagraphBuilder::default());
+        let mut p_style_builder = Some(ShapeStyleRef::default());
+        let mut bg_grad_stops = Vec::new();
+        let mut bg_solid_color = None;
+        let mut current_shape = Some(ShapeBuilder::default());
+        let mut grad_stops = Vec::new();
+
+        dispatch_parsed_color(
+            Color::rgb("112233"),
+            &["bgPr".into(), "gs".into()],
+            false,
+            false,
+            false,
+            false,
+            0.5,
+            true,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::theme("accent1"),
+            &["bgPr".into(), "gs".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            true,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::rgb("445566"),
+            &["bgPr".into(), "gs".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            true,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::rgb("778899"),
+            &["bgPr".into(), "gs".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            true,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::rgb("AABBCC"),
+            &["bgPr".into(), "gs".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            true,
+            false,
+            true,
+            0.5,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        assert_eq!(
+            shape_effect_color
+                .as_ref()
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#112233")
+        );
+        assert_eq!(
+            cell_paragraph
+                .as_ref()
+                .and_then(|pb| pb.bu_color.as_ref())
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#4472C4")
+        );
+        assert_eq!(
+            current_shape_run_defaults
+                .as_ref()
+                .and_then(|rd| rd.color.as_ref())
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#445566")
+        );
+        assert!(
+            matches!(current_cell.as_ref().map(|cell| &cell.fill), Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#778899"))
+        );
+        assert_eq!(bg_grad_stops.len(), 1);
+    }
+
+    #[test]
     fn shape_paragraph_run_archive_and_table_helpers_cover_remaining_paths() {
         let mut shape = Some(ShapeBuilder::default());
         parse_shape_identity(
