@@ -170,7 +170,7 @@ console.log(`HTML: ${result.html.length}, Unresolved: ${result.unresolvedElement
 ```
 
 A drag-and-drop demo page is included at `crates/pptx2html-wasm/demo/index.html`.
-On the `feature/slide-scale-output` line, that local demo also exposes the image-like whole-slide zoom controls that are planned for `1.1.0`.
+The included demo exposes image-like whole-slide zoom controls that keep the original slide coordinates and text flow intact.
 
 ## Supported Features
 

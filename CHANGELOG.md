@@ -4,18 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Upcoming — 1.1.0
+ - No unreleased changes after the 1.1.0 release line.
+
+## [1.1.0] - 2026-04-14
 
 ### Rendering / Public API
 - Add exact-layout whole-slide scale across the Rust core, CLI, Python bindings, and WASM/browser APIs
 - Keep scale image-like by enlarging the whole slide surface without recomputing coordinates or reflowing text
-- Expose the branch-local WASM demo as a `v1.1.0` preview with slider + numeric zoom controls that re-render from the original PPTX bytes
+
+### Demo / Docs
+- Add slider + numeric whole-slide zoom controls to the browser WASM demo
+- Update the root README and package README examples to document the released scale parameter and no-reflow semantics
 
 ### Release Prep / CI
 - Reserve the `1.1.0` package line across Cargo, Python, and WASM manifests so tag validation cannot drift back onto the published `1.0.5` line
-- Keep the public GitHub Pages demo aligned to the stable `v1.0.5` release while preview-only scale UX stays on the feature branch
-- Run CI on `feature/slide-scale-output` so the preview branch gets the same multi-platform verification signal before merge
+- Run CI on `feature/slide-scale-output` during release prep so the branch receives the same multi-platform verification signal before merge
 - Upgrade GitHub Actions workflow dependencies to Node 24-compatible major versions across CI, release, npm publish, and demo deploy lanes
+- Normalize the generated npm package repository metadata and document a local `npm publish --dry-run` fallback when workflow-dispatch permissions are unavailable
 
 ## [1.0.5] - 2026-04-14
 
