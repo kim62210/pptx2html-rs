@@ -415,33 +415,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
                         in_para_def_rpr = true;
                         if let Some(pb) = cell_paragraph.as_mut() {
-                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
-                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(spc) = xml_utils::attr_str(e, "spc") {
-                                pb.def_rpr_letter_spacing =
-                                    spc.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
-                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
-                            }
-                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization =
-                                    Some(TextCapitalization::from_ooxml(&cap));
-                            }
-                            if let Some(u) = xml_utils::attr_str(e, "u") {
-                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
-                            }
-                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
-                                pb.def_rpr_strikethrough =
-                                    Some(StrikethroughType::from_ooxml(&strike));
-                            }
-                            if let Some(b) = xml_utils::attr_str(e, "b") {
-                                pb.def_rpr_bold = Some(b == "1" || b == "true");
-                            }
-                            if let Some(i) = xml_utils::attr_str(e, "i") {
-                                pb.def_rpr_italic = Some(i == "1" || i == "true");
-                            }
+                            apply_paragraph_def_rpr(pb, e);
                         }
                     }
                     // Spacing containers inside table cell
@@ -496,16 +470,7 @@ pub fn parse_slide<R: Read + Seek>(
                     // Transform (rotation, flip)
                     "xfrm" if in_sp_pr => {
                         if let Some(sb) = current_shape.as_mut() {
-                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
-                                // rot is in 60000ths of a degree
-                                sb.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60000.0;
-                            }
-                            if let Some(fh) = xml_utils::attr_str(e, "flipH") {
-                                sb.flip_h = fh == "1" || fh == "true";
-                            }
-                            if let Some(fv) = xml_utils::attr_str(e, "flipV") {
-                                sb.flip_v = fv == "1" || fv == "true";
-                            }
+                            apply_shape_transform(sb, e);
                         }
                     }
                     // Line/border
@@ -585,23 +550,18 @@ pub fn parse_slide<R: Read + Seek>(
                     // normAutofit — shrink text to fit (child of bodyPr)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = parse_autofit_ratio(e, "fontScale");
-                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
-                            sb.text_auto_fit = AutoFit::Normal {
-                                font_scale,
-                                line_spacing_reduction,
-                            };
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     "noAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::NoAutoFit;
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     // spAutoFit — resize shape to fit text (child of bodyPr)
                     "spAutoFit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::Shrink;
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     // Paragraph (non-table)
@@ -616,33 +576,7 @@ pub fn parse_slide<R: Read + Seek>(
                     "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
                         in_para_def_rpr = true;
                         if let Some(pb) = current_paragraph.as_mut() {
-                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
-                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(spc) = xml_utils::attr_str(e, "spc") {
-                                pb.def_rpr_letter_spacing =
-                                    spc.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
-                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
-                            }
-                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization =
-                                    Some(TextCapitalization::from_ooxml(&cap));
-                            }
-                            if let Some(u) = xml_utils::attr_str(e, "u") {
-                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
-                            }
-                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
-                                pb.def_rpr_strikethrough =
-                                    Some(StrikethroughType::from_ooxml(&strike));
-                            }
-                            if let Some(b) = xml_utils::attr_str(e, "b") {
-                                pb.def_rpr_bold = Some(b == "1" || b == "true");
-                            }
-                            if let Some(i) = xml_utils::attr_str(e, "i") {
-                                pb.def_rpr_italic = Some(i == "1" || i == "true");
-                            }
+                            apply_paragraph_def_rpr(pb, e);
                         }
                     }
                     // Paragraph spacing containers (non-table)
@@ -1067,33 +1001,7 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph-level defRPr inside table cell (Empty variant)
                     "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
                         if let Some(pb) = cell_paragraph.as_mut() {
-                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
-                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(spc) = xml_utils::attr_str(e, "spc") {
-                                pb.def_rpr_letter_spacing =
-                                    spc.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
-                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
-                            }
-                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization =
-                                    Some(TextCapitalization::from_ooxml(&cap));
-                            }
-                            if let Some(u) = xml_utils::attr_str(e, "u") {
-                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
-                            }
-                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
-                                pb.def_rpr_strikethrough =
-                                    Some(StrikethroughType::from_ooxml(&strike));
-                            }
-                            if let Some(b) = xml_utils::attr_str(e, "b") {
-                                pb.def_rpr_bold = Some(b == "1" || b == "true");
-                            }
-                            if let Some(i) = xml_utils::attr_str(e, "i") {
-                                pb.def_rpr_italic = Some(i == "1" || i == "true");
-                            }
+                            apply_paragraph_def_rpr(pb, e);
                         }
                     }
                     // Run properties inside table cell (Empty variant)
@@ -1177,15 +1085,7 @@ pub fn parse_slide<R: Read + Seek>(
                     // Transform (Empty variant, e.g. connector with no children)
                     "xfrm" if in_sp_pr => {
                         if let Some(sb) = current_shape.as_mut() {
-                            if let Some(rot) = xml_utils::attr_str(e, "rot") {
-                                sb.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60000.0;
-                            }
-                            if let Some(fh) = xml_utils::attr_str(e, "flipH") {
-                                sb.flip_h = fh == "1" || fh == "true";
-                            }
-                            if let Some(fv) = xml_utils::attr_str(e, "flipV") {
-                                sb.flip_v = fv == "1" || fv == "true";
-                            }
+                            apply_shape_transform(sb, e);
                         }
                     }
                     // Preset geometry
@@ -1203,23 +1103,18 @@ pub fn parse_slide<R: Read + Seek>(
                     // normAutofit (Empty variant — self-closing tag)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            let font_scale = parse_autofit_ratio(e, "fontScale");
-                            let line_spacing_reduction = parse_autofit_ratio(e, "lnSpcReduction");
-                            sb.text_auto_fit = AutoFit::Normal {
-                                font_scale,
-                                line_spacing_reduction,
-                            };
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     "noAutofit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::NoAutoFit;
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     // spAutoFit (Empty variant)
                     "spAutoFit" if current_shape.is_some() && !in_tc => {
                         if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = AutoFit::Shrink;
+                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                         }
                     }
                     // Paragraph properties (Empty variant, non-table)
@@ -1229,33 +1124,7 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph-level defRPr (Empty variant — self-closing, no children)
                     "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
                         if let Some(pb) = current_paragraph.as_mut() {
-                            if let Some(sz) = xml_utils::attr_str(e, "sz") {
-                                pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(spc) = xml_utils::attr_str(e, "spc") {
-                                pb.def_rpr_letter_spacing =
-                                    spc.parse::<f64>().ok().map(|v| v / 100.0);
-                            }
-                            if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
-                                pb.def_rpr_baseline = baseline.parse::<i32>().ok();
-                            }
-                            if let Some(cap) = xml_utils::attr_str(e, "cap") {
-                                pb.def_rpr_capitalization =
-                                    Some(TextCapitalization::from_ooxml(&cap));
-                            }
-                            if let Some(u) = xml_utils::attr_str(e, "u") {
-                                pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
-                            }
-                            if let Some(strike) = xml_utils::attr_str(e, "strike") {
-                                pb.def_rpr_strikethrough =
-                                    Some(StrikethroughType::from_ooxml(&strike));
-                            }
-                            if let Some(b) = xml_utils::attr_str(e, "b") {
-                                pb.def_rpr_bold = Some(b == "1" || b == "true");
-                            }
-                            if let Some(i) = xml_utils::attr_str(e, "i") {
-                                pb.def_rpr_italic = Some(i == "1" || i == "true");
-                            }
+                            apply_paragraph_def_rpr(pb, e);
                         }
                     }
                     // Run properties (Empty variant, non-table)
@@ -1646,155 +1515,45 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     // Font (table cell, paragraph defRPr, or regular run)
-                    "latin" => {
-                        if let Some(rb) = cell_run.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rb.font_latin = Some(typeface);
-                            }
-                        } else if in_shape_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                                && let Some(rd) = current_shape_run_defaults.as_mut()
-                            {
-                                rd.font_latin = Some(typeface);
-                            }
-                        } else if in_para_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                let target = if in_tc {
-                                    &mut cell_paragraph
-                                } else {
-                                    &mut current_paragraph
-                                };
-                                if let Some(pb) = target.as_mut() {
-                                    pb.def_rpr_font_latin = Some(typeface);
-                                }
-                            }
-                        } else if let Some(rb) = current_run.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rb.font_latin = Some(typeface);
-                        }
-                    }
-                    "ea" => {
-                        if let Some(rb) = cell_run.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rb.font_ea = Some(typeface);
-                            }
-                        } else if in_shape_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                                && let Some(rd) = current_shape_run_defaults.as_mut()
-                            {
-                                rd.font_ea = Some(typeface);
-                            }
-                        } else if in_para_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                let target = if in_tc {
-                                    &mut cell_paragraph
-                                } else {
-                                    &mut current_paragraph
-                                };
-                                if let Some(pb) = target.as_mut() {
-                                    pb.def_rpr_font_ea = Some(typeface);
-                                }
-                            }
-                        } else if let Some(rb) = current_run.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rb.font_ea = Some(typeface);
-                        }
-                    }
-                    "cs" => {
-                        if let Some(rb) = cell_run.as_mut() {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                rb.font_cs = Some(typeface);
-                            }
-                        } else if in_shape_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                                && let Some(rd) = current_shape_run_defaults.as_mut()
-                            {
-                                rd.font_cs = Some(typeface);
-                            }
-                        } else if in_para_def_rpr {
-                            if let Some(typeface) = xml_utils::attr_str(e, "typeface") {
-                                let target = if in_tc {
-                                    &mut cell_paragraph
-                                } else {
-                                    &mut current_paragraph
-                                };
-                                if let Some(pb) = target.as_mut() {
-                                    pb.def_rpr_font_cs = Some(typeface);
-                                }
-                            }
-                        } else if let Some(rb) = current_run.as_mut()
-                            && let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                        {
-                            rb.font_cs = Some(typeface);
-                        }
-                    }
-                    // Spacing percentage (inside lnSpc/spcBef/spcAft) — cell or regular
-                    "spcPct" => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Percent(val / 100_000.0);
-                            if in_shape_lst_style {
-                                if let Some(pd) = current_shape_para_defaults.as_mut() {
-                                    if in_shape_ln_spc {
-                                        pd.line_spacing = Some(spacing);
-                                    } else if in_shape_spc_bef {
-                                        pd.space_before = Some(spacing);
-                                    } else if in_shape_spc_aft {
-                                        pd.space_after = Some(spacing);
-                                    }
-                                }
+                    "latin" | "ea" | "cs" => {
+                        assign_typeface(
+                            &local,
+                            e,
+                            &mut cell_run,
+                            in_shape_def_rpr,
+                            &mut current_shape_run_defaults,
+                            in_para_def_rpr,
+                            if in_tc {
+                                cell_paragraph.as_mut()
                             } else {
-                                let target = if in_tc {
-                                    &mut cell_paragraph
-                                } else {
-                                    &mut current_paragraph
-                                };
-                                if let Some(pb) = target.as_mut() {
-                                    if in_ln_spc {
-                                        pb.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pb.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pb.space_after = Some(spacing);
-                                    }
-                                }
-                            }
-                        }
+                                current_paragraph.as_mut()
+                            },
+                            &mut current_run,
+                        );
                     }
-                    // Spacing points (inside lnSpc/spcBef/spcAft) — cell or regular
-                    "spcPts" => {
-                        if let Some(val_str) = xml_utils::attr_str(e, "val")
-                            && let Ok(val) = val_str.parse::<f64>()
-                        {
-                            let spacing = SpacingValue::Points(val / 100.0);
+                    // Spacing percentage / points (inside lnSpc/spcBef/spcAft) — cell or regular
+                    "spcPct" | "spcPts" => {
+                        if let Some(spacing) = parse_spacing_tag(&local, e) {
                             if in_shape_lst_style {
-                                if let Some(pd) = current_shape_para_defaults.as_mut() {
-                                    if in_shape_ln_spc {
-                                        pd.line_spacing = Some(spacing);
-                                    } else if in_shape_spc_bef {
-                                        pd.space_before = Some(spacing);
-                                    } else if in_shape_spc_aft {
-                                        pd.space_after = Some(spacing);
-                                    }
-                                }
+                                assign_spacing_defaults(
+                                    current_shape_para_defaults.as_mut(),
+                                    spacing,
+                                    in_shape_ln_spc,
+                                    in_shape_spc_bef,
+                                    in_shape_spc_aft,
+                                );
                             } else {
-                                let target = if in_tc {
-                                    &mut cell_paragraph
-                                } else {
-                                    &mut current_paragraph
-                                };
-                                if let Some(pb) = target.as_mut() {
-                                    if in_ln_spc {
-                                        pb.line_spacing = Some(spacing);
-                                    } else if in_spc_bef {
-                                        pb.space_before = Some(spacing);
-                                    } else if in_spc_aft {
-                                        pb.space_after = Some(spacing);
-                                    }
-                                }
+                                assign_spacing_paragraph(
+                                    if in_tc {
+                                        cell_paragraph.as_mut()
+                                    } else {
+                                        current_paragraph.as_mut()
+                                    },
+                                    spacing,
+                                    in_ln_spc,
+                                    in_spc_bef,
+                                    in_spc_aft,
+                                );
                             }
                         }
                     }
@@ -3125,6 +2884,57 @@ fn parse_body_pr(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<Shape
     }
 }
 
+fn apply_shape_transform(sb: &mut ShapeBuilder, e: &quick_xml::events::BytesStart<'_>) {
+    if let Some(rot) = xml_utils::attr_str(e, "rot") {
+        sb.rotation = rot.parse::<f64>().unwrap_or(0.0) / 60000.0;
+    }
+    if let Some(fh) = xml_utils::attr_str(e, "flipH") {
+        sb.flip_h = fh == "1" || fh == "true";
+    }
+    if let Some(fv) = xml_utils::attr_str(e, "flipV") {
+        sb.flip_v = fv == "1" || fv == "true";
+    }
+}
+
+fn parse_shape_auto_fit(local: &str, e: &quick_xml::events::BytesStart<'_>) -> AutoFit {
+    match local {
+        "normAutofit" => AutoFit::Normal {
+            font_scale: parse_autofit_ratio(e, "fontScale"),
+            line_spacing_reduction: parse_autofit_ratio(e, "lnSpcReduction"),
+        },
+        "noAutofit" => AutoFit::NoAutoFit,
+        "spAutoFit" => AutoFit::Shrink,
+        _ => AutoFit::None,
+    }
+}
+
+fn apply_paragraph_def_rpr(pb: &mut ParagraphBuilder, e: &quick_xml::events::BytesStart<'_>) {
+    if let Some(sz) = xml_utils::attr_str(e, "sz") {
+        pb.def_rpr_font_size = sz.parse::<f64>().ok().map(|v| v / 100.0);
+    }
+    if let Some(spc) = xml_utils::attr_str(e, "spc") {
+        pb.def_rpr_letter_spacing = spc.parse::<f64>().ok().map(|v| v / 100.0);
+    }
+    if let Some(baseline) = xml_utils::attr_str(e, "baseline") {
+        pb.def_rpr_baseline = baseline.parse::<i32>().ok();
+    }
+    if let Some(cap) = xml_utils::attr_str(e, "cap") {
+        pb.def_rpr_capitalization = Some(TextCapitalization::from_ooxml(&cap));
+    }
+    if let Some(u) = xml_utils::attr_str(e, "u") {
+        pb.def_rpr_underline = Some(UnderlineType::from_ooxml(&u));
+    }
+    if let Some(strike) = xml_utils::attr_str(e, "strike") {
+        pb.def_rpr_strikethrough = Some(StrikethroughType::from_ooxml(&strike));
+    }
+    if let Some(b) = xml_utils::attr_str(e, "b") {
+        pb.def_rpr_bold = Some(b == "1" || b == "true");
+    }
+    if let Some(i) = xml_utils::attr_str(e, "i") {
+        pb.def_rpr_italic = Some(i == "1" || i == "true");
+    }
+}
+
 pub(crate) fn parse_autofit_ratio(
     e: &quick_xml::events::BytesStart<'_>,
     attr: &str,
@@ -3132,6 +2942,107 @@ pub(crate) fn parse_autofit_ratio(
     xml_utils::attr_str(e, attr)
         .and_then(|s| s.parse::<f64>().ok())
         .map(|v| (v / 100000.0).clamp(0.0, 1.0))
+}
+
+fn parse_spacing_tag(local: &str, e: &quick_xml::events::BytesStart<'_>) -> Option<SpacingValue> {
+    let value = xml_utils::attr_str(e, "val")?.parse::<f64>().ok()?;
+    Some(match local {
+        "spcPct" => SpacingValue::Percent(value / 100_000.0),
+        "spcPts" => SpacingValue::Points(value / 100.0),
+        _ => return None,
+    })
+}
+
+fn assign_spacing_defaults(
+    target: Option<&mut ParagraphDefaults>,
+    spacing: SpacingValue,
+    in_ln_spc: bool,
+    in_spc_bef: bool,
+    in_spc_aft: bool,
+) {
+    if let Some(target) = target {
+        if in_ln_spc {
+            target.line_spacing = Some(spacing);
+        } else if in_spc_bef {
+            target.space_before = Some(spacing);
+        } else if in_spc_aft {
+            target.space_after = Some(spacing);
+        }
+    }
+}
+
+fn assign_spacing_paragraph(
+    target: Option<&mut ParagraphBuilder>,
+    spacing: SpacingValue,
+    in_ln_spc: bool,
+    in_spc_bef: bool,
+    in_spc_aft: bool,
+) {
+    if let Some(target) = target {
+        if in_ln_spc {
+            target.line_spacing = Some(spacing);
+        } else if in_spc_bef {
+            target.space_before = Some(spacing);
+        } else if in_spc_aft {
+            target.space_after = Some(spacing);
+        }
+    }
+}
+
+fn assign_typeface_to_run(run: &mut RunBuilder, local: &str, typeface: String) {
+    match local {
+        "latin" => run.font_latin = Some(typeface),
+        "ea" => run.font_ea = Some(typeface),
+        "cs" => run.font_cs = Some(typeface),
+        _ => {}
+    }
+}
+
+fn assign_typeface_to_defaults(defaults: &mut RunDefaults, local: &str, typeface: String) {
+    match local {
+        "latin" => defaults.font_latin = Some(typeface),
+        "ea" => defaults.font_ea = Some(typeface),
+        "cs" => defaults.font_cs = Some(typeface),
+        _ => {}
+    }
+}
+
+fn assign_typeface_to_paragraph(paragraph: &mut ParagraphBuilder, local: &str, typeface: String) {
+    match local {
+        "latin" => paragraph.def_rpr_font_latin = Some(typeface),
+        "ea" => paragraph.def_rpr_font_ea = Some(typeface),
+        "cs" => paragraph.def_rpr_font_cs = Some(typeface),
+        _ => {}
+    }
+}
+
+fn assign_typeface(
+    local: &str,
+    e: &quick_xml::events::BytesStart<'_>,
+    cell_run: &mut Option<RunBuilder>,
+    in_shape_def_rpr: bool,
+    shape_run_defaults: &mut Option<RunDefaults>,
+    in_para_def_rpr: bool,
+    paragraph_target: Option<&mut ParagraphBuilder>,
+    current_run: &mut Option<RunBuilder>,
+) {
+    let Some(typeface) = xml_utils::attr_str(e, "typeface") else {
+        return;
+    };
+
+    if let Some(run) = cell_run.as_mut() {
+        assign_typeface_to_run(run, local, typeface);
+    } else if in_shape_def_rpr {
+        if let Some(defaults) = shape_run_defaults.as_mut() {
+            assign_typeface_to_defaults(defaults, local, typeface);
+        }
+    } else if in_para_def_rpr {
+        if let Some(paragraph) = paragraph_target {
+            assign_typeface_to_paragraph(paragraph, local, typeface);
+        }
+    } else if let Some(run) = current_run.as_mut() {
+        assign_typeface_to_run(run, local, typeface);
+    }
 }
 
 fn parse_shape_identity(e: &quick_xml::events::BytesStart<'_>, shape: &mut Option<ShapeBuilder>) {
@@ -3861,7 +3772,10 @@ mod tests {
         );
         let shape_ref = shape.as_ref().expect("shape builder");
         assert_eq!(shape_ref.border_color.to_css().as_deref(), Some("#445566"));
-        assert!(matches!(shape_ref.border_style, BorderStyle::Solid));
+        assert_eq!(
+            std::mem::discriminant(&shape_ref.border_style),
+            std::mem::discriminant(&BorderStyle::Solid)
+        );
 
         assign_color(
             Color::rgb("778899"),
@@ -3922,9 +3836,18 @@ mod tests {
             &[("type", "arrow"), ("w", "sm"), ("len", "lg")],
         ))
         .expect("arrow line end");
-        assert!(matches!(arrow.end_type, LineEndType::Arrow));
-        assert!(matches!(arrow.width, LineEndSize::Small));
-        assert!(matches!(arrow.length, LineEndSize::Large));
+        assert_eq!(
+            std::mem::discriminant(&arrow.end_type),
+            std::mem::discriminant(&LineEndType::Arrow)
+        );
+        assert_eq!(
+            std::mem::discriminant(&arrow.width),
+            std::mem::discriminant(&LineEndSize::Small)
+        );
+        assert_eq!(
+            std::mem::discriminant(&arrow.length),
+            std::mem::discriminant(&LineEndSize::Large)
+        );
         assert!(parse_line_end(&bytes_start("a:tailEnd", &[("type", "none")])).is_none());
         assert!(parse_line_end(&bytes_start("a:tailEnd", &[("type", "weird")])).is_none());
     }
@@ -3992,7 +3915,10 @@ mod tests {
             &mut shape,
         );
         let shape = shape.expect("shape builder");
-        assert!(matches!(shape.text_vertical_align, VerticalAlign::Middle));
+        assert_eq!(
+            std::mem::discriminant(&shape.text_vertical_align),
+            std::mem::discriminant(&VerticalAlign::Middle)
+        );
         assert!(shape.text_anchor_center);
         assert!((shape.text_rotation_deg - 90.0).abs() < 1e-6);
         assert!(!shape.text_word_wrap);
@@ -4130,7 +4056,10 @@ mod tests {
 
         let paragraph = para.expect("paragraph").build();
         let built_run = run.expect("run").build();
-        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert_eq!(
+            std::mem::discriminant(&paragraph.alignment),
+            std::mem::discriminant(&Alignment::Center)
+        );
         assert!(paragraph.rtl);
         assert_eq!(paragraph.level, 2);
         assert_eq!(paragraph.indent, Some(1.0));
@@ -4138,15 +4067,18 @@ mod tests {
         assert_eq!(built_run.style.font_size, Some(24.0));
         assert!(built_run.style.bold);
         assert!(built_run.style.italic);
-        assert!(matches!(built_run.style.underline, UnderlineType::Double));
-        assert!(matches!(
-            built_run.style.strikethrough,
-            StrikethroughType::Single
-        ));
-        assert!(matches!(
-            built_run.style.capitalization,
-            TextCapitalization::All
-        ));
+        assert_eq!(
+            std::mem::discriminant(&built_run.style.underline),
+            std::mem::discriminant(&UnderlineType::Double)
+        );
+        assert_eq!(
+            std::mem::discriminant(&built_run.style.strikethrough),
+            std::mem::discriminant(&StrikethroughType::Single)
+        );
+        assert_eq!(
+            std::mem::discriminant(&built_run.style.capitalization),
+            std::mem::discriminant(&TextCapitalization::All)
+        );
         assert_eq!(built_run.style.baseline, Some(30000));
         assert_eq!(built_run.style.letter_spacing, Some(2.0));
 
@@ -4157,7 +4089,10 @@ mod tests {
             ..Default::default()
         }
         .build();
-        assert!(matches!(chart_shape.shape_type, ShapeType::Chart(_)));
+        assert_eq!(
+            std::mem::discriminant(&chart_shape.shape_type),
+            std::mem::discriminant(&ShapeType::Chart(ChartData::default()))
+        );
 
         let picture_shape = ShapeBuilder {
             is_picture: true,
@@ -4165,14 +4100,21 @@ mod tests {
             ..Default::default()
         }
         .build();
-        assert!(matches!(picture_shape.shape_type, ShapeType::Picture(_)));
+        assert_eq!(
+            std::mem::discriminant(&picture_shape.shape_type),
+            std::mem::discriminant(&ShapeType::Picture(PictureData::default()))
+        );
 
         let connector_shape = ShapeBuilder {
             is_connector: true,
             ..Default::default()
         }
         .build();
-        assert!(matches!(connector_shape.shape_type, ShapeType::Custom(ref s) if s == "line"));
+        if let ShapeType::Custom(name) = &connector_shape.shape_type {
+            assert_eq!(name, "line");
+        } else {
+            panic!("expected line custom shape");
+        }
 
         let unsupported_shape = ShapeBuilder {
             unsupported_content: Some("SmartArt".to_string()),
@@ -4180,10 +4122,14 @@ mod tests {
             ..Default::default()
         }
         .build();
-        assert!(matches!(
-            unsupported_shape.shape_type,
-            ShapeType::Unsupported(_)
-        ));
+        assert_eq!(
+            std::mem::discriminant(&unsupported_shape.shape_type),
+            std::mem::discriminant(&ShapeType::Unsupported(UnsupportedData {
+                label: String::new(),
+                element_type: UnresolvedType::SmartArt,
+                raw_xml: None,
+            }))
+        );
 
         let custom_geom_shape = ShapeBuilder {
             custom_geometry: Some(CustomGeometry {
@@ -4195,10 +4141,15 @@ mod tests {
             ..Default::default()
         }
         .build();
-        assert!(matches!(
-            custom_geom_shape.shape_type,
-            ShapeType::CustomGeom(_)
-        ));
+        assert_eq!(
+            std::mem::discriminant(&custom_geom_shape.shape_type),
+            std::mem::discriminant(&ShapeType::CustomGeom(CustomGeometry {
+                paths: Vec::new(),
+                text_rect: None,
+                adjust_handles: Vec::new(),
+                connection_sites: Vec::new(),
+            }))
+        );
 
         let mut cell = Some(default_table_cell_builder());
         cell.as_mut().unwrap().border_left.width = 1.0;
@@ -4209,9 +4160,11 @@ mod tests {
         let cell = cell.expect("cell").build();
         assert_eq!(cell.border_left.color.to_css().as_deref(), Some("#112233"));
         assert_eq!(cell.border_top.color.to_css().as_deref(), Some("#445566"));
-        assert!(
-            matches!(cell.fill, Fill::Solid(ref fill) if fill.color.to_css().as_deref() == Some("#778899"))
-        );
+        let fill = match &cell.fill {
+            Fill::Solid(fill) => fill,
+            other => panic!("expected solid fill, got {other:?}"),
+        };
+        assert_eq!(fill.color.to_css().as_deref(), Some("#778899"));
 
         let table = TableBuilder {
             rows: vec![
@@ -4327,41 +4280,71 @@ mod tests {
         assert_eq!(shape.name, "Styled Shape");
         assert!((shape.rotation - 30.0).abs() < 1e-6);
         assert!(shape.flip_v);
-        assert!(matches!(shape.border.cap, LineCap::Flat));
-        assert!(matches!(shape.border.alignment, LineAlignment::Inset));
-        assert!(matches!(
-            shape.style_ref.as_ref().and_then(|style| style.effect_ref.as_ref()),
-            Some(effect_ref) if effect_ref.idx == 1
-        ));
-        assert!(matches!(
-            shape.fill,
-            Fill::Gradient(ref fill)
-                if fill.stops.len() == 2
-                    && matches!(fill.stops[0].color.kind, ColorKind::Preset(ref name) if name == "orange")
-                    && matches!(fill.stops[1].color.kind, ColorKind::Rgb(ref hex) if hex == "112233")
-        ));
+        assert_eq!(
+            std::mem::discriminant(&shape.border.cap),
+            std::mem::discriminant(&LineCap::Flat)
+        );
+        assert_eq!(
+            std::mem::discriminant(&shape.border.alignment),
+            std::mem::discriminant(&LineAlignment::Inset)
+        );
+        assert_eq!(
+            shape
+                .style_ref
+                .as_ref()
+                .and_then(|style| style.effect_ref.as_ref())
+                .map(|effect_ref| effect_ref.idx),
+            Some(1)
+        );
+        let fill = match &shape.fill {
+            Fill::Gradient(fill) => fill,
+            other => panic!("expected gradient fill, got {other:?}"),
+        };
+        assert_eq!(fill.stops.len(), 2);
+        assert_eq!(
+            fill.stops[0].color.kind,
+            ColorKind::Preset("orange".to_string())
+        );
+        assert_eq!(
+            fill.stops[1].color.kind,
+            ColorKind::Rgb("112233".to_string())
+        );
 
         let text_body = shape.text_body.as_ref().expect("text body");
         assert!(!text_body.word_wrap);
-        assert!(matches!(text_body.auto_fit, AutoFit::NoAutoFit));
+        assert_eq!(
+            std::mem::discriminant(&text_body.auto_fit),
+            std::mem::discriminant(&AutoFit::NoAutoFit)
+        );
         let list_style = text_body.list_style.as_ref().expect("list style");
         let lvl1 = list_style.levels[0].as_ref().expect("level 1 defaults");
-        assert!(matches!(lvl1.alignment, Some(Alignment::Right)));
-        assert!(matches!(
-            lvl1.line_spacing,
-            Some(SpacingValue::Percent(v)) if (v - 0.8).abs() < 1e-6
-        ));
-        assert!(matches!(
-            lvl1.space_before,
-            Some(SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
-        ));
-        assert!(matches!(
-            lvl1.space_after,
-            Some(SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6
-        ));
+        assert_eq!(
+            lvl1.alignment
+                .as_ref()
+                .map(std::mem::discriminant::<Alignment>),
+            Some(std::mem::discriminant(&Alignment::Right))
+        );
+        if let Some(SpacingValue::Percent(v)) = lvl1.line_spacing {
+            assert!((v - 0.8).abs() < 1e-6);
+        } else {
+            panic!("expected percent line spacing");
+        }
+        if let Some(SpacingValue::Points(v)) = lvl1.space_before {
+            assert!((v - 12.0).abs() < 1e-6);
+        } else {
+            panic!("expected points space before");
+        }
+        if let Some(SpacingValue::Percent(v)) = lvl1.space_after {
+            assert!((v - 1.1).abs() < 1e-6);
+        } else {
+            panic!("expected percent space after");
+        }
 
         let paragraph = &text_body.paragraphs[0];
-        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert_eq!(
+            std::mem::discriminant(&paragraph.alignment),
+            std::mem::discriminant(&Alignment::Center)
+        );
         assert!(paragraph.rtl);
         assert_eq!(paragraph.level, 1);
         assert_eq!(paragraph.runs.len(), 3);
@@ -4376,21 +4359,36 @@ mod tests {
         assert_eq!(def_rpr.baseline, Some(30000));
         assert_eq!(def_rpr.bold, Some(true));
         assert_eq!(def_rpr.italic, Some(true));
-        assert!(matches!(
-            def_rpr.capitalization,
-            Some(TextCapitalization::All)
-        ));
-        assert!(matches!(def_rpr.underline, Some(UnderlineType::Double)));
-        assert!(matches!(
-            def_rpr.strikethrough,
-            Some(StrikethroughType::Single)
-        ));
+        assert_eq!(
+            def_rpr
+                .capitalization
+                .as_ref()
+                .map(std::mem::discriminant::<TextCapitalization>),
+            Some(std::mem::discriminant(&TextCapitalization::All))
+        );
+        assert_eq!(
+            def_rpr
+                .underline
+                .as_ref()
+                .map(std::mem::discriminant::<UnderlineType>),
+            Some(std::mem::discriminant(&UnderlineType::Double))
+        );
+        assert_eq!(
+            def_rpr
+                .strikethrough
+                .as_ref()
+                .map(std::mem::discriminant::<StrikethroughType>),
+            Some(std::mem::discriminant(&StrikethroughType::Single))
+        );
 
         let shrink_shape = &slide.shapes[1];
-        assert!(matches!(
-            shrink_shape.text_body.as_ref().map(|tb| &tb.auto_fit),
-            Some(AutoFit::Shrink)
-        ));
+        assert_eq!(
+            shrink_shape
+                .text_body
+                .as_ref()
+                .map(|tb| std::mem::discriminant(&tb.auto_fit)),
+            Some(std::mem::discriminant(&AutoFit::Shrink))
+        );
     }
 
     #[test]
@@ -4466,12 +4464,16 @@ mod tests {
         let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
         assert_eq!(slide.shapes.len(), 2);
 
-        assert!(matches!(
-            &slide.shapes[0].shape_type,
-            ShapeType::Unsupported(data)
-                if data.label == "OLE Object"
-                    && data.raw_xml.as_deref().is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
-        ));
+        let ole = match &slide.shapes[0].shape_type {
+            ShapeType::Unsupported(data) => data,
+            other => panic!("expected unsupported OLE shape, got {other:?}"),
+        };
+        assert_eq!(ole.label, "OLE Object");
+        assert!(
+            ole.raw_xml
+                .as_deref()
+                .is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
+        );
 
         let table = slide
             .shapes
@@ -4489,27 +4491,48 @@ mod tests {
         assert_eq!(cell.col_span, 2);
         assert_eq!(cell.row_span, 2);
         assert!(cell.v_merge);
-        assert!(matches!(cell.vertical_align, VerticalAlign::Bottom));
-        assert!(matches!(cell.border_left.style, BorderStyle::Dotted));
-        assert!(matches!(cell.border_left.dash_style, DashStyle::SystemDot));
-        assert!(matches!(cell.border_right.style, BorderStyle::Dotted));
-        assert!(matches!(
-            cell.border_right.dash_style,
-            DashStyle::LongDashDot
-        ));
-        assert!(matches!(cell.border_top.style, BorderStyle::Dotted));
-        assert!(matches!(
-            cell.border_top.dash_style,
-            DashStyle::LongDashDotDot
-        ));
-        assert!(matches!(cell.border_bottom.style, BorderStyle::Dashed));
-        assert!(matches!(
-            cell.border_bottom.dash_style,
-            DashStyle::SystemDash
-        ));
+        assert_eq!(
+            std::mem::discriminant(&cell.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Bottom)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_left.style),
+            std::mem::discriminant(&BorderStyle::Dotted)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_left.dash_style),
+            std::mem::discriminant(&DashStyle::SystemDot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_right.style),
+            std::mem::discriminant(&BorderStyle::Dotted)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_right.dash_style),
+            std::mem::discriminant(&DashStyle::LongDashDot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_top.style),
+            std::mem::discriminant(&BorderStyle::Dotted)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_top.dash_style),
+            std::mem::discriminant(&DashStyle::LongDashDotDot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_bottom.style),
+            std::mem::discriminant(&BorderStyle::Dashed)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_bottom.dash_style),
+            std::mem::discriminant(&DashStyle::SystemDash)
+        );
 
         let paragraph = &cell.text_body.as_ref().expect("cell text body").paragraphs[0];
-        assert!(matches!(paragraph.alignment, Alignment::Center));
+        assert_eq!(
+            std::mem::discriminant(&paragraph.alignment),
+            std::mem::discriminant(&Alignment::Center)
+        );
         assert_eq!(paragraph.level, 1);
         assert_eq!(paragraph.runs.len(), 2);
         assert_eq!(
@@ -4523,15 +4546,27 @@ mod tests {
         assert_eq!(def_rpr.baseline, Some(10000));
         assert_eq!(def_rpr.bold, Some(true));
         assert_eq!(def_rpr.italic, Some(true));
-        assert!(matches!(
-            def_rpr.capitalization,
-            Some(TextCapitalization::Small)
-        ));
-        assert!(matches!(def_rpr.underline, Some(UnderlineType::DashLong)));
-        assert!(matches!(
-            def_rpr.strikethrough,
-            Some(StrikethroughType::Double)
-        ));
+        assert_eq!(
+            def_rpr
+                .capitalization
+                .as_ref()
+                .map(std::mem::discriminant::<TextCapitalization>),
+            Some(std::mem::discriminant(&TextCapitalization::Small))
+        );
+        assert_eq!(
+            def_rpr
+                .underline
+                .as_ref()
+                .map(std::mem::discriminant::<UnderlineType>),
+            Some(std::mem::discriminant(&UnderlineType::DashLong))
+        );
+        assert_eq!(
+            def_rpr
+                .strikethrough
+                .as_ref()
+                .map(std::mem::discriminant::<StrikethroughType>),
+            Some(std::mem::discriminant(&StrikethroughType::Double))
+        );
     }
 
     #[test]
@@ -4794,15 +4829,27 @@ mod tests {
             .expect("custom geometry shape");
         assert!(custom_shape.flip_h);
         assert!(custom_shape.flip_v);
-        assert!(matches!(custom_shape.border.cap, LineCap::Flat));
-        assert!(matches!(custom_shape.border.compound, CompoundLine::Triple));
-        assert!(matches!(
-            custom_shape.border.alignment,
-            LineAlignment::Inset
-        ));
+        assert_eq!(
+            std::mem::discriminant(&custom_shape.border.cap),
+            std::mem::discriminant(&LineCap::Flat)
+        );
+        assert_eq!(
+            std::mem::discriminant(&custom_shape.border.compound),
+            std::mem::discriminant(&CompoundLine::Triple)
+        );
+        assert_eq!(
+            std::mem::discriminant(&custom_shape.border.alignment),
+            std::mem::discriminant(&LineAlignment::Inset)
+        );
         let custom_text = custom_shape.text_body.as_ref().expect("custom text body");
-        assert!(matches!(custom_text.auto_fit, AutoFit::Shrink));
-        assert!(matches!(custom_text.vertical_align, VerticalAlign::Bottom));
+        assert_eq!(
+            std::mem::discriminant(&custom_text.auto_fit),
+            std::mem::discriminant(&AutoFit::Shrink)
+        );
+        assert_eq!(
+            std::mem::discriminant(&custom_text.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Bottom)
+        );
         assert_eq!(custom_shape.vertical_text.as_deref(), Some("vert"));
         let custom_paragraph = &custom_text.paragraphs[0];
         assert_eq!(
@@ -4818,10 +4865,13 @@ mod tests {
             .iter()
             .find(|shape| shape.name == "No AutoFit")
             .expect("no autofit shape");
-        assert!(matches!(
-            no_autofit.text_body.as_ref().map(|body| &body.auto_fit),
-            Some(AutoFit::NoAutoFit)
-        ));
+        assert_eq!(
+            no_autofit
+                .text_body
+                .as_ref()
+                .map(|body| std::mem::discriminant(&body.auto_fit)),
+            Some(std::mem::discriminant(&AutoFit::NoAutoFit))
+        );
 
         let picture = slide
             .shapes
@@ -4955,11 +5005,15 @@ mod tests {
 
         let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide parses");
 
-        assert!(matches!(
-            &slide.background,
-            Some(Fill::Gradient(fill))
-                if fill.stops.len() == 2 && matches!(fill.gradient_type, GradientType::Rectangular)
-        ));
+        let fill = match slide.background.as_ref().expect("gradient background") {
+            Fill::Gradient(fill) => fill,
+            other => panic!("expected gradient background, got {other:?}"),
+        };
+        assert_eq!(fill.stops.len(), 2);
+        assert_eq!(
+            std::mem::discriminant(&fill.gradient_type),
+            std::mem::discriminant(&GradientType::Rectangular)
+        );
 
         let table = slide
             .shapes
@@ -4974,15 +5028,42 @@ mod tests {
         assert!(table.first_col && table.last_col);
         let cell = &table.rows[0].cells[0];
         assert!(cell.v_merge);
-        assert!(matches!(cell.vertical_align, VerticalAlign::Bottom));
-        assert!(matches!(cell.border_left.style, BorderStyle::Solid));
-        assert!(matches!(cell.border_left.dash_style, DashStyle::Solid));
-        assert!(matches!(cell.border_right.style, BorderStyle::Dashed));
-        assert!(matches!(cell.border_right.dash_style, DashStyle::Dash));
-        assert!(matches!(cell.border_top.style, BorderStyle::Dotted));
-        assert!(matches!(cell.border_top.dash_style, DashStyle::Dot));
-        assert!(matches!(cell.border_bottom.style, BorderStyle::Dashed));
-        assert!(matches!(cell.border_bottom.dash_style, DashStyle::LongDash));
+        assert_eq!(
+            std::mem::discriminant(&cell.vertical_align),
+            std::mem::discriminant(&VerticalAlign::Bottom)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_left.style),
+            std::mem::discriminant(&BorderStyle::Solid)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_left.dash_style),
+            std::mem::discriminant(&DashStyle::Solid)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_right.style),
+            std::mem::discriminant(&BorderStyle::Dashed)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_right.dash_style),
+            std::mem::discriminant(&DashStyle::Dash)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_top.style),
+            std::mem::discriminant(&BorderStyle::Dotted)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_top.dash_style),
+            std::mem::discriminant(&DashStyle::Dot)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_bottom.style),
+            std::mem::discriminant(&BorderStyle::Dashed)
+        );
+        assert_eq!(
+            std::mem::discriminant(&cell.border_bottom.dash_style),
+            std::mem::discriminant(&DashStyle::LongDash)
+        );
 
         let paragraph = &cell.text_body.as_ref().expect("table text body").paragraphs[0];
         assert_eq!(
@@ -5001,28 +5082,48 @@ mod tests {
         assert_eq!(def_rpr.baseline, Some(10000));
         assert_eq!(def_rpr.bold, Some(true));
         assert_eq!(def_rpr.italic, Some(true));
-        assert!(matches!(
-            def_rpr.capitalization,
-            Some(TextCapitalization::Small)
-        ));
-        assert!(matches!(def_rpr.underline, Some(UnderlineType::DashLong)));
-        assert!(matches!(
-            def_rpr.strikethrough,
-            Some(StrikethroughType::Double)
-        ));
+        assert_eq!(
+            def_rpr
+                .capitalization
+                .as_ref()
+                .map(std::mem::discriminant::<TextCapitalization>),
+            Some(std::mem::discriminant(&TextCapitalization::Small))
+        );
+        assert_eq!(
+            def_rpr
+                .underline
+                .as_ref()
+                .map(std::mem::discriminant::<UnderlineType>),
+            Some(std::mem::discriminant(&UnderlineType::DashLong))
+        );
+        assert_eq!(
+            def_rpr
+                .strikethrough
+                .as_ref()
+                .map(std::mem::discriminant::<StrikethroughType>),
+            Some(std::mem::discriminant(&StrikethroughType::Double))
+        );
 
         let shape = slide
             .shapes
             .iter()
             .find(|shape| shape.name == "Norm Autofit Shape")
             .expect("norm autofit shape");
-        assert!(matches!(
-            shape.text_body.as_ref().map(|body| &body.auto_fit),
-            Some(AutoFit::Normal {
-                font_scale: Some(v),
-                line_spacing_reduction: Some(lsr)
-            }) if (*v - 0.7).abs() < 1e-6 && (*lsr - 0.15).abs() < 1e-6
-        ));
+        let auto_fit = shape
+            .text_body
+            .as_ref()
+            .map(|body| &body.auto_fit)
+            .expect("normal autofit body");
+        if let AutoFit::Normal {
+            font_scale: Some(v),
+            line_spacing_reduction: Some(lsr),
+        } = auto_fit
+        {
+            assert!((*v - 0.7).abs() < 1e-6);
+            assert!((*lsr - 0.15).abs() < 1e-6);
+        } else {
+            panic!("expected normal autofit");
+        }
         let custom_geom = slide
             .shapes
             .iter()
@@ -5032,9 +5133,18 @@ mod tests {
             })
             .expect("custom geometry");
         assert_eq!(custom_geom.paths.len(), 3);
-        assert!(matches!(custom_geom.paths[0].fill, PathFill::Lighten));
-        assert!(matches!(custom_geom.paths[1].fill, PathFill::Darken));
-        assert!(matches!(custom_geom.paths[2].fill, PathFill::LightenLess));
+        assert_eq!(
+            std::mem::discriminant(&custom_geom.paths[0].fill),
+            std::mem::discriminant(&PathFill::Lighten)
+        );
+        assert_eq!(
+            std::mem::discriminant(&custom_geom.paths[1].fill),
+            std::mem::discriminant(&PathFill::Darken)
+        );
+        assert_eq!(
+            std::mem::discriminant(&custom_geom.paths[2].fill),
+            std::mem::discriminant(&PathFill::LightenLess)
+        );
     }
 
     #[test]
@@ -5188,33 +5298,47 @@ mod tests {
             paragraph.runs[1].hyperlink.as_deref(),
             Some("https://example.com/shape")
         );
-        assert!(matches!(
-            shape.text_body.as_ref().map(|body| &body.auto_fit),
-            Some(AutoFit::Normal {
-                font_scale: Some(v),
-                line_spacing_reduction: Some(lsr)
-            }) if (*v - 0.8).abs() < 1e-6 && (*lsr - 0.1).abs() < 1e-6
-        ));
+        let auto_fit = shape
+            .text_body
+            .as_ref()
+            .map(|body| &body.auto_fit)
+            .expect("shape empty variants body");
+        if let AutoFit::Normal {
+            font_scale: Some(v),
+            line_spacing_reduction: Some(lsr),
+        } = auto_fit
+        {
+            assert!((*v - 0.8).abs() < 1e-6);
+            assert!((*lsr - 0.1).abs() < 1e-6);
+        } else {
+            panic!("expected normal autofit");
+        }
 
         let no_autofit = slide
             .shapes
             .iter()
             .find(|shape| shape.name == "No Autofit")
             .expect("no autofit shape");
-        assert!(matches!(
-            no_autofit.text_body.as_ref().map(|body| &body.auto_fit),
-            Some(AutoFit::NoAutoFit)
-        ));
+        assert_eq!(
+            no_autofit
+                .text_body
+                .as_ref()
+                .map(|body| std::mem::discriminant(&body.auto_fit)),
+            Some(std::mem::discriminant(&AutoFit::NoAutoFit))
+        );
 
         let shrink_autofit = slide
             .shapes
             .iter()
             .find(|shape| shape.name == "Shrink Autofit")
             .expect("shrink autofit shape");
-        assert!(matches!(
-            shrink_autofit.text_body.as_ref().map(|body| &body.auto_fit),
-            Some(AutoFit::Shrink)
-        ));
+        assert_eq!(
+            shrink_autofit
+                .text_body
+                .as_ref()
+                .map(|body| std::mem::discriminant(&body.auto_fit)),
+            Some(std::mem::discriminant(&AutoFit::Shrink))
+        );
     }
 
     #[test]
@@ -5248,7 +5372,10 @@ mod tests {
         assign_tc_color(Color::rgb("778899"), &None, &mut missing_cell);
         let mut cell = Some(TableCellBuilder::default());
         assign_tc_color(Color::rgb("AABBCC"), &Some("lnDiag".to_string()), &mut cell);
-        assert!(matches!(cell.expect("cell").fill, Fill::None));
+        assert_eq!(
+            std::mem::discriminant(&cell.expect("cell").fill),
+            std::mem::discriminant(&Fill::None)
+        );
 
         let mut missing_shape = None;
         store_shape_level_defaults(&mut missing_shape, 9, ParagraphDefaults::default());
@@ -5263,10 +5390,7 @@ mod tests {
 
         let mut archive = archive_with_entries(&[]);
         let malformed = "<p:sld xmlns:p=\"p\"><p:cSld><";
-        assert!(matches!(
-            parse_slide(malformed, &HashMap::new(), &mut archive),
-            Err(PptxError::Xml(_))
-        ));
+        assert!(parse_slide(malformed, &HashMap::new(), &mut archive).is_err());
     }
 
     fn bytes_start<'a>(name: &'a str, attrs: &[(&'a str, &'a str)]) -> BytesStart<'a> {
