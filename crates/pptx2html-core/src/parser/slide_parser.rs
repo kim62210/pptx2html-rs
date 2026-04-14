@@ -3934,6 +3934,102 @@ mod tests {
     }
 
     #[test]
+    fn style_ref_and_line_end_helpers_cover_empty_builders_and_remaining_variants() {
+        let mut missing_builder: Option<ShapeStyleRef> = None;
+        assign_style_ref_color("fillRef", "1", Color::rgb("ABCDEF"), &mut missing_builder);
+        ensure_style_ref("lnRef", "2", &mut missing_builder);
+        assign_style_ref_no_color("fontRef", "major", &mut missing_builder);
+        assert!(missing_builder.is_none());
+
+        let mut style_ref = Some(ShapeStyleRef::default());
+        ensure_style_ref("lnRef", "7", &mut style_ref);
+        ensure_style_ref("effectRef", "8", &mut style_ref);
+        ensure_style_ref("fontRef", "major", &mut style_ref);
+        assign_style_ref_no_color("fillRef", "9", &mut style_ref);
+        assign_style_ref_no_color("lnRef", "10", &mut style_ref);
+        assign_style_ref_no_color("fontRef", "minor", &mut style_ref);
+        assign_style_ref_color("unknownRef", "11", Color::rgb("FFFFFF"), &mut style_ref);
+        ensure_style_ref("unknownRef", "12", &mut style_ref);
+
+        let style_ref = style_ref.expect("style ref");
+        assert_eq!(style_ref.fill_ref.as_ref().map(|s| s.idx), Some(9));
+        assert_eq!(style_ref.ln_ref.as_ref().map(|s| s.idx), Some(10));
+        assert_eq!(style_ref.effect_ref.as_ref().map(|s| s.idx), Some(8));
+        assert_eq!(
+            style_ref.font_ref.as_ref().map(|s| s.idx.as_str()),
+            Some("minor")
+        );
+        assert!(
+            style_ref
+                .fill_ref
+                .as_ref()
+                .and_then(|s| s.color.to_css())
+                .is_none()
+        );
+        assert!(
+            style_ref
+                .effect_ref
+                .as_ref()
+                .and_then(|s| s.color.to_css())
+                .is_none()
+        );
+        assert!(
+            style_ref
+                .font_ref
+                .as_ref()
+                .and_then(|s| s.color.to_css())
+                .is_none()
+        );
+
+        let triangle = parse_line_end(&bytes_start("a:headEnd", &[("type", "triangle")]))
+            .expect("triangle line end");
+        assert_eq!(
+            std::mem::discriminant(&triangle.end_type),
+            std::mem::discriminant(&LineEndType::Triangle)
+        );
+        assert_eq!(
+            std::mem::discriminant(&triangle.width),
+            std::mem::discriminant(&LineEndSize::Medium)
+        );
+        assert_eq!(
+            std::mem::discriminant(&triangle.length),
+            std::mem::discriminant(&LineEndSize::Medium)
+        );
+
+        let stealth = parse_line_end(&bytes_start("a:tailEnd", &[("type", "stealth")]))
+            .expect("stealth line end");
+        assert_eq!(
+            std::mem::discriminant(&stealth.end_type),
+            std::mem::discriminant(&LineEndType::Stealth)
+        );
+
+        let diamond = parse_line_end(&bytes_start("a:tailEnd", &[("type", "diamond")]))
+            .expect("diamond line end");
+        assert_eq!(
+            std::mem::discriminant(&diamond.end_type),
+            std::mem::discriminant(&LineEndType::Diamond)
+        );
+
+        let oval = parse_line_end(&bytes_start(
+            "a:tailEnd",
+            &[("type", "oval"), ("w", "mystery"), ("len", "mystery")],
+        ))
+        .expect("oval line end");
+        assert_eq!(
+            std::mem::discriminant(&oval.end_type),
+            std::mem::discriminant(&LineEndType::Oval)
+        );
+        assert_eq!(
+            std::mem::discriminant(&oval.width),
+            std::mem::discriminant(&LineEndSize::Medium)
+        );
+        assert_eq!(
+            std::mem::discriminant(&oval.length),
+            std::mem::discriminant(&LineEndSize::Medium)
+        );
+    }
+
+    #[test]
     fn guide_formula_and_body_parsers_cover_helper_branches() {
         let guides = HashMap::from([
             ("x".to_string(), 3.0),
@@ -4031,6 +4127,198 @@ mod tests {
                 "fontScale"
             ),
             Some(0.0)
+        );
+    }
+
+    #[test]
+    fn shape_helper_fallbacks_cover_invalid_attributes_and_defaults() {
+        let guides = HashMap::from([("x".to_string(), 3.0)]);
+        assert_eq!(parse_guide_formula_value("", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("val", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("+- 1 2", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("*/ 6 4 0", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("+/ 6 4 0", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("pin 1 2", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("min 1", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("max 1", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("?: 1 2", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("abs", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("sqrt -9", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("mod 1 2", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("sin 10", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("cos 10", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("cat2 10 y", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("sat2 10 y", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("at2 10", &guides), 0.0);
+        assert_eq!(parse_guide_formula_value("tan 10", &guides), 0.0);
+
+        let auto_fit = parse_shape_auto_fit(
+            "normAutofit",
+            &bytes_start(
+                "a:normAutofit",
+                &[("fontScale", "70000"), ("lnSpcReduction", "15000")],
+            ),
+        );
+        assert!(matches!(
+            auto_fit,
+            AutoFit::Normal {
+                font_scale: Some(font_scale),
+                line_spacing_reduction: Some(line_spacing_reduction),
+            } if (font_scale - 0.7).abs() < 1e-6
+                && (line_spacing_reduction - 0.15).abs() < 1e-6
+        ));
+
+        let mut paragraph_defaults = ParagraphBuilder::default();
+        apply_paragraph_def_rpr(
+            &mut paragraph_defaults,
+            &bytes_start(
+                "a:defRPr",
+                &[
+                    ("sz", "oops"),
+                    ("spc", "oops"),
+                    ("baseline", "oops"),
+                    ("cap", "small"),
+                    ("u", "dashLong"),
+                    ("strike", "dblStrike"),
+                    ("b", "false"),
+                    ("i", "0"),
+                ],
+            ),
+        );
+        assert_eq!(paragraph_defaults.def_rpr_font_size, None);
+        assert_eq!(paragraph_defaults.def_rpr_letter_spacing, None);
+        assert_eq!(paragraph_defaults.def_rpr_baseline, None);
+        assert_eq!(
+            paragraph_defaults
+                .def_rpr_capitalization
+                .as_ref()
+                .map(std::mem::discriminant::<TextCapitalization>),
+            Some(std::mem::discriminant(&TextCapitalization::Small))
+        );
+        assert_eq!(
+            paragraph_defaults
+                .def_rpr_underline
+                .as_ref()
+                .map(std::mem::discriminant::<UnderlineType>),
+            Some(std::mem::discriminant(&UnderlineType::DashLong))
+        );
+        assert_eq!(
+            paragraph_defaults
+                .def_rpr_strikethrough
+                .as_ref()
+                .map(std::mem::discriminant::<StrikethroughType>),
+            Some(std::mem::discriminant(&StrikethroughType::Double))
+        );
+        assert_eq!(paragraph_defaults.def_rpr_bold, Some(false));
+        assert_eq!(paragraph_defaults.def_rpr_italic, Some(false));
+
+        let mut para = Some(ParagraphBuilder::default());
+        parse_para_props(
+            &bytes_start(
+                "a:pPr",
+                &[
+                    ("lvl", "oops"),
+                    ("indent", "oops"),
+                    ("marL", "oops"),
+                    ("rtl", "true"),
+                ],
+            ),
+            &mut para,
+        );
+        let para = para.expect("paragraph");
+        assert_eq!(para.level, 0);
+        assert_eq!(para.indent, Some(0.0));
+        assert_eq!(para.margin_left, Some(0.0));
+        assert!(para.rtl);
+
+        let mut run = Some(RunBuilder::default());
+        parse_run_props(
+            &bytes_start(
+                "a:rPr",
+                &[
+                    ("sz", "oops"),
+                    ("b", "false"),
+                    ("i", "0"),
+                    ("u", "dashLong"),
+                    ("strike", "dblStrike"),
+                    ("cap", "small"),
+                    ("baseline", "oops"),
+                    ("spc", "oops"),
+                ],
+            ),
+            &mut run,
+        );
+        let run = run.expect("run");
+        assert_eq!(run.font_size, None);
+        assert!(!run.bold);
+        assert!(!run.italic);
+        assert_eq!(
+            std::mem::discriminant(&run.underline),
+            std::mem::discriminant(&UnderlineType::DashLong)
+        );
+        assert_eq!(
+            std::mem::discriminant(&run.strikethrough),
+            std::mem::discriminant(&StrikethroughType::Double)
+        );
+        assert_eq!(
+            std::mem::discriminant(&run.capitalization),
+            std::mem::discriminant(&TextCapitalization::Small)
+        );
+        assert_eq!(run.baseline, None);
+        assert_eq!(run.letter_spacing, None);
+
+        let mut connector = Some(ShapeBuilder::default());
+        parse_connector_ref(
+            &bytes_start("a:stCxn", &[("id", "oops"), ("idx", "nope")]),
+            &mut connector,
+            true,
+        );
+        parse_connector_ref(&bytes_start("a:endCxn", &[]), &mut connector, false);
+        let connector = connector.expect("connector");
+        assert_eq!(
+            connector.start_connection.as_ref().map(|c| c.shape_id),
+            Some(0)
+        );
+        assert_eq!(
+            connector.end_connection.as_ref().map(|c| c.site_idx),
+            Some(0)
+        );
+
+        assert_eq!(
+            hyperlink_rel_id(&bytes_start("a:hlinkClick", &[("id", "plain-id")])),
+            None
+        );
+
+        let mut bg_grad_stops = Vec::new();
+        let mut bg_solid_color = None;
+        assign_background_color_target(
+            Color::rgb("ABCDEF"),
+            &["bgPr".into(), "solidFill".into()],
+            true,
+            0.4,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+        );
+        assert!(bg_grad_stops.is_empty());
+        assert_eq!(
+            bg_solid_color
+                .as_ref()
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#ABCDEF")
+        );
+
+        let mut missing_shape = None;
+        store_shape_level_defaults(&mut missing_shape, 0, ParagraphDefaults::default());
+        assert!(missing_shape.is_none());
+
+        let mut level_ignored = Some(ShapeBuilder::default());
+        store_shape_level_defaults(&mut level_ignored, 9, ParagraphDefaults::default());
+        assert!(
+            level_ignored
+                .as_ref()
+                .and_then(|shape| shape.text_list_style.as_ref())
+                .is_none()
         );
     }
 
@@ -4631,6 +4919,148 @@ mod tests {
         );
         assert!(!para_false.as_ref().expect("paragraph false case").rtl);
         assert!(!run_false.as_ref().expect("run false case").bold);
+    }
+
+    #[test]
+    fn shape_builder_covers_variant_defaults_and_shape_specific_metadata() {
+        let unsupported = ShapeBuilder {
+            unsupported_content: Some("Math".to_string()),
+            raw_xml_capture: Some("<m:oMath/>".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(
+            unsupported.shape_type,
+            ShapeType::Unsupported(ref data)
+                if data.label == "Math"
+                    && matches!(data.element_type, UnresolvedType::SmartArt)
+                    && data.raw_xml.as_deref() == Some("<m:oMath/>")
+        ));
+
+        let round_rect = ShapeBuilder {
+            preset_geometry: Some("roundRect".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(round_rect.shape_type, ShapeType::RoundedRectangle));
+
+        let ellipse = ShapeBuilder {
+            preset_geometry: Some("ellipse".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(ellipse.shape_type, ShapeType::Ellipse));
+
+        let triangle = ShapeBuilder {
+            preset_geometry: Some("rtTriangle".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(triangle.shape_type, ShapeType::Triangle));
+
+        let custom = ShapeBuilder {
+            preset_geometry: Some("hexagon".to_string()),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(
+            custom.shape_type,
+            ShapeType::Custom(ref name) if name == "hexagon"
+        ));
+
+        let text_box = ShapeBuilder {
+            name: "Text Box".to_string(),
+            has_text_body: true,
+            paragraphs: vec![TextParagraph {
+                runs: vec![TextRun {
+                    text: "shape text".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            border_no_fill: true,
+            border_width: 2.0,
+            adjust_values: HashMap::from([("adj".to_string(), 25_000.0)]),
+            shape_outer_shadow: Some(OuterShadow {
+                blur_radius: 1.0,
+                distance: 2.0,
+                direction: 30.0,
+                color: Color::rgb("112233"),
+                alpha: 0.5,
+            }),
+            shape_glow: Some(GlowEffect {
+                radius: 1.5,
+                color: Color::theme("accent1"),
+                alpha: 0.75,
+            }),
+            vertical_text: Some("wordArtVert".to_string()),
+            vertical_text_explicit: true,
+            start_connection: Some(ConnectionRef {
+                shape_id: 1,
+                site_idx: 2,
+            }),
+            end_connection: Some(ConnectionRef {
+                shape_id: 3,
+                site_idx: 4,
+            }),
+            ..Default::default()
+        }
+        .build();
+        assert!(matches!(text_box.shape_type, ShapeType::TextBox));
+        let text_body = text_box.text_body.as_ref().expect("text body");
+        assert!(text_body.word_wrap);
+        assert!(!text_body.word_wrap_explicit);
+        assert_eq!(text_body.paragraphs.len(), 1);
+        assert_eq!(
+            std::mem::discriminant(&text_box.border.style),
+            std::mem::discriminant(&BorderStyle::None)
+        );
+        assert!(text_box.border.no_fill);
+        assert_eq!(
+            text_box
+                .adjust_values
+                .as_ref()
+                .and_then(|values| values.get("adj"))
+                .copied(),
+            Some(25_000.0)
+        );
+        assert!(text_box.effects.outer_shadow.is_some());
+        assert!(text_box.effects.glow.is_some());
+        assert_eq!(text_box.vertical_text.as_deref(), Some("wordArtVert"));
+        assert!(text_box.vertical_text_explicit);
+        assert_eq!(
+            text_box.start_connection.as_ref().map(|c| c.shape_id),
+            Some(1)
+        );
+        assert_eq!(
+            text_box.end_connection.as_ref().map(|c| c.site_idx),
+            Some(4)
+        );
+
+        let solid_border = ShapeBuilder {
+            border_width: 1.5,
+            ..Default::default()
+        }
+        .build();
+        assert_eq!(
+            std::mem::discriminant(&solid_border.border.style),
+            std::mem::discriminant(&BorderStyle::Solid)
+        );
+
+        let explicit_no_wrap = ShapeBuilder {
+            has_text_body: true,
+            text_word_wrap_explicit: true,
+            text_word_wrap: false,
+            ..Default::default()
+        }
+        .build();
+        assert_eq!(
+            explicit_no_wrap
+                .text_body
+                .as_ref()
+                .map(|body| (body.word_wrap, body.word_wrap_explicit)),
+            Some((false, true))
+        );
     }
 
     #[test]
