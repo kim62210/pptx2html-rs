@@ -172,7 +172,9 @@ mod tests {
     use crate::model::color::{Color, ColorKind};
     use crate::model::hierarchy::{EffectStyle, FmtScheme, FontRef, StyleRef};
     use crate::model::presentation::{ClrMap, ColorScheme, FontScheme};
-    use crate::model::{Border, BorderStyle, Fill, GlowEffect, OuterShadow, SolidFill};
+    use crate::model::{
+        Border, BorderStyle, Fill, GlowEffect, GradientFill, OuterShadow, SolidFill,
+    };
 
     fn test_scheme() -> ColorScheme {
         ColorScheme {
@@ -192,9 +194,8 @@ mod tests {
                 Fill::Solid(SolidFill {
                     color: Color::rgb("AABBCC"),
                 }),
-                Fill::Solid(SolidFill {
-                    color: Color::none(),
-                }),
+                Fill::Gradient(GradientFill::default()),
+                Fill::None,
             ],
             ln_style_lst: vec![
                 Border {
@@ -206,6 +207,12 @@ mod tests {
                 Border {
                     width: 1.5,
                     color: Color::none(),
+                    style: BorderStyle::Solid,
+                    ..Default::default()
+                },
+                Border {
+                    width: 0.0,
+                    color: Color::rgb("123456"),
                     style: BorderStyle::Solid,
                     ..Default::default()
                 },
@@ -236,12 +243,9 @@ mod tests {
         };
         let fill =
             resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
-        match fill {
-            Fill::Solid(sf) => {
-                assert!(matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"));
-            }
-            other => panic!("Expected SolidFill, got {other:?}"),
-        }
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"))
+        );
     }
 
     #[test]
@@ -252,12 +256,31 @@ mod tests {
         };
         let fill =
             resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
-        match fill {
-            Fill::Solid(sf) => {
-                assert!(matches!(sf.color.kind, ColorKind::Rgb(ref v) if v == "AABBCC"));
-            }
-            other => panic!("Expected SolidFill, got {other:?}"),
-        }
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Rgb(ref v) if v == "AABBCC"))
+        );
+    }
+
+    #[test]
+    fn fill_ref_idx_3_clones_non_solid_fill() {
+        let sr = StyleRef {
+            idx: 3,
+            color: Color::theme("accent1"),
+        };
+        let fill =
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        assert!(matches!(fill, Fill::Gradient(_)));
+    }
+
+    #[test]
+    fn fill_ref_idx_4_none_without_ref_color_returns_none() {
+        let sr = StyleRef {
+            idx: 4,
+            color: Color::none(),
+        };
+        assert!(
+            resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none()
+        );
     }
 
     #[test]
@@ -268,12 +291,9 @@ mod tests {
         };
         let fill =
             resolve_fill_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
-        match fill {
-            Fill::Solid(sf) => {
-                assert!(matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"));
-            }
-            other => panic!("Expected SolidFill, got {other:?}"),
-        }
+        assert!(
+            matches!(fill, Fill::Solid(ref sf) if matches!(sf.color.kind, ColorKind::Theme(ref n) if n == "accent1"))
+        );
     }
 
     #[test]
@@ -324,6 +344,30 @@ mod tests {
     }
 
     #[test]
+    fn ln_ref_idx_3_keeps_existing_color_and_suppresses_style_for_zero_width() {
+        let sr = StyleRef {
+            idx: 3,
+            color: Color::none(),
+        };
+        let border =
+            resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).unwrap();
+        assert_eq!(border.width, 0.0);
+        assert!(matches!(border.color.kind, ColorKind::Rgb(ref v) if v == "123456"));
+        assert!(matches!(border.style, BorderStyle::None));
+    }
+
+    #[test]
+    fn ln_ref_out_of_range_returns_none() {
+        let sr = StyleRef {
+            idx: 99,
+            color: Color::theme("accent1"),
+        };
+        assert!(
+            resolve_ln_ref(&sr, &test_fmt_scheme(), &test_scheme(), &ClrMap::default()).is_none()
+        );
+    }
+
+    #[test]
     fn font_ref_major() {
         let fr = FontRef {
             idx: "major".to_string(),
@@ -362,6 +406,20 @@ mod tests {
             color: Color::none(),
         };
         let fs = FontScheme::default();
+        assert!(resolve_font_ref(&fr, &fs, &test_scheme(), &ClrMap::default()).is_none());
+    }
+
+    #[test]
+    fn font_ref_empty_major_font_returns_none() {
+        let fr = FontRef {
+            idx: "major".to_string(),
+            color: Color::theme("dk1"),
+        };
+        let fs = FontScheme {
+            major_latin: String::new(),
+            minor_latin: "Calibri".to_string(),
+            ..Default::default()
+        };
         assert!(resolve_font_ref(&fr, &fs, &test_scheme(), &ClrMap::default()).is_none());
     }
 
