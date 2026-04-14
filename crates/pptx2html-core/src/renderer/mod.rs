@@ -447,6 +447,82 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             })
     }
 
+    fn resolve_shape_effects(
+        shape: &Shape,
+        fmt_scheme: Option<&FmtScheme>,
+        scheme: Option<&ColorScheme>,
+        clr_map: Option<&ClrMap>,
+    ) -> Option<ShapeEffects> {
+        if shape.effects.outer_shadow.is_some() || shape.effects.glow.is_some() {
+            Some(shape.effects.clone())
+        } else if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
+            (&shape.style_ref, fmt_scheme, scheme, clr_map)
+            && let Some(effect_ref) = &sr.effect_ref
+        {
+            style_ref::resolve_effect_ref(effect_ref, fmt, cs, cm)
+        } else {
+            None
+        }
+    }
+
+    fn effects_to_box_shadows(effects: &ShapeEffects, ctx: &RenderCtx<'_>) -> Vec<String> {
+        let mut shadows: Vec<String> = Vec::new();
+
+        if let Some(ref shadow) = effects.outer_shadow {
+            let angle_rad = shadow.direction.to_radians();
+            let offset_x = shadow.distance * angle_rad.cos();
+            let offset_y = shadow.distance * angle_rad.sin();
+            let blur = shadow.blur_radius;
+            let color = ctx
+                .color_to_css(&shadow.color)
+                .unwrap_or_else(|| "rgba(0,0,0,0.4)".to_string());
+            shadows.push(format!(
+                "{offset_x:.1}pt {offset_y:.1}pt {blur:.1}pt {color}"
+            ));
+        }
+
+        if let Some(ref glow) = effects.glow {
+            let spread = glow.radius;
+            let color = ctx
+                .color_to_css(&glow.color)
+                .unwrap_or_else(|| "rgba(255,215,0,0.5)".to_string());
+            shadows.push(format!("0 0 {spread:.1}pt {spread:.1}pt {color}"));
+        }
+
+        shadows
+    }
+
+    fn effects_to_svg_filter_attr(effects: &ShapeEffects, ctx: &RenderCtx<'_>) -> String {
+        let mut filters: Vec<String> = Vec::new();
+
+        if let Some(ref shadow) = effects.outer_shadow {
+            let angle_rad = shadow.direction.to_radians();
+            let offset_x = shadow.distance * angle_rad.cos();
+            let offset_y = shadow.distance * angle_rad.sin();
+            let blur = shadow.blur_radius;
+            let color = ctx
+                .color_to_css(&shadow.color)
+                .unwrap_or_else(|| "rgba(0,0,0,0.4)".to_string());
+            filters.push(format!(
+                "drop-shadow({offset_x:.1}pt {offset_y:.1}pt {blur:.1}pt {color})"
+            ));
+        }
+
+        if let Some(ref glow) = effects.glow {
+            let blur = glow.radius;
+            let color = ctx
+                .color_to_css(&glow.color)
+                .unwrap_or_else(|| "rgba(255,215,0,0.5)".to_string());
+            filters.push(format!("drop-shadow(0 0 {blur:.1}pt {color})"));
+        }
+
+        if filters.is_empty() {
+            String::new()
+        } else {
+            format!(" style=\"filter: {}\"", filters.join(" "))
+        }
+    }
+
     /// Render shape with resolved properties from inheritance cascade
     fn render_shape_resolved(
         shape: &Shape,
@@ -687,49 +763,16 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             );
         }
 
-        // Shape-level effects → CSS box-shadow
-        // Use explicit effects if present; otherwise fall back to effectRef from theme
-        {
-            let resolved_effects =
-                if shape.effects.outer_shadow.is_none() && shape.effects.glow.is_none() {
-                    if let (Some(sr), Some(fmt), Some(cs), Some(cm)) =
-                        (&shape.style_ref, fmt_scheme, ctx.scheme, ctx.clr_map)
-                        && let Some(effect_ref) = &sr.effect_ref
-                    {
-                        style_ref::resolve_effect_ref(effect_ref, fmt, cs, cm)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
-            let effective_effects = resolved_effects.as_ref().unwrap_or(&shape.effects);
+        let effective_effects =
+            Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map);
+        let svg_effect_attr = effective_effects
+            .as_ref()
+            .map(|effects| Self::effects_to_svg_filter_attr(effects, ctx))
+            .unwrap_or_default();
 
-            let mut shadows: Vec<String> = Vec::new();
-
-            // outerShdw → box-shadow with offset
-            if let Some(ref shadow) = effective_effects.outer_shadow {
-                let angle_rad = shadow.direction.to_radians();
-                let offset_x = shadow.distance * angle_rad.cos();
-                let offset_y = shadow.distance * angle_rad.sin();
-                let blur = shadow.blur_radius;
-                let color = ctx
-                    .color_to_css(&shadow.color)
-                    .unwrap_or_else(|| "rgba(0,0,0,0.4)".to_string());
-                shadows.push(format!(
-                    "{offset_x:.1}pt {offset_y:.1}pt {blur:.1}pt {color}"
-                ));
-            }
-
-            // glow → box-shadow with spread, no offset
-            if let Some(ref glow) = effective_effects.glow {
-                let spread = glow.radius;
-                let color = ctx
-                    .color_to_css(&glow.color)
-                    .unwrap_or_else(|| "rgba(255,215,0,0.5)".to_string());
-                shadows.push(format!("0 0 {spread:.1}pt {spread:.1}pt {color}"));
-            }
-
+        // Shape-level effects on non-SVG shapes can use CSS box-shadow directly.
+        if !uses_svg && let Some(ref effects) = effective_effects {
+            let shadows = Self::effects_to_box_shadows(effects, ctx);
             if !shadows.is_empty() {
                 let _ = write!(style_buf, "; box-shadow: {}", shadows.join(", "));
             }
@@ -2287,12 +2330,13 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("", stroke_width)
                 };
+                let _ = write!(html, "<g{svg_effect_attr}>");
                 let _ = writeln!(
                     html,
                     "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
                      stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
                      {non_scaling}{dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
-                     </svg>"
+                     </g></svg>"
                 );
             }
         }
@@ -2344,6 +2388,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 html.push_str(&defs_buf);
                 html.push_str("</defs>");
             }
+            let _ = write!(html, "<g{svg_effect_attr}>");
             let default_fill = if let Some(ref grad_ref) = gradient_fill_ref {
                 grad_ref.clone()
             } else {
@@ -4882,6 +4927,63 @@ mod tests {
 
         assert!(html.contains("outline: 1.0pt none"));
         assert!(html.contains("box-shadow:"));
+    }
+
+    #[test]
+    fn render_shape_resolved_routes_svg_effects_to_filter_instead_of_box_shadow() {
+        let (mut pres, collector) = test_ctx(true);
+        pres.themes[0]
+            .fmt_scheme
+            .effect_style_lst
+            .push(EffectStyle {
+                outer_shadow: Some(OuterShadow {
+                    blur_radius: 2.0,
+                    distance: 3.0,
+                    direction: 45.0,
+                    color: Color::theme("accent1"),
+                    alpha: 1.0,
+                }),
+                glow: Some(GlowEffect {
+                    radius: 1.5,
+                    color: Color::rgb("ABCDEF"),
+                    alpha: 1.0,
+                }),
+            });
+        let clr_map = ClrMap::default();
+
+        let shape = Shape {
+            name: "arrow-with-effect-ref".to_string(),
+            shape_type: ShapeType::Custom("rightArrow".to_string()),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            fill: Fill::Solid(SolidFill {
+                color: Color::rgb("336699"),
+            }),
+            style_ref: Some(ShapeStyleRef {
+                effect_ref: Some(StyleRef {
+                    idx: 1,
+                    color: Color::none(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: Some(&clr_map),
+            embed_images: true,
+            collector: &collector,
+        };
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("filter: drop-shadow("));
+        assert!(!html.contains("box-shadow:"));
     }
 
     #[test]

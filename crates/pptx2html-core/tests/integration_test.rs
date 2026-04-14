@@ -6681,6 +6681,44 @@ fn test_shape_no_effects_no_box_shadow() {
 }
 
 #[test]
+fn test_svg_shape_effects_use_svg_filter_not_box_shadow() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="3000000" cy="1500000"/></a:xfrm>
+        <a:prstGeom prst="rightArrow"/>
+        <a:solidFill><a:srgbClr val="336699"/></a:solidFill>
+        <a:effectLst>
+          <a:outerShdw blurRad="50800" dist="38100" dir="2700000">
+            <a:srgbClr val="000000"/>
+          </a:outerShdw>
+          <a:glow rad="63500">
+            <a:srgbClr val="FFC000"/>
+          </a:glow>
+        </a:effectLst>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    let shape_div_start = html
+        .find("<div class=\"shape\"")
+        .expect("shape div should exist");
+    let shape_section =
+        &html[shape_div_start..shape_div_start + 800.min(html.len() - shape_div_start)];
+
+    assert!(
+        !shape_section.contains("box-shadow"),
+        "SVG shapes should not use rectangular box-shadow on the outer div: {shape_section}"
+    );
+    assert!(
+        shape_section.contains("filter: drop-shadow("),
+        "SVG shapes should render effects through SVG filters: {shape_section}"
+    );
+}
+
+#[test]
 fn test_shape_shadow_with_scheme_color() {
     let slide = r#"
     <p:sp>
