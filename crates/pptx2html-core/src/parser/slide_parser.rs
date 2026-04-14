@@ -1248,179 +1248,128 @@ pub fn parse_slide<R: Read + Seek>(
                     // Color element (Empty — simple color without modifiers)
                     "srgbClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::rgb(val);
-                            if in_shape_outer_shdw || in_shape_glow {
-                                shape_effect_color = Some(color);
-                            } else if in_highlight {
-                                if in_cell_r_pr {
-                                    if let Some(rb) = cell_run.as_mut() {
-                                        rb.highlight = Some(color);
-                                    }
-                                } else if in_r_pr && let Some(rb) = current_run.as_mut() {
-                                    rb.highlight = Some(color);
-                                }
-                            } else if in_outer_shdw {
-                                current_color = Some(color);
-                            } else if in_cell_bu_clr {
-                                if let Some(pb) = cell_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_shape_def_rpr {
-                                if let Some(rd) = current_shape_run_defaults.as_mut() {
-                                    rd.color = Some(color);
-                                }
-                            } else if in_tc_pr {
-                                assign_tc_color(color, &tc_border_side, &mut current_cell);
-                            } else if in_cell_r_pr {
-                                if let Some(rb) = cell_run.as_mut() {
-                                    rb.color = color;
-                                }
-                            } else if in_bu_clr {
-                                if let Some(pb) = current_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_p_style && p_style_current_ref.is_some() {
-                                assign_style_ref_color(
-                                    p_style_current_ref.as_deref().unwrap_or(""),
-                                    p_style_idx.as_deref().unwrap_or("0"),
-                                    color,
-                                    &mut p_style_builder,
-                                );
-                            } else if in_bg_pr && !in_bg_blip_fill {
-                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
-                                    bg_grad_stops.push(GradientStop {
-                                        position: bg_gs_pos,
-                                        color,
-                                    });
-                                } else {
-                                    bg_solid_color = Some(color);
-                                }
-                            } else {
-                                assign_color(
-                                    color,
-                                    &depth,
-                                    in_sp_pr,
-                                    in_ln,
-                                    in_r_pr,
-                                    in_grad_fill,
-                                    current_gs_pos,
-                                    &mut current_shape,
-                                    &mut current_run,
-                                    &mut grad_stops,
-                                );
-                            }
+                            dispatch_parsed_color(
+                                Color::rgb(val),
+                                &depth,
+                                in_sp_pr,
+                                in_ln,
+                                in_r_pr,
+                                in_grad_fill,
+                                current_gs_pos,
+                                in_shape_outer_shdw || in_shape_glow,
+                                &mut shape_effect_color,
+                                in_highlight,
+                                in_cell_r_pr,
+                                &mut cell_run,
+                                &mut current_run,
+                                in_outer_shdw,
+                                &mut current_color,
+                                in_cell_bu_clr,
+                                &mut cell_paragraph,
+                                in_shape_def_rpr,
+                                &mut current_shape_run_defaults,
+                                in_tc_pr,
+                                &tc_border_side,
+                                &mut current_cell,
+                                in_bu_clr,
+                                &mut current_paragraph,
+                                in_p_style,
+                                p_style_current_ref.as_deref(),
+                                p_style_idx.as_deref(),
+                                &mut p_style_builder,
+                                in_bg_pr,
+                                in_bg_blip_fill,
+                                in_bg_grad_fill,
+                                bg_gs_pos,
+                                &mut bg_grad_stops,
+                                &mut bg_solid_color,
+                                &mut current_shape,
+                                &mut grad_stops,
+                            );
                         }
                     }
                     "schemeClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::theme(val);
-                            if in_shape_outer_shdw || in_shape_glow {
-                                shape_effect_color = Some(color);
-                            } else if in_highlight {
-                                if in_cell_r_pr {
-                                    if let Some(rb) = cell_run.as_mut() {
-                                        rb.highlight = Some(color);
-                                    }
-                                } else if in_r_pr && let Some(rb) = current_run.as_mut() {
-                                    rb.highlight = Some(color);
-                                }
-                            } else if in_outer_shdw {
-                                current_color = Some(color);
-                            } else if in_cell_bu_clr {
-                                if let Some(pb) = cell_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_tc_pr {
-                                assign_tc_color(color, &tc_border_side, &mut current_cell);
-                            } else if in_cell_r_pr {
-                                if let Some(rb) = cell_run.as_mut() {
-                                    rb.color = color;
-                                }
-                            } else if in_bu_clr {
-                                if let Some(pb) = current_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_p_style && p_style_current_ref.is_some() {
-                                assign_style_ref_color(
-                                    p_style_current_ref.as_deref().unwrap_or(""),
-                                    p_style_idx.as_deref().unwrap_or("0"),
-                                    color,
-                                    &mut p_style_builder,
-                                );
-                            } else if in_bg_pr && !in_bg_blip_fill {
-                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
-                                    bg_grad_stops.push(GradientStop {
-                                        position: bg_gs_pos,
-                                        color,
-                                    });
-                                } else {
-                                    bg_solid_color = Some(color);
-                                }
-                            } else {
-                                assign_color(
-                                    color,
-                                    &depth,
-                                    in_sp_pr,
-                                    in_ln,
-                                    in_r_pr,
-                                    in_grad_fill,
-                                    current_gs_pos,
-                                    &mut current_shape,
-                                    &mut current_run,
-                                    &mut grad_stops,
-                                );
-                            }
+                            dispatch_parsed_color(
+                                Color::theme(val),
+                                &depth,
+                                in_sp_pr,
+                                in_ln,
+                                in_r_pr,
+                                in_grad_fill,
+                                current_gs_pos,
+                                in_shape_outer_shdw || in_shape_glow,
+                                &mut shape_effect_color,
+                                in_highlight,
+                                in_cell_r_pr,
+                                &mut cell_run,
+                                &mut current_run,
+                                in_outer_shdw,
+                                &mut current_color,
+                                in_cell_bu_clr,
+                                &mut cell_paragraph,
+                                in_shape_def_rpr,
+                                &mut current_shape_run_defaults,
+                                in_tc_pr,
+                                &tc_border_side,
+                                &mut current_cell,
+                                in_bu_clr,
+                                &mut current_paragraph,
+                                in_p_style,
+                                p_style_current_ref.as_deref(),
+                                p_style_idx.as_deref(),
+                                &mut p_style_builder,
+                                in_bg_pr,
+                                in_bg_blip_fill,
+                                in_bg_grad_fill,
+                                bg_gs_pos,
+                                &mut bg_grad_stops,
+                                &mut bg_solid_color,
+                                &mut current_shape,
+                                &mut grad_stops,
+                            );
                         }
                     }
                     "prstClr" => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            let color = Color::preset(val);
-                            if in_shape_outer_shdw || in_shape_glow {
-                                shape_effect_color = Some(color);
-                            } else if in_cell_bu_clr {
-                                if let Some(pb) = cell_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_tc_pr {
-                                assign_tc_color(color, &tc_border_side, &mut current_cell);
-                            } else if in_cell_r_pr {
-                                if let Some(rb) = cell_run.as_mut() {
-                                    rb.color = color;
-                                }
-                            } else if in_bu_clr {
-                                if let Some(pb) = current_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_p_style && p_style_current_ref.is_some() {
-                                assign_style_ref_color(
-                                    p_style_current_ref.as_deref().unwrap_or(""),
-                                    p_style_idx.as_deref().unwrap_or("0"),
-                                    color,
-                                    &mut p_style_builder,
-                                );
-                            } else if in_bg_pr && !in_bg_blip_fill {
-                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
-                                    bg_grad_stops.push(GradientStop {
-                                        position: bg_gs_pos,
-                                        color,
-                                    });
-                                } else {
-                                    bg_solid_color = Some(color);
-                                }
-                            } else {
-                                assign_color(
-                                    color,
-                                    &depth,
-                                    in_sp_pr,
-                                    in_ln,
-                                    in_r_pr,
-                                    in_grad_fill,
-                                    current_gs_pos,
-                                    &mut current_shape,
-                                    &mut current_run,
-                                    &mut grad_stops,
-                                );
-                            }
+                            dispatch_parsed_color(
+                                Color::preset(val),
+                                &depth,
+                                in_sp_pr,
+                                in_ln,
+                                in_r_pr,
+                                in_grad_fill,
+                                current_gs_pos,
+                                in_shape_outer_shdw || in_shape_glow,
+                                &mut shape_effect_color,
+                                in_highlight,
+                                in_cell_r_pr,
+                                &mut cell_run,
+                                &mut current_run,
+                                in_outer_shdw,
+                                &mut current_color,
+                                in_cell_bu_clr,
+                                &mut cell_paragraph,
+                                in_shape_def_rpr,
+                                &mut current_shape_run_defaults,
+                                in_tc_pr,
+                                &tc_border_side,
+                                &mut current_cell,
+                                in_bu_clr,
+                                &mut current_paragraph,
+                                in_p_style,
+                                p_style_current_ref.as_deref(),
+                                p_style_idx.as_deref(),
+                                &mut p_style_builder,
+                                in_bg_pr,
+                                in_bg_blip_fill,
+                                in_bg_grad_fill,
+                                bg_gs_pos,
+                                &mut bg_grad_stops,
+                                &mut bg_solid_color,
+                                &mut current_shape,
+                                &mut grad_stops,
+                            );
                         }
                     }
                     "sysClr" => {
@@ -1432,52 +1381,44 @@ pub fn parse_slide<R: Read + Seek>(
                             Color::none()
                         };
                         if !color.is_none() {
-                            if in_shape_outer_shdw || in_shape_glow {
-                                shape_effect_color = Some(color);
-                            } else if in_cell_bu_clr {
-                                if let Some(pb) = cell_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_tc_pr {
-                                assign_tc_color(color, &tc_border_side, &mut current_cell);
-                            } else if in_cell_r_pr {
-                                if let Some(rb) = cell_run.as_mut() {
-                                    rb.color = color;
-                                }
-                            } else if in_bu_clr {
-                                if let Some(pb) = current_paragraph.as_mut() {
-                                    pb.bu_color = Some(color);
-                                }
-                            } else if in_p_style && p_style_current_ref.is_some() {
-                                assign_style_ref_color(
-                                    p_style_current_ref.as_deref().unwrap_or(""),
-                                    p_style_idx.as_deref().unwrap_or("0"),
-                                    color,
-                                    &mut p_style_builder,
-                                );
-                            } else if in_bg_pr && !in_bg_blip_fill {
-                                if in_bg_grad_fill && depth_contains(&depth, "gs") {
-                                    bg_grad_stops.push(GradientStop {
-                                        position: bg_gs_pos,
-                                        color,
-                                    });
-                                } else {
-                                    bg_solid_color = Some(color);
-                                }
-                            } else {
-                                assign_color(
-                                    color,
-                                    &depth,
-                                    in_sp_pr,
-                                    in_ln,
-                                    in_r_pr,
-                                    in_grad_fill,
-                                    current_gs_pos,
-                                    &mut current_shape,
-                                    &mut current_run,
-                                    &mut grad_stops,
-                                );
-                            }
+                            dispatch_parsed_color(
+                                color,
+                                &depth,
+                                in_sp_pr,
+                                in_ln,
+                                in_r_pr,
+                                in_grad_fill,
+                                current_gs_pos,
+                                in_shape_outer_shdw || in_shape_glow,
+                                &mut shape_effect_color,
+                                in_highlight,
+                                in_cell_r_pr,
+                                &mut cell_run,
+                                &mut current_run,
+                                in_outer_shdw,
+                                &mut current_color,
+                                in_cell_bu_clr,
+                                &mut cell_paragraph,
+                                in_shape_def_rpr,
+                                &mut current_shape_run_defaults,
+                                in_tc_pr,
+                                &tc_border_side,
+                                &mut current_cell,
+                                in_bu_clr,
+                                &mut current_paragraph,
+                                in_p_style,
+                                p_style_current_ref.as_deref(),
+                                p_style_idx.as_deref(),
+                                &mut p_style_builder,
+                                in_bg_pr,
+                                in_bg_blip_fill,
+                                in_bg_grad_fill,
+                                bg_gs_pos,
+                                &mut bg_grad_stops,
+                                &mut bg_solid_color,
+                                &mut current_shape,
+                                &mut grad_stops,
+                            );
                         }
                     }
                     // Color modifiers (Empty tags)
@@ -2932,6 +2873,125 @@ fn apply_paragraph_def_rpr(pb: &mut ParagraphBuilder, e: &quick_xml::events::Byt
     }
     if let Some(i) = xml_utils::attr_str(e, "i") {
         pb.def_rpr_italic = Some(i == "1" || i == "true");
+    }
+}
+
+fn assign_background_color_target(
+    color: Color,
+    depth: &[String],
+    in_bg_grad_fill: bool,
+    bg_gs_pos: f64,
+    bg_grad_stops: &mut Vec<GradientStop>,
+    bg_solid_color: &mut Option<Color>,
+) {
+    if in_bg_grad_fill && depth_contains(depth, "gs") {
+        bg_grad_stops.push(GradientStop {
+            position: bg_gs_pos,
+            color,
+        });
+    } else {
+        *bg_solid_color = Some(color);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn dispatch_parsed_color(
+    color: Color,
+    depth: &[String],
+    in_sp_pr: bool,
+    in_ln: bool,
+    in_r_pr: bool,
+    in_grad_fill: bool,
+    current_gs_pos: f64,
+    in_shape_effect: bool,
+    shape_effect_color: &mut Option<Color>,
+    in_highlight: bool,
+    in_cell_r_pr: bool,
+    cell_run: &mut Option<RunBuilder>,
+    current_run: &mut Option<RunBuilder>,
+    in_outer_shdw: bool,
+    current_color: &mut Option<Color>,
+    in_cell_bu_clr: bool,
+    cell_paragraph: &mut Option<ParagraphBuilder>,
+    in_shape_def_rpr: bool,
+    current_shape_run_defaults: &mut Option<RunDefaults>,
+    in_tc_pr: bool,
+    tc_border_side: &Option<String>,
+    current_cell: &mut Option<TableCellBuilder>,
+    in_bu_clr: bool,
+    current_paragraph: &mut Option<ParagraphBuilder>,
+    in_p_style: bool,
+    p_style_current_ref: Option<&str>,
+    p_style_idx: Option<&str>,
+    p_style_builder: &mut Option<ShapeStyleRef>,
+    in_bg_pr: bool,
+    in_bg_blip_fill: bool,
+    in_bg_grad_fill: bool,
+    bg_gs_pos: f64,
+    bg_grad_stops: &mut Vec<GradientStop>,
+    bg_solid_color: &mut Option<Color>,
+    current_shape: &mut Option<ShapeBuilder>,
+    grad_stops: &mut Vec<GradientStop>,
+) {
+    if in_shape_effect {
+        *shape_effect_color = Some(color);
+    } else if in_highlight {
+        if in_cell_r_pr {
+            if let Some(run) = cell_run.as_mut() {
+                run.highlight = Some(color);
+            }
+        } else if in_r_pr && let Some(run) = current_run.as_mut() {
+            run.highlight = Some(color);
+        }
+    } else if in_outer_shdw {
+        *current_color = Some(color);
+    } else if in_cell_bu_clr {
+        if let Some(paragraph) = cell_paragraph.as_mut() {
+            paragraph.bu_color = Some(color);
+        }
+    } else if in_shape_def_rpr {
+        if let Some(defaults) = current_shape_run_defaults.as_mut() {
+            defaults.color = Some(color);
+        }
+    } else if in_tc_pr {
+        assign_tc_color(color, tc_border_side, current_cell);
+    } else if in_cell_r_pr {
+        if let Some(run) = cell_run.as_mut() {
+            run.color = color;
+        }
+    } else if in_bu_clr {
+        if let Some(paragraph) = current_paragraph.as_mut() {
+            paragraph.bu_color = Some(color);
+        }
+    } else if in_p_style && p_style_current_ref.is_some() {
+        assign_style_ref_color(
+            p_style_current_ref.unwrap_or(""),
+            p_style_idx.unwrap_or("0"),
+            color,
+            p_style_builder,
+        );
+    } else if in_bg_pr && !in_bg_blip_fill {
+        assign_background_color_target(
+            color,
+            depth,
+            in_bg_grad_fill,
+            bg_gs_pos,
+            bg_grad_stops,
+            bg_solid_color,
+        );
+    } else {
+        assign_color(
+            color,
+            depth,
+            in_sp_pr,
+            in_ln,
+            in_r_pr,
+            in_grad_fill,
+            current_gs_pos,
+            current_shape,
+            current_run,
+            grad_stops,
+        );
     }
 }
 
