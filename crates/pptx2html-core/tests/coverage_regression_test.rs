@@ -7740,3 +7740,191 @@ fn parse_slide_directly_covers_start_tag_fallback_and_missing_attr_branches() {
         assert_eq!(crop.bottom, expected_bottom.unwrap_or(0.0));
     }
 }
+
+#[test]
+fn parse_slide_directly_covers_style_ref_effect_defaults_and_custom_geom_handles() {
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:sp>
+        <p:nvSpPr>
+          <p:cNvPr id="20" name="Styled Fill Shape"></p:cNvPr>
+          <p:cNvSpPr></p:cNvSpPr>
+          <p:nvPr><p:ph type="body" idx="1"/></p:nvPr>
+        </p:nvSpPr>
+        <p:style>
+          <a:lnRef idx="2"/>
+          <a:fillRef idx="3"/>
+          <a:effectRef idx="4"/>
+          <a:fontRef idx="minor"/>
+        </p:style>
+        <p:spPr>
+          <a:xfrm><a:off x="12700" y="25400"></a:off><a:ext cx="914400" cy="457200"></a:ext></a:xfrm>
+          <a:prstGeom prst="rect">
+            <a:avLst><a:gd name="adj1" fmla="val 50000"/></a:avLst>
+          </a:prstGeom>
+          <a:blipFill><a:blip r:embed="rIdFill"></a:blip></a:blipFill>
+        </p:spPr>
+        <p:txBody><a:bodyPr></a:bodyPr><a:p><a:r><a:t>Styled fill</a:t></a:r></a:p></p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="21" name="Handle Shape"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="914400" cy="457200"></a:ext></a:xfrm>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000"><a:srgbClr val="112233"><a:tint val="20000"/></a:srgbClr></a:outerShdw>
+            <a:glow rad="6350"><a:schemeClr val="accent4"><a:shade val="50000"/></a:schemeClr></a:glow>
+          </a:effectLst>
+          <a:custGeom>
+            <a:avLst><a:gd name="adj2" fmla="val 40000"/></a:avLst>
+            <a:ahLst>
+              <a:ahXY gdRefX="adj2" gdRefY="adj2" minX="0" maxX="100000" minY="0" maxY="100000">
+                <a:pos x="50000" y="60000"/>
+              </a:ahXY>
+              <a:ahPolar gdRefR="adj2" gdRefAng="adj2" minR="0" maxR="100000" minAng="0" maxAng="21600000">
+                <a:pos x="70000" y="80000"/>
+              </a:ahPolar>
+            </a:ahLst>
+            <a:cxnLst><a:cxn ang="5400000"><a:pos x="100000" y="200000"/></a:cxn></a:cxnLst>
+            <a:rect l="0" t="0" r="100000" b="100000"></a:rect>
+            <a:pathLst>
+              <a:path w="100000" h="100000" fill="darkenLess">
+                <a:moveTo><a:pt x="0" y="0"/></a:moveTo>
+                <a:quadBezTo><a:pt x="25000" y="25000"/><a:pt x="50000" y="50000"/></a:quadBezTo>
+                <a:cubicBezTo><a:pt x="0" y="75000"/><a:pt x="25000" y="100000"/><a:pt x="50000" y="100000"/></a:cubicBezTo>
+              </a:path>
+            </a:pathLst>
+          </a:custGeom>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="22" name="Effect Fallback Shape"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="228600"></a:ext></a:xfrm>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000"></a:outerShdw>
+            <a:glow rad="6350"></a:glow>
+          </a:effectLst>
+          <a:prstGeom prst="rect"></a:prstGeom>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .with_slide_rels(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdFill" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/fill.png"/>
+</Relationships>"#,
+        )
+        .with_extra_file("ppt/media/fill.png", b"fill-data")
+        .build();
+
+    let slide = &parse_pptx(&pptx).slides[0];
+
+    let styled_fill_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Styled Fill Shape")
+        .expect("styled fill shape");
+    assert_eq!(
+        styled_fill_shape.placeholder.as_ref().and_then(|ph| ph.idx),
+        Some(1)
+    );
+    assert!(matches!(
+        styled_fill_shape
+            .placeholder
+            .as_ref()
+            .and_then(|ph| ph.ph_type.as_ref())
+            .map(std::mem::discriminant::<PlaceholderType>),
+        Some(kind) if kind == std::mem::discriminant(&PlaceholderType::Body)
+    ));
+    assert!(matches!(
+        styled_fill_shape
+            .style_ref
+            .as_ref()
+            .and_then(|style| style.font_ref.as_ref())
+            .map(|style| style.idx.as_str()),
+        Some("minor")
+    ));
+    assert!(matches!(
+        styled_fill_shape.adjust_values.as_ref().and_then(|map| map.get("adj1")),
+        Some(value) if (*value - 50000.0).abs() < 1e-6
+    ));
+    assert!(matches!(
+        &styled_fill_shape.fill,
+        Fill::Image(fill)
+            if fill.rel_id == "rIdFill"
+                && fill.content_type == "image/png"
+                && fill.data.as_slice() == b"fill-data"
+    ));
+
+    let handle_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Handle Shape")
+        .expect("handle shape");
+    let custom_geom = match &handle_shape.shape_type {
+        ShapeType::CustomGeom(geom) => geom,
+        other => panic!("expected custom geometry, got {other:?}"),
+    };
+    assert_eq!(custom_geom.adjust_handles.len(), 2);
+    assert_eq!(custom_geom.connection_sites.len(), 1);
+    assert!(matches!(custom_geom.paths[0].fill, PathFill::DarkenLess));
+    assert!(custom_geom.paths[0].commands.iter().any(|command| matches!(
+        command,
+        pptx2html_core::model::PathCommand::QuadBezTo { .. }
+    )));
+    assert!(custom_geom.paths[0].commands.iter().any(|command| matches!(
+        command,
+        pptx2html_core::model::PathCommand::CubicBezTo { .. }
+    )));
+    assert_eq!(
+        handle_shape
+            .effects
+            .outer_shadow
+            .as_ref()
+            .map(|shadow| shadow.color.modifiers.len()),
+        Some(1)
+    );
+    assert_eq!(
+        handle_shape
+            .effects
+            .glow
+            .as_ref()
+            .map(|glow| glow.color.modifiers.len()),
+        Some(1)
+    );
+
+    let fallback_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Effect Fallback Shape")
+        .expect("effect fallback shape");
+    assert_eq!(
+        fallback_shape
+            .effects
+            .outer_shadow
+            .as_ref()
+            .and_then(|shadow| shadow.color.to_css())
+            .as_deref(),
+        Some("#000000")
+    );
+    assert_eq!(
+        fallback_shape
+            .effects
+            .glow
+            .as_ref()
+            .and_then(|glow| glow.color.to_css())
+            .as_deref(),
+        Some("#FFC000")
+    );
+}

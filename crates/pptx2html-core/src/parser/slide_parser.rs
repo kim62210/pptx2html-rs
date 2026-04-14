@@ -414,9 +414,12 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph-level defRPr inside table cell paragraph
                     "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
                         in_para_def_rpr = true;
-                        if let Some(pb) = cell_paragraph.as_mut() {
-                            apply_paragraph_def_rpr(pb, e);
-                        }
+                        apply_paragraph_def_rpr(
+                            cell_paragraph
+                                .as_mut()
+                                .expect("table paragraph builder for start defRPr"),
+                            e,
+                        );
                     }
                     // Spacing containers inside table cell
                     "lnSpc" if in_tc && cell_paragraph.is_some() => {
@@ -450,13 +453,12 @@ pub fn parse_slide<R: Read + Seek>(
                     // Shape start
                     "sp" | "pic" | "cxnSp" => {
                         current_shape = Some(ShapeBuilder::default());
-                        if let Some(sb) = &mut current_shape {
-                            if local == "pic" {
-                                sb.is_picture = true;
-                            }
-                            if local == "cxnSp" {
-                                sb.is_connector = true;
-                            }
+                        let sb = current_shape.as_mut().expect("shape builder initialized");
+                        if local == "pic" {
+                            sb.is_picture = true;
+                        }
+                        if local == "cxnSp" {
+                            sb.is_connector = true;
                         }
                     }
                     // Non-visual properties (contains placeholder)
@@ -469,42 +471,43 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // Transform (rotation, flip)
                     "xfrm" if in_sp_pr => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            apply_shape_transform(sb, e);
-                        }
+                        apply_shape_transform(
+                            current_shape.as_mut().expect("shape builder in spPr"),
+                            e,
+                        );
                     }
                     // Line/border
                     "ln" if in_sp_pr => {
                         in_ln = true;
-                        if let Some(sb) = &mut current_shape {
-                            if let Some(w) = xml_utils::attr_str(e, "w") {
-                                sb.border_width = Emu::parse_emu(&w).to_pt();
-                            } else {
-                                sb.border_width = 0.0;
-                            }
-                            sb.border_cap = match xml_utils::attr_str(e, "cap").as_deref() {
-                                Some("rnd") => LineCap::Round,
-                                Some("flat") => LineCap::Flat,
-                                _ => LineCap::Square,
-                            };
-                            sb.border_compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
-                                Some("dbl") => CompoundLine::Double,
-                                Some("thickThin") => CompoundLine::ThickThin,
-                                Some("thinThick") => CompoundLine::ThinThick,
-                                Some("tri") => CompoundLine::Triple,
-                                _ => CompoundLine::Single,
-                            };
-                            sb.border_alignment = match xml_utils::attr_str(e, "algn").as_deref() {
-                                Some("in") => LineAlignment::Inset,
-                                _ => LineAlignment::Center,
-                            };
+                        let sb = current_shape.as_mut().expect("shape builder for line");
+                        if let Some(w) = xml_utils::attr_str(e, "w") {
+                            sb.border_width = Emu::parse_emu(&w).to_pt();
+                        } else {
+                            sb.border_width = 0.0;
                         }
+                        sb.border_cap = match xml_utils::attr_str(e, "cap").as_deref() {
+                            Some("rnd") => LineCap::Round,
+                            Some("flat") => LineCap::Flat,
+                            _ => LineCap::Square,
+                        };
+                        sb.border_compound = match xml_utils::attr_str(e, "cmpd").as_deref() {
+                            Some("dbl") => CompoundLine::Double,
+                            Some("thickThin") => CompoundLine::ThickThin,
+                            Some("thinThick") => CompoundLine::ThinThick,
+                            Some("tri") => CompoundLine::Triple,
+                            _ => CompoundLine::Single,
+                        };
+                        sb.border_alignment = match xml_utils::attr_str(e, "algn").as_deref() {
+                            Some("in") => LineAlignment::Inset,
+                            _ => LineAlignment::Center,
+                        };
                     }
                     // Text body (non-table)
                     "txBody" if !in_tc => {
-                        if let Some(sb) = &mut current_shape {
-                            sb.has_text_body = true;
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for text body")
+                            .has_text_body = true;
                     }
                     // bodyPr — text area properties
                     "bodyPr" if current_shape.is_some() && !in_tc => {
@@ -549,20 +552,23 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // normAutofit — shrink text to fit (child of bodyPr)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for normAutofit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     "noAutofit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for noAutofit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     // spAutoFit — resize shape to fit text (child of bodyPr)
                     "spAutoFit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for spAutoFit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     // Paragraph (non-table)
                     "p" if current_shape.is_some() && !in_tc => {
@@ -575,9 +581,12 @@ pub fn parse_slide<R: Read + Seek>(
                     // Paragraph-level defRPr (default run properties inside pPr)
                     "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
                         in_para_def_rpr = true;
-                        if let Some(pb) = current_paragraph.as_mut() {
-                            apply_paragraph_def_rpr(pb, e);
-                        }
+                        apply_paragraph_def_rpr(
+                            current_paragraph
+                                .as_mut()
+                                .expect("paragraph builder for defRPr"),
+                            e,
+                        );
                     }
                     // Paragraph spacing containers (non-table)
                     "lnSpc" if current_paragraph.is_some() && !in_tc => {
@@ -1000,9 +1009,12 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // Paragraph-level defRPr inside table cell (Empty variant)
                     "defRPr" if in_tc && cell_paragraph.is_some() && cell_run.is_none() => {
-                        if let Some(pb) = cell_paragraph.as_mut() {
-                            apply_paragraph_def_rpr(pb, e);
-                        }
+                        apply_paragraph_def_rpr(
+                            cell_paragraph
+                                .as_mut()
+                                .expect("table paragraph builder for defRPr"),
+                            e,
+                        );
                     }
                     // Run properties inside table cell (Empty variant)
                     "rPr" if in_tc && cell_run.is_some() => {
@@ -1084,9 +1096,10 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // Transform (Empty variant, e.g. connector with no children)
                     "xfrm" if in_sp_pr => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            apply_shape_transform(sb, e);
-                        }
+                        apply_shape_transform(
+                            current_shape.as_mut().expect("shape builder in empty xfrm"),
+                            e,
+                        );
                     }
                     // Preset geometry
                     "prstGeom" => {
@@ -1102,20 +1115,23 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // normAutofit (Empty variant — self-closing tag)
                     "normAutofit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for empty normAutofit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     "noAutofit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for empty noAutofit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     // spAutoFit (Empty variant)
                     "spAutoFit" if current_shape.is_some() && !in_tc => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for empty spAutoFit")
+                            .text_auto_fit = parse_shape_auto_fit(local.as_str(), e);
                     }
                     // Paragraph properties (Empty variant, non-table)
                     "pPr" if current_paragraph.is_some() && !in_tc => {
@@ -1123,9 +1139,12 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // Paragraph-level defRPr (Empty variant — self-closing, no children)
                     "defRPr" if current_paragraph.is_some() && !in_tc && current_run.is_none() => {
-                        if let Some(pb) = current_paragraph.as_mut() {
-                            apply_paragraph_def_rpr(pb, e);
-                        }
+                        apply_paragraph_def_rpr(
+                            current_paragraph
+                                .as_mut()
+                                .expect("paragraph builder for empty defRPr"),
+                            e,
+                        );
                     }
                     // Run properties (Empty variant, non-table)
                     "rPr" if current_run.is_some() && !in_tc => {
@@ -1437,9 +1456,10 @@ pub fn parse_slide<R: Read + Seek>(
                     }
                     // Placeholder
                     "ph" if in_nv_pr && current_shape.is_some() => {
-                        if let Some(sb) = current_shape.as_mut() {
-                            sb.placeholder = Some(super::master_parser::parse_placeholder_attrs(e));
-                        }
+                        current_shape
+                            .as_mut()
+                            .expect("shape builder for placeholder")
+                            .placeholder = Some(super::master_parser::parse_placeholder_attrs(e));
                     }
                     // Image reference (Empty variant)
                     "blip" => {
@@ -4202,15 +4222,21 @@ mod tests {
             para.as_ref().and_then(|pb| pb.def_rpr_font_cs.as_deref()),
             Some("Noto Sans Arabic")
         );
-        if let Some(run) = current_run.as_mut() {
-            assign_typeface_to_run(run, "unknown", "Ignored".to_string());
-        }
-        if let Some(defaults) = shape_defaults.as_mut() {
-            assign_typeface_to_defaults(defaults, "unknown", "Ignored".to_string());
-        }
-        if let Some(paragraph) = para.as_mut() {
-            assign_typeface_to_paragraph(paragraph, "unknown", "Ignored".to_string());
-        }
+        assign_typeface_to_run(
+            current_run.as_mut().expect("current run"),
+            "unknown",
+            "Ignored".to_string(),
+        );
+        assign_typeface_to_defaults(
+            shape_defaults.as_mut().expect("shape defaults"),
+            "unknown",
+            "Ignored".to_string(),
+        );
+        assign_typeface_to_paragraph(
+            para.as_mut().expect("paragraph defaults"),
+            "unknown",
+            "Ignored".to_string(),
+        );
         assign_typeface(
             "latin",
             &bytes_start("a:latin", &[]),
@@ -4773,11 +4799,10 @@ mod tests {
             ..Default::default()
         }
         .build();
-        if let ShapeType::Custom(name) = &connector_shape.shape_type {
-            assert_eq!(name, "line");
-        } else {
-            panic!("expected line custom shape");
-        }
+        assert!(matches!(
+            connector_shape.shape_type,
+            ShapeType::Custom(ref name) if name == "line"
+        ));
 
         let unsupported_shape = ShapeBuilder {
             unsupported_content: Some("SmartArt".to_string()),
@@ -4823,11 +4848,10 @@ mod tests {
         let cell = cell.expect("cell").build();
         assert_eq!(cell.border_left.color.to_css().as_deref(), Some("#112233"));
         assert_eq!(cell.border_top.color.to_css().as_deref(), Some("#445566"));
-        let fill = match &cell.fill {
-            Fill::Solid(fill) => fill,
-            other => panic!("expected solid fill, got {other:?}"),
-        };
-        assert_eq!(fill.color.to_css().as_deref(), Some("#778899"));
+        assert!(matches!(
+            &cell.fill,
+            Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#778899")
+        ));
 
         let table = TableBuilder {
             rows: vec![
@@ -4959,19 +4983,13 @@ mod tests {
                 .map(|effect_ref| effect_ref.idx),
             Some(1)
         );
-        let fill = match &shape.fill {
-            Fill::Gradient(fill) => fill,
-            other => panic!("expected gradient fill, got {other:?}"),
-        };
-        assert_eq!(fill.stops.len(), 2);
-        assert_eq!(
-            fill.stops[0].color.kind,
-            ColorKind::Preset("orange".to_string())
-        );
-        assert_eq!(
-            fill.stops[1].color.kind,
-            ColorKind::Rgb("112233".to_string())
-        );
+        assert!(matches!(
+            &shape.fill,
+            Fill::Gradient(fill)
+                if fill.stops.len() == 2
+                    && fill.stops[0].color.kind == ColorKind::Preset("orange".to_string())
+                    && fill.stops[1].color.kind == ColorKind::Rgb("112233".to_string())
+        ));
 
         let text_body = shape.text_body.as_ref().expect("text body");
         assert!(!text_body.word_wrap);
@@ -4987,21 +5005,18 @@ mod tests {
                 .map(std::mem::discriminant::<Alignment>),
             Some(std::mem::discriminant(&Alignment::Right))
         );
-        if let Some(SpacingValue::Percent(v)) = lvl1.line_spacing {
-            assert!((v - 0.8).abs() < 1e-6);
-        } else {
-            panic!("expected percent line spacing");
-        }
-        if let Some(SpacingValue::Points(v)) = lvl1.space_before {
-            assert!((v - 12.0).abs() < 1e-6);
-        } else {
-            panic!("expected points space before");
-        }
-        if let Some(SpacingValue::Percent(v)) = lvl1.space_after {
-            assert!((v - 1.1).abs() < 1e-6);
-        } else {
-            panic!("expected percent space after");
-        }
+        assert!(matches!(
+            lvl1.line_spacing,
+            Some(SpacingValue::Percent(v)) if (v - 0.8).abs() < 1e-6
+        ));
+        assert!(matches!(
+            lvl1.space_before,
+            Some(SpacingValue::Points(v)) if (v - 12.0).abs() < 1e-6
+        ));
+        assert!(matches!(
+            lvl1.space_after,
+            Some(SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6
+        ));
 
         let paragraph = &text_body.paragraphs[0];
         assert_eq!(
@@ -5127,16 +5142,15 @@ mod tests {
         let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide should parse");
         assert_eq!(slide.shapes.len(), 2);
 
-        let ole = match &slide.shapes[0].shape_type {
-            ShapeType::Unsupported(data) => data,
-            other => panic!("expected unsupported OLE shape, got {other:?}"),
-        };
-        assert_eq!(ole.label, "OLE Object");
-        assert!(
-            ole.raw_xml
-                .as_deref()
-                .is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
-        );
+        assert!(matches!(
+            &slide.shapes[0].shape_type,
+            ShapeType::Unsupported(data)
+                if data.label == "OLE Object"
+                    && data
+                        .raw_xml
+                        .as_deref()
+                        .is_some_and(|raw| raw.contains("progId=\"Excel.Sheet.12\""))
+        ));
 
         let table = slide
             .shapes
@@ -5668,15 +5682,13 @@ mod tests {
 
         let slide = parse_slide(slide_xml, &rels, &mut archive).expect("slide parses");
 
-        let fill = match slide.background.as_ref().expect("gradient background") {
-            Fill::Gradient(fill) => fill,
-            other => panic!("expected gradient background, got {other:?}"),
-        };
-        assert_eq!(fill.stops.len(), 2);
-        assert_eq!(
-            std::mem::discriminant(&fill.gradient_type),
-            std::mem::discriminant(&GradientType::Rectangular)
-        );
+        assert!(matches!(
+            slide.background.as_ref(),
+            Some(Fill::Gradient(fill))
+                if fill.stops.len() == 2
+                    && std::mem::discriminant(&fill.gradient_type)
+                        == std::mem::discriminant(&GradientType::Rectangular)
+        ));
 
         let table = slide
             .shapes
@@ -5777,16 +5789,13 @@ mod tests {
             .as_ref()
             .map(|body| &body.auto_fit)
             .expect("normal autofit body");
-        if let AutoFit::Normal {
-            font_scale: Some(v),
-            line_spacing_reduction: Some(lsr),
-        } = auto_fit
-        {
-            assert!((*v - 0.7).abs() < 1e-6);
-            assert!((*lsr - 0.15).abs() < 1e-6);
-        } else {
-            panic!("expected normal autofit");
-        }
+        assert!(matches!(
+            auto_fit,
+            AutoFit::Normal {
+                font_scale: Some(v),
+                line_spacing_reduction: Some(lsr),
+            } if (*v - 0.7).abs() < 1e-6 && (*lsr - 0.15).abs() < 1e-6
+        ));
         let custom_geom = slide
             .shapes
             .iter()
@@ -5966,16 +5975,13 @@ mod tests {
             .as_ref()
             .map(|body| &body.auto_fit)
             .expect("shape empty variants body");
-        if let AutoFit::Normal {
-            font_scale: Some(v),
-            line_spacing_reduction: Some(lsr),
-        } = auto_fit
-        {
-            assert!((*v - 0.8).abs() < 1e-6);
-            assert!((*lsr - 0.1).abs() < 1e-6);
-        } else {
-            panic!("expected normal autofit");
-        }
+        assert!(matches!(
+            auto_fit,
+            AutoFit::Normal {
+                font_scale: Some(v),
+                line_spacing_reduction: Some(lsr),
+            } if (*v - 0.8).abs() < 1e-6 && (*lsr - 0.1).abs() < 1e-6
+        ));
 
         let no_autofit = slide
             .shapes
