@@ -3987,6 +3987,16 @@ mod tests {
         assert_eq!(shape.text_margins.top, 3.6);
         assert_eq!(shape.text_margins.right, 14.4);
         assert_eq!(shape.text_margins.bottom, 1.8);
+
+        let mut horizontal_shape = Some(ShapeBuilder::default());
+        parse_body_pr(
+            &bytes_start("a:bodyPr", &[("anchorCtr", "true"), ("vert", "horz")]),
+            &mut horizontal_shape,
+        );
+        let horizontal_shape = horizontal_shape.expect("horizontal shape builder");
+        assert!(horizontal_shape.text_anchor_center);
+        assert_eq!(horizontal_shape.vertical_text, None);
+
         assert_eq!(
             parse_autofit_ratio(
                 &bytes_start("a:normAutofit", &[("fontScale", "250000")]),
@@ -4030,6 +4040,19 @@ mod tests {
             )),
             std::mem::discriminant(&AutoFit::Shrink)
         );
+        assert_eq!(
+            std::mem::discriminant(&parse_shape_auto_fit(
+                "mystery",
+                &bytes_start("a:other", &[])
+            )),
+            std::mem::discriminant(&AutoFit::None)
+        );
+        let mut body_shape = Some(ShapeBuilder::default());
+        parse_body_pr(
+            &bytes_start("a:bodyPr", &[("anchorCtr", "0")]),
+            &mut body_shape,
+        );
+        assert!(!body_shape.as_ref().expect("body shape").text_anchor_center);
         assert!(matches!(
             parse_spacing_tag("spcPct", &bytes_start("a:spcPct", &[("val", "125000")])),
             Some(SpacingValue::Percent(v)) if (v - 1.25).abs() < 1e-6
@@ -4038,6 +4061,7 @@ mod tests {
             parse_spacing_tag("spcPts", &bytes_start("a:spcPts", &[("val", "600")])),
             Some(SpacingValue::Points(v)) if (v - 6.0).abs() < 1e-6
         ));
+        assert!(parse_spacing_tag("spcPct", &bytes_start("a:spcPct", &[])).is_none());
         assert!(parse_spacing_tag("other", &bytes_start("a:other", &[])).is_none());
 
         let mut defaults = ParagraphDefaults::default();
@@ -4056,11 +4080,51 @@ mod tests {
             true,
             false,
         );
+        assign_spacing_defaults(
+            Some(&mut defaults),
+            SpacingValue::Points(5.0),
+            false,
+            false,
+            true,
+        );
+        assign_spacing_paragraph(
+            Some(&mut paragraph),
+            SpacingValue::Percent(0.9),
+            false,
+            false,
+            true,
+        );
         assert!(
             matches!(defaults.line_spacing, Some(SpacingValue::Percent(v)) if (v - 1.1).abs() < 1e-6)
         );
         assert!(
+            matches!(defaults.space_after, Some(SpacingValue::Points(v)) if (v - 5.0).abs() < 1e-6)
+        );
+        assert!(
             matches!(paragraph.space_before, Some(SpacingValue::Points(v)) if (v - 4.0).abs() < 1e-6)
+        );
+        assert!(
+            matches!(paragraph.space_after, Some(SpacingValue::Percent(v)) if (v - 0.9).abs() < 1e-6)
+        );
+        assign_spacing_defaults(
+            Some(&mut defaults),
+            SpacingValue::Points(3.0),
+            false,
+            false,
+            true,
+        );
+        assign_spacing_paragraph(
+            Some(&mut paragraph),
+            SpacingValue::Percent(0.8),
+            false,
+            false,
+            true,
+        );
+        assert!(
+            matches!(defaults.space_after, Some(SpacingValue::Points(v)) if (v - 3.0).abs() < 1e-6)
+        );
+        assert!(
+            matches!(paragraph.space_after, Some(SpacingValue::Percent(v)) if (v - 0.8).abs() < 1e-6)
         );
 
         let mut cell_run = Some(RunBuilder::default());
@@ -4098,6 +4162,32 @@ mod tests {
             para.as_mut(),
             &mut current_run,
         );
+        assign_typeface(
+            "latin",
+            &bytes_start("a:latin", &[("typeface", "Calibri")]),
+            &mut empty_cell_run,
+            false,
+            &mut shape_defaults,
+            false,
+            None,
+            &mut current_run,
+        );
+        assign_typeface(
+            "latin",
+            &bytes_start("a:latin", &[]),
+            &mut empty_cell_run,
+            false,
+            &mut shape_defaults,
+            false,
+            None,
+            &mut current_run,
+        );
+        let mut ignored_run = RunBuilder::default();
+        assign_typeface_to_run(&mut ignored_run, "other", "Ignored".to_string());
+        let mut ignored_defaults = RunDefaults::default();
+        assign_typeface_to_defaults(&mut ignored_defaults, "other", "Ignored".to_string());
+        let mut ignored_paragraph = ParagraphBuilder::default();
+        assign_typeface_to_paragraph(&mut ignored_paragraph, "other", "Ignored".to_string());
         assert_eq!(
             cell_run.as_ref().and_then(|run| run.font_latin.as_deref()),
             Some("Aptos")
@@ -4111,6 +4201,35 @@ mod tests {
         assert_eq!(
             para.as_ref().and_then(|pb| pb.def_rpr_font_cs.as_deref()),
             Some("Noto Sans Arabic")
+        );
+        if let Some(run) = current_run.as_mut() {
+            assign_typeface_to_run(run, "unknown", "Ignored".to_string());
+        }
+        if let Some(defaults) = shape_defaults.as_mut() {
+            assign_typeface_to_defaults(defaults, "unknown", "Ignored".to_string());
+        }
+        if let Some(paragraph) = para.as_mut() {
+            assign_typeface_to_paragraph(paragraph, "unknown", "Ignored".to_string());
+        }
+        assign_typeface(
+            "latin",
+            &bytes_start("a:latin", &[]),
+            &mut empty_cell_run,
+            false,
+            &mut shape_defaults,
+            true,
+            None,
+            &mut current_run,
+        );
+        assign_typeface(
+            "latin",
+            &bytes_start("a:latin", &[("typeface", "NoParagraph")]),
+            &mut empty_cell_run,
+            false,
+            &mut shape_defaults,
+            true,
+            None,
+            &mut current_run,
         );
 
         let mut shape_effect_color = None;
@@ -4341,7 +4460,150 @@ mod tests {
         assert!(
             matches!(current_cell.as_ref().map(|cell| &cell.fill), Some(Fill::Solid(fill)) if fill.color.to_css().as_deref() == Some("#778899"))
         );
+        dispatch_parsed_color(
+            Color::rgb("CCDDEE"),
+            &["rPr".into()],
+            false,
+            false,
+            true,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            true,
+            false,
+            &mut empty_cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::rgb("010203"),
+            &["rPr".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            true,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            false,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        dispatch_parsed_color(
+            Color::rgb("FEDCBA"),
+            &["pPr".into()],
+            false,
+            false,
+            false,
+            false,
+            0.0,
+            false,
+            &mut shape_effect_color,
+            false,
+            false,
+            &mut cell_run,
+            &mut current_run,
+            false,
+            &mut current_color,
+            false,
+            &mut cell_paragraph,
+            false,
+            &mut current_shape_run_defaults,
+            false,
+            &None,
+            &mut current_cell,
+            true,
+            &mut current_paragraph,
+            false,
+            None,
+            None,
+            &mut p_style_builder,
+            false,
+            false,
+            false,
+            0.0,
+            &mut bg_grad_stops,
+            &mut bg_solid_color,
+            &mut current_shape,
+            &mut grad_stops,
+        );
+        let mut para_false = Some(ParagraphBuilder::default());
+        parse_para_props(&bytes_start("a:pPr", &[("rtl", "false")]), &mut para_false);
+        let mut run_false = Some(RunBuilder::default());
+        parse_run_props(&bytes_start("a:rPr", &[("b", "false")]), &mut run_false);
         assert_eq!(bg_grad_stops.len(), 1);
+        assert_eq!(
+            current_run
+                .as_ref()
+                .and_then(|run| run.highlight.as_ref())
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#CCDDEE")
+        );
+        assert_eq!(
+            cell_run
+                .as_ref()
+                .and_then(|run| run.color.to_css())
+                .as_deref(),
+            Some("#010203")
+        );
+        assert_eq!(
+            current_paragraph
+                .as_ref()
+                .and_then(|pb| pb.bu_color.as_ref())
+                .and_then(|color| color.to_css())
+                .as_deref(),
+            Some("#FEDCBA")
+        );
+        assert!(!para_false.as_ref().expect("paragraph false case").rtl);
+        assert!(!run_false.as_ref().expect("run false case").bold);
     }
 
     #[test]
@@ -5787,6 +6049,23 @@ mod tests {
                 .as_ref()
                 .and_then(|shape| shape.text_list_style.as_ref())
                 .is_none()
+        );
+
+        let mut anonymous_shape = Some(ShapeBuilder::default());
+        parse_shape_identity(&bytes_start("p:cNvPr", &[]), &mut anonymous_shape);
+        assert_eq!(anonymous_shape.as_ref().map(|shape| shape.id), Some(0));
+        assert_eq!(
+            anonymous_shape.as_ref().map(|shape| shape.name.as_str()),
+            Some("")
+        );
+        let mut missing_connector = None;
+        parse_connector_ref(&bytes_start("a:stCxn", &[]), &mut missing_connector, true);
+        let mut rtl_para = Some(ParagraphBuilder::default());
+        parse_para_props(&bytes_start("a:pPr", &[("rtl", "true")]), &mut rtl_para);
+        assert!(rtl_para.as_ref().is_some_and(|para| para.rtl));
+        assert_eq!(
+            resolve_rel_path("ppt/slides", "../media/./image.png"),
+            "ppt/media/image.png"
         );
 
         let mut archive = archive_with_entries(&[]);

@@ -7528,3 +7528,215 @@ fn parse_slide_directly_covers_graphic_frame_table_and_shape_contexts() {
         Some(AutoFit::Shrink)
     ));
 }
+
+#[test]
+fn parse_slide_directly_covers_start_tag_fallback_and_missing_attr_branches() {
+    let slide_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:blipFill><a:blip r:embed="rIdBg"></a:blip></a:blipFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr/>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="10" name="Chart Without Id"></p:cNvPr><p:cNvGraphicFramePr></p:cNvGraphicFramePr><p:nvPr></p:nvPr></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"></a:off><a:ext cx="1828800" cy="914400"></a:ext></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chart></c:chart>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:graphicFrame>
+        <p:nvGraphicFramePr><p:cNvPr id="11" name="Sparse Table"></p:cNvPr><p:cNvGraphicFramePr></p:cNvGraphicFramePr><p:nvPr></p:nvPr></p:nvGraphicFramePr>
+        <p:xfrm><a:off x="0" y="0"></a:off><a:ext cx="1828800" cy="914400"></a:ext></p:xfrm>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+            <a:tbl>
+              <a:tblPr></a:tblPr>
+              <a:tblGrid><a:gridCol w="914400"></a:gridCol></a:tblGrid>
+              <a:tr h="457200">
+                <a:tc>
+                  <a:txBody>
+                    <a:bodyPr></a:bodyPr>
+                    <a:lstStyle></a:lstStyle>
+                    <a:p>
+                      <a:buClr><a:schemeClr val="accent3"><a:tint val="20000"></a:tint></a:schemeClr></a:buClr>
+                      <a:buChar char="•"/>
+                      <a:r>
+                        <a:rPr>
+                          <a:highlight><a:schemeClr val="accent1"><a:tint val="10000"></a:tint></a:schemeClr></a:highlight>
+                          <a:schemeClr val="accent2"><a:shade val="20000"></a:shade></a:schemeClr>
+                        </a:rPr>
+                        <a:t>Cell</a:t>
+                      </a:r>
+                      <a:br></a:br>
+                    </a:p>
+                  </a:txBody>
+                  <a:tcPr><a:solidFill><a:schemeClr val="accent4"><a:shade val="30000"></a:shade></a:schemeClr></a:solidFill></a:tcPr>
+                </a:tc>
+              </a:tr>
+            </a:tbl>
+          </a:graphicData>
+        </a:graphic>
+      </p:graphicFrame>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="12" name="Fallback Shape"></p:cNvPr><p:cNvSpPr></p:cNvSpPr><p:nvPr></p:nvPr></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="914400" cy="457200"></a:ext></a:xfrm>
+          <a:prstGeom prst="rect"></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr anchorCtr="true" vert="horz"></a:bodyPr>
+          <a:p>
+            <a:buClr><a:schemeClr val="accent5"><a:tint val="5000"></a:tint></a:schemeClr></a:buClr>
+            <a:buChar char="◦"/>
+            <a:r>
+              <a:rPr>
+                <a:highlight><a:schemeClr val="accent6"><a:shade val="10000"></a:shade></a:schemeClr></a:highlight>
+                <a:schemeClr val="accent4"><a:tint val="15000"></a:tint></a:schemeClr>
+              </a:rPr>
+              <a:t>Shape</a:t>
+            </a:r>
+            <a:br></a:br>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="13" name="Crop Top"></p:cNvPr><p:cNvPicPr></p:cNvPicPr><p:nvPr></p:nvPr></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="rIdPicTop"></a:blip><a:srcRect t="10000"/></p:blipFill>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="228600"></a:ext></a:xfrm><a:prstGeom prst="rect"></a:prstGeom></p:spPr>
+      </p:pic>
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="14" name="Crop Right"></p:cNvPr><p:cNvPicPr></p:cNvPicPr><p:nvPr></p:nvPr></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="rIdPicRight"></a:blip><a:srcRect r="20000"/></p:blipFill>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="228600"></a:ext></a:xfrm><a:prstGeom prst="rect"></a:prstGeom></p:spPr>
+      </p:pic>
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="15" name="Crop Bottom"></p:cNvPr><p:cNvPicPr></p:cNvPicPr><p:nvPr></p:nvPr></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="rIdPicBottom"></a:blip><a:srcRect b="30000"/></p:blipFill>
+        <p:spPr><a:xfrm><a:off x="0" y="0"></a:off><a:ext cx="457200" cy="228600"></a:ext></a:xfrm><a:prstGeom prst="rect"></a:prstGeom></p:spPr>
+      </p:pic>
+    </p:spTree>
+  </p:cSld>
+</p:sld>"#;
+
+    let slide_rels = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdBg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/empty-bg.png"/>
+  <Relationship Id="rIdPicTop" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/crop-top.png"/>
+  <Relationship Id="rIdPicRight" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/crop-right.png"/>
+  <Relationship Id="rIdPicBottom" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/crop-bottom.png"/>
+</Relationships>"#;
+
+    let pptx = fixtures::MinimalPptx::new("")
+        .with_raw_slide(slide_xml)
+        .with_slide_rels(slide_rels)
+        .with_extra_file("ppt/media/empty-bg.png", b"")
+        .with_extra_file("ppt/media/crop-top.png", b"top")
+        .with_extra_file("ppt/media/crop-right.png", b"right")
+        .with_extra_file("ppt/media/crop-bottom.png", b"bottom")
+        .build();
+
+    let presentation = parse_pptx(&pptx);
+    let slide = &presentation.slides[0];
+
+    assert!(
+        slide.background.is_none(),
+        "empty background image should be ignored"
+    );
+
+    let chart = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Chart(chart) => Some(chart),
+            _ => None,
+        })
+        .expect("chart fallback shape");
+    assert!(chart.rel_id.is_empty());
+    assert!(chart.direct_spec.is_none());
+
+    let table = slide
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape_type {
+            ShapeType::Table(table) => Some(table),
+            _ => None,
+        })
+        .expect("sparse table");
+    assert!(
+        !table.band_row
+            && !table.band_col
+            && !table.first_row
+            && !table.last_row
+            && !table.first_col
+            && !table.last_col
+    );
+    let cell_para = &table.rows[0].cells[0]
+        .text_body
+        .as_ref()
+        .expect("cell text body")
+        .paragraphs[0];
+    assert_eq!(cell_para.runs.len(), 2);
+    assert!(matches!(
+        cell_para.bullet.as_ref(),
+        Some(Bullet::Char(bullet)) if bullet.char == "•"
+    ));
+    let cell_run = &cell_para.runs[0];
+    assert!(matches!(
+        cell_run.style.color.kind,
+        ColorKind::Theme(ref name) if name == "accent2"
+    ));
+
+    let fallback_shape = slide
+        .shapes
+        .iter()
+        .find(|shape| shape.name == "Fallback Shape")
+        .expect("fallback shape");
+    let fallback_body = fallback_shape
+        .text_body
+        .as_ref()
+        .expect("fallback text body");
+    assert!(fallback_body.anchor_center);
+    assert!(fallback_shape.vertical_text.is_none());
+    let fallback_para = &fallback_body.paragraphs[0];
+    assert_eq!(fallback_para.runs.len(), 2);
+    assert!(matches!(
+        fallback_para.bullet.as_ref(),
+        Some(Bullet::Char(bullet)) if bullet.char == "◦"
+    ));
+    let fallback_run = &fallback_para.runs[0];
+    assert!(matches!(
+        fallback_run.style.color.kind,
+        ColorKind::Theme(ref name) if name == "accent4"
+    ));
+
+    for (name, expected_top, expected_right, expected_bottom, expected_bytes) in [
+        ("Crop Top", Some(0.1), None, None, b"top".as_slice()),
+        ("Crop Right", None, Some(0.2), None, b"right".as_slice()),
+        ("Crop Bottom", None, None, Some(0.3), b"bottom".as_slice()),
+    ] {
+        let picture = slide
+            .shapes
+            .iter()
+            .find(|shape| shape.name == name)
+            .expect("picture shape");
+        let picture = match &picture.shape_type {
+            ShapeType::Picture(pic) => pic,
+            other => panic!("expected picture for {name}, got {other:?}"),
+        };
+        assert_eq!(picture.data.as_slice(), expected_bytes);
+        let crop = picture.crop.as_ref().expect("picture crop");
+        assert_eq!(crop.top, expected_top.unwrap_or(0.0));
+        assert_eq!(crop.right, expected_right.unwrap_or(0.0));
+        assert_eq!(crop.bottom, expected_bottom.unwrap_or(0.0));
+    }
+}
