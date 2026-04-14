@@ -11,7 +11,7 @@ This directory holds the human-maintained release-note inputs used before a tag 
 
 1. Update `CHANGELOG.md` `Unreleased` with the shipped scope.
 2. Update `unreleased-draft.md` so it can be copied into a GitHub release body with minimal editing.
-3. Run `pre-release-checklist.md` against the current tree.
+3. Run `pre-release-checklist.md` against the current tree, including the npm dry-run path for the intended version line (`workflow_dispatch` when permissions allow it, otherwise local `npm publish --dry-run` from the prepared package directory).
 4. Only after human approval, create the release tag and let `.github/workflows/release.yml` attach the validated artifacts.
 
 ## Important Note

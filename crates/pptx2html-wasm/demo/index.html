@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>pptx2html-turbo Demo · v1.0.5</title>
+<title>pptx2html-turbo Demo · v1.1.0</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
@@ -13,17 +13,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .release-panel {
   background: #fff;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #d8e3ff;
   border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 20px;
-  display: grid;
-  gap: 10px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
 }
-.release-badges {
+.release-panel p {
+  font-size: 14px;
+  color: #4a5568;
+  line-height: 1.5;
+}
+.release-panel a {
+  color: #2b6cb0;
+  font-weight: 600;
+  text-decoration: none;
+}
+.release-panel a:hover { text-decoration: underline; }
+.badges {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 12px;
 }
 .badge {
   display: inline-flex;
@@ -31,24 +41,37 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
-.badge.stable { background: #e8f5e9; color: #2e7d32; }
-.badge.version { background: #e8f4fd; color: #1565c0; }
-.badge.pkg { background: #f3e5f5; color: #7b1fa2; }
-.release-panel p { font-size: 14px; color: #555; line-height: 1.5; }
-.release-links {
-  display: flex;
-  flex-wrap: wrap;
+.badge.stable { background: #ebf8ff; color: #2b6cb0; }
+.badge.version { background: #e6fffa; color: #0f766e; }
+.badge.feature { background: #faf5ff; color: #7c3aed; }
+.controls {
+  display: none;
+  grid-template-columns: 120px minmax(180px, 1fr) 96px;
   gap: 12px;
-  font-size: 13px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
 }
-.release-links a {
-  color: #1565c0;
-  text-decoration: none;
-  font-weight: 500;
+.controls label { font-size: 14px; font-weight: 600; color: #444; }
+.controls input[type="range"] { width: 100%; }
+.controls input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 14px;
 }
-.release-links a:hover { text-decoration: underline; }
+.controls .hint {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #666;
+}
 .drop-zone {
   border: 2px dashed #ccc; border-radius: 8px; padding: 48px; text-align: center;
   cursor: pointer; transition: border-color 0.2s, background 0.2s;
@@ -83,52 +106,99 @@ input[type="file"] {
 </head>
 <body>
 <div class="header">
-  <h1>pptx2html-turbo Demo</h1>
-  <p>Stable browser demo for the current <strong>v1.0.5</strong> release line.</p>
+  <h1>pptx2html-turbo Demo · v1.1.0</h1>
+  <p>The stable browser demo for the released v1.1.0 line. Whole-slide zoom now scales like an image while keeping the original layout intact.</p>
 </div>
 <div class="container">
-  <section class="release-panel" aria-label="release info">
-    <div class="release-badges">
+  <div class="release-panel">
+    <div class="badges">
       <span class="badge stable">Stable demo</span>
-      <span class="badge version">v1.0.5</span>
-      <span class="badge pkg">@briank-dev/pptx2html-turbo</span>
+      <span class="badge version">v1.1.0</span>
+      <span class="badge feature">Slide scale</span>
     </div>
     <p>
-      This page tracks the shipped 1.0.5 release line and demonstrates the current stable
-      in-browser PPTX → HTML conversion flow. Drop a PowerPoint file below to inspect slide count,
-      canvas size, and rendered HTML output without leaving the browser.
+      This page tracks the shipped 1.1.0 release line and demonstrates image-like whole-slide zoom without changing slide coordinates or text flow.
+      You can compare the browser package, repository, and release history directly:
+      <a href="https://www.npmjs.com/package/@briank-dev/pptx2html-turbo" target="_blank" rel="noreferrer">npm package</a>,
+      <a href="https://github.com/kim62210/pptx2html-turbo" target="_blank" rel="noreferrer">repository</a>.
     </p>
-    <p>
-      Whole-slide image-like zoom controls are being prepared separately for the next 1.1.0 line.
-      This stable demo intentionally stays aligned with what was actually released in 1.0.5.
-    </p>
-    <div class="release-links">
-      <a href="https://github.com/kim62210/pptx2html-turbo/releases/tag/v1.0.5" target="_blank" rel="noreferrer">v1.0.5 release notes</a>
-      <a href="https://www.npmjs.com/package/@briank-dev/pptx2html-turbo" target="_blank" rel="noreferrer">npm package</a>
-      <a href="https://github.com/kim62210/pptx2html-turbo" target="_blank" rel="noreferrer">repository</a>
-    </div>
-  </section>
+  </div>
   <label class="drop-zone" id="dropZone" for="fileInput">
     <span class="icon">&#128196;</span>
     <p>Drop a .pptx file here or click to select</p>
   </label>
   <input type="file" id="fileInput" accept=".pptx">
   <div class="status" id="status"></div>
+  <div class="controls" id="controls">
+    <label for="scaleRange">Slide zoom</label>
+    <input type="range" id="scaleRange" min="0.5" max="3" step="0.1" value="1">
+    <input type="number" id="scaleNumber" min="0.5" max="3" step="0.1" value="1.0">
+    <div class="hint">Layout-preserving whole-slide scale. The output grows like an image without changing coordinates or reflowing text.</div>
+  </div>
   <div class="meta" id="meta"></div>
   <iframe class="output-frame" id="output" sandbox="allow-same-origin"></iframe>
 </div>
 <script type="module">
-import init, { convert, get_slide_count, get_info } from './pkg/pptx2html_wasm.js';
+import init, { convert_with_options, get_info } from './pkg/pptx2html_wasm.js';
 
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const status = document.getElementById('status');
+const controls = document.getElementById('controls');
+const scaleRange = document.getElementById('scaleRange');
+const scaleNumber = document.getElementById('scaleNumber');
 const meta = document.getElementById('meta');
 const output = document.getElementById('output');
+let currentBuffer = null;
+let currentInfo = null;
 
 function setStatus(msg, type) {
   status.textContent = msg;
   status.className = 'status ' + type;
+}
+
+function clampScale(value) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return 1.0;
+  return Math.min(3.0, Math.max(0.5, parsed));
+}
+
+function syncScaleInputs(value) {
+  const scale = clampScale(value);
+  scaleRange.value = scale.toFixed(1);
+  scaleNumber.value = scale.toFixed(1);
+  return scale;
+}
+
+function updateMeta() {
+  if (!currentInfo) return;
+  const scale = clampScale(scaleNumber.value);
+  meta.innerHTML =
+    '<span>Slides: ' + currentInfo.slide_count + '</span>' +
+    '<span>Original: ' + currentInfo.width_px.toFixed(0) + ' x ' + currentInfo.height_px.toFixed(0) + ' px</span>' +
+    '<span>Rendered: ' + (currentInfo.width_px * scale).toFixed(0) + ' x ' + (currentInfo.height_px * scale).toFixed(0) + ' px</span>' +
+    '<span>Zoom: ' + scale.toFixed(1) + 'x</span>' +
+    (currentInfo.title ? '<span>Title: ' + currentInfo.title + '</span>' : '');
+}
+
+async function renderCurrentBuffer() {
+  if (!currentBuffer) return;
+  const scale = clampScale(scaleNumber.value);
+  syncScaleInputs(scale);
+  updateMeta();
+  setStatus('Converting at ' + scale.toFixed(1) + 'x…', 'info');
+
+  try {
+    const t0 = performance.now();
+    const html = convert_with_options(currentBuffer, true, false, [], scale);
+    const elapsed = (performance.now() - t0).toFixed(0);
+
+    output.srcdoc = html;
+    output.style.display = 'block';
+    setStatus('Converted in ' + elapsed + ' ms (' + (html.length / 1024).toFixed(1) + ' KB HTML, ' + scale.toFixed(1) + 'x zoom)', 'success');
+  } catch (e) {
+    setStatus('Conversion failed: ' + e.message, 'error');
+  }
 }
 
 async function handleFile(file) {
@@ -136,26 +206,16 @@ async function handleFile(file) {
     setStatus('Please select a .pptx file.', 'error');
     return;
   }
-  setStatus('Converting...', 'info');
+  setStatus('Loading presentation…', 'info');
   meta.innerHTML = '';
   output.style.display = 'none';
 
   try {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const infoJson = get_info(buf);
-    const info = JSON.parse(infoJson);
-    meta.innerHTML =
-      '<span>Slides: ' + info.slide_count + '</span>' +
-      '<span>Size: ' + info.width_px.toFixed(0) + ' x ' + info.height_px.toFixed(0) + ' px</span>' +
-      (info.title ? '<span>Title: ' + info.title + '</span>' : '');
-
-    const t0 = performance.now();
-    const html = convert(buf);
-    const elapsed = (performance.now() - t0).toFixed(0);
-
-    output.srcdoc = html;
-    output.style.display = 'block';
-    setStatus('Converted in ' + elapsed + ' ms (' + (html.length / 1024).toFixed(1) + ' KB HTML)', 'success');
+    currentBuffer = new Uint8Array(await file.arrayBuffer());
+    currentInfo = JSON.parse(get_info(currentBuffer));
+    controls.style.display = 'grid';
+    syncScaleInputs(scaleNumber.value);
+    await renderCurrentBuffer();
   } catch (e) {
     setStatus('Conversion failed: ' + e.message, 'error');
   }
@@ -172,6 +232,16 @@ dropZone.addEventListener('drop', (e) => {
   dropZone.classList.remove('dragover');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
+scaleRange.addEventListener('input', () => {
+  syncScaleInputs(scaleRange.value);
+  updateMeta();
+});
+scaleRange.addEventListener('change', () => { void renderCurrentBuffer(); });
+scaleNumber.addEventListener('input', () => {
+  syncScaleInputs(scaleNumber.value);
+  updateMeta();
+});
+scaleNumber.addEventListener('change', () => { void renderCurrentBuffer(); });
 
 init().then(() => setStatus('WASM module loaded — ready to convert.', 'info'));
 </script>

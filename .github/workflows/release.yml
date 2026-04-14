@@ -20,7 +20,7 @@ jobs:
     name: Validate Workspace
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -57,7 +57,7 @@ jobs:
             os: windows-latest
             artifact: pptx2html.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -87,7 +87,7 @@ jobs:
           7z a ../../../pptx2html-${{ matrix.target }}.zip ${{ matrix.artifact }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pptx2html-${{ matrix.target }}
           path: pptx2html-${{ matrix.target }}.*
@@ -96,14 +96,14 @@ jobs:
     name: Validate Bindings
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
       - uses: Swatinem/rust-cache@v2
@@ -130,13 +130,13 @@ jobs:
     needs: [validate-workspace, build, validate-bindings]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install evaluate test dependencies
         run: python -m pip install -r evaluate/requirements-test.txt
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
       - name: Check exactness contract

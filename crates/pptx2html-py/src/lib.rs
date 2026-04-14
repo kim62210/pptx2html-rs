@@ -26,19 +26,22 @@ fn convert_bytes(data: &[u8]) -> PyResult<String> {
 ///     embed_images: Embed images as base64 data URIs (default: True)
 ///     include_hidden: Include hidden slides (default: False)
 ///     slides: List of 1-based slide indices to include (default: all)
+///     scale: Whole-slide zoom factor (default: 1.0)
 #[pyfunction]
-#[pyo3(signature = (path, *, embed_images=true, include_hidden=false, slides=None))]
+#[pyo3(signature = (path, *, embed_images=true, include_hidden=false, slides=None, scale=1.0))]
 fn convert(
     path: &str,
     embed_images: bool,
     include_hidden: bool,
     slides: Option<Vec<usize>>,
+    scale: f64,
 ) -> PyResult<String> {
     let opts = ConversionOptions {
         embed_images,
         include_hidden,
         slide_range: None,
         slide_indices: slides,
+        scale,
     };
     pptx2html_core::convert_file_with_options(Path::new(path), &opts)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
@@ -51,22 +54,25 @@ fn convert(
 ///     embed_images: Embed images as base64 data URIs (default: True)
 ///     include_hidden: Include hidden slides (default: False)
 ///     slides: List of 1-based slide indices to include (default: all)
+///     scale: Whole-slide zoom factor (default: 1.0)
 ///
 /// Returns:
 ///     ConversionResult with html, unresolved_elements, and slide_count
 #[pyfunction]
-#[pyo3(signature = (path, *, embed_images=true, include_hidden=false, slides=None))]
+#[pyo3(signature = (path, *, embed_images=true, include_hidden=false, slides=None, scale=1.0))]
 fn convert_with_metadata(
     path: &str,
     embed_images: bool,
     include_hidden: bool,
     slides: Option<Vec<usize>>,
+    scale: f64,
 ) -> PyResult<PyConversionResult> {
     let opts = ConversionOptions {
         embed_images,
         include_hidden,
         slide_range: None,
         slide_indices: slides,
+        scale,
     };
     let result = pptx2html_core::convert_file_with_options_metadata(Path::new(path), &opts)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
@@ -85,22 +91,25 @@ fn convert_with_metadata(
 ///     embed_images: Embed images as base64 data URIs (default: True)
 ///     include_hidden: Include hidden slides (default: False)
 ///     slides: List of 1-based slide indices to include (default: all)
+///     scale: Whole-slide zoom factor (default: 1.0)
 ///
 /// Returns:
 ///     ConversionResult with html, unresolved_elements, and slide_count
 #[pyfunction]
-#[pyo3(signature = (data, *, embed_images=true, include_hidden=false, slides=None))]
+#[pyo3(signature = (data, *, embed_images=true, include_hidden=false, slides=None, scale=1.0))]
 fn convert_bytes_with_metadata(
     data: &[u8],
     embed_images: bool,
     include_hidden: bool,
     slides: Option<Vec<usize>>,
+    scale: f64,
 ) -> PyResult<PyConversionResult> {
     let opts = ConversionOptions {
         embed_images,
         include_hidden,
         slide_range: None,
         slide_indices: slides,
+        scale,
     };
     let result = pptx2html_core::convert_bytes_with_options_metadata(data, &opts)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
@@ -265,7 +274,7 @@ mod tests {
     fn convert_uses_one_based_slide_indices() {
         let path = write_temp_pptx(build_two_slide_pptx());
 
-        let html = convert(path.to_str().unwrap(), true, false, Some(vec![1]))
+        let html = convert(path.to_str().unwrap(), true, false, Some(vec![1]), 1.0)
             .expect("convert should succeed");
 
         assert!(
@@ -296,7 +305,7 @@ mod tests {
     fn convert_with_metadata_reports_no_unresolved_elements_for_basic_fixture() {
         let path = write_temp_pptx(build_two_slide_pptx());
 
-        let result = convert_with_metadata(path.to_str().unwrap(), true, false, Some(vec![1]))
+        let result = convert_with_metadata(path.to_str().unwrap(), true, false, Some(vec![1]), 1.0)
             .expect("convert_with_metadata should succeed");
 
         assert_eq!(result.slide_count, 1);
@@ -310,7 +319,7 @@ mod tests {
     fn convert_bytes_with_metadata_respects_one_based_slide_filtering() {
         let bytes = build_two_slide_pptx();
 
-        let result = convert_bytes_with_metadata(&bytes, true, false, Some(vec![2]))
+        let result = convert_bytes_with_metadata(&bytes, true, false, Some(vec![2]), 1.0)
             .expect("convert_bytes_with_metadata should succeed");
 
         assert_eq!(result.slide_count, 1);

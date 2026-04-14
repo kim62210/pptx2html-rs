@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'feature/slide-scale-output']
   pull_request:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'feature/slide-scale-output']
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         rust: [stable]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
@@ -37,7 +37,7 @@ jobs:
     name: WASM Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -59,9 +59,9 @@ jobs:
     name: Python Bindings Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - uses: Swatinem/rust-cache@v2
@@ -81,8 +81,8 @@ jobs:
     name: Evaluate Tooling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install evaluate test dependencies
@@ -98,7 +98,7 @@ jobs:
           python evaluate/powerpoint_evidence.py summary --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-summary.json
           python evaluate/powerpoint_evidence.py gate --family text-layout --golden-set-dir evaluate/golden_set --output-dir evaluate/powerpoint_golden --output-json artifacts/evaluate/powerpoint-evidence-text-layout-gate.json || true
       - name: Upload evaluate artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: evaluate-artifacts
           path: artifacts/evaluate/*.json

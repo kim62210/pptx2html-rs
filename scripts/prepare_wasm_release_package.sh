@@ -41,6 +41,13 @@ PACKAGE_VERSION="$PACKAGE_VERSION" node -e '
   pkg.keywords = ["pptx", "powerpoint", "html", "converter", "wasm", "presentation", "ooxml", "ecma-376"];
   pkg.author = process.env.PACKAGE_AUTHOR;
   pkg.homepage = process.env.PACKAGE_HOMEPAGE;
+  const homepage = String(process.env.PACKAGE_HOMEPAGE || "").replace(/\/$/, "");
+  if (homepage) {
+    const repoUrl = homepage.startsWith("git+")
+      ? homepage
+      : `git+${homepage.endsWith(".git") ? homepage : `${homepage}.git`}`;
+    pkg.repository = { type: "git", url: repoUrl };
+  }
   pkg.bugs = { url: process.env.PACKAGE_BUGS_URL };
   pkg.exports = {
     ".": {

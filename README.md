@@ -17,6 +17,7 @@ Built on the ECMA-376 open standard — no Microsoft dependencies, no C/C++ bind
 - Table, group shape, and connector support
 - Image embedding (base64) or external references, with cropping
 - Text styling: bold, italic, underline, strikethrough, super/subscript, bullets, vertical text, shadows, highlights, letter spacing
+- Layout-preserving whole-slide scale/zoom across Rust, CLI, Python, and WASM surfaces
 - Approximate direct chart rendering for clustered, stacked, and percent-stacked bar/column charts plus simple line, flat area3D, single-series/no-dLbls bubble (non-negative sizes, area semantics, bubbleScale support), multi-series/no-dLbls radar (approximate marker handling), single-series/no-dLbls ofPie (`ofPieType=pie`, `splitType=pos`), pie, doughnut, and flat pie3D charts
 - Graceful placeholders for unsupported content (SmartArt, OLE, Math)
 - Self-contained HTML output (single file, no external dependencies)
@@ -63,6 +64,9 @@ pptx2html input.pptx --no-embed
 # Include hidden slides
 pptx2html input.pptx --include-hidden
 
+# Image-like whole-slide zoom without reflow
+pptx2html input.pptx --scale 2.0
+
 # Print presentation info as JSON
 pptx2html input.pptx --info
 ```
@@ -84,6 +88,7 @@ let opts = ConversionOptions {
     embed_images: false,
     include_hidden: true,
     slide_indices: Some(vec![1, 3, 5]),
+    scale: 2.0,
     ..Default::default()
 };
 let html = convert_file_with_options(Path::new("presentation.pptx"), &opts)?;
@@ -117,6 +122,7 @@ html = pptx2html.convert(
     embed_images=False,
     include_hidden=True,
     slides=[1, 3, 5],
+    scale=2.0,
 )
 
 # Get metadata
@@ -150,8 +156,8 @@ const data = new Uint8Array(await response.arrayBuffer());
 const html = convert(data);
 document.getElementById('output').srcdoc = html;
 
-// With options (embedImages, includeHidden, slideIndices)
-const html2 = convert_with_options(data, false, true, new Uint32Array([1, 3]));
+// With options (embedImages, includeHidden, slideIndices, scale)
+const html2 = convert_with_options(data, false, true, new Uint32Array([1, 3]), 1.5);
 
 // Typed metadata
 const info = get_presentation_info(data);
@@ -164,6 +170,7 @@ console.log(`HTML: ${result.html.length}, Unresolved: ${result.unresolvedElement
 ```
 
 A drag-and-drop demo page is included at `crates/pptx2html-wasm/demo/index.html`.
+The included demo exposes image-like whole-slide zoom controls that keep the original slide coordinates and text flow intact.
 
 ## Supported Features
 

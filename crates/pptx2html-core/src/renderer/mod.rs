@@ -163,6 +163,7 @@ impl HtmlRenderer {
     ) -> PptxResult<ConversionResult> {
         let slide_w = pres.slide_size.width.to_px();
         let slide_h = pres.slide_size.height.to_px();
+        let slide_scale = opts.effective_scale();
 
         let collector = RefCell::new(UnresolvedCollector {
             elements: Vec::new(),
@@ -215,7 +216,15 @@ impl HtmlRenderer {
                 continue;
             }
             collector.borrow_mut().current_slide_index = i;
-            Self::render_slide(slide, one_based, slide_w, slide_h, &ctx, &mut html);
+            Self::render_slide(
+                slide,
+                one_based,
+                slide_w,
+                slide_h,
+                slide_scale,
+                &ctx,
+                &mut html,
+            );
             slide_count += 1;
         }
 
@@ -236,6 +245,11 @@ impl HtmlRenderer {
             r#"* {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ background: #f0f0f0; font-family: 'Calibri', 'Malgun Gothic', sans-serif; }}
 .pptx-container {{ display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; }}
+.slide-shell {{
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+}}
 .slide {{
   position: relative;
   width: {slide_w:.1}px;
@@ -296,8 +310,9 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
     fn render_slide(
         slide: &Slide,
         num: usize,
-        _slide_w: f64,
-        _slide_h: f64,
+        slide_w: f64,
+        slide_h: f64,
+        slide_scale: f64,
         ctx: &RenderCtx<'_>,
         html: &mut String,
     ) {
@@ -329,9 +344,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         // Resolve background via inheritance
         let bg = inheritance::resolve_background(slide, layout, master);
         let bg_style = Self::fill_to_css(&bg, &slide_ctx);
+        let shell_w = slide_w * slide_scale;
+        let shell_h = slide_h * slide_scale;
+        let slide_style = if (slide_scale - 1.0).abs() < f64::EPSILON {
+            bg_style
+        } else {
+            format!("{bg_style}; transform: scale({slide_scale:.4}); transform-origin: top left")
+        };
         let _ = writeln!(
             html,
-            "<div class=\"slide\" data-slide=\"{num}\" style=\"{bg_style}\">"
+            "<div class=\"slide-shell\" data-slide=\"{num}\" style=\"width: {shell_w:.1}px; height: {shell_h:.1}px;\">"
+        );
+        let _ = writeln!(
+            html,
+            "<div class=\"slide\" data-slide=\"{num}\" style=\"{slide_style}\">"
         );
         slide_ctx.push_provenance(RenderedProvenanceEntry {
             slide_index: num,
@@ -380,7 +406,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             Self::render_shape_resolved(shape, layout_match, master_match, &slide_ctx, html);
         }
 
-        html.push_str("</div>\n");
+        html.push_str("</div>\n</div>\n");
     }
 
     /// Render shape with resolved properties from inheritance cascade
@@ -4267,6 +4293,7 @@ mod tests {
     fn global_css_and_helper_formatters_cover_supported_variants() {
         let css = HtmlRenderer::global_css(960.0, 540.0);
         assert!(css.contains(".pptx-container"));
+        assert!(css.contains(".slide-shell"));
         assert!(css.contains("width: 960.0px"));
         assert!(css.contains("height: 540.0px"));
 
@@ -4679,7 +4706,7 @@ mod tests {
             collector: &collector,
         };
         let mut html = String::new();
-        HtmlRenderer::render_slide(&slide, 1, 960.0, 540.0, &ctx, &mut html);
+        HtmlRenderer::render_slide(&slide, 1, 960.0, 540.0, 1.0, &ctx, &mut html);
 
         assert!(html.contains("transform: rotate(30.0deg)"));
         assert!(html.contains("width: 2px"));
@@ -5004,6 +5031,43 @@ mod tests {
                 .expect("render_with_options wrapper")
                 .contains("pptx-container")
         );
+    }
+
+    #[test]
+    fn render_with_scale_wraps_slide_in_scaled_shell() {
+        let mut presentation = Presentation::default();
+        presentation.slide_size = Size {
+            width: Emu(914_400),
+            height: Emu(457_200),
+        };
+        presentation.slides.push(Slide {
+            shapes: vec![Shape {
+                shape_type: ShapeType::Rectangle,
+                size: Size {
+                    width: Emu(228_600),
+                    height: Emu(114_300),
+                },
+                fill: Fill::Solid(SolidFill {
+                    color: Color::rgb("CCCCCC"),
+                }),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+
+        let html = HtmlRenderer::render_with_options(
+            &presentation,
+            &ConversionOptions {
+                scale: 2.0,
+                ..Default::default()
+            },
+        )
+        .expect("scaled render");
+
+        assert!(html.contains("class=\"slide-shell\""));
+        assert!(html.contains("width: 192.0px; height: 96.0px;"));
+        assert!(html.contains("transform: scale(2.0000); transform-origin: top left"));
+        assert!(html.contains("class=\"slide\""));
     }
 
     #[test]

@@ -35,6 +35,7 @@ def convert(
     embed_images: bool = True,
     include_hidden: bool = False,
     slides: Optional[list[int]] = None,
+    scale: float = 1.0,
 ) -> str:
     """Convert a PPTX file to HTML with options.
 
@@ -43,6 +44,7 @@ def convert(
         embed_images: Embed images as base64 data URIs (default: True).
         include_hidden: Include hidden slides (default: False).
         slides: List of 1-based slide indices to include (default: all).
+        scale: Whole-slide zoom factor (default: 1.0).
     """
     ...
 
@@ -52,6 +54,7 @@ def convert_with_metadata(
     embed_images: bool = True,
     include_hidden: bool = False,
     slides: Optional[list[int]] = None,
+    scale: float = 1.0,
 ) -> ConversionResult:
     """Convert a PPTX file to HTML with metadata about unresolved elements.
 
@@ -60,6 +63,7 @@ def convert_with_metadata(
         embed_images: Embed images as base64 data URIs (default: True).
         include_hidden: Include hidden slides (default: False).
         slides: List of 1-based slide indices to include (default: all).
+        scale: Whole-slide zoom factor (default: 1.0).
 
     Returns:
         ConversionResult with html, unresolved_elements, and slide_count.
@@ -72,6 +76,7 @@ def convert_bytes_with_metadata(
     embed_images: bool = True,
     include_hidden: bool = False,
     slides: Optional[list[int]] = None,
+    scale: float = 1.0,
 ) -> ConversionResult:
     """Convert PPTX bytes to HTML with metadata about unresolved elements.
 
@@ -80,6 +85,7 @@ def convert_bytes_with_metadata(
         embed_images: Embed images as base64 data URIs (default: True).
         include_hidden: Include hidden slides (default: False).
         slides: List of 1-based slide indices to include (default: all).
+        scale: Whole-slide zoom factor (default: 1.0).
 
     Returns:
         ConversionResult with html, unresolved_elements, and slide_count.
