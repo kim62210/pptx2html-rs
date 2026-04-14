@@ -117,20 +117,24 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // Color elements inside outerShdw or glow in effectLst
                     "srgbClr" if in_outer_shdw || in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_outer_shdw {
-                                effect_shdw_color = Some(Color::rgb(val));
-                            } else {
-                                effect_glow_color = Some(Color::rgb(val));
-                            }
+                            assign_effect_color(
+                                &mut effect_shdw_color,
+                                &mut effect_glow_color,
+                                in_outer_shdw,
+                                false,
+                                val,
+                            );
                         }
                     }
                     "schemeClr" if in_outer_shdw || in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_outer_shdw {
-                                effect_shdw_color = Some(Color::theme(val));
-                            } else {
-                                effect_glow_color = Some(Color::theme(val));
-                            }
+                            assign_effect_color(
+                                &mut effect_shdw_color,
+                                &mut effect_glow_color,
+                                in_outer_shdw,
+                                true,
+                                val,
+                            );
                         }
                     }
                     // Line element inside lnStyleLst
@@ -167,20 +171,24 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // Color elements (Start variant, may have child modifiers)
                     "srgbClr" if fmt_list_kind.is_some() && !in_outer_shdw && !in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_ln {
-                                current_ln_color = Some(Color::rgb(val));
-                            } else {
-                                current_fill_color = Some(Color::rgb(val));
-                            }
+                            assign_fmt_color(
+                                &mut current_ln_color,
+                                &mut current_fill_color,
+                                in_ln,
+                                false,
+                                val,
+                            );
                         }
                     }
                     "schemeClr" if fmt_list_kind.is_some() && !in_outer_shdw && !in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_ln {
-                                current_ln_color = Some(Color::theme(val));
-                            } else {
-                                current_fill_color = Some(Color::theme(val));
-                            }
+                            assign_fmt_color(
+                                &mut current_ln_color,
+                                &mut current_fill_color,
+                                in_ln,
+                                true,
+                                val,
+                            );
                         }
                     }
                     _ => {}
@@ -221,50 +229,50 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                         }
                     }
                     "ea" if in_major_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                            && !typeface.is_empty()
-                        {
-                            theme.font_scheme.major_east_asian = Some(typeface);
-                        }
+                        set_optional_string(
+                            &mut theme.font_scheme.major_east_asian,
+                            xml_utils::attr_str(e, "typeface"),
+                        );
                     }
                     "ea" if in_minor_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                            && !typeface.is_empty()
-                        {
-                            theme.font_scheme.minor_east_asian = Some(typeface);
-                        }
+                        set_optional_string(
+                            &mut theme.font_scheme.minor_east_asian,
+                            xml_utils::attr_str(e, "typeface"),
+                        );
                     }
                     "cs" if in_major_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                            && !typeface.is_empty()
-                        {
-                            theme.font_scheme.major_complex_script = Some(typeface);
-                        }
+                        set_optional_string(
+                            &mut theme.font_scheme.major_complex_script,
+                            xml_utils::attr_str(e, "typeface"),
+                        );
                     }
                     "cs" if in_minor_font => {
-                        if let Some(typeface) = xml_utils::attr_str(e, "typeface")
-                            && !typeface.is_empty()
-                        {
-                            theme.font_scheme.minor_complex_script = Some(typeface);
-                        }
+                        set_optional_string(
+                            &mut theme.font_scheme.minor_complex_script,
+                            xml_utils::attr_str(e, "typeface"),
+                        );
                     }
                     // Empty color elements inside effect outerShdw/glow
                     "srgbClr" if in_outer_shdw || in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_outer_shdw {
-                                effect_shdw_color = Some(Color::rgb(val));
-                            } else {
-                                effect_glow_color = Some(Color::rgb(val));
-                            }
+                            assign_effect_color(
+                                &mut effect_shdw_color,
+                                &mut effect_glow_color,
+                                in_outer_shdw,
+                                false,
+                                val,
+                            );
                         }
                     }
                     "schemeClr" if in_outer_shdw || in_effect_glow => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_outer_shdw {
-                                effect_shdw_color = Some(Color::theme(val));
-                            } else {
-                                effect_glow_color = Some(Color::theme(val));
-                            }
+                            assign_effect_color(
+                                &mut effect_shdw_color,
+                                &mut effect_glow_color,
+                                in_outer_shdw,
+                                true,
+                                val,
+                            );
                         }
                     }
                     // Alpha modifier inside effect outerShdw/glow
@@ -289,20 +297,24 @@ pub fn parse_theme(xml: &str) -> PptxResult<Theme> {
                     // Empty color elements inside fmtScheme lists
                     "srgbClr" if fmt_list_kind.is_some() => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_ln {
-                                current_ln_color = Some(Color::rgb(val));
-                            } else {
-                                current_fill_color = Some(Color::rgb(val));
-                            }
+                            assign_fmt_color(
+                                &mut current_ln_color,
+                                &mut current_fill_color,
+                                in_ln,
+                                false,
+                                val,
+                            );
                         }
                     }
                     "schemeClr" if fmt_list_kind.is_some() => {
                         if let Some(val) = xml_utils::attr_str(e, "val") {
-                            if in_ln {
-                                current_ln_color = Some(Color::theme(val));
-                            } else {
-                                current_fill_color = Some(Color::theme(val));
-                            }
+                            assign_fmt_color(
+                                &mut current_ln_color,
+                                &mut current_fill_color,
+                                in_ln,
+                                true,
+                                val,
+                            );
                         }
                     }
                     // noFill in fill/bg lists
@@ -484,6 +496,50 @@ fn set_color_scheme(scheme: &mut ColorScheme, role: &str, hex: &str) {
     }
 }
 
+fn assign_effect_color(
+    shadow_color: &mut Option<Color>,
+    glow_color: &mut Option<Color>,
+    in_outer_shdw: bool,
+    themed: bool,
+    value: String,
+) {
+    let color = if themed {
+        Color::theme(value)
+    } else {
+        Color::rgb(value)
+    };
+    if in_outer_shdw {
+        *shadow_color = Some(color);
+    } else {
+        *glow_color = Some(color);
+    }
+}
+
+fn assign_fmt_color(
+    line_color: &mut Option<Color>,
+    fill_color: &mut Option<Color>,
+    in_ln: bool,
+    themed: bool,
+    value: String,
+) {
+    let color = if themed {
+        Color::theme(value)
+    } else {
+        Color::rgb(value)
+    };
+    if in_ln {
+        *line_color = Some(color);
+    } else {
+        *fill_color = Some(color);
+    }
+}
+
+fn set_optional_string(target: &mut Option<String>, value: Option<String>) {
+    if let Some(value) = value.filter(|value| !value.is_empty()) {
+        *target = Some(value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -591,7 +647,10 @@ mod tests {
         );
 
         assert_eq!(theme.fmt_scheme.fill_style_lst.len(), 2);
-        assert!(matches!(theme.fmt_scheme.bg_fill_style_lst[0], Fill::None));
+        assert_eq!(
+            std::mem::discriminant(&theme.fmt_scheme.bg_fill_style_lst[0]),
+            std::mem::discriminant(&Fill::None)
+        );
         assert!(matches!(
             &theme.fmt_scheme.bg_fill_style_lst[1],
             Fill::Solid(fill) if fill.color.to_css().as_deref() == Some("#5B9BD5")
@@ -600,22 +659,37 @@ mod tests {
         assert_eq!(theme.fmt_scheme.ln_style_lst.len(), 3);
         let first_ln = &theme.fmt_scheme.ln_style_lst[0];
         assert_eq!(first_ln.width, 1.0);
-        assert!(matches!(first_ln.cap, LineCap::Round));
-        assert!(matches!(first_ln.compound, CompoundLine::Double));
-        assert!(matches!(first_ln.alignment, LineAlignment::Inset));
-        assert!(matches!(first_ln.join, LineJoin::Miter));
+        assert_eq!(
+            std::mem::discriminant(&first_ln.cap),
+            std::mem::discriminant(&LineCap::Round)
+        );
+        assert_eq!(
+            std::mem::discriminant(&first_ln.compound),
+            std::mem::discriminant(&CompoundLine::Double)
+        );
+        assert_eq!(
+            std::mem::discriminant(&first_ln.alignment),
+            std::mem::discriminant(&LineAlignment::Inset)
+        );
+        assert_eq!(
+            std::mem::discriminant(&first_ln.join),
+            std::mem::discriminant(&LineJoin::Miter)
+        );
         assert_eq!(first_ln.miter_limit, Some(2.0));
-        assert!(matches!(first_ln.dash_style, DashStyle::LongDashDot));
+        assert_eq!(
+            std::mem::discriminant(&first_ln.dash_style),
+            std::mem::discriminant(&DashStyle::LongDashDot)
+        );
         assert_eq!(first_ln.color.to_css().as_deref(), Some("#A5A5A5"));
 
-        assert!(matches!(
-            theme.fmt_scheme.ln_style_lst[1].join,
-            LineJoin::Round
-        ));
-        assert!(matches!(
-            theme.fmt_scheme.ln_style_lst[2].join,
-            LineJoin::Bevel
-        ));
+        assert_eq!(
+            std::mem::discriminant(&theme.fmt_scheme.ln_style_lst[1].join),
+            std::mem::discriminant(&LineJoin::Round)
+        );
+        assert_eq!(
+            std::mem::discriminant(&theme.fmt_scheme.ln_style_lst[2].join),
+            std::mem::discriminant(&LineJoin::Bevel)
+        );
 
         assert_eq!(theme.fmt_scheme.effect_style_lst.len(), 2);
         let effect = &theme.fmt_scheme.effect_style_lst[0];
@@ -631,6 +705,119 @@ mod tests {
         assert!((glow.alpha - 0.6).abs() < 1e-6);
         assert!(theme.fmt_scheme.effect_style_lst[1].outer_shadow.is_none());
         assert!(theme.fmt_scheme.effect_style_lst[1].glow.is_none());
+    }
+
+    #[test]
+    fn parse_theme_covers_start_color_variants_and_remaining_dash_values() {
+        let theme = parse_theme(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <a:themeElements>
+    <a:clrScheme name="StartVariants">
+      <a:accent1><a:srgbClr val="112233"/></a:accent1>
+      <a:accent6><a:srgbClr val="667788"/></a:accent6>
+    </a:clrScheme>
+    <a:fontScheme name="StartFonts">
+      <a:majorFont>
+        <a:latin typeface="Major Latin"/>
+      </a:majorFont>
+      <a:minorFont>
+        <a:latin typeface="Minor Latin"/>
+      </a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="StartFmt">
+      <a:fillStyleLst>
+        <a:solidFill><a:srgbClr val="010203"><a:alpha val="50000"/></a:srgbClr></a:solidFill>
+        <a:solidFill><a:schemeClr val="accent1"><a:alpha val="50000"/></a:schemeClr></a:solidFill>
+      </a:fillStyleLst>
+      <a:lnStyleLst>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="AA0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="solid"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"><a:alpha val="50000"/></a:schemeClr></a:solidFill><a:prstDash val="dash"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="BB0000"/></a:solidFill><a:prstDash val="dot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="CC0000"/></a:solidFill><a:prstDash val="dashDot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="DD0000"/></a:solidFill><a:prstDash val="lgDash"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="EE0000"/></a:solidFill><a:prstDash val="lgDashDotDot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="0A0A0A"/></a:solidFill><a:prstDash val="sysDash"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="0B0B0B"/></a:solidFill><a:prstDash val="sysDot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="0C0C0C"/></a:solidFill><a:prstDash val="sysDashDot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="0D0D0D"/></a:solidFill><a:prstDash val="sysDashDotDot"/></a:ln>
+        <a:ln w="12700"><a:solidFill><a:srgbClr val="0E0E0E"/></a:solidFill><a:prstDash val="mysteryDash"/></a:ln>
+      </a:lnStyleLst>
+      <a:effectStyleLst>
+        <a:effectStyle>
+          <a:effectLst>
+            <a:outerShdw blurRad="12700" dist="25400" dir="5400000">
+              <a:srgbClr val="ABCDEF"><a:alpha val="25000"/></a:srgbClr>
+            </a:outerShdw>
+            <a:glow rad="6350">
+              <a:schemeClr val="accent6"><a:alpha val="75000"/></a:schemeClr>
+            </a:glow>
+          </a:effectLst>
+        </a:effectStyle>
+      </a:effectStyleLst>
+    </a:fmtScheme>
+  </a:themeElements>
+</a:theme>"#,
+        )
+        .expect("theme should parse");
+
+        assert_eq!(theme.fmt_scheme.fill_style_lst.len(), 2);
+        assert_eq!(
+            theme.fmt_scheme.fill_style_lst[0]
+                .color_ref()
+                .to_css()
+                .as_deref(),
+            Some("#010203")
+        );
+        assert_eq!(
+            theme.fmt_scheme.fill_style_lst[1].color_ref().kind,
+            crate::model::color::ColorKind::Theme("accent1".to_string())
+        );
+
+        let expected_dashes = [
+            DashStyle::Solid,
+            DashStyle::Dash,
+            DashStyle::Dot,
+            DashStyle::DashDot,
+            DashStyle::LongDash,
+            DashStyle::LongDashDotDot,
+            DashStyle::SystemDash,
+            DashStyle::SystemDot,
+            DashStyle::SystemDashDot,
+            DashStyle::SystemDashDotDot,
+            DashStyle::Solid,
+        ];
+        assert_eq!(theme.fmt_scheme.ln_style_lst.len(), expected_dashes.len());
+        for (border, expected) in theme
+            .fmt_scheme
+            .ln_style_lst
+            .iter()
+            .zip(expected_dashes.iter())
+        {
+            assert_eq!(
+                std::mem::discriminant(&border.dash_style),
+                std::mem::discriminant(expected)
+            );
+        }
+        assert_eq!(
+            theme.fmt_scheme.ln_style_lst[0].color.to_css().as_deref(),
+            Some("#AA0000")
+        );
+        assert_eq!(
+            theme.fmt_scheme.ln_style_lst[1].color.kind,
+            crate::model::color::ColorKind::Theme("accent1".to_string())
+        );
+
+        let effect = &theme.fmt_scheme.effect_style_lst[0];
+        let shadow = effect.outer_shadow.as_ref().expect("outer shadow");
+        assert_eq!(shadow.color.to_css().as_deref(), Some("#ABCDEF"));
+        assert!((shadow.alpha - 0.25).abs() < 1e-6);
+        let glow = effect.glow.as_ref().expect("glow");
+        assert_eq!(
+            glow.color.kind,
+            crate::model::color::ColorKind::Theme("accent6".to_string())
+        );
+        assert!((glow.alpha - 0.75).abs() < 1e-6);
     }
 
     #[test]
