@@ -6,6 +6,9 @@
 
 use std::collections::HashMap;
 
+type Point = (f64, f64);
+type PolylineSides = (Vec<Point>, Vec<Point>);
+
 /// Returns true if this preset shape needs `fill-rule="evenodd"` to render holes correctly.
 /// Shapes with inner cutouts (donut, frame, noSmoking, blockArc, etc.) use two subpaths
 /// where the inner subpath winds in the opposite direction to create a hole.
@@ -618,29 +621,15 @@ fn curved_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let body_top = h * a1.clamp(0.08, 0.42);
-    let body_bottom = h - body_top;
-    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_ctrl_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
-    let ctrl_front_x = w * (0.15 + a2.clamp(0.0, 1.0) * 0.3);
-    let ctrl_back_x = w * (0.25 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_x = w * (0.05 + a2.clamp(0.0, 1.0) * 0.3);
-    let cy = h / 2.0;
-    let xh = w * (1.0 - a3);
-    format!(
-        "M0,{h:.1} C0,{ctrl_y:.1} {ctrl_front_x:.1},{body_top:.1} {xh:.1},{body_top:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{body_bottom:.1} C{ctrl_back_x:.1},{body_bottom:.1} {tail_x:.1},{tail_ctrl_y:.1} {tail_x:.1},{h:.1} Z",
-        h = h,
-        ctrl_y = ctrl_y,
-        ctrl_front_x = ctrl_front_x,
-        body_top = body_top,
-        xh = xh,
-        w = w,
-        cy = cy,
-        body_bottom = body_bottom,
-        ctrl_back_x = ctrl_back_x,
-        tail_x = tail_x,
-        tail_ctrl_y = tail_ctrl_y
-    )
+    let thickness = w.min(h) * (0.20 + a1.clamp(0.0, 1.0) * 0.08);
+    let cx = w * (0.60 + a2.clamp(0.0, 1.0) * 0.04);
+    let cy = h * (0.46 - a2.clamp(0.0, 1.0) * 0.04);
+    let rx = w * (0.56 + a3.clamp(0.0, 1.0) * 0.06);
+    let ry = h * (0.36 + a2.clamp(0.0, 1.0) * 0.08);
+    let start_angle = 5.10 - a3.clamp(0.0, 1.0) * 0.18;
+    let end_angle = 0.78 + a1.clamp(0.0, 1.0) * 0.12;
+    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, start_angle, end_angle, 28);
+    ribbon_path_from_centerline(&centerline, thickness, false, true)
 }
 fn curved_left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
@@ -729,47 +718,15 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
 fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let a5 = adj.get("adj5").copied().unwrap_or(12500.0) / 100_000.0;
-    let rx = w / 2.0;
-    let ry = h / 2.0;
-    let cx = rx;
-    let cy = ry;
-    let sweep = (std::f64::consts::PI * (1.25 + a1))
-        .clamp(std::f64::consts::FRAC_PI_2, std::f64::consts::TAU - 0.2);
-    let start_angle = -std::f64::consts::FRAC_PI_2;
-    let end_angle = start_angle + sweep;
-    let t = (w.min(h) * (0.08 + a5 * 0.2)).min(w.min(h) * 0.35);
-    let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
-    let (ax, ay) = ellipse_point(cx, cy, rx, ry, end_angle);
-    let (isx, isy) = ellipse_point(cx, cy, (rx - t).max(0.1), (ry - t).max(0.1), start_angle);
-    let (iax, iay) = ellipse_point(cx, cy, (rx - t).max(0.1), (ry - t).max(0.1), end_angle);
-    let tx = -end_angle.sin();
-    let ty = end_angle.cos();
-    let head_len = t * 1.6;
-    let head_half = t * 0.8;
-    let tip_x = ax + end_angle.cos() * head_len;
-    let tip_y = ay + end_angle.sin() * head_len;
-    format!(
-        "M{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 {large_arc},1 {ax:.1},{ay:.1} L{b1x:.1},{b1y:.1} L{tip_x:.1},{tip_y:.1} L{b2x:.1},{b2y:.1} L{iax:.1},{iay:.1} A{rxi:.1},{ryi:.1} 0 {large_arc},0 {isx:.1},{isy:.1} Z",
-        sx = sx,
-        sy = sy,
-        rx = rx,
-        ry = ry,
-        large_arc = if sweep > std::f64::consts::PI { 1 } else { 0 },
-        ax = ax,
-        ay = ay,
-        b1x = ax + tx * head_half,
-        b1y = ay + ty * head_half,
-        tip_x = tip_x,
-        tip_y = tip_y,
-        b2x = ax - tx * head_half,
-        b2y = ay - ty * head_half,
-        iax = iax,
-        iay = iay,
-        rxi = (rx - t).max(0.1),
-        ryi = (ry - t).max(0.1),
-        isx = isx,
-        isy = isy
-    )
+    let thickness = w.min(h) * (0.16 + a5.clamp(0.0, 1.0) * 0.12);
+    let cx = w * 0.50;
+    let cy = h * (0.82 - a1.clamp(-0.4, 0.6) * 0.08);
+    let rx = w * (0.46 + a1.clamp(-0.4, 0.6) * 0.04);
+    let ry = h * (0.75 + a5.clamp(0.0, 1.0) * 0.06);
+    let start_angle = 3.30 + a1.clamp(-0.4, 0.6) * 0.18;
+    let end_angle = 5.90 - a1.clamp(-0.4, 0.6) * 0.50;
+    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, start_angle, end_angle, 26);
+    ribbon_path_from_centerline(&centerline, thickness, false, true)
 }
 fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
@@ -2138,6 +2095,138 @@ fn arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 
+fn sample_ellipse_arc_points(
+    cx: f64,
+    cy: f64,
+    rx: f64,
+    ry: f64,
+    start_angle: f64,
+    end_angle: f64,
+    steps: usize,
+) -> Vec<Point> {
+    let mut points = Vec::with_capacity(steps.saturating_add(1));
+    if steps == 0 {
+        points.push(ellipse_point(cx, cy, rx, ry, start_angle));
+        return points;
+    }
+
+    for i in 0..=steps {
+        let t = i as f64 / steps as f64;
+        let angle = start_angle + (end_angle - start_angle) * t;
+        points.push(ellipse_point(cx, cy, rx, ry, angle));
+    }
+    points
+}
+
+fn normalize_vector(dx: f64, dy: f64) -> (f64, f64) {
+    let len = (dx * dx + dy * dy).sqrt();
+    if len <= f64::EPSILON {
+        (0.0, 0.0)
+    } else {
+        (dx / len, dy / len)
+    }
+}
+
+fn offset_polyline(points: &[Point], half_width: f64) -> PolylineSides {
+    if points.len() < 2 {
+        return (points.to_vec(), points.to_vec());
+    }
+
+    let mut left = Vec::with_capacity(points.len());
+    let mut right = Vec::with_capacity(points.len());
+
+    for i in 0..points.len() {
+        let (px, py) = points[i];
+        let prev_dir = if i == 0 {
+            let (nx, ny) = points[i + 1];
+            normalize_vector(nx - px, ny - py)
+        } else {
+            let (bx, by) = points[i - 1];
+            normalize_vector(px - bx, py - by)
+        };
+        let next_dir = if i + 1 == points.len() {
+            let (bx, by) = points[i - 1];
+            normalize_vector(px - bx, py - by)
+        } else {
+            let (nx, ny) = points[i + 1];
+            normalize_vector(nx - px, ny - py)
+        };
+
+        let prev_normal = (-prev_dir.1, prev_dir.0);
+        let next_normal = (-next_dir.1, next_dir.0);
+        let mut normal = (prev_normal.0 + next_normal.0, prev_normal.1 + next_normal.1);
+        if normal.0.abs() <= f64::EPSILON && normal.1.abs() <= f64::EPSILON {
+            normal = prev_normal;
+        }
+        let normal = normalize_vector(normal.0, normal.1);
+
+        left.push((px + normal.0 * half_width, py + normal.1 * half_width));
+        right.push((px - normal.0 * half_width, py - normal.1 * half_width));
+    }
+
+    (left, right)
+}
+
+fn polygon_path(points: &[Point]) -> String {
+    let mut iter = points.iter();
+    let Some(&(x0, y0)) = iter.next() else {
+        return String::new();
+    };
+
+    let mut path = format!("M{x0:.1},{y0:.1}");
+    for &(x, y) in iter {
+        path.push_str(&format!(" L{x:.1},{y:.1}"));
+    }
+    path.push_str(" Z");
+    path
+}
+
+fn ribbon_path_from_centerline(
+    centerline: &[Point],
+    thickness: f64,
+    start_head: bool,
+    end_head: bool,
+) -> String {
+    if centerline.len() < 2 {
+        return String::new();
+    }
+
+    let head_len = thickness * 1.35;
+    let half_width = thickness / 2.0;
+    let (left, right) = offset_polyline(centerline, half_width);
+    let start_dir = normalize_vector(
+        centerline[1].0 - centerline[0].0,
+        centerline[1].1 - centerline[0].1,
+    );
+    let end_dir = normalize_vector(
+        centerline[centerline.len() - 1].0 - centerline[centerline.len() - 2].0,
+        centerline[centerline.len() - 1].1 - centerline[centerline.len() - 2].1,
+    );
+
+    let mut polygon = Vec::with_capacity(centerline.len() * 2 + 2);
+    if start_head {
+        let mid = (
+            (left[0].0 + right[0].0) / 2.0,
+            (left[0].1 + right[0].1) / 2.0,
+        );
+        polygon.push((
+            mid.0 - start_dir.0 * head_len,
+            mid.1 - start_dir.1 * head_len,
+        ));
+    }
+    polygon.extend(left.iter().copied());
+    if end_head {
+        let last = centerline.len() - 1;
+        let mid = (
+            (left[last].0 + right[last].0) / 2.0,
+            (left[last].1 + right[last].1) / 2.0,
+        );
+        polygon.push((mid.0 + end_dir.0 * head_len, mid.1 + end_dir.1 * head_len));
+    }
+    polygon.extend(right.iter().rev().copied());
+    polygon_path(&polygon)
+}
+
 fn ellipse_point(cx: f64, cy: f64, rx: f64, ry: f64, angle: f64) -> (f64, f64) {
     (cx + rx * angle.cos(), cy + ry * angle.sin())
 }
@@ -2587,58 +2676,22 @@ fn ellipse_ribbon2_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 
 // Circular arrows
 fn left_circular_arrow_path(w: f64, h: f64) -> String {
-    let (rx, ry) = (w / 2.0, h / 2.0);
-    let cx = rx;
-    let t = w.min(h) * 0.1;
-    let ax = cx - rx * 0.866;
-    let ay = ry + ry * 0.5;
-    format!(
-        "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,0 {ax:.1},{ay:.1} L{tx1:.1},{ty1:.1} L{tx2:.1},{ty2:.1} L{tx3:.1},{ty3:.1} A{rxi:.1},{ryi:.1} 0 1,1 {cx:.1},{t:.1} Z",
-        cx = cx,
-        rx = rx,
-        ry = ry,
-        ax = ax,
-        ay = ay,
-        tx1 = ax - t,
-        ty1 = ay + t,
-        tx2 = ax - t * 1.5,
-        ty2 = ay - t * 0.5,
-        tx3 = ax,
-        ty3 = ay,
-        rxi = (rx - t).max(0.1),
-        ryi = (ry - t).max(0.1),
-        t = t
-    )
+    let thickness = w.min(h) * 0.16;
+    let cx = w * 0.50;
+    let cy = h * 0.50;
+    let rx = w * 0.40;
+    let ry = h * 0.40;
+    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, 3.35, -0.30, 28);
+    ribbon_path_from_centerline(&centerline, thickness, false, true)
 }
 fn left_right_circular_arrow_path(w: f64, h: f64) -> String {
-    let (rx, ry) = (w / 2.0, h / 2.0);
-    let cx = rx;
-    let t = w.min(h) * 0.1;
-    let (ax1, ay1) = (cx + rx * 0.866, ry - ry * 0.5);
-    let (ax2, ay2) = (cx - rx * 0.866, ry + ry * 0.5);
-    format!(
-        "M{cx:.1},0 A{rx:.1},{ry:.1} 0 0,1 {ax1:.1},{ay1:.1} L{tx1:.1},{ty1:.1} L{tx2:.1},{ty2:.1} L{ax1:.1},{ay1:.1} A{rxi:.1},{ryi:.1} 0 0,0 {cx:.1},{t:.1} Z M{cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 0,1 {ax2:.1},{ay2:.1} L{bx1:.1},{by1:.1} L{bx2:.1},{by2:.1} L{ax2:.1},{ay2:.1} A{rxi:.1},{ryi:.1} 0 0,0 {cx:.1},{yt:.1} Z",
-        cx = cx,
-        rx = rx,
-        ry = ry,
-        h = h,
-        t = t,
-        ax1 = ax1,
-        ay1 = ay1,
-        tx1 = ax1 + t,
-        ty1 = ay1 - t,
-        tx2 = ax1 + t * 1.5,
-        ty2 = ay1 + t * 0.5,
-        rxi = (rx - t).max(0.1),
-        ryi = (ry - t).max(0.1),
-        ax2 = ax2,
-        ay2 = ay2,
-        bx1 = ax2 - t,
-        by1 = ay2 + t,
-        bx2 = ax2 - t * 1.5,
-        by2 = ay2 - t * 0.5,
-        yt = h - t
-    )
+    let thickness = w.min(h) * 0.18;
+    let cx = w * 0.50;
+    let cy = h * 0.62;
+    let rx = w * 0.41;
+    let ry = h * 0.49;
+    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, 3.50, 5.92, 28);
+    ribbon_path_from_centerline(&centerline, thickness, true, true)
 }
 
 // Misc shapes
@@ -3165,6 +3218,48 @@ mod tests {
     }
 
     #[test]
+    fn test_left_circular_arrow_default_path_tracks_u_shape_reference() {
+        let path = left_circular_arrow_path(100.0, 140.0);
+
+        assert_eq!(
+            path,
+            "M2.9,57.6 L2.1,65.2 L2.1,73.2 L2.7,81.2 L4.2,89.1 L6.3,96.6 L9.1,103.8 L12.7,110.4 L16.9,116.5 L21.7,121.8 L27.0,126.3 L32.9,129.8 L39.1,132.4 L45.7,133.7 L52.3,133.9 L58.9,132.9 L65.3,130.7 L71.3,127.4 L76.8,123.2 L81.8,118.1 L86.1,112.3 L89.9,105.8 L92.9,98.8 L95.3,91.3 L96.9,83.6 L97.8,75.6 L98.0,67.6 L97.4,59.6 L96.1,52.1 L84.6,32.2 L80.3,54.8 L81.5,61.5 L82.0,68.0 L81.9,74.6 L81.1,81.0 L79.8,87.3 L77.9,93.2 L75.6,98.6 L72.8,103.5 L69.6,107.7 L66.2,111.3 L62.6,114.0 L58.8,116.1 L55.1,117.4 L51.3,118.0 L47.6,117.9 L43.8,117.1 L40.0,115.5 L36.4,113.3 L32.8,110.3 L29.4,106.5 L26.3,102.1 L23.7,97.0 L21.4,91.4 L19.7,85.4 L18.6,79.1 L18.0,72.6 L18.1,66.1 L18.8,59.2 Z"
+        );
+    }
+
+    #[test]
+    fn test_left_right_circular_arrow_default_path_tracks_arch_reference() {
+        let path = left_right_circular_arrow_path(100.0, 140.0);
+
+        assert_eq!(
+            path,
+            "M5.6,86.3 L20.3,65.0 L21.6,59.7 L23.1,55.0 L24.9,50.6 L26.8,46.5 L28.9,42.7 L31.1,39.3 L33.4,36.3 L35.8,33.8 L38.3,31.7 L40.7,30.0 L43.1,28.8 L45.4,27.9 L47.7,27.4 L49.9,27.2 L52.2,27.4 L54.5,27.8 L56.8,28.7 L59.2,29.9 L61.6,31.6 L64.0,33.7 L66.5,36.2 L68.8,39.1 L71.0,42.5 L73.1,46.3 L75.0,50.4 L76.8,54.8 L78.3,59.5 L79.6,64.7 L94.4,86.0 L97.0,60.2 L95.6,54.5 L93.7,48.7 L91.6,43.3 L89.1,38.0 L86.4,33.1 L83.3,28.6 L80.0,24.4 L76.4,20.6 L72.6,17.3 L68.4,14.5 L64.0,12.2 L59.4,10.5 L54.7,9.5 L49.9,9.2 L45.0,9.6 L40.3,10.6 L35.7,12.3 L31.4,14.6 L27.2,17.5 L23.4,20.8 L19.8,24.6 L16.5,28.8 L13.5,33.4 L10.7,38.3 L8.3,43.5 L6.2,49.1 L4.3,54.8 L2.9,60.5 Z"
+        );
+    }
+
+    #[test]
+    fn test_circular_arrow_default_path_tracks_office_arc_span() {
+        let adj = HashMap::new();
+        let path = circular_arrow_path(160.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M15.3,69.3 L16.9,62.6 L18.9,56.4 L21.5,50.5 L24.7,44.9 L28.4,39.6 L32.5,34.7 L37.1,30.3 L42.1,26.3 L47.5,22.8 L53.1,19.9 L59.0,17.5 L65.1,15.7 L71.4,14.6 L77.7,14.0 L84.0,14.1 L90.3,14.8 L96.5,16.1 L102.5,18.1 L108.4,20.6 L114.0,23.7 L119.2,27.3 L124.1,31.4 L128.6,36.0 L132.6,41.0 L136.2,46.4 L139.4,52.4 L158.2,69.2 L154.9,44.3 L151.3,37.4 L146.8,30.7 L141.7,24.3 L136.0,18.5 L129.8,13.3 L123.1,8.8 L116.1,4.9 L108.7,1.7 L101.0,-0.8 L93.1,-2.4 L85.1,-3.3 L77.0,-3.4 L69.0,-2.8 L61.1,-1.3 L53.3,1.0 L45.8,4.0 L38.7,7.7 L31.9,12.1 L25.6,17.1 L19.8,22.8 L14.5,28.9 L9.9,35.6 L5.9,42.7 L2.6,50.1 L0.0,57.9 L-1.7,65.4 Z"
+        );
+    }
+
+    #[test]
+    fn test_curved_right_arrow_default_path_tracks_reference_c_shape() {
+        let adj = HashMap::new();
+        let path = curved_right_arrow_path(100.0, 140.0, &adj);
+
+        assert_eq!(
+            path,
+            "M84.1,-1.8 L75.0,-4.2 L64.7,-5.3 L54.4,-5.0 L44.2,-3.1 L34.5,0.3 L25.3,5.0 L17.0,11.1 L9.7,18.3 L3.6,26.5 L-1.1,35.6 L-4.4,45.2 L-6.2,55.3 L-6.4,65.5 L-5.0,75.6 L-2.1,85.3 L2.4,94.6 L8.1,103.0 L15.1,110.5 L23.2,116.8 L32.2,121.9 L41.8,125.6 L51.9,127.9 L62.2,128.6 L72.5,127.8 L82.6,125.5 L92.2,121.8 L101.1,116.6 L108.5,110.8 L124.9,83.7 L94.8,93.6 L88.7,98.4 L82.6,101.9 L76.1,104.5 L69.2,106.1 L62.1,106.6 L55.1,106.1 L48.2,104.6 L41.6,102.0 L35.5,98.6 L30.0,94.3 L25.3,89.2 L21.4,83.6 L18.5,77.4 L16.5,70.9 L15.6,64.2 L15.7,57.4 L16.9,50.7 L19.1,44.3 L22.3,38.2 L26.4,32.7 L31.3,27.8 L36.9,23.7 L43.1,20.5 L49.8,18.2 L56.8,16.9 L63.8,16.6 L70.9,17.4 L78.5,19.5 Z"
+        );
+    }
+
+    #[test]
     fn test_star4_default_path_matches_office_body_width() {
         let adj = HashMap::new();
         let path = star4_path(100.0, 100.0, &adj);
@@ -3290,13 +3385,26 @@ mod tests {
         let default_path = preset_shape_svg("circularArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("circularArrow", 120.0, 100.0, &custom_adj).unwrap();
 
+        let parse_start = |path: &str| {
+            let start = path
+                .strip_prefix('M')
+                .and_then(|rest| rest.split_once(' '))
+                .map(|(coords, _)| coords)
+                .unwrap();
+            let (x, y) = start.split_once(',').unwrap();
+            (x.parse::<f64>().unwrap(), y.parse::<f64>().unwrap())
+        };
+
+        let (default_x, default_y) = parse_start(&default_path);
+        let (custom_x, custom_y) = parse_start(&custom_path);
+
         assert!(
-            default_path.contains("A60.0,50.0 0 1,1"),
-            "default circularArrow should keep large-arc sweep: {default_path}"
+            default_path.ends_with('Z') && custom_path.ends_with('Z'),
+            "circularArrow should remain a closed polygon ribbon"
         );
         assert!(
-            custom_path.contains("A60.0,50.0 0 0,1"),
-            "negative adj1 should flip the sweep below π: {custom_path}"
+            custom_x > default_x && custom_y > default_y,
+            "negative adj1 should tighten the sweep and move the start point inward: default={default_path} custom={custom_path}"
         );
     }
 
