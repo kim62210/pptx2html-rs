@@ -4329,6 +4329,29 @@ fn test_preset_shape_with_adjust_values() {
 }
 
 #[test]
+fn test_preset_shape_star4_uses_office_default_body_width() {
+    let slide = r#"
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="2" name="Star4"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="100000" y="100000"/><a:ext cx="1000000" cy="1000000"/></a:xfrm>
+        <a:prstGeom prst="star4"/>
+        <a:solidFill><a:srgbClr val="FFD700"/></a:solidFill>
+      </p:spPr>
+    </p:sp>"#;
+
+    let pptx = fixtures::MinimalPptx::new(slide).build();
+    let html = render_html(&pptx);
+    assert!(html.contains("shape-svg"));
+    assert!(
+        html.contains(
+            "M52.5,0 L61.9,43.0 L105.0,52.5 L61.9,61.9 L52.5,105.0 L43.0,61.9 L0,52.5 L43.0,43.0 Z"
+        ),
+        "star4 should keep the fuller Office default body width: {html}"
+    );
+}
+
+#[test]
 fn test_preset_shape_star5() {
     let slide = r#"
     <p:sp>
@@ -4344,6 +4367,12 @@ fn test_preset_shape_star5() {
     let html = render_html(&pptx);
     assert!(html.contains("shape-svg"));
     assert!(html.contains("#FFD700"));
+    assert!(
+        html.contains(
+            "M52.5,0.0 L67.9,31.3 L102.4,36.3 L77.5,60.6 L83.3,95.0 L52.5,78.7 L21.6,95.0 L27.5,60.6 L2.6,36.3 L37.1,31.3 Z"
+        ),
+        "star5 should keep the fuller Office default body width: {html}"
+    );
 }
 
 #[test]

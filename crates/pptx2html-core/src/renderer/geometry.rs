@@ -1519,7 +1519,7 @@ fn action_button_icon_path(w: f64, h: f64, icon: &str) -> String {
     format!("{btn} {ip}")
 }
 fn star4_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let ratio = adj.get("adj").copied().unwrap_or(12500.0) / 100_000.0;
+    let ratio = adj.get("adj").copied().unwrap_or(18000.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
     let (ix, iy) = (cx * (1.0 - ratio), cy * (1.0 - ratio));
     format!(
@@ -1535,7 +1535,7 @@ fn star4_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn star5_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let ratio = adj.get("adj").copied().unwrap_or(10530.0) / 100_000.0;
+    let ratio = adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
     let (ro_x, ro_y) = (cx, cy);
     let (ri_x, ri_y) = (cx * ratio * 2.0, cy * ratio * 2.0);
@@ -3161,6 +3161,28 @@ mod tests {
         assert_eq!(
             path,
             "M15.0,0 L105.0,0 L105.0,50.0 L120.0,50.0 L60.0,100.0 L0,50.0 L15.0,50.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_star4_default_path_matches_office_body_width() {
+        let adj = HashMap::new();
+        let path = star4_path(100.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M50.0,0 L59.0,41.0 L100.0,50.0 L59.0,59.0 L50.0,100.0 L41.0,59.0 L0,50.0 L41.0,41.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_star5_default_path_matches_office_body_width() {
+        let adj = HashMap::new();
+        let path = star5_path(100.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M50.0,0.0 L64.7,29.8 L97.6,34.5 L73.8,57.7 L79.4,90.5 L50.0,75.0 L20.6,90.5 L26.2,57.7 L2.4,34.5 L35.3,29.8 Z"
         );
     }
 
