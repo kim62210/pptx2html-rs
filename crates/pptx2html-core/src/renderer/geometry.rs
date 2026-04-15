@@ -1680,6 +1680,14 @@ fn math_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.033486,0.208517 L 0.485552,0.208517 0.544693,0.018927 0.719147,0.092744 0.682960,0.208517 0.966244,0.208517 0.966244,0.425237 0.615447,0.425237 0.581691,0.533754 0.966244,0.533754 0.966244,0.750473 0.514178,0.750473 0.455036,0.940379 0.280583,0.866246 0.316770,0.750473 0.033486,0.750473 0.033486,0.533754 0.384283,0.533754 0.418039,0.425237 0.033486,0.425237 0.033486,0.208517 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
     let a2_angle = adj.get("adj2").copied().unwrap_or(6600000.0);
     let a3 = adj.get("adj3").copied().unwrap_or(11760.0) / 100_000.0;
@@ -1729,6 +1737,14 @@ fn math_multiply_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn math_divide_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.499791,0.015629 L 0.499791,0.015629 C 0.540292,0.015629 0.579958,0.022402 0.615031,0.034905 0.650104,0.047669 0.679332,0.065642 0.699791,0.087523 0.719833,0.109403 0.730689,0.134410 0.730689,0.159677 0.730689,0.184944 0.719833,0.209690 0.699791,0.231571 0.679332,0.253451 0.650104,0.271685 0.615031,0.284189 0.579958,0.296952 0.540292,0.303464 0.499791,0.303464 0.459290,0.303464 0.419624,0.296952 0.384551,0.284189 0.349478,0.271685 0.320251,0.253451 0.299791,0.231571 0.279749,0.209690 0.268894,0.184944 0.268894,0.159677 0.268894,0.134410 0.279749,0.109403 0.299791,0.087523 0.320251,0.065642 0.349478,0.047669 0.384551,0.034905 0.419624,0.022402 0.459290,0.015629 0.499791,0.015629 Z M 0.499791,0.950768 L 0.499791,0.950768 C 0.459290,0.950768 0.419624,0.943996 0.384551,0.931493 0.349478,0.918729 0.320251,0.900755 0.299791,0.878875 0.279749,0.856994 0.268894,0.831987 0.268894,0.806721 0.268894,0.781454 0.279749,0.756707 0.299791,0.734827 0.320251,0.712946 0.349478,0.694712 0.384551,0.682209 0.419624,0.669445 0.459290,0.662933 0.499791,0.662933 0.540292,0.662933 0.579958,0.669445 0.615031,0.682209 0.650104,0.694712 0.679332,0.712946 0.699791,0.734827 0.719833,0.756707 0.730689,0.781454 0.730689,0.806721 0.730689,0.831987 0.719833,0.856994 0.699791,0.878875 0.679332,0.900755 0.650104,0.918729 0.615031,0.931493 0.579958,0.943996 0.540292,0.950768 0.499791,0.950768 Z M 0.051775,0.339151 L 0.947808,0.339151 0.947808,0.627247 0.051775,0.627247 0.051775,0.339151 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(5765.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(11760.0) / 100_000.0;
@@ -1793,27 +1809,10 @@ fn math_minus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn lightning_bolt_path(w: f64, h: f64) -> String {
-    format!(
-        "M{x1:.1},0 L{x2:.1},{y1:.1} L{x3:.1},{y2:.1} L{x4:.1},{y2:.1} L{x5:.1},{y3:.1} L{x6:.1},{y4:.1} L{x7:.1},{h:.1} L{x8:.1},{y5:.1} L{x9:.1},{y6:.1} L{x10:.1},{y6:.1} L{x11:.1},{y7:.1} Z",
-        x1 = w * 0.55,
-        x2 = w * 0.3,
-        y1 = h * 0.35,
-        x3 = w * 0.52,
-        y2 = h * 0.35,
-        x4 = w * 0.25,
-        y3 = h * 0.6,
-        x5 = w * 0.47,
-        y4 = h * 0.6,
-        x6 = w * 0.17,
-        x7 = w * 0.45,
-        h = h,
-        x8 = w * 0.7,
-        y5 = h * 0.65,
-        x9 = w * 0.48,
-        y6 = h * 0.65,
-        x10 = w * 0.75,
-        y7 = h * 0.4,
-        x11 = w * 0.83
+    scale_normalized_path(
+        "M 0.398471,0.014333 L 0.589345,0.279025 0.510750,0.310081 0.751314,0.537028 0.672480,0.575012 0.970139,0.954849 0.465361,0.663641 0.561634,0.623268 0.248208,0.436694 0.360487,0.379121 0.029623,0.183708 0.398471,0.014333 Z",
+        w,
+        h,
     )
 }
 fn cloud_path(w: f64, h: f64) -> String {
@@ -2325,6 +2324,23 @@ fn scale_unit_point(w: f64, h: f64, ux: f64, uy: f64) -> Point {
     (w * ux, h * uy)
 }
 
+fn scale_normalized_path(path: &str, w: f64, h: f64) -> String {
+    path.split_whitespace()
+        .map(|token| {
+            if token.len() == 1 && token.chars().all(|c| c.is_ascii_alphabetic()) {
+                token.to_string()
+            } else if let Some((x, y)) = token.split_once(',') {
+                let x = x.parse::<f64>().unwrap_or_default() * w;
+                let y = y.parse::<f64>().unwrap_or_default() * h;
+                format!("{x:.1},{y:.1}")
+            } else {
+                token.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
@@ -2611,6 +2627,14 @@ fn left_brace_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn right_brace_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.029854,0.014333 L 0.029854,0.014333 C 0.112491,0.014333 0.193456,0.017917 0.264867,0.024845 0.336279,0.031773 0.395749,0.041567 0.437067,0.053512 0.478385,0.065456 0.500119,0.078834 0.500119,0.092690 L 0.500119,0.092690 0.499881,0.406116 0.499881,0.406116 C 0.499881,0.419971 0.521615,0.433349 0.562933,0.445294 0.604251,0.457238 0.663482,0.467033 0.734894,0.473961 0.806305,0.480889 0.887509,0.484472 0.970146,0.484472 L 0.970146,0.484472 C 0.887509,0.484472 0.806305,0.488055 0.734894,0.494983 0.663482,0.501911 0.604251,0.511706 0.562933,0.523650 0.521615,0.535595 0.499881,0.549212 0.499881,0.562828 L 0.499881,0.876254 0.499881,0.876254 C 0.499881,0.890110 0.478147,0.903488 0.436828,0.915432 0.395510,0.927377 0.336279,0.937172 0.264867,0.944099 0.193456,0.951027 0.112252,0.954611 0.029854,0.954611 L 0.029854,0.014333 Z",
+            w,
+            h,
+        );
+    }
+
     let r = h * adj.get("adj1").copied().unwrap_or(8333.0) / 100_000.0;
     let cy = h * adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
     let x = w * 0.3;
@@ -3916,6 +3940,28 @@ mod tests {
     }
 
     #[test]
+    fn test_math_not_equal_default_path_matches_extracted_office_polygon() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathNotEqual", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 4.0,20.9 L 58.3,20.9 65.4,1.9 86.3,9.3 82.0,20.9 115.9,20.9 115.9,42.5 73.9,42.5 69.8,53.4 115.9,53.4 115.9,75.0 61.7,75.0 54.6,94.0 33.7,86.6 38.0,75.0 4.0,75.0 4.0,53.4 46.1,53.4 50.2,42.5 4.0,42.5 4.0,20.9 Z"
+        );
+    }
+
+    #[test]
+    fn test_math_divide_default_path_matches_extracted_office_geometry() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathDivide", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(path.matches('M').count(), 3);
+        assert!(path.contains("60.0,1.6"));
+        assert!(path.contains("113.7,33.9"));
+        assert!(path.contains("6.2,33.9"));
+    }
+
+    #[test]
     fn test_bent_connector5_adjust_values_change_path() {
         let default_adj = HashMap::new();
         let mut custom_adj = HashMap::new();
@@ -3930,6 +3976,26 @@ mod tests {
             default_path, custom_path,
             "bentConnector5 adj1/adj2/adj3 should change the path"
         );
+    }
+
+    #[test]
+    fn test_lightning_bolt_default_path_matches_extracted_office_polygon() {
+        let path = lightning_bolt_path(120.0, 100.0);
+
+        assert_eq!(
+            path,
+            "M 47.8,1.4 L 70.7,27.9 61.3,31.0 90.2,53.7 80.7,57.5 116.4,95.5 55.8,66.4 67.4,62.3 29.8,43.7 43.3,37.9 3.6,18.4 47.8,1.4 Z"
+        );
+    }
+
+    #[test]
+    fn test_right_brace_default_path_matches_extracted_office_outline() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("rightBrace", 120.0, 100.0, &default_adj).unwrap();
+
+        assert!(path.contains("M 3.6,1.4"));
+        assert!(path.contains("116.4,48.4"));
+        assert!(path.contains("3.6,95.5"));
     }
 
     #[test]
