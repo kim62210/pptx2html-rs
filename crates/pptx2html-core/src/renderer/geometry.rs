@@ -798,6 +798,29 @@ fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn left_right_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        let points = [
+            scale_unit_point(w, h, 0.000000, 0.749743),
+            scale_unit_point(w, h, 0.155352, 0.499829),
+            scale_unit_point(w, h, 0.155352, 0.624786),
+            scale_unit_point(w, h, 0.422217, 0.624786),
+            scale_unit_point(w, h, 0.422217, 0.249914),
+            scale_unit_point(w, h, 0.344541, 0.249914),
+            scale_unit_point(w, h, 0.499894, 0.000000),
+            scale_unit_point(w, h, 0.655246, 0.249914),
+            scale_unit_point(w, h, 0.577570, 0.249914),
+            scale_unit_point(w, h, 0.577570, 0.624786),
+            scale_unit_point(w, h, 0.844435, 0.624786),
+            scale_unit_point(w, h, 0.844435, 0.499829),
+            scale_unit_point(w, h, 1.000000, 0.749743),
+            scale_unit_point(w, h, 0.844435, 1.000000),
+            scale_unit_point(w, h, 0.844435, 0.874700),
+            scale_unit_point(w, h, 0.155352, 0.874700),
+            scale_unit_point(w, h, 0.155352, 1.000000),
+        ];
+        return polygon_path(&points);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -1895,6 +1918,51 @@ fn no_smoking_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        let (sx, sy) = scale_unit_point(w, h, 0.000000, 0.499873);
+        let (c1x, c1y) = scale_unit_point(w, h, 0.000000, 0.411989);
+        let (c2x, c2y) = scale_unit_point(w, h, 0.023114, 0.325883);
+        let (x1, y1) = scale_unit_point(w, h, 0.067056, 0.249936);
+        let (c3x, c3y) = scale_unit_point(w, h, 0.110998, 0.173990);
+        let (c4x, c4y) = scale_unit_point(w, h, 0.173990, 0.110744);
+        let (x2, y2) = scale_unit_point(w, h, 0.249936, 0.066802);
+        let (c5x, c5y) = scale_unit_point(w, h, 0.325883, 0.022860);
+        let (c6x, c6y) = scale_unit_point(w, h, 0.412243, 0.000000);
+        let (x3, y3) = scale_unit_point(w, h, 0.500127, 0.000000);
+        let (c7x, c7y) = scale_unit_point(w, h, 0.587757, 0.000000);
+        let (c8x, c8y) = scale_unit_point(w, h, 0.674117, 0.022860);
+        let (x4, y4) = scale_unit_point(w, h, 0.750064, 0.066802);
+        let (c9x, c9y) = scale_unit_point(w, h, 0.826010, 0.110744);
+        let (c10x, c10y) = scale_unit_point(w, h, 0.889002, 0.173990);
+        let (x5, y5) = scale_unit_point(w, h, 0.932944, 0.249936);
+        let (c11x, c11y) = scale_unit_point(w, h, 0.976886, 0.325883);
+        let (c12x, c12y) = scale_unit_point(w, h, 1.000000, 0.411989);
+        let (x6, y6) = scale_unit_point(w, h, 1.000000, 0.499873);
+        let (lx1, ly1) = scale_unit_point(w, h, 0.749809, 0.499873);
+        let (ic1x, ic1y) = scale_unit_point(w, h, 0.749809, 0.455931);
+        let (ic2x, ic2y) = scale_unit_point(w, h, 0.738379, 0.412751);
+        let (ix1, iy1) = scale_unit_point(w, h, 0.716281, 0.374905);
+        let (ic3x, ic3y) = scale_unit_point(w, h, 0.694437, 0.336805);
+        let (ic4x, ic4y) = scale_unit_point(w, h, 0.662687, 0.305309);
+        let (ix2, iy2) = scale_unit_point(w, h, 0.624841, 0.283465);
+        let (ic5x, ic5y) = scale_unit_point(w, h, 0.586741, 0.261367);
+        let (ic6x, ic6y) = scale_unit_point(w, h, 0.543815, 0.249936);
+        let (ix3, iy3) = scale_unit_point(w, h, 0.499873, 0.249936);
+        let (ic7x, ic7y) = scale_unit_point(w, h, 0.455931, 0.249936);
+        let (ic8x, ic8y) = scale_unit_point(w, h, 0.412751, 0.261367);
+        let (ix4, iy4) = scale_unit_point(w, h, 0.374905, 0.283465);
+        let (ic9x, ic9y) = scale_unit_point(w, h, 0.336805, 0.305309);
+        let (ic10x, ic10y) = scale_unit_point(w, h, 0.305309, 0.336805);
+        let (ix5, iy5) = scale_unit_point(w, h, 0.283211, 0.374905);
+        let (ic11x, ic11y) = scale_unit_point(w, h, 0.261367, 0.412751);
+        let (ic12x, ic12y) = scale_unit_point(w, h, 0.249936, 0.455931);
+        let (ix6, iy6) = scale_unit_point(w, h, 0.249936, 0.499873);
+
+        return format!(
+            "M{sx:.1},{sy:.1} C{c1x:.1},{c1y:.1} {c2x:.1},{c2y:.1} {x1:.1},{y1:.1} C{c3x:.1},{c3y:.1} {c4x:.1},{c4y:.1} {x2:.1},{y2:.1} C{c5x:.1},{c5y:.1} {c6x:.1},{c6y:.1} {x3:.1},{y3:.1} C{c7x:.1},{c7y:.1} {c8x:.1},{c8y:.1} {x4:.1},{y4:.1} C{c9x:.1},{c9y:.1} {c10x:.1},{c10y:.1} {x5:.1},{y5:.1} C{c11x:.1},{c11y:.1} {c12x:.1},{c12y:.1} {x6:.1},{y6:.1} L{lx1:.1},{ly1:.1} C{ic1x:.1},{ic1y:.1} {ic2x:.1},{ic2y:.1} {ix1:.1},{iy1:.1} C{ic3x:.1},{ic3y:.1} {ic4x:.1},{ic4y:.1} {ix2:.1},{iy2:.1} C{ic5x:.1},{ic5y:.1} {ic6x:.1},{ic6y:.1} {ix3:.1},{iy3:.1} C{ic7x:.1},{ic7y:.1} {ic8x:.1},{ic8y:.1} {ix4:.1},{iy4:.1} C{ic9x:.1},{ic9y:.1} {ic10x:.1},{ic10y:.1} {ix5:.1},{iy5:.1} C{ic11x:.1},{ic11y:.1} {ic12x:.1},{ic12y:.1} {ix6:.1},{iy6:.1} L{sx:.1},{sy:.1} Z"
+        );
+    }
+
     let adj1 = adj.get("adj1").copied().unwrap_or(10800000.0);
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -2252,6 +2320,11 @@ fn ribbon_path_from_centerline(
 fn ellipse_point(cx: f64, cy: f64, rx: f64, ry: f64, angle: f64) -> (f64, f64) {
     (cx + rx * angle.cos(), cy + ry * angle.sin())
 }
+
+fn scale_unit_point(w: f64, h: f64, ux: f64, uy: f64) -> Point {
+    (w * ux, h * uy)
+}
+
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
@@ -2309,16 +2382,51 @@ fn regular_polygon_path(w: f64, h: f64, sides: u32) -> String {
     p
 }
 fn funnel_path(w: f64, h: f64) -> String {
-    let cx = w / 2.0;
-    let nw = w * 0.2;
-    let ny = h * 0.6;
+    let (sx, sy) = scale_unit_point(w, h, 0.004682, 0.284492);
+    let (c1x, c1y) = scale_unit_point(w, h, 0.001490, 0.272852);
+    let (c2x, c2y) = scale_unit_point(w, h, -0.000213, 0.261212);
+    let (x1, y1) = scale_unit_point(w, h, -0.000213, 0.249572);
+    let (c3x, c3y) = scale_unit_point(w, h, 0.022984, 0.205751);
+    let (c4x, c4y) = scale_unit_point(w, h, 0.066823, 0.162616);
+    let (x2, y2) = scale_unit_point(w, h, 0.110662, 0.124615);
+    let (c5x, c5y) = scale_unit_point(w, h, 0.173867, 0.086614);
+    let (c6x, c6y) = scale_unit_point(w, h, 0.249840, 0.055118);
+    let (x3, y3) = scale_unit_point(w, h, 0.325814, 0.033208);
+    let (c7x, c7y) = scale_unit_point(w, h, 0.412003, 0.011298);
+    let (c8x, c8y) = scale_unit_point(w, h, 0.499894, -0.000342);
+    let (x4, y4) = scale_unit_point(w, h, 0.587572, -0.000342);
+    let (c9x, c9y) = scale_unit_point(w, h, 0.673760, 0.011298);
+    let (c10x, c10y) = scale_unit_point(w, h, 0.749734, 0.033208);
+    let (x5, y5) = scale_unit_point(w, h, 0.825920, 0.055118);
+    let (c11x, c11y) = scale_unit_point(w, h, 0.888913, 0.086614);
+    let (c12x, c12y) = scale_unit_point(w, h, 0.932752, 0.124615);
+    let (x6, y6) = scale_unit_point(w, h, 0.976804, 0.162616);
+    let (c13x, c13y) = scale_unit_point(w, h, 0.999787, 0.205751);
+    let (c14x, c14y) = scale_unit_point(w, h, 0.999787, 0.249572);
+    let (x7, y7) = scale_unit_point(w, h, 0.999787, 0.261212);
+    let (c15x, c15y) = scale_unit_point(w, h, 0.998085, 0.272852);
+    let (c16x, c16y) = scale_unit_point(w, h, 0.994893, 0.284492);
+    let (x8, y8) = scale_unit_point(w, h, 0.623750, 0.945909);
+    let (c17x, c17y) = scale_unit_point(w, h, 0.621622, 0.953783);
+    let (c18x, c18y) = scale_unit_point(w, h, 0.616301, 0.961657);
+    let (x9, y9) = scale_unit_point(w, h, 0.608215, 0.968504);
+    let (c19x, c19y) = scale_unit_point(w, h, 0.597148, 0.978090);
+    let (c20x, c20y) = scale_unit_point(w, h, 0.581400, 0.985964);
+    let (x10, y10) = scale_unit_point(w, h, 0.562460, 0.991441);
+    let (c21x, c21y) = scale_unit_point(w, h, 0.543520, 0.996919);
+    let (c22x, c22y) = scale_unit_point(w, h, 0.521813, 0.999658);
+    let (x11, y11) = scale_unit_point(w, h, 0.499894, 0.999658);
+    let (c23x, c23y) = scale_unit_point(w, h, 0.477974, 0.999658);
+    let (c24x, c24y) = scale_unit_point(w, h, 0.456480, 0.996919);
+    let (x12, y12) = scale_unit_point(w, h, 0.437540, 0.991441);
+    let (c25x, c25y) = scale_unit_point(w, h, 0.418387, 0.985964);
+    let (c26x, c26y) = scale_unit_point(w, h, 0.402639, 0.978090);
+    let (x13, y13) = scale_unit_point(w, h, 0.391785, 0.968504);
+    let (c27x, c27y) = scale_unit_point(w, h, 0.383699, 0.961657);
+    let (c28x, c28y) = scale_unit_point(w, h, 0.378378, 0.953783);
+    let (x14, y14) = scale_unit_point(w, h, 0.376250, 0.945909);
     format!(
-        "M0,0 L{w:.1},0 L{x2:.1},{ny:.1} L{x2:.1},{h:.1} L{x1:.1},{h:.1} L{x1:.1},{ny:.1} Z",
-        w = w,
-        x1 = cx - nw / 2.0,
-        x2 = cx + nw / 2.0,
-        ny = ny,
-        h = h
+        "M{sx:.1},{sy:.1} C{c1x:.1},{c1y:.1} {c2x:.1},{c2y:.1} {x1:.1},{y1:.1} C{c3x:.1},{c3y:.1} {c4x:.1},{c4y:.1} {x2:.1},{y2:.1} C{c5x:.1},{c5y:.1} {c6x:.1},{c6y:.1} {x3:.1},{y3:.1} C{c7x:.1},{c7y:.1} {c8x:.1},{c8y:.1} {x4:.1},{y4:.1} C{c9x:.1},{c9y:.1} {c10x:.1},{c10y:.1} {x5:.1},{y5:.1} C{c11x:.1},{c11y:.1} {c12x:.1},{c12y:.1} {x6:.1},{y6:.1} C{c13x:.1},{c13y:.1} {c14x:.1},{c14y:.1} {x7:.1},{y7:.1} C{c15x:.1},{c15y:.1} {c16x:.1},{c16y:.1} {x8:.1},{y8:.1} C{c17x:.1},{c17y:.1} {c18x:.1},{c18y:.1} {x9:.1},{y9:.1} C{c19x:.1},{c19y:.1} {c20x:.1},{c20y:.1} {x10:.1},{y10:.1} C{c21x:.1},{c21y:.1} {c22x:.1},{c22y:.1} {x11:.1},{y11:.1} C{c23x:.1},{c23y:.1} {c24x:.1},{c24y:.1} {x12:.1},{y12:.1} C{c25x:.1},{c25y:.1} {c26x:.1},{c26y:.1} {x13:.1},{y13:.1} C{c27x:.1},{c27y:.1} {c28x:.1},{c28y:.1} {x14:.1},{y14:.1} L{sx:.1},{sy:.1} Z"
     )
 }
 fn teardrop_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -3475,6 +3583,59 @@ mod tests {
     }
 
     #[test]
+    fn test_block_arc_default_path_matches_upper_band_silhouette() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("blockArc", 120.0, 100.0, &default_adj).unwrap();
+
+        let ys: Vec<f64> = path
+            .split(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+            .filter(|token| !token.is_empty())
+            .skip(1)
+            .step_by(2)
+            .map(|token| token.parse::<f64>().unwrap())
+            .collect();
+
+        assert!(
+            path.contains('C'),
+            "blockArc default should preserve the extracted curved band outline"
+        );
+        assert!(
+            ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) <= 50.1,
+            "blockArc default should stay in the upper half of its box: {path}"
+        );
+        assert!(
+            ys.iter().copied().fold(f64::INFINITY, f64::min) <= 0.1,
+            "blockArc default should still reach the top edge: {path}"
+        );
+    }
+
+    #[test]
+    fn test_funnel_default_path_matches_extracted_body_curve() {
+        let path = funnel_path(120.0, 100.0);
+
+        let ys: Vec<f64> = path
+            .split(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+            .filter(|token| !token.is_empty())
+            .skip(1)
+            .step_by(2)
+            .map(|token| token.parse::<f64>().unwrap())
+            .collect();
+
+        assert!(
+            path.contains('C'),
+            "funnel default should use the extracted curved body instead of a hexagon"
+        );
+        assert!(
+            ys.iter().copied().fold(f64::INFINITY, f64::min) <= 0.1,
+            "funnel mouth should still reach the top edge: {path}"
+        );
+        assert!(
+            ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) >= 94.0,
+            "funnel tail should extend near the bottom edge: {path}"
+        );
+    }
+
+    #[test]
     fn test_circular_arrow_adjust_values_change_path() {
         let default_adj = HashMap::new();
         let mut custom_adj = HashMap::new();
@@ -3677,6 +3838,17 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "leftRightUpArrow adj2/adj3 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_left_right_up_arrow_default_path_matches_extracted_polygon() {
+        let adj = HashMap::new();
+        let path = left_right_up_arrow_path(120.0, 100.0, &adj);
+
+        assert_eq!(
+            path,
+            "M0.0,75.0 L18.6,50.0 L18.6,62.5 L50.7,62.5 L50.7,25.0 L41.3,25.0 L60.0,0.0 L78.6,25.0 L69.3,25.0 L69.3,62.5 L101.3,62.5 L101.3,50.0 L120.0,75.0 L101.3,100.0 L101.3,87.5 L18.6,87.5 L18.6,100.0 Z"
         );
     }
 
