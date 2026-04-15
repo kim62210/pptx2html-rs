@@ -1821,6 +1821,14 @@ fn heart_path(w: f64, h: f64) -> String {
     )
 }
 fn plus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.352280,0.110805 L 0.647720,0.110805 0.647720,0.408107 0.899713,0.408107 0.899713,0.591893 0.647720,0.591893 0.647720,0.889195 0.352280,0.889195 0.352280,0.591893 0.100287,0.591893 0.100287,0.408107 0.352280,0.408107 0.352280,0.110805 Z",
+            w,
+            h,
+        );
+    }
+
     let a = adj.get("adj").copied().unwrap_or(25000.0);
     let ax = w * a / 100_000.0;
     let ay = h * a / 100_000.0;
@@ -1830,6 +1838,14 @@ fn plus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn math_minus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.100287,0.363463 L 0.899713,0.363463 0.899713,0.636537 0.100287,0.636537 0.100287,0.363463 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(11760.0) / 100_000.0;
     let bar_h = h * a1;
     let cy = h / 2.0;
@@ -4009,6 +4025,28 @@ mod tests {
         assert_eq!(
             path,
             "M 4.7,2.3 L 115.2,2.3 115.2,38.5 4.7,38.5 4.7,2.3 Z M 4.7,56.5 L 115.2,56.5 115.2,92.6 4.7,92.6 4.7,56.5 Z"
+        );
+    }
+
+    #[test]
+    fn test_math_plus_default_path_matches_extracted_office_geometry() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathPlus", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 42.3,11.1 L 77.7,11.1 77.7,40.8 108.0,40.8 108.0,59.2 77.7,59.2 77.7,88.9 42.3,88.9 42.3,59.2 12.0,59.2 12.0,40.8 42.3,40.8 42.3,11.1 Z"
+        );
+    }
+
+    #[test]
+    fn test_math_minus_default_path_matches_extracted_office_geometry() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathMinus", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 12.0,36.3 L 108.0,36.3 108.0,63.7 12.0,63.7 12.0,36.3 Z"
         );
     }
 
