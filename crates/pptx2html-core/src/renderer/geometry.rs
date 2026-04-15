@@ -923,6 +923,14 @@ fn quad_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn left_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.039117,0.814066 L 0.269401,0.666532 0.269401,0.740299 0.614826,0.740299 0.614826,0.159660 0.499685,0.159660 0.729968,0.012126 0.960568,0.159660 0.845110,0.159660 0.845110,0.887833 0.269401,0.887833 0.269401,0.961803 0.039117,0.814066 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -4168,6 +4176,17 @@ mod tests {
         assert_eq!(
             path,
             "M 3.0,71.0 L 90.4,71.0 90.4,24.9 81.5,24.9 99.2,1.9 117.0,24.9 108.1,24.9 108.1,94.0 3.0,94.0 3.0,71.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_left_up_arrow_default_path_matches_extracted_office_polygon() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 4.7,81.4 L 32.3,66.7 32.3,74.0 73.8,74.0 73.8,16.0 60.0,16.0 87.6,1.2 115.3,16.0 101.4,16.0 101.4,88.8 32.3,88.8 32.3,96.2 4.7,81.4 Z"
         );
     }
 
