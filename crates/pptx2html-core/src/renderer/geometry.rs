@@ -741,6 +741,14 @@ fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     ribbon_path_from_centerline(&centerline, thickness, false, true)
 }
 fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.039117,0.814104 L 0.614826,0.814104 0.614826,0.159830 0.499685,0.159830 0.729968,0.012326 0.960568,0.159830 0.845110,0.159830 0.845110,0.961810 0.039117,0.961810 0.039117,0.814104 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -1661,6 +1669,14 @@ fn irregular_seal2_path(w: f64, h: f64) -> String {
     s
 }
 fn math_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.039453,0.023410 L 0.960229,0.023410 0.960229,0.384705 0.039453,0.384705 0.039453,0.023410 Z M 0.039453,0.564963 L 0.960229,0.564963 0.960229,0.926258 0.039453,0.926258 0.039453,0.564963 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(11760.0) / 100_000.0;
     let bar_h = h * a2;
@@ -1714,6 +1730,14 @@ fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn math_multiply_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.052744,0.138225 L 0.301148,0.019653 0.499787,0.265640 0.698426,0.019653 0.946831,0.138225 0.671629,0.478873 0.946831,0.819522 0.698426,0.938094 0.499787,0.692106 0.301148,0.938094 0.052744,0.819522 0.327946,0.478873 0.052744,0.138225 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
     let (cx, cy) = (w / 2.0, h / 2.0);
     let d = w.min(h) * a1;
@@ -3962,6 +3986,17 @@ mod tests {
     }
 
     #[test]
+    fn test_math_equal_default_path_matches_extracted_office_geometry() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathEqual", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 4.7,2.3 L 115.2,2.3 115.2,38.5 4.7,38.5 4.7,2.3 Z M 4.7,56.5 L 115.2,56.5 115.2,92.6 4.7,92.6 4.7,56.5 Z"
+        );
+    }
+
+    #[test]
     fn test_bent_connector5_adjust_values_change_path() {
         let default_adj = HashMap::new();
         let mut custom_adj = HashMap::new();
@@ -3985,6 +4020,28 @@ mod tests {
         assert_eq!(
             path,
             "M 47.8,1.4 L 70.7,27.9 61.3,31.0 90.2,53.7 80.7,57.5 116.4,95.5 55.8,66.4 67.4,62.3 29.8,43.7 43.3,37.9 3.6,18.4 47.8,1.4 Z"
+        );
+    }
+
+    #[test]
+    fn test_math_multiply_default_path_matches_extracted_office_polygon() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("mathMultiply", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 6.3,13.8 L 36.1,2.0 60.0,26.6 83.8,2.0 113.6,13.8 80.6,47.9 113.6,82.0 83.8,93.8 60.0,69.2 36.1,93.8 6.3,82.0 39.4,47.9 6.3,13.8 Z"
+        );
+    }
+
+    #[test]
+    fn test_bent_up_arrow_default_path_matches_extracted_office_polygon() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 4.7,81.4 L 73.8,81.4 73.8,16.0 60.0,16.0 87.6,1.2 115.3,16.0 101.4,16.0 101.4,96.2 4.7,96.2 4.7,81.4 Z"
         );
     }
 
