@@ -810,6 +810,14 @@ fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.266000,0.972000 L 0.028000,0.962000 0.028000,0.418000 0.044000,0.322000 0.124000,0.174000 0.250000,0.072000 0.394000,0.028000 0.554000,0.040000 0.686000,0.104000 0.776000,0.194000 0.844000,0.334000 0.856000,0.490000 0.972000,0.502000 0.730000,0.736000 0.496000,0.502000 0.612000,0.486000 0.608000,0.406000 0.576000,0.338000 0.482000,0.276000 0.362000,0.292000 0.308000,0.338000 0.276000,0.410000 Z",
+            w,
+            h,
+        );
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -4001,6 +4009,17 @@ mod tests {
         assert_ne!(
             default_path, custom_path,
             "uturnArrow adj3/adj4/adj5 should change the path"
+        );
+    }
+
+    #[test]
+    fn test_uturn_arrow_default_path_matches_extracted_office_outline() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("uturnArrow", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 31.9,97.2 L 3.4,96.2 3.4,41.8 5.3,32.2 14.9,17.4 30.0,7.2 47.3,2.8 66.5,4.0 82.3,10.4 93.1,19.4 101.3,33.4 102.7,49.0 116.6,50.2 87.6,73.6 59.5,50.2 73.4,48.6 73.0,40.6 69.1,33.8 57.8,27.6 43.4,29.2 37.0,33.8 33.1,41.0 Z"
         );
     }
 
