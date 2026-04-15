@@ -2262,6 +2262,11 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("none".to_string(), 0.0)
                 };
+                let stroke_width = if is_line_shape && preset_name == "lineInv" {
+                    stroke_width * 1.6
+                } else {
+                    stroke_width
+                };
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let cap_attr = line_cap_to_svg(&resolved_border.cap);
                 let join_attr = line_join_to_svg(&resolved_border.join);
@@ -5375,6 +5380,39 @@ mod tests {
         assert!(html.contains("marker-end=\"url(#marker-head-1)\""));
         assert!(html.contains("marker id=\"marker-tail-0\""));
         assert!(html.contains("marker id=\"marker-head-1\""));
+    }
+
+    #[test]
+    fn render_line_inverse_boosts_default_stroke_width_for_reference_fidelity() {
+        let (pres, collector) = test_ctx(true);
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+        let shape = Shape {
+            shape_type: ShapeType::Custom("lineInv".to_string()),
+            size: Size {
+                width: Emu(1_051_560),
+                height: Emu(1_691_640),
+            },
+            border: Border {
+                width: 1.5,
+                color: Color::rgb("202020"),
+                ..Default::default()
+            },
+            fill: Fill::None,
+            ..Default::default()
+        };
+
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("d=\"M0,177.6 L110.4,0\""));
+        assert!(html.contains("stroke-width=\"3.2\""));
     }
 
     #[test]
