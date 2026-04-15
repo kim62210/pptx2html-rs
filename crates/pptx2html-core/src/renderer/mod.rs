@@ -465,6 +465,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
     }
 
+    fn explicit_shape_effects(shape: &Shape) -> Option<ShapeEffects> {
+        if shape.effects.outer_shadow.is_some() || shape.effects.glow.is_some() {
+            Some(shape.effects.clone())
+        } else {
+            None
+        }
+    }
+
     fn effects_to_box_shadows(effects: &ShapeEffects, ctx: &RenderCtx<'_>) -> Vec<String> {
         let mut shadows: Vec<String> = Vec::new();
 
@@ -763,8 +771,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             );
         }
 
-        let effective_effects =
-            Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map);
+        let effective_effects = if uses_svg {
+            // Theme effectRef shadows are consistently over-applied on preset SVG
+            // shapes compared with the current LibreOffice oracle. Keep explicit
+            // effectLst effects, but skip style-ref fallback for SVG paths.
+            Self::explicit_shape_effects(shape)
+        } else {
+            Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
+        };
         let svg_effect_attr = effective_effects
             .as_ref()
             .map(|effects| Self::effects_to_svg_filter_attr(effects, ctx))
@@ -4931,6 +4945,52 @@ mod tests {
 
     #[test]
     fn render_shape_resolved_routes_svg_effects_to_filter_instead_of_box_shadow() {
+        let (pres, collector) = test_ctx(true);
+        let clr_map = ClrMap::default();
+        let shape = Shape {
+            name: "arrow-with-effect-ref".to_string(),
+            shape_type: ShapeType::Custom("rightArrow".to_string()),
+            size: Size {
+                width: Emu(914_400),
+                height: Emu(457_200),
+            },
+            fill: Fill::Solid(SolidFill {
+                color: Color::rgb("336699"),
+            }),
+            effects: ShapeEffects {
+                outer_shadow: Some(OuterShadow {
+                    blur_radius: 2.0,
+                    distance: 3.0,
+                    direction: 45.0,
+                    color: Color::theme("accent1"),
+                    alpha: 1.0,
+                }),
+                glow: Some(GlowEffect {
+                    radius: 1.5,
+                    color: Color::rgb("ABCDEF"),
+                    alpha: 1.0,
+                }),
+            },
+            ..Default::default()
+        };
+
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: Some(&clr_map),
+            embed_images: true,
+            collector: &collector,
+        };
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("filter: drop-shadow("));
+        assert!(!html.contains("box-shadow:"));
+    }
+
+    #[test]
+    fn render_shape_resolved_skips_style_ref_effect_fallback_for_svg_shapes() {
         let (mut pres, collector) = test_ctx(true);
         pres.themes[0]
             .fmt_scheme
@@ -4952,7 +5012,7 @@ mod tests {
         let clr_map = ClrMap::default();
 
         let shape = Shape {
-            name: "arrow-with-effect-ref".to_string(),
+            name: "arrow-style-ref-only".to_string(),
             shape_type: ShapeType::Custom("rightArrow".to_string()),
             size: Size {
                 width: Emu(914_400),
@@ -4982,7 +5042,7 @@ mod tests {
         let mut html = String::new();
         HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
 
-        assert!(html.contains("filter: drop-shadow("));
+        assert!(!html.contains("filter: drop-shadow("));
         assert!(!html.contains("box-shadow:"));
     }
 
