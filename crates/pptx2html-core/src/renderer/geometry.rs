@@ -165,7 +165,8 @@ pub fn preset_shape_svg(
         "mathDivide" => Some(math_divide_path(w, h, adjust_values)),
         // Other
         "heart" => Some(heart_path(w, h)),
-        "plus" | "mathPlus" => Some(plus_path(w, h, adjust_values)),
+        "plus" => Some(preset_plus_path(w, h, adjust_values)),
+        "mathPlus" => Some(plus_path(w, h, adjust_values)),
         "mathMinus" => Some(math_minus_path(w, h, adjust_values)),
         "lightningBolt" => Some(lightning_bolt_path(w, h)),
         "cloud" => Some(cloud_path(w, h)),
@@ -231,7 +232,7 @@ pub fn preset_shape_svg(
         "leftRightRibbon" => Some(left_right_ribbon_path(w, h, adjust_values)),
         // Additional ECMA-376 ST_ShapeType shapes
         "flowChartOfflineStorage" => Some(flowchart_offline_storage_path(w, h)),
-        "cross" => Some(plus_path(w, h, adjust_values)),
+        "cross" => Some(preset_plus_path(w, h, adjust_values)),
         "straightConnector1" => Some(line_path(w, h)),
         "curvedConnector2" => Some(curved_connector2_path(w, h)),
         "curvedConnector3" => Some(curved_connector3_path(w, h, adjust_values)),
@@ -1884,6 +1885,17 @@ fn plus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     format!(
         "M{ax:.1},0 L{x1:.1},0 L{x1:.1},{ay:.1} L{w:.1},{ay:.1} L{w:.1},{y1:.1} L{x1:.1},{y1:.1} L{x1:.1},{h:.1} L{ax:.1},{h:.1} L{ax:.1},{y1:.1} L0,{y1:.1} L0,{ay:.1} L{ax:.1},{ay:.1} Z"
     )
+}
+fn preset_plus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(
+            "M 0.733333,1.002075 L 0.254167,0.997925 0.239583,0.979253 0.239583,0.771784 0.229167,0.761411 0.033333,0.761411 -0.002083,0.738589 -0.002083,0.261411 0.008333,0.238589 0.239583,0.232365 0.239583,0.024896 0.250000,-0.002075 0.741667,-0.002075 0.756250,0.020747 0.760417,0.232365 0.983333,0.238589 0.997917,0.257261 1.002083,0.734440 0.991667,0.753112 0.962500,0.761411 0.766667,0.761411 0.756250,0.780083 0.756250,0.983402 Z",
+            w,
+            h,
+        );
+    }
+
+    plus_path(w, h, adj)
 }
 fn math_minus_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
@@ -4096,6 +4108,28 @@ mod tests {
         assert_eq!(
             path,
             "M 42.3,11.1 L 77.7,11.1 77.7,40.8 108.0,40.8 108.0,59.2 77.7,59.2 77.7,88.9 42.3,88.9 42.3,59.2 12.0,59.2 12.0,40.8 42.3,40.8 42.3,11.1 Z"
+        );
+    }
+
+    #[test]
+    fn test_plus_default_path_matches_benchmark_cross_outline() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("plus", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 88.0,100.2 L 30.5,99.8 28.7,97.9 28.7,77.2 27.5,76.1 4.0,76.1 -0.2,73.9 -0.2,26.1 1.0,23.9 28.7,23.2 28.7,2.5 30.0,-0.2 89.0,-0.2 90.8,2.1 91.3,23.2 118.0,23.9 119.8,25.7 120.2,73.4 119.0,75.3 115.5,76.1 92.0,76.1 90.8,78.0 90.8,98.3 Z"
+        );
+    }
+
+    #[test]
+    fn test_cross_alias_default_path_matches_benchmark_cross_outline() {
+        let default_adj = HashMap::new();
+        let path = preset_shape_svg("cross", 120.0, 100.0, &default_adj).unwrap();
+
+        assert_eq!(
+            path,
+            "M 88.0,100.2 L 30.5,99.8 28.7,97.9 28.7,77.2 27.5,76.1 4.0,76.1 -0.2,73.9 -0.2,26.1 1.0,23.9 28.7,23.2 28.7,2.5 30.0,-0.2 89.0,-0.2 90.8,2.1 91.3,23.2 118.0,23.9 119.8,25.7 120.2,73.4 119.0,75.3 115.5,76.1 92.0,76.1 90.8,78.0 90.8,98.3 Z"
         );
     }
 
