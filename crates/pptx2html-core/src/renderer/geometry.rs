@@ -2459,29 +2459,6 @@ fn scale_normalized_path(path: &str, w: f64, h: f64) -> String {
         .join(" ")
 }
 
-fn scale_normalized_path_about_center(
-    path: &str,
-    w: f64,
-    h: f64,
-    scale_x: f64,
-    scale_y: f64,
-) -> String {
-    path.split_whitespace()
-        .map(|token| {
-            if token.len() == 1 && token.chars().all(|c| c.is_ascii_alphabetic()) {
-                token.to_string()
-            } else if let Some((x, y)) = token.split_once(',') {
-                let x = (x.parse::<f64>().unwrap_or_default() - 0.5) * scale_x + 0.5;
-                let y = (y.parse::<f64>().unwrap_or_default() - 0.5) * scale_y + 0.5;
-                format!("{:.1},{:.1}", x * w, y * h)
-            } else {
-                token.to_string()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
@@ -2945,34 +2922,22 @@ fn vertical_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 
 // Tabs
+const CORNER_TABS_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.099415,0.000000 L 0.000000,0.061594 L 0.000000,0.000000 Z M 0.953216,0.032609 L 0.906433,0.000000 L 1.000000,0.000000 L 1.000000,0.061594 Z M 0.070175,0.985507 L 0.099415,1.000000 L 0.000000,1.000000 L 0.000000,0.942029 Z M 0.988304,0.952899 L 1.000000,0.942029 L 1.000000,1.000000 L 0.906433,1.000000 Z"#;
+
 fn corner_tabs_path(w: f64, h: f64) -> String {
-    scale_normalized_path_about_center(
-        "M 0.000000,0.000000 L 0.120000,0.000000 0.000000,0.120000 Z M 0.880000,0.000000 L 1.000000,0.000000 1.000000,0.120000 Z M 1.000000,0.880000 L 1.000000,1.000000 0.880000,1.000000 Z M 0.000000,0.880000 L 0.120000,1.000000 0.000000,1.000000 Z",
-        w,
-        h,
-        1.045,
-        1.040,
-    )
+    scale_normalized_path(CORNER_TABS_DEFAULT_NORMALIZED_PATH, w, h)
 }
+
+const PLAQUE_TABS_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.000000,0.077586 L 0.000000,0.000000 L 0.077586,0.000000 L 0.077586,0.021552 L 0.068966,0.030172 L 0.068966,0.043103 L 0.043103,0.068966 Z M 1.000000,0.077586 L 0.987069,0.077586 L 0.987069,0.073276 L 0.974138,0.073276 L 0.974138,0.068966 L 0.956897,0.064655 L 0.931034,0.030172 L 0.926724,0.000000 L 1.000000,0.000000 Z M 0.000000,0.926724 L 0.043103,0.935345 L 0.068966,0.961207 L 0.068966,0.974138 L 0.077586,0.982759 L 0.077586,1.000000 L 0.000000,1.000000 Z M 0.987069,0.931034 L 0.987069,0.926724 L 1.000000,0.926724 L 1.000000,1.000000 L 0.926724,1.000000 L 0.931034,0.974138 L 0.935345,0.974138 L 0.939655,0.956897 L 0.956897,0.939655 L 0.965517,0.939655 L 0.974138,0.931034 Z"#;
+
 fn plaque_tabs_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.078;
-    format!(
-        "M0,0 L{r:.1},0 A{r:.1},{r:.1} 0 0,1 0,{r:.1} Z          M{x:.1},0 L{w:.1},0 L{w:.1},{r:.1} A{r:.1},{r:.1} 0 0,1 {x:.1},0 Z          M{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} A{r:.1},{r:.1} 0 0,1 {w:.1},{y:.1} Z          M0,{h:.1} L0,{y:.1} A{r:.1},{r:.1} 0 0,1 {r:.1},{h:.1} Z",
-        r = r,
-        x = w - r,
-        y = h - r,
-        w = w,
-        h = h
-    )
+    scale_normalized_path(PLAQUE_TABS_DEFAULT_NORMALIZED_PATH, w, h)
 }
+
+const SQUARE_TABS_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.077586,0.073276 L 0.073276,0.077586 L 0.000000,0.077586 L 0.000000,0.000000 L 0.077586,0.000000 Z M 1.000000,0.077586 L 0.931034,0.077586 L 0.926724,0.073276 L 0.926724,0.000000 L 1.000000,0.000000 Z M 0.000000,0.926724 L 0.073276,0.926724 L 0.077586,0.931034 L 0.077586,1.000000 L 0.000000,1.000000 Z M 0.926724,1.000000 L 0.926724,0.931034 L 0.931034,0.926724 L 1.000000,0.926724 L 1.000000,1.000000 Z"#;
+
 fn square_tabs_path(w: f64, h: f64) -> String {
-    scale_normalized_path_about_center(
-        "M 0.000000,0.000000 L 0.100000,0.000000 0.100000,0.100000 0.000000,0.100000 Z M 0.900000,0.000000 L 1.000000,0.000000 1.000000,0.100000 0.900000,0.100000 Z M 0.900000,0.900000 L 1.000000,0.900000 1.000000,1.000000 0.900000,1.000000 Z M 0.000000,0.900000 L 0.100000,0.900000 0.100000,1.000000 0.000000,1.000000 Z",
-        w,
-        h,
-        1.030,
-        1.035,
-    )
+    scale_normalized_path(SQUARE_TABS_DEFAULT_NORMALIZED_PATH, w, h)
 }
 
 // Ribbons
@@ -3487,14 +3452,6 @@ mod tests {
         let unknown = action_button_icon_path(100.0, 100.0, "mystery");
 
         assert_eq!(unknown, format!("{blank} "));
-    }
-
-    #[test]
-    fn test_scale_normalized_path_about_center_expands_coordinates_symmetrically() {
-        let path =
-            scale_normalized_path_about_center("M 0.0,0.0 L 1.0,1.0", 100.0, 100.0, 1.1, 1.1);
-
-        assert_eq!(path, "M -5.0,-5.0 L 105.0,105.0");
     }
 
     #[test]
@@ -4274,10 +4231,30 @@ mod tests {
     fn test_plaque_tabs_default_path_uses_small_quarter_tabs() {
         let path = preset_shape_svg("plaqueTabs", 120.0, 100.0, &HashMap::new()).unwrap();
 
-        assert!(path.contains("L7.8,0"));
-        assert!(path.contains("A7.8,7.8 0 0,1 0,7.8"));
-        assert!(path.contains("M120.0,92.2 L120.0,100.0 L112.2,100.0"));
-        assert!(path.contains("M0,100.0 L0,92.2 A7.8,7.8 0 0,1 7.8,100.0"));
+        assert!(path.contains("M 0.0,7.8"));
+        assert!(path.contains("120.0,7.8"));
+        assert!(path.contains("120.0,92.7"));
+        assert!(path.contains("9.3,100.0"));
+    }
+
+    #[test]
+    fn test_corner_tabs_default_path_matches_corner_triangles() {
+        let path = preset_shape_svg("cornerTabs", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert!(path.contains("11.9,0.0"));
+        assert!(path.contains("0.0,6.2"));
+        assert!(path.contains("120.0,6.2"));
+        assert!(path.contains("108.8,100.0"));
+    }
+
+    #[test]
+    fn test_square_tabs_default_path_matches_detached_squares() {
+        let path = preset_shape_svg("squareTabs", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert!(path.contains("9.3,7.3"));
+        assert!(path.contains("120.0,7.8"));
+        assert!(path.contains("9.3,100.0"));
+        assert!(path.contains("111.2,100.0"));
     }
 
     #[test]
