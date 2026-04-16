@@ -2449,6 +2449,29 @@ fn scale_normalized_path(path: &str, w: f64, h: f64) -> String {
         .join(" ")
 }
 
+fn scale_normalized_path_about_center(
+    path: &str,
+    w: f64,
+    h: f64,
+    scale_x: f64,
+    scale_y: f64,
+) -> String {
+    path.split_whitespace()
+        .map(|token| {
+            if token.len() == 1 && token.chars().all(|c| c.is_ascii_alphabetic()) {
+                token.to_string()
+            } else if let Some((x, y)) = token.split_once(',') {
+                let x = (x.parse::<f64>().unwrap_or_default() - 0.5) * scale_x + 0.5;
+                let y = (y.parse::<f64>().unwrap_or_default() - 0.5) * scale_y + 0.5;
+                format!("{:.1},{:.1}", x * w, y * h)
+            } else {
+                token.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a = h * adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
@@ -2900,14 +2923,12 @@ fn vertical_scroll_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 
 // Tabs
 fn corner_tabs_path(w: f64, h: f64) -> String {
-    let s = w.min(h) * 0.12;
-    format!(
-        "M0,0 L{s:.1},0 L0,{s:.1} Z M{x:.1},0 L{w:.1},0 L{w:.1},{s:.1} Z M{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} Z M0,{y:.1} L{s:.1},{h:.1} L0,{h:.1} Z",
-        s = s,
-        x = w - s,
-        w = w,
-        y = h - s,
-        h = h
+    scale_normalized_path_about_center(
+        "M 0.000000,0.000000 L 0.120000,0.000000 0.000000,0.120000 Z M 0.880000,0.000000 L 1.000000,0.000000 1.000000,0.120000 Z M 1.000000,0.880000 L 1.000000,1.000000 0.880000,1.000000 Z M 0.000000,0.880000 L 0.120000,1.000000 0.000000,1.000000 Z",
+        w,
+        h,
+        1.045,
+        1.040,
     )
 }
 fn plaque_tabs_path(w: f64, h: f64) -> String {
@@ -2922,14 +2943,12 @@ fn plaque_tabs_path(w: f64, h: f64) -> String {
     )
 }
 fn square_tabs_path(w: f64, h: f64) -> String {
-    let s = w.min(h) * 0.1;
-    format!(
-        "M0,0 L{s:.1},0 L{s:.1},{s:.1} L0,{s:.1} Z M{x:.1},0 L{w:.1},0 L{w:.1},{s:.1} L{x:.1},{s:.1} Z M{x:.1},{y:.1} L{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} Z M0,{y:.1} L{s:.1},{y:.1} L{s:.1},{h:.1} L0,{h:.1} Z",
-        s = s,
-        x = w - s,
-        w = w,
-        y = h - s,
-        h = h
+    scale_normalized_path_about_center(
+        "M 0.000000,0.000000 L 0.100000,0.000000 0.100000,0.100000 0.000000,0.100000 Z M 0.900000,0.000000 L 1.000000,0.000000 1.000000,0.100000 0.900000,0.100000 Z M 0.900000,0.900000 L 1.000000,0.900000 1.000000,1.000000 0.900000,1.000000 Z M 0.000000,0.900000 L 0.100000,0.900000 0.100000,1.000000 0.000000,1.000000 Z",
+        w,
+        h,
+        1.030,
+        1.035,
     )
 }
 
@@ -3452,6 +3471,14 @@ mod tests {
         let unknown = action_button_icon_path(100.0, 100.0, "mystery");
 
         assert_eq!(unknown, format!("{blank} "));
+    }
+
+    #[test]
+    fn test_scale_normalized_path_about_center_expands_coordinates_symmetrically() {
+        let path =
+            scale_normalized_path_about_center("M 0.0,0.0 L 1.0,1.0", 100.0, 100.0, 1.1, 1.1);
+
+        assert_eq!(path, "M -5.0,-5.0 L 105.0,105.0");
     }
 
     #[test]
