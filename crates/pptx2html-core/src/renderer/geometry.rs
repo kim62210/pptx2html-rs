@@ -23,6 +23,7 @@ pub fn needs_evenodd_fill(name: &str) -> bool {
             | "bracketPair"
             | "bevel"
             | "can"
+            | "funnel"
     )
 }
 
@@ -2572,9 +2573,22 @@ fn funnel_path(w: f64, h: f64) -> String {
     let (c27x, c27y) = scale_unit_point(w, h, 0.383699, 0.961657);
     let (c28x, c28y) = scale_unit_point(w, h, 0.378378, 0.953783);
     let (x14, y14) = scale_unit_point(w, h, 0.376250, 0.945909);
-    format!(
+    let outer = format!(
         "M{sx:.1},{sy:.1} C{c1x:.1},{c1y:.1} {c2x:.1},{c2y:.1} {x1:.1},{y1:.1} C{c3x:.1},{c3y:.1} {c4x:.1},{c4y:.1} {x2:.1},{y2:.1} C{c5x:.1},{c5y:.1} {c6x:.1},{c6y:.1} {x3:.1},{y3:.1} C{c7x:.1},{c7y:.1} {c8x:.1},{c8y:.1} {x4:.1},{y4:.1} C{c9x:.1},{c9y:.1} {c10x:.1},{c10y:.1} {x5:.1},{y5:.1} C{c11x:.1},{c11y:.1} {c12x:.1},{c12y:.1} {x6:.1},{y6:.1} C{c13x:.1},{c13y:.1} {c14x:.1},{c14y:.1} {x7:.1},{y7:.1} C{c15x:.1},{c15y:.1} {c16x:.1},{c16y:.1} {x8:.1},{y8:.1} C{c17x:.1},{c17y:.1} {c18x:.1},{c18y:.1} {x9:.1},{y9:.1} C{c19x:.1},{c19y:.1} {c20x:.1},{c20y:.1} {x10:.1},{y10:.1} C{c21x:.1},{c21y:.1} {c22x:.1},{c22y:.1} {x11:.1},{y11:.1} C{c23x:.1},{c23y:.1} {c24x:.1},{c24y:.1} {x12:.1},{y12:.1} C{c25x:.1},{c25y:.1} {c26x:.1},{c26y:.1} {x13:.1},{y13:.1} C{c27x:.1},{c27y:.1} {c28x:.1},{c28y:.1} {x14:.1},{y14:.1} L{sx:.1},{sy:.1} Z"
-    )
+    );
+    let hole_cx = w * 0.49955;
+    let hole_cy = h * 0.26229;
+    let hole_rx = w * 0.45225;
+    let hole_ry = h * 0.17101;
+    let hole = format!(
+        "M{left:.1},{cy:.1} A{rx:.1},{ry:.1} 0 1,0 {right:.1},{cy:.1} A{rx:.1},{ry:.1} 0 1,0 {left:.1},{cy:.1} Z",
+        left = hole_cx - hole_rx,
+        right = hole_cx + hole_rx,
+        cy = hole_cy,
+        rx = hole_rx,
+        ry = hole_ry
+    );
+    format!("{outer} {hole}")
 }
 fn teardrop_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let ratio = adj.get("adj").copied().unwrap_or(100000.0) / 100_000.0;
@@ -3797,6 +3811,10 @@ mod tests {
         assert!(
             ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) >= 94.0,
             "funnel tail should extend near the bottom edge: {path}"
+        );
+        assert!(
+            path.contains("M5.7,26.2 A54.3,17.1 0 1,0 114.2,26.2"),
+            "funnel default should carve the inner opening ellipse: {path}"
         );
     }
 
