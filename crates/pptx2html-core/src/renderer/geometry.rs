@@ -2949,13 +2949,13 @@ fn corner_tabs_path(w: f64, h: f64) -> String {
     )
 }
 fn plaque_tabs_path(w: f64, h: f64) -> String {
-    let r = w.min(h) * 0.12;
+    let r = w.min(h) * 0.078;
     format!(
-        "M0,0 L{r:.1},0 Q0,0 0,{r:.1} Z M{x:.1},0 L{w:.1},0 Q{w:.1},0 {w:.1},{r:.1} Z M{w:.1},{y:.1} Q{w:.1},{h:.1} {x:.1},{h:.1} L{w:.1},{h:.1} Z M0,{y:.1} Q0,{h:.1} {r:.1},{h:.1} L0,{h:.1} Z",
+        "M0,0 L{r:.1},0 A{r:.1},{r:.1} 0 0,1 0,{r:.1} Z          M{x:.1},0 L{w:.1},0 L{w:.1},{r:.1} A{r:.1},{r:.1} 0 0,1 {x:.1},0 Z          M{w:.1},{y:.1} L{w:.1},{h:.1} L{x:.1},{h:.1} A{r:.1},{r:.1} 0 0,1 {w:.1},{y:.1} Z          M0,{h:.1} L0,{y:.1} A{r:.1},{r:.1} 0 0,1 {r:.1},{h:.1} Z",
         r = r,
         x = w - r,
-        w = w,
         y = h - r,
+        w = w,
         h = h
     )
 }
@@ -4264,6 +4264,16 @@ mod tests {
             !path.contains(" A"),
             "gear9 default silhouette should not cut a center hole"
         );
+    }
+
+    #[test]
+    fn test_plaque_tabs_default_path_uses_small_quarter_tabs() {
+        let path = preset_shape_svg("plaqueTabs", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert!(path.contains("L7.8,0"));
+        assert!(path.contains("A7.8,7.8 0 0,1 0,7.8"));
+        assert!(path.contains("M120.0,92.2 L120.0,100.0 L112.2,100.0"));
+        assert!(path.contains("M0,100.0 L0,92.2 A7.8,7.8 0 0,1 7.8,100.0"));
     }
 
     #[test]
