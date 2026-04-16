@@ -3324,7 +3324,7 @@ impl ShapeBuilder {
                 "rect" => ShapeType::Rectangle,
                 "roundRect" => ShapeType::RoundedRectangle,
                 "ellipse" => ShapeType::Ellipse,
-                "triangle" | "rtTriangle" => ShapeType::Triangle,
+                "triangle" => ShapeType::Triangle,
                 other => ShapeType::Custom(other.to_string()),
             }
         } else if self.is_connector {
@@ -4956,7 +4956,10 @@ mod tests {
             ..Default::default()
         }
         .build();
-        assert!(matches!(triangle.shape_type, ShapeType::Triangle));
+        assert!(matches!(
+            triangle.shape_type,
+            ShapeType::Custom(ref name) if name == "rtTriangle"
+        ));
 
         let custom = ShapeBuilder {
             preset_geometry: Some("hexagon".to_string()),

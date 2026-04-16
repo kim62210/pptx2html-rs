@@ -3504,6 +3504,14 @@ mod tests {
     }
 
     #[test]
+    fn test_right_triangle_default_path_keeps_the_right_angle_on_the_left() {
+        let adj = HashMap::new();
+        let path = preset_shape_svg("rtTriangle", 120.0, 100.0, &adj).unwrap();
+
+        assert_eq!(path, "M0,0 L120.0,100.0 L0,100.0 Z");
+    }
+
+    #[test]
     fn test_up_arrow_default_path_widens_the_shaft() {
         let adj = HashMap::new();
         let path = up_arrow_path(120.0, 100.0, &adj);

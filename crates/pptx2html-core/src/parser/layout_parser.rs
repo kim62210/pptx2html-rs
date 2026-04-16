@@ -724,7 +724,7 @@ impl LayoutShapeBuilder {
             Some("rect") | None => ShapeType::Rectangle,
             Some("roundRect") => ShapeType::RoundedRectangle,
             Some("ellipse") => ShapeType::Ellipse,
-            Some("triangle") | Some("rtTriangle") => ShapeType::Triangle,
+            Some("triangle") => ShapeType::Triangle,
             Some(other) => ShapeType::Custom(other.to_string()),
         };
         let adjust_values = (!self.adjust_values.is_empty()).then_some(self.adjust_values);
