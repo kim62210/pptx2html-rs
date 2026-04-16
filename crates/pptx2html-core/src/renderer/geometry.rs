@@ -2007,18 +2007,25 @@ fn donut_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 fn no_smoking_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let (rx, ry) = (w / 2.0, h / 2.0);
     let cx = rx;
+    let cy = ry;
     let t = w.min(h) * adj.get("adj").copied().unwrap_or(18750.0) / 100_000.0;
+    let inner_rx = (rx - t).max(0.1);
+    let inner_ry = (ry - t).max(0.1);
     let a = std::f64::consts::FRAC_PI_4;
     let (ca, sa) = (a.cos(), a.sin());
-    let (bx1, by1) = (cx - rx * ca, ry - ry * sa);
-    let (bx2, by2) = (cx + rx * ca, ry + ry * sa);
+    let (bx1, by1) = (cx - rx * ca, cy - ry * sa);
+    let (bx2, by2) = (cx + rx * ca, cy + ry * sa);
     let (dx, dy) = (t / 2.0 * sa, t / 2.0 * ca);
     format!(
-        "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 1,1 {cx:.1},0 Z M{a:.1},{b:.1} L{c:.1},{d:.1} L{e:.1},{f:.1} L{g:.1},{hh:.1} Z",
+        "M{cx:.1},0 A{rx:.1},{ry:.1} 0 1,1 {cx:.1},{h:.1} A{rx:.1},{ry:.1} 0 1,1 {cx:.1},0 Z          M{cx:.1},{iy:.1} A{irx:.1},{iry:.1} 0 1,0 {cx:.1},{y2:.1} A{irx:.1},{iry:.1} 0 1,0 {cx:.1},{iy:.1} Z          M{a:.1},{b:.1} L{c:.1},{d:.1} L{e:.1},{f:.1} L{g:.1},{hh:.1} Z",
         cx = cx,
         rx = rx,
         ry = ry,
         h = h,
+        iy = cy - inner_ry,
+        y2 = cy + inner_ry,
+        irx = inner_rx,
+        iry = inner_ry,
         a = bx1 + dx,
         b = by1 - dy,
         c = bx2 + dx,
@@ -4249,6 +4256,16 @@ mod tests {
         assert!(path.contains("120.0,43.0"));
         assert!(path.contains("60.2,50.6"));
         assert!(path.contains("60.2,0.0"));
+    }
+
+    #[test]
+    fn test_no_smoking_default_path_carves_inner_ring_hole() {
+        let path = preset_shape_svg("noSmoking", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert!(path.matches('M').count() >= 3);
+        assert!(path.contains("60.0,18.8"));
+        assert!(path.contains("24.2,8.0"));
+        assert!(path.contains("95.8,92.0"));
     }
 
     #[test]
