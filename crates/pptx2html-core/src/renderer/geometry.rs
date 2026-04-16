@@ -22,7 +22,6 @@ pub fn needs_evenodd_fill(name: &str) -> bool {
             | "bracePair"
             | "bracketPair"
             | "bevel"
-            | "can"
             | "funnel"
     )
 }
@@ -2145,7 +2144,7 @@ fn can_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let rx = w / 2.0;
     let (bt, bb) = (ry, h - ry);
     format!(
-        "M0,{bt:.1} L0,{bb:.1} A{rx:.1},{ry:.1} 0 0,0 {w:.1},{bb:.1} L{w:.1},{bt:.1} A{rx:.1},{ry:.1} 0 0,0 0,{bt:.1} Z M0,{bt:.1} A{rx:.1},{ry:.1} 0 0,1 {w:.1},{bt:.1} A{rx:.1},{ry:.1} 0 0,1 0,{bt:.1} Z",
+        "M0,{bt:.1} L0,{bb:.1} A{rx:.1},{ry:.1} 0 0,0 {w:.1},{bb:.1} L{w:.1},{bt:.1} A{rx:.1},{ry:.1} 0 0,0 0,{bt:.1} Z M0,{bt:.1} A{rx:.1},{ry:.1} 0 0,0 {w:.1},{bt:.1} A{rx:.1},{ry:.1} 0 0,0 0,{bt:.1} Z",
         bt = bt,
         bb = bb,
         rx = rx,
@@ -4290,6 +4289,16 @@ mod tests {
         assert!(path.contains("60.0,18.8"));
         assert!(path.contains("24.2,8.0"));
         assert!(path.contains("95.8,92.0"));
+    }
+
+    #[test]
+    fn test_can_default_uses_filled_top_ellipse_without_evenodd_hole() {
+        let path = preset_shape_svg("can", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert!(!needs_evenodd_fill("can"));
+        assert!(path.matches('M').count() >= 2);
+        assert!(path.contains("M0,25.0"));
+        assert!(path.contains("120.0,25.0 A60.0,25.0 0 0,0 0,25.0 Z"));
     }
 
     #[test]
