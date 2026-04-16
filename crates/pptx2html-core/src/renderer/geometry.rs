@@ -769,7 +769,13 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
         tail_y = tail_y
     )
 }
+const CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.332552,0.225485 L 0.246128,0.271726 L 0.184911,0.329528 L 0.141698,0.398890 L 0.123693,0.462472 L 0.120092,0.508714 L 0.037269,0.508714 L 0.037269,0.445132 L 0.058875,0.352649 L 0.087683,0.289067 L 0.130895,0.225485 L 0.174107,0.179243 L 0.260532,0.115661 L 0.354159,0.075200 L 0.433381,0.057859 L 0.570220,0.057859 L 0.627836,0.069420 L 0.707059,0.098321 L 0.815089,0.167683 L 0.876307,0.231265 L 0.912317,0.294847 L 0.941125,0.294847 L 0.930322,0.491373 L 0.923120,0.508714 L 0.897913,0.479813 L 0.793483,0.323748 L 0.786281,0.323748 L 0.775478,0.289067 L 0.685453,0.231265 L 0.559417,0.196584 L 0.444184,0.196584 Z"#;
+
 fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH, w, h);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
     let a5 = adj.get("adj5").copied().unwrap_or(12500.0) / 100_000.0;
     let thickness = w.min(h) * (0.16 + a5.clamp(0.0, 1.0) * 0.12);
@@ -3002,23 +3008,16 @@ fn ellipse_ribbon2_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 }
 
 // Circular arrows
+const LEFT_CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.595584,0.954034 L 0.583998,0.961241 L 0.526068,0.968448 L 0.473932,0.968448 L 0.398623,0.957637 L 0.300143,0.921601 L 0.201663,0.853131 L 0.143734,0.788266 L 0.097390,0.708985 L 0.062632,0.608083 L 0.056839,0.496369 L 0.195870,0.499973 L 0.207456,0.622497 L 0.259593,0.741418 L 0.323315,0.813491 L 0.381245,0.853131 L 0.439174,0.874753 L 0.491311,0.881961 L 0.543447,0.878357 L 0.601377,0.860339 L 0.670892,0.817095 L 0.717236,0.770247 L 0.769372,0.683759 L 0.792544,0.615290 L 0.792544,0.586461 L 0.734614,0.582857 L 0.734614,0.575650 L 0.775165,0.550424 L 0.786751,0.550424 L 0.867852,0.496369 L 0.879438,0.496369 L 0.995297,0.572046 L 0.995297,0.586461 L 0.937368,0.586461 L 0.902610,0.705381 L 0.821509,0.827906 L 0.711443,0.914393 L 0.647720,0.943223 Z"#;
+
 fn left_circular_arrow_path(w: f64, h: f64) -> String {
-    let thickness = w.min(h) * 0.16;
-    let cx = w * 0.50;
-    let cy = h * 0.50;
-    let rx = w * 0.40;
-    let ry = h * 0.40;
-    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, 3.35, -0.30, 28);
-    ribbon_path_from_centerline(&centerline, thickness, false, true)
+    scale_normalized_path(LEFT_CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH, w, h)
 }
+
+const LEFT_RIGHT_CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.126355,0.253900 L 0.137941,0.225156 L 0.195870,0.156887 L 0.248007,0.113770 L 0.323315,0.070653 L 0.398623,0.045501 L 0.468139,0.034722 L 0.583998,0.041908 L 0.699857,0.081432 L 0.780958,0.135329 L 0.838888,0.192818 L 0.879438,0.250307 L 0.919989,0.336541 L 0.937368,0.415589 L 0.995297,0.415589 L 1.000000,0.426369 L 0.879438,0.505417 L 0.862059,0.501824 L 0.740407,0.426369 L 0.740407,0.415589 L 0.798337,0.415589 L 0.798337,0.404810 L 0.769372,0.314983 L 0.699857,0.210783 L 0.659306,0.174853 L 0.595584,0.138922 L 0.543447,0.124549 L 0.491311,0.120956 L 0.439174,0.128142 L 0.375452,0.153294 L 0.294350,0.217970 L 0.242214,0.293424 L 0.201663,0.411996 L 0.259593,0.415589 L 0.265386,0.422776 L 0.132148,0.505417 L 0.120562,0.505417 L 0.004703,0.429962 L 0.000000,0.419183 L 0.062632,0.415589 L 0.080011,0.340135 Z"#;
+
 fn left_right_circular_arrow_path(w: f64, h: f64) -> String {
-    let thickness = w.min(h) * 0.18;
-    let cx = w * 0.50;
-    let cy = h * 0.62;
-    let rx = w * 0.41;
-    let ry = h * 0.49;
-    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, 3.50, 5.92, 28);
-    ribbon_path_from_centerline(&centerline, thickness, true, true)
+    scale_normalized_path(LEFT_RIGHT_CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH, w, h)
 }
 
 // Misc shapes
@@ -3625,20 +3624,20 @@ mod tests {
     fn test_left_circular_arrow_default_path_tracks_u_shape_reference() {
         let path = left_circular_arrow_path(100.0, 140.0);
 
-        assert_eq!(
-            path,
-            "M2.9,57.6 L2.1,65.2 L2.1,73.2 L2.7,81.2 L4.2,89.1 L6.3,96.6 L9.1,103.8 L12.7,110.4 L16.9,116.5 L21.7,121.8 L27.0,126.3 L32.9,129.8 L39.1,132.4 L45.7,133.7 L52.3,133.9 L58.9,132.9 L65.3,130.7 L71.3,127.4 L76.8,123.2 L81.8,118.1 L86.1,112.3 L89.9,105.8 L92.9,98.8 L95.3,91.3 L96.9,83.6 L97.8,75.6 L98.0,67.6 L97.4,59.6 L96.1,52.1 L84.6,32.2 L80.3,54.8 L81.5,61.5 L82.0,68.0 L81.9,74.6 L81.1,81.0 L79.8,87.3 L77.9,93.2 L75.6,98.6 L72.8,103.5 L69.6,107.7 L66.2,111.3 L62.6,114.0 L58.8,116.1 L55.1,117.4 L51.3,118.0 L47.6,117.9 L43.8,117.1 L40.0,115.5 L36.4,113.3 L32.8,110.3 L29.4,106.5 L26.3,102.1 L23.7,97.0 L21.4,91.4 L19.7,85.4 L18.6,79.1 L18.0,72.6 L18.1,66.1 L18.8,59.2 Z"
-        );
+        assert!(path.contains("59.6,133.6"));
+        assert!(path.contains("6.3,85.1"));
+        assert!(path.contains("99.5,80.1"));
+        assert!(path.contains("64.8,132.1"));
     }
 
     #[test]
     fn test_left_right_circular_arrow_default_path_tracks_arch_reference() {
         let path = left_right_circular_arrow_path(100.0, 140.0);
 
-        assert_eq!(
-            path,
-            "M5.6,86.3 L20.3,65.0 L21.6,59.7 L23.1,55.0 L24.9,50.6 L26.8,46.5 L28.9,42.7 L31.1,39.3 L33.4,36.3 L35.8,33.8 L38.3,31.7 L40.7,30.0 L43.1,28.8 L45.4,27.9 L47.7,27.4 L49.9,27.2 L52.2,27.4 L54.5,27.8 L56.8,28.7 L59.2,29.9 L61.6,31.6 L64.0,33.7 L66.5,36.2 L68.8,39.1 L71.0,42.5 L73.1,46.3 L75.0,50.4 L76.8,54.8 L78.3,59.5 L79.6,64.7 L94.4,86.0 L97.0,60.2 L95.6,54.5 L93.7,48.7 L91.6,43.3 L89.1,38.0 L86.4,33.1 L83.3,28.6 L80.0,24.4 L76.4,20.6 L72.6,17.3 L68.4,14.5 L64.0,12.2 L59.4,10.5 L54.7,9.5 L49.9,9.2 L45.0,9.6 L40.3,10.6 L35.7,12.3 L31.4,14.6 L27.2,17.5 L23.4,20.8 L19.8,24.6 L16.5,28.8 L13.5,33.4 L10.7,38.3 L8.3,43.5 L6.2,49.1 L4.3,54.8 L2.9,60.5 Z"
-        );
+        assert!(path.contains("46.8,4.9"));
+        assert!(path.contains("78.1,18.9"));
+        assert!(path.contains("13.2,70.8"));
+        assert!(path.contains("0.5,60.2"));
     }
 
     #[test]
@@ -3646,10 +3645,10 @@ mod tests {
         let adj = HashMap::new();
         let path = circular_arrow_path(160.0, 100.0, &adj);
 
-        assert_eq!(
-            path,
-            "M15.3,69.3 L16.9,62.6 L18.9,56.4 L21.5,50.5 L24.7,44.9 L28.4,39.6 L32.5,34.7 L37.1,30.3 L42.1,26.3 L47.5,22.8 L53.1,19.9 L59.0,17.5 L65.1,15.7 L71.4,14.6 L77.7,14.0 L84.0,14.1 L90.3,14.8 L96.5,16.1 L102.5,18.1 L108.4,20.6 L114.0,23.7 L119.2,27.3 L124.1,31.4 L128.6,36.0 L132.6,41.0 L136.2,46.4 L139.4,52.4 L158.2,69.2 L154.9,44.3 L151.3,37.4 L146.8,30.7 L141.7,24.3 L136.0,18.5 L129.8,13.3 L123.1,8.8 L116.1,4.9 L108.7,1.7 L101.0,-0.8 L93.1,-2.4 L85.1,-3.3 L77.0,-3.4 L69.0,-2.8 L61.1,-1.3 L53.3,1.0 L45.8,4.0 L38.7,7.7 L31.9,12.1 L25.6,17.1 L19.8,22.8 L14.5,28.9 L9.9,35.6 L5.9,42.7 L2.6,50.1 L0.0,57.9 L-1.7,65.4 Z"
-        );
+        assert!(path.contains("53.2,22.5"));
+        assert!(path.contains("6.0,50.9"));
+        assert!(path.contains("150.6,29.5"));
+        assert!(path.contains("143.7,48.0"));
     }
 
     #[test]
@@ -3839,20 +3838,25 @@ mod tests {
 
     #[test]
     fn test_circular_arrow_negative_adjust_flips_large_arc_flag() {
-        let default_adj = HashMap::new();
+        let mut default_adj = HashMap::new();
+        default_adj.insert("adj1".to_string(), 12_500.0);
+        default_adj.insert("adj5".to_string(), 12_500.0);
         let mut custom_adj = HashMap::new();
         custom_adj.insert("adj1".to_string(), -40_000.0);
+        custom_adj.insert("adj5".to_string(), 12_500.0);
 
         let default_path = preset_shape_svg("circularArrow", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("circularArrow", 120.0, 100.0, &custom_adj).unwrap();
 
         let parse_start = |path: &str| {
-            let start = path
-                .strip_prefix('M')
-                .and_then(|rest| rest.split_once(' '))
-                .map(|(coords, _)| coords)
-                .unwrap();
-            let (x, y) = start.split_once(',').unwrap();
+            let mut tokens = path.split_whitespace();
+            let first = tokens.next().unwrap();
+            let coords = if first == "M" {
+                tokens.next().unwrap()
+            } else {
+                first.strip_prefix('M').unwrap_or(first)
+            };
+            let (x, y) = coords.split_once(',').unwrap();
             (x.parse::<f64>().unwrap(), y.parse::<f64>().unwrap())
         };
 
