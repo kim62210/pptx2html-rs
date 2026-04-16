@@ -2676,7 +2676,13 @@ fn up_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const QUAD_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.976608,0.525362 L 0.824561,0.623188 L 0.812865,0.619565 L 0.812865,0.565217 L 0.754386,0.565217 L 0.754386,0.746377 L 0.602339,0.750000 L 0.602339,0.884058 L 0.695906,0.884058 L 0.695906,0.894928 L 0.520468,1.000000 L 0.485380,1.000000 L 0.309942,0.894928 L 0.309942,0.884058 L 0.403509,0.884058 L 0.403509,0.750000 L 0.251462,0.746377 L 0.251462,0.565217 L 0.192982,0.565217 L 0.192982,0.619565 L 0.175439,0.619565 L 0.000000,0.510870 L 0.000000,0.492754 L 0.175439,0.384058 L 0.192982,0.384058 L 0.192982,0.438406 L 0.251462,0.438406 L 0.251462,0.257246 L 0.403509,0.253623 L 0.403509,0.119565 L 0.309942,0.119565 L 0.309942,0.108696 L 0.485380,0.000000 L 0.520468,0.000000 L 0.695906,0.108696 L 0.695906,0.119565 L 0.602339,0.119565 L 0.602339,0.253623 L 0.754386,0.257246 L 0.754386,0.438406 L 0.812865,0.438406 L 0.812865,0.384058 L 0.824561,0.380435 L 1.000000,0.492754 L 1.000000,0.510870 Z"#;
+
 fn quad_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(QUAD_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH, w, h);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(18515.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(18515.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(18515.0) / 100_000.0;
@@ -2708,7 +2714,13 @@ fn quad_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String
         y4 = h - by
     )
 }
+const LEFT_RIGHT_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.256318,1.000000 L 0.256318,0.639535 L 0.162455,0.633721 L 0.162455,0.755814 L 0.151625,0.761628 L 0.000000,0.517442 L 0.000000,0.488372 L 0.151625,0.244186 L 0.162455,0.250000 L 0.162455,0.372093 L 0.256318,0.366279 L 0.256318,0.000000 L 0.747292,0.000000 L 0.747292,0.372093 L 0.841155,0.372093 L 0.841155,0.250000 L 0.851986,0.244186 L 1.000000,0.488372 L 1.000000,0.517442 L 0.920578,0.651163 L 0.913357,0.651163 L 0.848375,0.761628 L 0.841155,0.755814 L 0.841155,0.633721 L 0.747292,0.633721 L 0.747292,1.000000 Z"#;
+
 fn left_right_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(LEFT_RIGHT_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH, w, h);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -2729,7 +2741,13 @@ fn left_right_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> 
         h = h
     )
 }
+const UP_DOWN_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.340580,0.255814 L 0.344203,0.238372 L 0.492754,0.000000 L 0.510870,0.000000 L 0.663043,0.244186 L 0.663043,0.255814 L 1.000000,0.255814 L 1.000000,0.750000 L 0.663043,0.750000 L 0.663043,0.761628 L 0.510870,1.000000 L 0.492754,1.000000 L 0.344203,0.767442 L 0.340580,0.750000 L 0.000000,0.750000 L 0.000000,0.255814 Z"#;
+
 fn up_down_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return scale_normalized_path(UP_DOWN_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH, w, h);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
     let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
@@ -4266,6 +4284,31 @@ mod tests {
         assert!(path.contains("60.0,18.8"));
         assert!(path.contains("24.2,8.0"));
         assert!(path.contains("95.8,92.0"));
+    }
+
+    #[test]
+    fn test_left_right_arrow_callout_default_path_matches_office_outline() {
+        let path =
+            preset_shape_svg("leftRightArrowCallout", 120.0, 100.0, &HashMap::new()).unwrap();
+        assert!(path.contains("30.8,100.0"));
+        assert!(path.contains("89.7,0.0"));
+        assert!(path.contains("0.0,48.8"));
+    }
+
+    #[test]
+    fn test_up_down_arrow_callout_default_path_matches_office_outline() {
+        let path = preset_shape_svg("upDownArrowCallout", 120.0, 100.0, &HashMap::new()).unwrap();
+        assert!(path.contains("59.1,0.0"));
+        assert!(path.contains("120.0,75.0"));
+        assert!(path.contains("0.0,25.6"));
+    }
+
+    #[test]
+    fn test_quad_arrow_callout_default_path_matches_office_outline() {
+        let path = preset_shape_svg("quadArrowCallout", 120.0, 100.0, &HashMap::new()).unwrap();
+        assert!(path.contains("117.2,52.5"));
+        assert!(path.contains("62.5,0.0"));
+        assert!(path.contains("0.0,49.3"));
     }
 
     #[test]
