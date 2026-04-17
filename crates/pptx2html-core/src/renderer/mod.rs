@@ -2261,7 +2261,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     ("none".to_string(), 0.0)
                 };
                 let stroke_width = if is_line_shape && preset_name == "lineInv" {
-                    stroke_width * 1.6
+                    stroke_width * 2.4
                 } else {
                     stroke_width
                 };
@@ -5490,7 +5490,7 @@ mod tests {
         HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
 
         assert!(html.contains("d=\"M-0.8,178.4 L111.2,-0.8\""));
-        assert!(html.contains("stroke-width=\"3.2\""));
+        assert!(html.contains("stroke-width=\"4.8\""));
     }
 
     #[test]
