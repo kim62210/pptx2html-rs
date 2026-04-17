@@ -2349,14 +2349,51 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("", stroke_width)
                 };
+                let svg_path = if is_line_shape && preset_name == "lineInv" {
+                    line_inverse_path_with_overshoot(svg_w, svg_h, 0.8)
+                } else {
+                    svg_path
+                };
                 let _ = write!(html, "<g{svg_effect_attr}>");
-                let _ = writeln!(
-                    html,
-                    "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
-                     stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {non_scaling}{dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
-                     </g></svg>"
-                );
+                if preset_name == "actionButtonInformation"
+                    && let Some(base_fill) = ctx.resolve_color(&resolved_fill.color_ref())
+                {
+                    let button_path = geometry::preset_shape_svg(
+                        "actionButtonBlank",
+                        svg_w,
+                        svg_h,
+                        &HashMap::new(),
+                    )
+                    .unwrap_or_else(|| svg_path.clone());
+                    let (circle_path, mark_path) =
+                        geometry::action_button_information_icon_paths(svg_w, svg_h);
+                    let dark_fill = shade_resolved_color(base_fill, 0.59).to_css();
+                    let light_fill = tint_resolved_color(base_fill, 0.60).to_css();
+                    let common_attrs = format!(
+                        "stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"{non_scaling}{dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{svg_transform}"
+                    );
+                    let _ = writeln!(
+                        html,
+                        "<path d=\"{button_path}\" fill=\"{fill_attr}\" {common_attrs}/>"
+                    );
+                    let _ = writeln!(
+                        html,
+                        "<path d=\"{circle_path}\" fill=\"{dark_fill}\" {common_attrs}/>"
+                    );
+                    let _ = writeln!(
+                        html,
+                        "<path d=\"{mark_path}\" fill=\"{light_fill}\" {common_attrs}/>"
+                    );
+                    html.push_str("</g></svg>");
+                } else {
+                    let _ = writeln!(
+                        html,
+                        "<path d=\"{svg_path}\" fill=\"{fill_attr}\"{fill_rule_attr} \
+                         stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
+                         {non_scaling}{dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}{svg_transform}/>\
+                         </g></svg>"
+                    );
+                }
             }
         }
 
@@ -4273,6 +4310,31 @@ fn line_cap_to_svg(cap: &LineCap) -> &'static str {
     }
 }
 
+fn shade_resolved_color(color: ResolvedColor, factor: f64) -> ResolvedColor {
+    let factor = factor.clamp(0.0, 1.0);
+    ResolvedColor::new(
+        (f64::from(color.r) * factor).round() as u8,
+        (f64::from(color.g) * factor).round() as u8,
+        (f64::from(color.b) * factor).round() as u8,
+    )
+}
+
+fn tint_resolved_color(color: ResolvedColor, factor: f64) -> ResolvedColor {
+    let factor = factor.clamp(0.0, 1.0);
+    let tint = |channel: u8| (f64::from(channel) * factor + 255.0 * (1.0 - factor)).round() as u8;
+    ResolvedColor::new(tint(color.r), tint(color.g), tint(color.b))
+}
+
+fn line_inverse_path_with_overshoot(w: f64, h: f64, overshoot: f64) -> String {
+    format!(
+        "M{start_x:.1},{start_y:.1} L{end_x:.1},{end_y:.1}",
+        start_x = -overshoot,
+        start_y = h + overshoot,
+        end_x = w + overshoot,
+        end_y = -overshoot
+    )
+}
+
 /// Convert LineJoin to SVG stroke-linejoin attribute string (including leading space).
 /// Returns empty string for Miter (SVG default).
 fn line_join_to_svg(join: &LineJoin) -> &'static str {
@@ -5411,8 +5473,45 @@ mod tests {
         let mut html = String::new();
         HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
 
-        assert!(html.contains("d=\"M0,177.6 L110.4,0\""));
+        assert!(html.contains("d=\"M-0.8,178.4 L111.2,-0.8\""));
         assert!(html.contains("stroke-width=\"3.2\""));
+    }
+
+    #[test]
+    fn render_action_button_information_uses_two_tone_icon_layers() {
+        let (pres, collector) = test_ctx(true);
+        let ctx = RenderCtx {
+            pres: &pres,
+            slide: None,
+            scheme: pres.primary_theme().map(|t| &t.color_scheme),
+            clr_map: None,
+            embed_images: true,
+            collector: &collector,
+        };
+        let shape = Shape {
+            shape_type: ShapeType::Custom("actionButtonInformation".to_string()),
+            size: Size {
+                width: Emu(1_889_760),
+                height: Emu(1_889_760),
+            },
+            border: Border {
+                width: 1.5,
+                color: Color::rgb("202020"),
+                ..Default::default()
+            },
+            fill: Fill::Solid(SolidFill {
+                color: Color::rgb("4472C4"),
+            }),
+            ..Default::default()
+        };
+
+        let mut html = String::new();
+        HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
+
+        assert!(html.contains("fill=\"#4472C4\""));
+        assert!(html.contains("fill=\"#284374\""));
+        assert!(html.contains("fill=\"#8FAADC\""));
+        assert!(html.matches("<path d=").count() >= 3);
     }
 
     #[test]
