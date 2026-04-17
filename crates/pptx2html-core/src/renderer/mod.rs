@@ -795,8 +795,14 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             } else if let Some(explicit) = Self::explicit_shape_effects(shape) {
                 Some(explicit)
             } else {
-                Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
-                    .map(|effects| Self::attenuate_shape_effects(&effects, 0.65))
+                Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map).map(
+                    |effects| {
+                        Self::attenuate_shape_effects(
+                            &effects,
+                            svg_style_effect_factor(svg_preset_name),
+                        )
+                    },
+                )
             }
         } else {
             Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
@@ -4324,6 +4330,13 @@ fn dash_style_to_css(style: &DashStyle) -> &'static str {
 
 /// Convert LineCap to SVG stroke-linecap attribute string (including leading space).
 /// Returns empty string for Flat (SVG default "butt").
+fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
+    match preset_name {
+        Some("sun") => 0.65,
+        _ => 0.55,
+    }
+}
+
 fn svg_uses_style_ref_effect_fallback(preset_name: Option<&str>) -> bool {
     !matches!(
         preset_name,
@@ -5515,6 +5528,13 @@ mod tests {
 
         assert!(html.contains("d=\"M-0.8,178.4 L111.2,-0.8\""));
         assert!(html.contains("stroke-width=\"4.8\""));
+    }
+
+    #[test]
+    fn svg_style_effect_factor_uses_sun_override() {
+        assert_eq!(svg_style_effect_factor(Some("sun")), 0.65);
+        assert_eq!(svg_style_effect_factor(Some("cloud")), 0.55);
+        assert_eq!(svg_style_effect_factor(None), 0.55);
     }
 
     #[test]
