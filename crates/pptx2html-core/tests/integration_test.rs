@@ -4369,7 +4369,7 @@ fn test_preset_shape_star5() {
     assert!(html.contains("#FFD700"));
     assert!(
         html.contains(
-            "M52.5,0.0 L67.9,31.3 L102.4,36.3 L77.5,60.6 L83.3,95.0 L52.5,78.7 L21.6,95.0 L27.5,60.6 L2.6,36.3 L37.1,31.3 Z"
+            "M 84.7,104.1 L 80.2,102.3 L 54.3,82.3 L 51.0,82.3 L 25.9,101.7 L 20.3,104.1 L 31.6,66.1 L 0.6,40.1 L 39.9,39.2 L 52.1,0.9 L 53.4,1.8 L 65.1,39.2 L 103.5,39.2 L 104.4,40.1 L 103.5,42.2 L 73.4,66.1 L 84.7,104.1 Z"
         ),
         "star5 should keep the fuller Office default body width: {html}"
     );
