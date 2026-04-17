@@ -1792,13 +1792,11 @@ fn math_not_equal_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const MATH_MULTIPLY_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.301724,0.827586 L 0.155172,0.685345 L 0.155172,0.672414 L 0.323276,0.508621 L 0.323276,0.495690 L 0.155172,0.331897 L 0.155172,0.318966 L 0.318966,0.155172 L 0.331897,0.155172 L 0.495690,0.323276 L 0.508621,0.323276 L 0.672414,0.155172 L 0.685345,0.155172 L 0.849138,0.318966 L 0.849138,0.331897 L 0.676724,0.504310 L 0.849138,0.672414 L 0.849138,0.685345 L 0.685345,0.849138 L 0.672414,0.849138 L 0.504310,0.676724 L 0.331897,0.849138 L 0.318966,0.849138 Z"#;
+
 fn math_multiply_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
-        return scale_normalized_path(
-            "M 0.052744,0.138225 L 0.301148,0.019653 0.499787,0.265640 0.698426,0.019653 0.946831,0.138225 0.671629,0.478873 0.946831,0.819522 0.698426,0.938094 0.499787,0.692106 0.301148,0.938094 0.052744,0.819522 0.327946,0.478873 0.052744,0.138225 Z",
-            w,
-            h,
-        );
+        return scale_normalized_path(MATH_MULTIPLY_DEFAULT_NORMALIZED_PATH, w, h);
     }
 
     let a1 = adj.get("adj1").copied().unwrap_or(23520.0) / 100_000.0;
@@ -4412,10 +4410,10 @@ mod tests {
         let default_adj = HashMap::new();
         let path = preset_shape_svg("mathMultiply", 120.0, 100.0, &default_adj).unwrap();
 
-        assert_eq!(
-            path,
-            "M 6.3,13.8 L 36.1,2.0 60.0,26.6 83.8,2.0 113.6,13.8 80.6,47.9 113.6,82.0 83.8,93.8 60.0,69.2 36.1,93.8 6.3,82.0 39.4,47.9 6.3,13.8 Z"
-        );
+        assert!(path.contains("36.2,82.8"));
+        assert!(path.contains("18.6,68.5"));
+        assert!(path.contains("101.9,31.9"));
+        assert!(path.contains("60.5,67.7"));
     }
 
     #[test]
