@@ -771,10 +771,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             );
         }
 
-        let effective_effects = if uses_svg {
-            // Theme effectRef shadows are consistently over-applied on preset SVG
-            // shapes compared with the current LibreOffice oracle. Keep explicit
-            // effectLst effects, but skip style-ref fallback for SVG paths.
+        let effective_effects = if uses_svg && !svg_uses_style_ref_effect_fallback(svg_preset_name)
+        {
             Self::explicit_shape_effects(shape)
         } else {
             Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
@@ -4302,6 +4300,24 @@ fn dash_style_to_css(style: &DashStyle) -> &'static str {
 
 /// Convert LineCap to SVG stroke-linecap attribute string (including leading space).
 /// Returns empty string for Flat (SVG default "butt").
+fn svg_uses_style_ref_effect_fallback(preset_name: Option<&str>) -> bool {
+    !matches!(
+        preset_name,
+        Some(
+            "squareTabs"
+                | "plaqueTabs"
+                | "lineInv"
+                | "circularArrow"
+                | "leftCircularArrow"
+                | "leftRightCircularArrow"
+                | "arc"
+                | "mathNotEqual"
+                | "leftRightArrowCallout"
+                | "frame"
+        )
+    )
+}
+
 fn line_cap_to_svg(cap: &LineCap) -> &'static str {
     match cap {
         LineCap::Flat => "",
@@ -5057,7 +5073,7 @@ mod tests {
     }
 
     #[test]
-    fn render_shape_resolved_skips_style_ref_effect_fallback_for_svg_shapes() {
+    fn render_shape_resolved_applies_style_ref_effect_fallback_for_svg_shapes() {
         let (mut pres, collector) = test_ctx(true);
         pres.themes[0]
             .fmt_scheme
@@ -5109,7 +5125,7 @@ mod tests {
         let mut html = String::new();
         HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
 
-        assert!(!html.contains("filter: drop-shadow("));
+        assert!(html.contains("filter: drop-shadow("));
         assert!(!html.contains("box-shadow:"));
     }
 
