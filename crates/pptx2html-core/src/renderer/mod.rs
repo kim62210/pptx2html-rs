@@ -2291,7 +2291,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                     ("none".to_string(), 0.0)
                 };
                 let stroke_width = if is_line_shape && preset_name == "lineInv" {
-                    stroke_width * 2.4
+                    stroke_width * 3.2
                 } else {
                     stroke_width
                 };
@@ -4333,6 +4333,8 @@ fn dash_style_to_css(style: &DashStyle) -> &'static str {
 fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
     match preset_name {
         Some("sun") => 0.65,
+        Some("cornerTabs") => 0.35,
+        Some("curvedRightArrow" | "curvedUpArrow") => 0.35,
         _ => 0.55,
     }
 }
@@ -5527,12 +5529,15 @@ mod tests {
         HtmlRenderer::render_shape_resolved(&shape, None, None, &ctx, &mut html);
 
         assert!(html.contains("d=\"M-0.8,178.4 L111.2,-0.8\""));
-        assert!(html.contains("stroke-width=\"4.8\""));
+        assert!(html.contains("stroke-width=\"6.4\""));
     }
 
     #[test]
     fn svg_style_effect_factor_uses_sun_override() {
         assert_eq!(svg_style_effect_factor(Some("sun")), 0.65);
+        assert_eq!(svg_style_effect_factor(Some("cornerTabs")), 0.35);
+        assert_eq!(svg_style_effect_factor(Some("curvedRightArrow")), 0.35);
+        assert_eq!(svg_style_effect_factor(Some("curvedUpArrow")), 0.35);
         assert_eq!(svg_style_effect_factor(Some("cloud")), 0.55);
         assert_eq!(svg_style_effect_factor(None), 0.55);
     }
