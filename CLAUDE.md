@@ -71,9 +71,11 @@ slide shape → layout placeholder → master placeholder → txStyles → defau
 ## Git Conventions
 - Branch: `main` only (no feature branches for the repo itself)
 - Worktrees for parallel development, cherry-pick into main
+- **Central rule:** every commit title MUST start with a conventional prefix such as `feat:`, `fix:`, `bug:`, `refactor:`, `docs:`, or `test:`
+- Do not create prefix-less commit titles; rewrite local commits before handing off if a prefix is missing
 - Commit messages in English, conventional commits format:
   ```
-  feat/fix/refactor/docs/test: concise summary
+  feat/fix/bug/refactor/docs/test: concise summary
 
   - detail 1
   - detail 2
