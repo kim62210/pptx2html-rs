@@ -473,6 +473,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         }
     }
 
+    fn attenuate_shape_effects(effects: &ShapeEffects, factor: f64) -> ShapeEffects {
+        let factor = factor.clamp(0.0, 1.0);
+        ShapeEffects {
+            outer_shadow: effects.outer_shadow.as_ref().map(|shadow| OuterShadow {
+                blur_radius: shadow.blur_radius * factor,
+                distance: shadow.distance * factor,
+                direction: shadow.direction,
+                color: shadow.color.clone(),
+                alpha: shadow.alpha,
+            }),
+            glow: effects.glow.as_ref().map(|glow| GlowEffect {
+                radius: glow.radius * factor,
+                color: glow.color.clone(),
+                alpha: glow.alpha,
+            }),
+        }
+    }
+
     fn effects_to_box_shadows(effects: &ShapeEffects, ctx: &RenderCtx<'_>) -> Vec<String> {
         let mut shadows: Vec<String> = Vec::new();
 
@@ -771,9 +789,15 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
             );
         }
 
-        let effective_effects = if uses_svg && !svg_uses_style_ref_effect_fallback(svg_preset_name)
-        {
-            Self::explicit_shape_effects(shape)
+        let effective_effects = if uses_svg {
+            if !svg_uses_style_ref_effect_fallback(svg_preset_name) {
+                Self::explicit_shape_effects(shape)
+            } else if let Some(explicit) = Self::explicit_shape_effects(shape) {
+                Some(explicit)
+            } else {
+                Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
+                    .map(|effects| Self::attenuate_shape_effects(&effects, 0.65))
+            }
         } else {
             Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
         };
