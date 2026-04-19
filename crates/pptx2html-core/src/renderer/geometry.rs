@@ -671,6 +671,66 @@ fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
         "M0,{yt:.1} L{s1:.1},{yt:.1} L{s1:.1},{yb:.1} L0,{yb:.1} Z M{s2:.1},{yt:.1} L{s3:.1},{yt:.1} L{s3:.1},{yb:.1} L{s2:.1},{yb:.1} Z M{s4:.1},{yt:.1} L{xh:.1},{yt:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{yb:.1} L{s4:.1},{yb:.1} Z"
     )
 }
+const CURVED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M -0.000112,0.344994 L -0.000112,0.344994 C -0.000112,0.405512 0.046007,0.465129 0.133971,0.517548 0.221710,0.569966 0.347919,0.613386 0.500000,0.643757 0.598988,0.663555 0.707199,0.677278 0.819910,0.684252 L 0.819685,0.494376 0.999888,0.749944 0.819685,0.994263 0.819685,0.804387 0.819685,0.804387 C 0.706974,0.797188 0.598763,0.783465 0.499775,0.763892 0.347694,0.733521 0.221485,0.689876 0.133746,0.637458 0.045782,0.585039 -0.000337,0.525647 -0.000337,0.465129 L -0.000112,0.344994 Z"#;
+const CURVED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000112,0.349944 L -0.000112,0.349944 C -0.000112,0.411361 0.046007,0.471654 0.133971,0.524972 0.221710,0.578065 0.347919,0.622385 0.500000,0.652981 0.525872,0.658380 0.552643,0.663105 0.579865,0.667604 L 0.579865,0.667604 0.999888,0.850056 0.579865,0.967717 0.579865,0.967717 0.579865,0.967717 C 0.552643,0.963217 0.525872,0.958493 0.499775,0.953093 0.347919,0.922497 0.221710,0.878178 0.133746,0.825084 0.046007,0.771766 -0.000112,0.711474 -0.000112,0.650056 L -0.000112,0.349944 Z"#;
+const CURVED_LEFT_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.000112,0.749944 L 0.180090,0.494376 0.180090,0.684477 0.180090,0.684477 C 0.292801,0.677278 0.401012,0.663555 0.500000,0.643982 0.652081,0.613611 0.778290,0.569966 0.866029,0.517548 0.924297,0.482677 0.964567,0.444657 0.984814,0.405062 L 0.984814,0.405062 C 0.994938,0.424859 1.000112,0.445107 1.000112,0.465129 1.000112,0.525647 0.953993,0.585264 0.866029,0.637683 0.778290,0.690101 0.652081,0.733521 0.500000,0.763892 0.401012,0.783690 0.292801,0.797413 0.180090,0.804387 L 0.180090,0.994263 0.000112,0.749944 Z"#;
+const CURVED_LEFT_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000112,0.850056 L 0.419685,0.667604 0.419685,0.667604 0.419685,0.667604 C 0.446907,0.663105 0.473678,0.658380 0.499775,0.652981 0.651631,0.622385 0.777840,0.578065 0.865804,0.524972 0.879078,0.516873 0.891676,0.508549 0.903150,0.500000 L 0.903150,0.500000 C 0.966817,0.546794 0.999663,0.598088 0.999663,0.650056 0.999663,0.711474 0.953543,0.771766 0.865804,0.824859 0.777840,0.878178 0.651631,0.922272 0.499775,0.953093 0.473678,0.958268 0.446907,0.963217 0.419685,0.967717 L 0.419685,0.967717 -0.000112,0.850056 Z"#;
+const CURVED_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.749719,-0.000112 L 0.994038,0.179865 0.804162,0.179865 0.804162,0.179865 C 0.796963,0.292576 0.783240,0.400787 0.763667,0.499775 0.733296,0.651856 0.689651,0.778065 0.637233,0.865804 0.584814,0.953768 0.525422,0.999888 0.464904,0.999888 0.444657,0.999888 0.424634,0.994713 0.404837,0.984589 L 0.404837,0.984589 C 0.444432,0.964342 0.482452,0.924072 0.517323,0.865804 0.569741,0.778065 0.613386,0.651856 0.643532,0.499775 0.663330,0.400787 0.677053,0.292576 0.684252,0.179865 L 0.494151,0.179865 0.749719,-0.000112 Z"#;
+const CURVED_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.849831,-0.000112 L 0.970191,0.419685 1.030259,0.419685 1.030259,0.419685 C 1.026209,0.446907 1.021710,0.473678 1.016985,0.499775 0.988864,0.651631 0.948594,0.777840 0.899775,0.865804 0.851181,0.953543 0.796063,0.999663 0.739820,0.999663 0.683577,0.999663 0.628459,0.953543 0.579865,0.865804 0.562092,0.833633 0.545444,0.796288 0.529921,0.754218 L 0.529921,0.754218 C 0.556693,0.681552 0.579190,0.595613 0.596963,0.499775 0.601687,0.473678 0.606187,0.446907 0.610236,0.419685 L 0.670079,0.419685 0.849831,-0.000112 Z"#;
+const CURVED_DOWN_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.749944,0.999888 L 0.494376,0.819685 0.684477,0.819685 0.684477,0.819685 C 0.677278,0.706974 0.663555,0.598763 0.643982,0.499775 0.613611,0.347694 0.569966,0.221485 0.517548,0.133746 0.465129,0.045782 0.405737,-0.000337 0.345219,-0.000337 L 0.464904,-0.000112 0.464904,-0.000112 C 0.525422,-0.000112 0.585039,0.046007 0.637458,0.133971 0.689876,0.221710 0.733296,0.347919 0.763667,0.499775 0.783465,0.598988 0.797188,0.707199 0.804162,0.819910 L 0.994263,0.819685 0.749944,0.999888 Z"#;
+const CURVED_DOWN_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.849831,0.999888 L 0.670079,0.579865 0.610236,0.579865 0.610236,0.579865 C 0.606187,0.552643 0.601687,0.525872 0.596963,0.499775 0.568841,0.347919 0.528571,0.221710 0.479753,0.133746 0.431159,0.046007 0.376040,-0.000112 0.319798,-0.000112 L 0.739820,-0.000112 0.739820,-0.000112 C 0.796063,-0.000112 0.851181,0.046007 0.899775,0.133971 0.948369,0.221710 0.988864,0.347919 1.016985,0.499775 1.021710,0.525872 1.026209,0.552643 1.030259,0.579865 L 0.970191,0.579865 0.849831,0.999888 Z"#;
+
+fn curved_arrow_adjust_profile(adj: &HashMap<String, f64>) -> f64 {
+    let adj1 = adj.get("adj1").copied().unwrap_or(25_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(50_000.0);
+    let adj3 = adj.get("adj3").copied().unwrap_or(25_000.0);
+    let t1 = ((adj1 - 12_000.0) / 30_000.0).clamp(0.0, 1.0);
+    let t2 = ((70_000.0 - adj2) / 40_000.0).clamp(0.0, 1.0);
+    let t3 = ((adj3 - 18_000.0) / 24_000.0).clamp(0.0, 1.0);
+    (t1 + t2 + t3) / 3.0
+}
+
+fn interpolate_normalized_paths(
+    start_path: &str,
+    end_path: &str,
+    t: f64,
+    w: f64,
+    h: f64,
+) -> String {
+    if t <= 0.0 {
+        return scale_normalized_path(start_path, w, h);
+    }
+    if t >= 1.0 {
+        return scale_normalized_path(end_path, w, h);
+    }
+
+    let start_tokens: Vec<_> = start_path.split_whitespace().collect();
+    let end_tokens: Vec<_> = end_path.split_whitespace().collect();
+    if start_tokens.len() != end_tokens.len() {
+        return scale_normalized_path(start_path, w, h);
+    }
+
+    start_tokens
+        .iter()
+        .zip(end_tokens.iter())
+        .map(|(start_token, end_token)| {
+            match (start_token.split_once(','), end_token.split_once(',')) {
+                (Some((sx, sy)), Some((ex, ey))) => {
+                    let sx = sx.parse::<f64>().unwrap_or_default();
+                    let sy = sy.parse::<f64>().unwrap_or_default();
+                    let ex = ex.parse::<f64>().unwrap_or_default();
+                    let ey = ey.parse::<f64>().unwrap_or_default();
+                    let x = (sx + (ex - sx) * t) * w;
+                    let y = (sy + (ey - sy) * t) * h;
+                    format!("{x:.1},{y:.1}")
+                }
+                _ => (*start_token).to_string(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn curved_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(
@@ -680,18 +740,13 @@ fn curved_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let thickness = w.min(h) * (0.20 + a1.clamp(0.0, 1.0) * 0.08);
-    let cx = w * (0.60 + a2.clamp(0.0, 1.0) * 0.04);
-    let cy = h * (0.46 - a2.clamp(0.0, 1.0) * 0.04);
-    let rx = w * (0.56 + a3.clamp(0.0, 1.0) * 0.06);
-    let ry = h * (0.36 + a2.clamp(0.0, 1.0) * 0.08);
-    let start_angle = 5.10 - a3.clamp(0.0, 1.0) * 0.18;
-    let end_angle = 0.78 + a1.clamp(0.0, 1.0) * 0.12;
-    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, start_angle, end_angle, 28);
-    ribbon_path_from_centerline(&centerline, thickness, false, true)
+    interpolate_normalized_paths(
+        CURVED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        CURVED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        curved_arrow_adjust_profile(adj),
+        w,
+        h,
+    )
 }
 fn curved_left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
@@ -702,31 +757,12 @@ fn curved_left_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let body_top = h * a1.clamp(0.08, 0.42);
-    let body_bottom = h - body_top;
-    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_ctrl_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
-    let ctrl_front_x = w * (0.85 - a2.clamp(0.0, 1.0) * 0.3);
-    let ctrl_back_x = w * (0.75 - a2.clamp(0.0, 1.0) * 0.4);
-    let tail_x = w * (0.95 - a2.clamp(0.0, 1.0) * 0.3);
-    let cy = h / 2.0;
-    let hw = w * a3;
-    format!(
-        "M{w:.1},{h:.1} C{w:.1},{ctrl_y:.1} {ctrl_front_x:.1},{body_top:.1} {hw:.1},{body_top:.1} L{hw:.1},0 L0,{cy:.1} L{hw:.1},{h:.1} L{hw:.1},{body_bottom:.1} C{ctrl_back_x:.1},{body_bottom:.1} {tail_x:.1},{tail_ctrl_y:.1} {tail_x:.1},{h:.1} Z",
-        w = w,
-        h = h,
-        ctrl_y = ctrl_y,
-        ctrl_front_x = ctrl_front_x,
-        body_top = body_top,
-        hw = hw,
-        cy = cy,
-        body_bottom = body_bottom,
-        ctrl_back_x = ctrl_back_x,
-        tail_x = tail_x,
-        tail_ctrl_y = tail_ctrl_y
+    interpolate_normalized_paths(
+        CURVED_LEFT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        CURVED_LEFT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        curved_arrow_adjust_profile(adj),
+        w,
+        h,
     )
 }
 fn curved_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -738,31 +774,12 @@ fn curved_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let cx = w / 2.0;
-    let hh = h * a3;
-    let body_left = w * a1.clamp(0.08, 0.42);
-    let body_right = w - body_left;
-    let ctrl_x = w * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_ctrl_x = w * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
-    let ctrl_top_y = h * (0.9 - a2.clamp(0.0, 1.0) * 0.4);
-    let tail_top_y = h * (0.45 + a2.clamp(0.0, 1.0) * 0.2);
-    let tail_y = h * (0.6 + a2.clamp(0.0, 1.0) * 0.4);
-    format!(
-        "M{w:.1},{h:.1} C{body_left_plus:.1},{h:.1} {ctrl_x:.1},{ctrl_top_y:.1} {ctrl_x:.1},{hh:.1} L0,{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{body_right:.1},{hh:.1} C{body_right:.1},{tail_top_y:.1} {tail_ctrl_x:.1},{tail_y:.1} {w:.1},{tail_y:.1} Z",
-        w = w,
-        h = h,
-        body_left_plus = (body_left + w * 0.05).min(w * 0.45),
-        ctrl_x = ctrl_x,
-        ctrl_top_y = ctrl_top_y,
-        hh = hh,
-        cx = cx,
-        body_right = body_right,
-        tail_top_y = tail_top_y,
-        tail_ctrl_x = tail_ctrl_x,
-        tail_y = tail_y
+    interpolate_normalized_paths(
+        CURVED_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        CURVED_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        curved_arrow_adjust_profile(adj),
+        w,
+        h,
     )
 }
 fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
@@ -774,31 +791,12 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(50000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let cx = w / 2.0;
-    let hy = h * (1.0 - a3);
-    let body_left = w * a1.clamp(0.08, 0.42);
-    let body_right = w - body_left;
-    let ctrl_x = w * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_ctrl_x = w * (0.6 + a2.clamp(0.0, 1.0) * 0.2);
-    let ctrl_y = h * (0.1 + a2.clamp(0.0, 1.0) * 0.4);
-    let tail_ctrl_y = h * (0.45 + a2.clamp(0.0, 1.0) * 0.2);
-    let tail_y = h * (0.6 - a2.clamp(0.0, 1.0) * 0.2);
-    format!(
-        "M{w:.1},0 C{body_left_plus:.1},0 {ctrl_x:.1},{ctrl_y:.1} {ctrl_x:.1},{hy:.1} L0,{hy:.1} L{cx:.1},{h:.1} L{w:.1},{hy:.1} L{body_right:.1},{hy:.1} C{body_right:.1},{tail_ctrl_y:.1} {tail_ctrl_x:.1},{tail_y:.1} {w:.1},{tail_y:.1} Z",
-        w = w,
-        body_left_plus = (body_left + w * 0.05).min(w * 0.45),
-        ctrl_x = ctrl_x,
-        ctrl_y = ctrl_y,
-        hy = hy,
-        cx = cx,
-        h = h,
-        body_right = body_right,
-        tail_ctrl_y = tail_ctrl_y,
-        tail_ctrl_x = tail_ctrl_x,
-        tail_y = tail_y
+    interpolate_normalized_paths(
+        CURVED_DOWN_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        CURVED_DOWN_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        curved_arrow_adjust_profile(adj),
+        w,
+        h,
     )
 }
 const CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.332552,0.225485 L 0.246128,0.271726 L 0.184911,0.329528 L 0.141698,0.398890 L 0.123693,0.462472 L 0.120092,0.508714 L 0.037269,0.508714 L 0.037269,0.445132 L 0.058875,0.352649 L 0.087683,0.289067 L 0.130895,0.225485 L 0.174107,0.179243 L 0.260532,0.115661 L 0.354159,0.075200 L 0.433381,0.057859 L 0.570220,0.057859 L 0.627836,0.069420 L 0.707059,0.098321 L 0.815089,0.167683 L 0.876307,0.231265 L 0.912317,0.294847 L 0.941125,0.294847 L 0.930322,0.491373 L 0.923120,0.508714 L 0.897913,0.479813 L 0.793483,0.323748 L 0.786281,0.323748 L 0.775478,0.289067 L 0.685453,0.231265 L 0.559417,0.196584 L 0.444184,0.196584 Z"#;
@@ -3908,6 +3906,57 @@ mod tests {
             default_path, custom_path,
             "curvedDownArrow adj1/adj2 should change the path"
         );
+    }
+
+    #[test]
+    fn test_curved_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        let make_adj = |adj1: f64, adj2: f64, adj3: f64| {
+            HashMap::from([
+                ("adj1".to_string(), adj1),
+                ("adj2".to_string(), adj2),
+                ("adj3".to_string(), adj3),
+            ])
+        };
+
+        let tight_adj = make_adj(12_000.0, 70_000.0, 18_000.0);
+        let wide_adj = make_adj(42_000.0, 30_000.0, 42_000.0);
+
+        for (preset, tight_anchor, wide_anchor) in [
+            (
+                "curvedRightArrow",
+                CURVED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+                CURVED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                "curvedLeftArrow",
+                CURVED_LEFT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+                CURVED_LEFT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                "curvedUpArrow",
+                CURVED_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+                CURVED_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                "curvedDownArrow",
+                CURVED_DOWN_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+                CURVED_DOWN_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+        ] {
+            let tight_path = preset_shape_svg(preset, 120.0, 100.0, &tight_adj).unwrap();
+            let wide_path = preset_shape_svg(preset, 120.0, 100.0, &wide_adj).unwrap();
+
+            assert_eq!(
+                tight_path,
+                scale_normalized_path(tight_anchor, 120.0, 100.0),
+                "{preset} tight benchmark profile should map to the tuned anchor path"
+            );
+            assert_eq!(
+                wide_path,
+                scale_normalized_path(wide_anchor, 120.0, 100.0),
+                "{preset} wide benchmark profile should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
