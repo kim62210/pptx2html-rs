@@ -73,8 +73,32 @@ CURVED_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "CIRCULAR_ARROW_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.CIRCULAR_ARROW,
+        {"adj1": -20_000, "adj5": 10_000},
+    ),
+    ShapeVariant(
+        "CIRCULAR_ARROW_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.CIRCULAR_ARROW,
+        {"adj1": 25_000, "adj5": 35_000},
+    ),
+    ShapeVariant(
+        "CIRCULAR_ARROW_ADJ_SWEEP",
+        MSO_AUTO_SHAPE_TYPE.CIRCULAR_ARROW,
+        {"adj1": 45_000, "adj5": 15_000},
+    ),
+    ShapeVariant(
+        "CIRCULAR_ARROW_ADJ_THICK",
+        MSO_AUTO_SHAPE_TYPE.CIRCULAR_ARROW,
+        {"adj1": 12_500, "adj5": 45_000},
+    ),
+)
+
 SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "curved-arrows": CURVED_ARROW_VARIANTS,
+    "circular-arrow": CIRCULAR_ARROW_VARIANTS,
 }
 
 
