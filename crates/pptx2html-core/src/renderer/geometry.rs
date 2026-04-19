@@ -839,6 +839,59 @@ fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 
     scale_normalized_path(circular_arrow_adjust_anchor(adj), w, h)
 }
+const BENT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.849795 L 0.774820,0.849795 0.774820,0.149863 0.699846,0.149863 0.849795,-0.000086 0.999914,0.149863 0.924769,0.149863 0.924769,0.999914 -0.000086,0.999914 -0.000086,0.849795 Z"#;
+const BENT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000086,0.649863 L 0.474752,0.649863 0.474752,0.399777 0.299812,0.399777 0.649863,-0.000086 0.999914,0.399777 0.824803,0.399777 0.824803,0.999914 -0.000086,0.999914 -0.000086,0.649863 Z"#;
+const BENT_UP_ARROW_ADJ_TALL_NORMALIZED_PATH: &str = r#"M -0.000086,0.749829 L 0.754793,0.749829 0.754793,0.499914 0.759757,0.499914 0.879750,-0.000086 0.999914,0.499914 1.004878,0.499914 1.004878,0.999914 -0.000086,0.999914 -0.000086,0.749829 Z"#;
+const BENT_UP_ARROW_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M -0.000086,0.799812 L 0.449760,0.799812 0.449760,0.199846 0.099880,0.199846 0.549897,-0.000086 0.999914,0.199846 0.649863,0.199846 0.649863,0.999914 -0.000086,0.999914 -0.000086,0.799812 Z"#;
+
+fn bent_up_arrow_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(25_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(25_000.0);
+    let adj3 = adj.get("adj3").copied().unwrap_or(25_000.0);
+    let anchors = [
+        (
+            15_000.0,
+            15_000.0,
+            15_000.0,
+            BENT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            35_000.0,
+            40_000.0,
+            BENT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            25_000.0,
+            15_000.0,
+            50_000.0,
+            BENT_UP_ARROW_ADJ_TALL_NORMALIZED_PATH,
+        ),
+        (
+            20_000.0,
+            45_000.0,
+            20_000.0,
+            BENT_UP_ARROW_ADJ_DEEP_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, a3x, _), (a1y, a2y, a3y, _)| {
+            let dx1 = (adj1 - *a1x) / 20_000.0;
+            let dx2 = (adj2 - *a2x) / 30_000.0;
+            let dx3 = (adj3 - *a3x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 20_000.0;
+            let dy2 = (adj2 - *a2y) / 30_000.0;
+            let dy3 = (adj3 - *a3y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2 + dx3 * dx3)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2 + dy3 * dy3))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, _, path)| path)
+        .unwrap_or(BENT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH)
+}
+
 fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(
@@ -848,25 +901,7 @@ fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let s = w * a1;
-    let hh = h * a2;
-    let xm = w - s;
-    let cx = xm + s / 2.0;
-    let xl = xm - s * (0.2 + a3.clamp(0.0, 1.0) * 0.8);
-    format!(
-        "M0,{h:.1} L0,{y1:.1} L{xm:.1},{y1:.1} L{xm:.1},{hh:.1} L{xl:.1},{hh:.1} L{cx:.1},0 L{w:.1},{hh:.1} L{w:.1},{y1:.1} L{s:.1},{y1:.1} L{s:.1},{h:.1} Z",
-        h = h,
-        y1 = h - s,
-        xm = xm,
-        hh = hh,
-        xl = xl,
-        cx = cx,
-        w = w,
-        s = s
-    )
+    scale_normalized_path(bent_up_arrow_adjust_anchor(adj), w, h)
 }
 fn uturn_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
@@ -3921,6 +3956,48 @@ mod tests {
             default_path, custom_path,
             "bentUpArrow adj3 should change the path"
         );
+    }
+
+    #[test]
+    fn test_bent_up_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, adj3, anchor) in [
+            (
+                15_000.0,
+                15_000.0,
+                15_000.0,
+                BENT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                35_000.0,
+                40_000.0,
+                BENT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                25_000.0,
+                15_000.0,
+                50_000.0,
+                BENT_UP_ARROW_ADJ_TALL_NORMALIZED_PATH,
+            ),
+            (
+                20_000.0,
+                45_000.0,
+                20_000.0,
+                BENT_UP_ARROW_ADJ_DEEP_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([
+                ("adj1".to_string(), adj1),
+                ("adj2".to_string(), adj2),
+                ("adj3".to_string(), adj3),
+            ]);
+            let path = preset_shape_svg("bentUpArrow", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "bentUpArrow benchmark profile ({adj1}, {adj2}, {adj3}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
