@@ -73,6 +73,29 @@ CURVED_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+BENT_UP_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "BENT_UP_ARROW_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.BENT_UP_ARROW,
+        {"adj1": 15_000, "adj2": 15_000, "adj3": 15_000},
+    ),
+    ShapeVariant(
+        "BENT_UP_ARROW_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.BENT_UP_ARROW,
+        {"adj1": 35_000, "adj2": 35_000, "adj3": 40_000},
+    ),
+    ShapeVariant(
+        "BENT_UP_ARROW_ADJ_TALL",
+        MSO_AUTO_SHAPE_TYPE.BENT_UP_ARROW,
+        {"adj1": 25_000, "adj2": 15_000, "adj3": 50_000},
+    ),
+    ShapeVariant(
+        "BENT_UP_ARROW_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.BENT_UP_ARROW,
+        {"adj1": 20_000, "adj2": 45_000, "adj3": 20_000},
+    ),
+)
+
 CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "CIRCULAR_ARROW_ADJ_TIGHT",
@@ -99,6 +122,7 @@ CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
 SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "curved-arrows": CURVED_ARROW_VARIANTS,
     "circular-arrow": CIRCULAR_ARROW_VARIANTS,
+    "bent-up-arrow": BENT_UP_ARROW_VARIANTS,
 }
 
 
