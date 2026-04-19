@@ -7,8 +7,6 @@
 use std::collections::HashMap;
 
 type Point = (f64, f64);
-type PolylineSides = (Vec<Point>, Vec<Point>);
-
 /// Returns true if this preset shape needs `fill-rule="evenodd"` to render holes correctly.
 /// Shapes with inner cutouts (donut, frame, noSmoking, blockArc, etc.) use two subpaths
 /// where the inner subpath winds in the opposite direction to create a hole.
@@ -800,23 +798,46 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
     )
 }
 const CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.332552,0.225485 L 0.246128,0.271726 L 0.184911,0.329528 L 0.141698,0.398890 L 0.123693,0.462472 L 0.120092,0.508714 L 0.037269,0.508714 L 0.037269,0.445132 L 0.058875,0.352649 L 0.087683,0.289067 L 0.130895,0.225485 L 0.174107,0.179243 L 0.260532,0.115661 L 0.354159,0.075200 L 0.433381,0.057859 L 0.570220,0.057859 L 0.627836,0.069420 L 0.707059,0.098321 L 0.815089,0.167683 L 0.876307,0.231265 L 0.912317,0.294847 L 0.941125,0.294847 L 0.930322,0.491373 L 0.923120,0.508714 L 0.897913,0.479813 L 0.793483,0.323748 L 0.786281,0.323748 L 0.775478,0.289067 L 0.685453,0.231265 L 0.559417,0.196584 L 0.444184,0.196584 Z"#;
+const CIRCULAR_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.099880,0.499914 L 0.099880,0.499914 C 0.099880,0.429733 0.118367,0.360750 0.153458,0.299983 0.188548,0.239045 0.239045,0.188548 0.299812,0.153458 0.360750,0.118367 0.429733,0.099880 0.499914,0.099880 0.570096,0.099880 0.639079,0.118367 0.699846,0.153458 0.760613,0.188548 0.811109,0.239045 0.846371,0.299983 0.859038,0.322064 0.869651,0.345344 0.878038,0.369480 L 0.978004,0.369308 0.899777,0.499743 0.777901,0.369308 0.877867,0.369308 0.877867,0.369308 C 0.869480,0.345173 0.858867,0.321893 0.846200,0.299812 0.811109,0.239045 0.760613,0.188548 0.699675,0.153458 0.638908,0.118196 0.569925,0.099709 0.499743,0.099709 0.429562,0.099709 0.360579,0.118196 0.299812,0.153458 0.238874,0.188548 0.188377,0.239045 0.153287,0.299812 0.118196,0.360579 0.099709,0.429562 0.099709,0.499743 L 0.099880,0.499914 Z"#;
+const CIRCULAR_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.124872,0.499914 L 0.124872,0.499914 C 0.124872,0.434012 0.142160,0.369480 0.175197,0.312479 0.208062,0.255478 0.255306,0.208062 0.312307,0.175197 0.369308,0.142160 0.434012,0.124872 0.499914,0.124872 0.565645,0.124872 0.630349,0.142160 0.687350,0.175197 0.744351,0.208062 0.791767,0.255478 0.824632,0.312479 0.843632,0.345344 0.857669,0.381119 0.865885,0.418435 L 0.986220,0.418264 0.749829,0.499743 0.486220,0.418264 0.405084,0.418264 0.405084,0.418264 C 0.399949,0.424255 0.395498,0.430589 0.391561,0.437265 0.380606,0.456265 0.374786,0.477833 0.374786,0.499743 L 0.124872,0.499914 Z"#;
+const CIRCULAR_ARROW_ADJ_SWEEP_NORMALIZED_PATH: &str = r#"M -0.000086,0.499914 L -0.000086,0.499914 C -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.249829,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.587727,-0.000086 0.673827,0.023023 0.749829,0.066844 0.826001,0.110835 0.888993,0.173827 0.932985,0.249829 0.957463,0.292280 0.975608,0.338155 0.986734,0.385741 L 0.986563,0.385741 0.849795,0.499743 0.664071,0.385741 0.664071,0.385741 0.664071,0.385741 C 0.647295,0.361606 0.625385,0.341407 0.599880,0.326686 0.569411,0.309226 0.535005,0.299983 0.499914,0.299983 0.464824,0.299983 0.430246,0.309226 0.399777,0.326686 0.369480,0.344317 0.344146,0.369480 0.326686,0.399949 0.309055,0.430246 0.299812,0.464824 0.299812,0.499914 L -0.000086,0.499914 Z"#;
+const CIRCULAR_ARROW_ADJ_THICK_NORMALIZED_PATH: &str = r#"M 0.187350,0.499914 L 0.187350,0.499914 C 0.187350,0.445139 0.201729,0.391219 0.229288,0.343632 0.256676,0.296217 0.296046,0.256676 0.343632,0.229288 0.391048,0.201900 0.444967,0.187350 0.499914,0.187350 0.554690,0.187350 0.608610,0.201900 0.656025,0.229288 0.703612,0.256676 0.742982,0.296217 0.770541,0.343632 0.784064,0.367083 0.794505,0.392246 0.801523,0.418435 L 0.986220,0.418264 0.749829,0.499743 0.486220,0.418264 0.330965,0.418264 0.330965,0.418264 C 0.318641,0.443769 0.312307,0.471499 0.312307,0.499743 L 0.187350,0.499914 Z"#;
+
+fn circular_arrow_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(12_500.0);
+    let adj5 = adj.get("adj5").copied().unwrap_or(12_500.0);
+    let anchors = [
+        (
+            -20_000.0,
+            10_000.0,
+            CIRCULAR_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (25_000.0, 35_000.0, CIRCULAR_ARROW_ADJ_WIDE_NORMALIZED_PATH),
+        (45_000.0, 15_000.0, CIRCULAR_ARROW_ADJ_SWEEP_NORMALIZED_PATH),
+        (12_500.0, 45_000.0, CIRCULAR_ARROW_ADJ_THICK_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a5x, _), (a1y, a5y, _)| {
+            let dx = (adj1 - *a1x) / 65_000.0;
+            let dy = (adj5 - *a5x) / 35_000.0;
+            let dxy = (adj1 - *a1y) / 65_000.0;
+            let dyy = (adj5 - *a5y) / 35_000.0;
+            (dx * dx + dy * dy)
+                .partial_cmp(&(dxy * dxy + dyy * dyy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(CIRCULAR_ARROW_ADJ_WIDE_NORMALIZED_PATH)
+}
 
 fn circular_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH, w, h);
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(12500.0) / 100_000.0;
-    let a5 = adj.get("adj5").copied().unwrap_or(12500.0) / 100_000.0;
-    let thickness = w.min(h) * (0.16 + a5.clamp(0.0, 1.0) * 0.12);
-    let cx = w * 0.50;
-    let cy = h * (0.82 - a1.clamp(-0.4, 0.6) * 0.08);
-    let rx = w * (0.46 + a1.clamp(-0.4, 0.6) * 0.04);
-    let ry = h * (0.75 + a5.clamp(0.0, 1.0) * 0.06);
-    let start_angle = 3.30 + a1.clamp(-0.4, 0.6) * 0.18;
-    let end_angle = 5.90 - a1.clamp(-0.4, 0.6) * 0.50;
-    let centerline = sample_ellipse_arc_points(cx, cy, rx, ry, start_angle, end_angle, 26);
-    ribbon_path_from_centerline(&centerline, thickness, false, true)
+    scale_normalized_path(circular_arrow_adjust_anchor(adj), w, h)
 }
 fn bent_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
@@ -2285,78 +2306,6 @@ fn arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 
-fn sample_ellipse_arc_points(
-    cx: f64,
-    cy: f64,
-    rx: f64,
-    ry: f64,
-    start_angle: f64,
-    end_angle: f64,
-    steps: usize,
-) -> Vec<Point> {
-    let mut points = Vec::with_capacity(steps.saturating_add(1));
-    if steps == 0 {
-        points.push(ellipse_point(cx, cy, rx, ry, start_angle));
-        return points;
-    }
-
-    for i in 0..=steps {
-        let t = i as f64 / steps as f64;
-        let angle = start_angle + (end_angle - start_angle) * t;
-        points.push(ellipse_point(cx, cy, rx, ry, angle));
-    }
-    points
-}
-
-fn normalize_vector(dx: f64, dy: f64) -> (f64, f64) {
-    let len = (dx * dx + dy * dy).sqrt();
-    if len <= f64::EPSILON {
-        (0.0, 0.0)
-    } else {
-        (dx / len, dy / len)
-    }
-}
-
-fn offset_polyline(points: &[Point], half_width: f64) -> PolylineSides {
-    if points.len() < 2 {
-        return (points.to_vec(), points.to_vec());
-    }
-
-    let mut left = Vec::with_capacity(points.len());
-    let mut right = Vec::with_capacity(points.len());
-
-    for i in 0..points.len() {
-        let (px, py) = points[i];
-        let prev_dir = if i == 0 {
-            let (nx, ny) = points[i + 1];
-            normalize_vector(nx - px, ny - py)
-        } else {
-            let (bx, by) = points[i - 1];
-            normalize_vector(px - bx, py - by)
-        };
-        let next_dir = if i + 1 == points.len() {
-            let (bx, by) = points[i - 1];
-            normalize_vector(px - bx, py - by)
-        } else {
-            let (nx, ny) = points[i + 1];
-            normalize_vector(nx - px, ny - py)
-        };
-
-        let prev_normal = (-prev_dir.1, prev_dir.0);
-        let next_normal = (-next_dir.1, next_dir.0);
-        let mut normal = (prev_normal.0 + next_normal.0, prev_normal.1 + next_normal.1);
-        if normal.0.abs() <= f64::EPSILON && normal.1.abs() <= f64::EPSILON {
-            normal = prev_normal;
-        }
-        let normal = normalize_vector(normal.0, normal.1);
-
-        left.push((px + normal.0 * half_width, py + normal.1 * half_width));
-        right.push((px - normal.0 * half_width, py - normal.1 * half_width));
-    }
-
-    (left, right)
-}
-
 fn polygon_path(points: &[Point]) -> String {
     let mut iter = points.iter();
     let Some(&(x0, y0)) = iter.next() else {
@@ -2369,52 +2318,6 @@ fn polygon_path(points: &[Point]) -> String {
     }
     path.push_str(" Z");
     path
-}
-
-fn ribbon_path_from_centerline(
-    centerline: &[Point],
-    thickness: f64,
-    start_head: bool,
-    end_head: bool,
-) -> String {
-    if centerline.len() < 2 {
-        return String::new();
-    }
-
-    let head_len = thickness * 1.35;
-    let half_width = thickness / 2.0;
-    let (left, right) = offset_polyline(centerline, half_width);
-    let start_dir = normalize_vector(
-        centerline[1].0 - centerline[0].0,
-        centerline[1].1 - centerline[0].1,
-    );
-    let end_dir = normalize_vector(
-        centerline[centerline.len() - 1].0 - centerline[centerline.len() - 2].0,
-        centerline[centerline.len() - 1].1 - centerline[centerline.len() - 2].1,
-    );
-
-    let mut polygon = Vec::with_capacity(centerline.len() * 2 + 2);
-    if start_head {
-        let mid = (
-            (left[0].0 + right[0].0) / 2.0,
-            (left[0].1 + right[0].1) / 2.0,
-        );
-        polygon.push((
-            mid.0 - start_dir.0 * head_len,
-            mid.1 - start_dir.1 * head_len,
-        ));
-    }
-    polygon.extend(left.iter().copied());
-    if end_head {
-        let last = centerline.len() - 1;
-        let mid = (
-            (left[last].0 + right[last].0) / 2.0,
-            (left[last].1 + right[last].1) / 2.0,
-        );
-        polygon.push((mid.0 + end_dir.0 * head_len, mid.1 + end_dir.1 * head_len));
-    }
-    polygon.extend(right.iter().rev().copied());
-    polygon_path(&polygon)
 }
 
 fn ellipse_point(cx: f64, cy: f64, rx: f64, ry: f64, angle: f64) -> (f64, f64) {
@@ -3807,40 +3710,25 @@ mod tests {
     }
 
     #[test]
-    fn test_circular_arrow_negative_adjust_flips_large_arc_flag() {
-        let mut default_adj = HashMap::new();
-        default_adj.insert("adj1".to_string(), 12_500.0);
-        default_adj.insert("adj5".to_string(), 12_500.0);
-        let mut custom_adj = HashMap::new();
-        custom_adj.insert("adj1".to_string(), -40_000.0);
-        custom_adj.insert("adj5".to_string(), 12_500.0);
-
-        let default_path = preset_shape_svg("circularArrow", 120.0, 100.0, &default_adj).unwrap();
-        let custom_path = preset_shape_svg("circularArrow", 120.0, 100.0, &custom_adj).unwrap();
-
-        let parse_start = |path: &str| {
-            let mut tokens = path.split_whitespace();
-            let first = tokens.next().unwrap();
-            let coords = if first == "M" {
-                tokens.next().unwrap()
-            } else {
-                first.strip_prefix('M').unwrap_or(first)
-            };
-            let (x, y) = coords.split_once(',').unwrap();
-            (x.parse::<f64>().unwrap(), y.parse::<f64>().unwrap())
-        };
-
-        let (default_x, default_y) = parse_start(&default_path);
-        let (custom_x, custom_y) = parse_start(&custom_path);
-
-        assert!(
-            default_path.ends_with('Z') && custom_path.ends_with('Z'),
-            "circularArrow should remain a closed polygon ribbon"
-        );
-        assert!(
-            custom_x > default_x && custom_y > default_y,
-            "negative adj1 should tighten the sweep and move the start point inward: default={default_path} custom={custom_path}"
-        );
+    fn test_circular_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj5, anchor) in [
+            (
+                -20_000.0,
+                10_000.0,
+                CIRCULAR_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (25_000.0, 35_000.0, CIRCULAR_ARROW_ADJ_WIDE_NORMALIZED_PATH),
+            (45_000.0, 15_000.0, CIRCULAR_ARROW_ADJ_SWEEP_NORMALIZED_PATH),
+            (12_500.0, 45_000.0, CIRCULAR_ARROW_ADJ_THICK_NORMALIZED_PATH),
+        ] {
+            let adj = HashMap::from([("adj1".to_string(), adj1), ("adj5".to_string(), adj5)]);
+            let path = preset_shape_svg("circularArrow", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "circularArrow benchmark profile ({adj1}, {adj5}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
