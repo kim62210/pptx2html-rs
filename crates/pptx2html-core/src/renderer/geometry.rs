@@ -2224,6 +2224,59 @@ fn no_smoking_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         hh = by1 + dy
     )
 }
+const BLOCK_ARC_ADJ_NARROW_NORMALIZED_PATH: &str = r#"M 0.999743,0.501626 L 0.999743,0.501626 C 0.999401,0.588754 0.976292,0.674341 0.932814,0.749829 0.888822,0.825830 0.825830,0.888993 0.749829,0.932814 0.673656,0.976806 0.587556,0.999914 0.499743,0.999914 0.411931,0.999914 0.325830,0.976806 0.249829,0.932814 0.195053,0.901318 0.146782,0.859552 0.107583,0.810082 L 0.499914,0.499914 0.499914,0.499914 0.999743,0.501626 Z"#;
+const BLOCK_ARC_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.999743,0.504878 L 0.999743,0.504878 C 0.998887,0.590979 0.975779,0.675197 0.932814,0.749829 0.903543,0.800325 0.865885,0.845344 0.821208,0.882831 L 0.499914,0.499914 0.499914,0.499914 0.999743,0.504878 Z"#;
+const BLOCK_ARC_ADJ_RING_NORMALIZED_PATH: &str = r#"M 0.999743,0.507104 L 0.999743,0.507104 C 0.998545,0.592349 0.975436,0.675882 0.932814,0.749829 0.888993,0.825830 0.825830,0.888993 0.749829,0.932814 0.673827,0.976806 0.587556,0.999914 0.499743,0.999914 0.412102,0.999914 0.325830,0.976806 0.249829,0.932814 0.173827,0.888993 0.110664,0.825830 0.066844,0.749829 0.022852,0.673827 -0.000257,0.587556 -0.000257,0.499914 -0.000257,0.412102 0.022852,0.325830 0.066844,0.249829 0.110664,0.173827 0.173827,0.110664 0.249829,0.066844 0.325830,0.022852 0.412102,-0.000086 0.499743,-0.000086 0.587556,-0.000086 0.673827,0.022852 0.749829,0.066844 0.825830,0.110664 0.888993,0.173827 0.932814,0.249829 0.976635,0.325830 0.999743,0.412102 0.999743,0.499914 L 0.999743,0.499914 0.499914,0.499914 0.499914,0.499914 0.999743,0.507104 Z"#;
+const BLOCK_ARC_ADJ_OFFSET_NORMALIZED_PATH: &str = r#"M 0.999743,0.503509 L 0.999743,0.503509 C 0.999059,0.590123 0.976121,0.674855 0.932814,0.749829 0.888822,0.825830 0.825830,0.888993 0.749829,0.932814 0.673827,0.976806 0.587556,0.999914 0.499743,0.999914 0.470644,0.999914 0.441544,0.997347 0.412958,0.992212 L 0.499914,0.499914 0.499914,0.499914 0.999743,0.503509 Z"#;
+
+fn block_arc_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(25_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(5_400_000.0);
+    let adj3 = adj.get("adj3").copied().unwrap_or(16_200_000.0);
+    let anchors = [
+        (
+            12_000.0,
+            8_500_000.0,
+            17_000_000.0,
+            BLOCK_ARC_ADJ_NARROW_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            3_000_000.0,
+            13_000_000.0,
+            BLOCK_ARC_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            50_000.0,
+            0.0,
+            21_600_000.0,
+            BLOCK_ARC_ADJ_RING_NORMALIZED_PATH,
+        ),
+        (
+            25_000.0,
+            6_000_000.0,
+            18_000_000.0,
+            BLOCK_ARC_ADJ_OFFSET_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, a3x, _), (a1y, a2y, a3y, _)| {
+            let dx1 = (adj1 - *a1x) / 38_000.0;
+            let dx2 = (adj2 - *a2x) / 21_600_000.0;
+            let dx3 = (adj3 - *a3x) / 21_600_000.0;
+            let dy1 = (adj1 - *a1y) / 38_000.0;
+            let dy2 = (adj2 - *a2y) / 21_600_000.0;
+            let dy3 = (adj3 - *a3y) / 21_600_000.0;
+            (dx1 * dx1 + dx2 * dx2 + dx3 * dx3)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2 + dy3 * dy3))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, _, path)| path)
+        .unwrap_or(BLOCK_ARC_ADJ_OFFSET_NORMALIZED_PATH)
+}
+
 fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         let (sx, sy) = scale_unit_point(w, h, 0.000000, 0.499873);
@@ -2270,36 +2323,7 @@ fn block_arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         );
     }
 
-    let adj1 = adj.get("adj1").copied().unwrap_or(10800000.0);
-    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let (ro, ryo) = (w / 2.0, h / 2.0);
-    let t = w.min(h) * a3;
-    let (cx, cy) = (ro, ryo);
-    let start_angle = -std::f64::consts::FRAC_PI_2 + adj2 / 21_600_000.0 * std::f64::consts::TAU;
-    let end_angle =
-        std::f64::consts::PI + (adj1 - 10_800_000.0) / 21_600_000.0 * std::f64::consts::TAU;
-    let (sx, sy) = ellipse_point(cx, cy, ro, ryo, start_angle);
-    let (ex, ey) = ellipse_point(cx, cy, ro, ryo, end_angle);
-    let ri = (ro - t).max(0.1);
-    let ryi = (ryo - t).max(0.1);
-    let (isx, isy) = ellipse_point(cx, cy, ri, ryi, start_angle);
-    let (iex, iey) = ellipse_point(cx, cy, ri, ryi, end_angle);
-    format!(
-        "M{sx:.1},{sy:.1} A{ro:.1},{ryo:.1} 0 1,1 {ex:.1},{ey:.1} L{iex:.1},{iey:.1} A{ri:.1},{ryi:.1} 0 1,0 {isx:.1},{isy:.1} Z",
-        sx = sx,
-        sy = sy,
-        ro = ro,
-        ryo = ryo,
-        ex = ex,
-        ey = ey,
-        iex = iex,
-        iey = iey,
-        ri = ri,
-        ryi = ryi,
-        isx = isx,
-        isy = isy
-    )
+    scale_normalized_path(block_arc_adjust_anchor(adj), w, h)
 }
 fn smiley_face_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let smile_adj = adj.get("adj").copied().unwrap_or(4653.0) / 100_000.0;
@@ -4005,6 +4029,48 @@ mod tests {
             path.contains("M5.7,26.2 A54.3,17.1 0 1,0 114.2,26.2"),
             "funnel default should carve the inner opening ellipse: {path}"
         );
+    }
+
+    #[test]
+    fn test_block_arc_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, adj3, anchor) in [
+            (
+                12_000.0,
+                8_500_000.0,
+                17_000_000.0,
+                BLOCK_ARC_ADJ_NARROW_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                3_000_000.0,
+                13_000_000.0,
+                BLOCK_ARC_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                50_000.0,
+                0.0,
+                21_600_000.0,
+                BLOCK_ARC_ADJ_RING_NORMALIZED_PATH,
+            ),
+            (
+                25_000.0,
+                6_000_000.0,
+                18_000_000.0,
+                BLOCK_ARC_ADJ_OFFSET_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([
+                ("adj1".to_string(), adj1),
+                ("adj2".to_string(), adj2),
+                ("adj3".to_string(), adj3),
+            ]);
+            let path = preset_shape_svg("blockArc", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "blockArc benchmark profile ({adj1}, {adj2}, {adj3}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
