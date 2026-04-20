@@ -73,6 +73,29 @@ CURVED_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+QUAD_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "QUAD_ARROW_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.QUAD_ARROW,
+        {"adj1": 15_000, "adj2": 15_000, "adj3": 15_000},
+    ),
+    ShapeVariant(
+        "QUAD_ARROW_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.QUAD_ARROW,
+        {"adj1": 35_000, "adj2": 35_000, "adj3": 35_000},
+    ),
+    ShapeVariant(
+        "QUAD_ARROW_ADJ_TALL",
+        MSO_AUTO_SHAPE_TYPE.QUAD_ARROW,
+        {"adj1": 20_000, "adj2": 20_000, "adj3": 50_000},
+    ),
+    ShapeVariant(
+        "QUAD_ARROW_ADJ_THICK",
+        MSO_AUTO_SHAPE_TYPE.QUAD_ARROW,
+        {"adj1": 45_000, "adj2": 15_000, "adj3": 25_000},
+    ),
+)
+
 LEFT_RIGHT_UP_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "LEFT_RIGHT_UP_ARROW_ADJ_TIGHT",
@@ -195,6 +218,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "left-up-arrow": LEFT_UP_ARROW_VARIANTS,
     "uturn-arrow": UTURN_ARROW_VARIANTS,
     "left-right-up-arrow": LEFT_RIGHT_UP_ARROW_VARIANTS,
+    "quad-arrow": QUAD_ARROW_VARIANTS,
 }
 
 
