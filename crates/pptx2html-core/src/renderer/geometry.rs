@@ -436,7 +436,38 @@ fn snip2_diag_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const SNIP_ROUND_RECT_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.099888,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,1.000000 0.000000,1.000000 0.000000,0.099888 0.000000,0.099888 C 0.000000,0.082340 0.004724,0.065017 0.013498,0.049944 0.022272,0.034646 0.034871,0.022047 0.049944,0.013273 0.065242,0.004499 0.082340,0.000000 0.100112,0.000000 L 0.099888,0.000000 Z"#;
+const SNIP_ROUND_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.166479,0.000225 L 0.833296,0.000225 1.000000,0.166667 1.000000,1.000000 0.000000,1.000000 0.000000,0.166667 0.000000,0.166667 C 0.000000,0.137427 0.007649,0.108637 0.022272,0.083446 0.036895,0.058030 0.058043,0.036887 0.083240,0.022267 0.108661,0.007647 0.137458,0.000000 0.166704,0.000000 L 0.166479,0.000225 Z"#;
+const SNIP_ROUND_RECT_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.299888,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,1.000000 0.000000,1.000000 0.000000,0.299888 0.000000,0.299888 C 0.000000,0.247244 0.013948,0.195501 0.040270,0.149831 0.066592,0.104387 0.104387,0.066367 0.150056,0.040045 0.195501,0.013723 0.247244,0.000000 0.300112,0.000000 L 0.299888,0.000000 Z"#;
+const SNIP_ROUND_RECT_ADJ_EXTREME_NORMALIZED_PATH: &str = r#"M 0.449944,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,1.000000 0.000000,1.000000 0.000000,0.449944 0.000000,0.449944 C 0.000000,0.370979 0.020697,0.293363 0.060292,0.224972 0.099888,0.156580 0.156580,0.099663 0.224972,0.060292 0.293363,0.020697 0.370979,0.000000 0.449944,0.000000 L 0.449944,0.000000 Z"#;
+
+fn snip_round_rect_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let value = adj.get("adj").copied().unwrap_or(16_667.0);
+    let anchors = [
+        (10_000.0, SNIP_ROUND_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+        (16_667.0, SNIP_ROUND_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+        (30_000.0, SNIP_ROUND_RECT_ADJ_DEEP_NORMALIZED_PATH),
+        (45_000.0, SNIP_ROUND_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (value - *ax) / 35_000.0;
+            let dy = (value - *ay) / 35_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(SNIP_ROUND_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH)
+}
+
 fn snip_round_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(snip_round_rect_adjust_anchor(adj), w, h);
+    }
+
     let m = w.min(h);
     let r = (m * adj.get("adj").copied().unwrap_or(16667.0) / 100_000.0).min(m / 2.0);
     format!(
@@ -4464,6 +4495,48 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "trapezoid benchmark profile ({adj}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_snip_round_rect_default_path_preserves_legacy_outline() {
+        let path = preset_shape_svg("snipRoundRect", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M16.7,0 L103.3,0 L120.0,16.7 L120.0,83.3 Q120.0,100.0 103.3,100.0 L16.7,100.0 Q0,100.0 0,83.3 L0,16.7 Q0,0 16.7,0 Z"
+        );
+    }
+
+    #[test]
+    fn test_snip_round_rect_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([("adj".to_string(), 30_000.0)]);
+
+        let default_path = preset_shape_svg("snipRoundRect", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("snipRoundRect", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "snipRoundRect adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_snip_round_rect_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (10_000.0, SNIP_ROUND_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+            (16_667.0, SNIP_ROUND_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+            (30_000.0, SNIP_ROUND_RECT_ADJ_DEEP_NORMALIZED_PATH),
+            (45_000.0, SNIP_ROUND_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("snipRoundRect", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "snipRoundRect benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
