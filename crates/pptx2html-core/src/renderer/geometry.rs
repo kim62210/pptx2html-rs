@@ -686,17 +686,67 @@ fn chevron_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let x1 = w - p;
     format!("M0,0 L{x1:.1},0 L{w:.1},{cy:.1} L{x1:.1},{h:.1} L0,{h:.1} L{p:.1},{cy:.1} Z")
 }
+const NOTCHED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.424769 L 0.849795,0.424769 0.849795,-0.000086 0.999914,0.499914 0.849795,0.999914 0.849795,0.574889 -0.000086,0.574889 0.022338,0.499914 -0.000086,0.424769 Z"#;
+const NOTCHED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000086,0.324803 L 0.649863,0.324803 0.649863,-0.000086 0.999914,0.499914 0.649863,0.999914 0.649863,0.674855 -0.000086,0.674855 0.122304,0.499914 -0.000086,0.324803 Z"#;
+const NOTCHED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH: &str = r#"M -0.000086,0.399777 L 0.499914,0.399777 0.499914,-0.000086 0.999914,0.499914 0.499914,0.999914 0.499914,0.599880 -0.000086,0.599880 0.099880,0.499914 -0.000086,0.399777 Z"#;
+const NOTCHED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH: &str = r#"M -0.000086,0.274820 L 0.799812,0.274820 0.799812,-0.000086 0.999914,0.499914 0.799812,0.999914 0.799812,0.724837 -0.000086,0.724837 0.089781,0.499914 -0.000086,0.274820 Z"#;
+
+fn notched_right_arrow_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(50_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(33_333.0);
+    let anchors = [
+        (
+            15_000.0,
+            15_000.0,
+            NOTCHED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            35_000.0,
+            NOTCHED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            20_000.0,
+            50_000.0,
+            NOTCHED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH,
+        ),
+        (
+            45_000.0,
+            20_000.0,
+            NOTCHED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 35_000.0;
+            let dx2 = (adj2 - *a2x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 35_000.0;
+            let dy2 = (adj2 - *a2y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(NOTCHED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH)
+}
+
 fn notched_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
-    let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
-    let s = h * a1 / 100_000.0 / 2.0;
-    let hw = w * a2 / 100_000.0;
-    let cy = h / 2.0;
-    let (yt, yb, xh) = (cy - s, cy + s, w - hw);
-    let n = hw * 0.5;
-    format!(
-        "M0,{yt:.1} L{xh:.1},{yt:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{yb:.1} L0,{yb:.1} L{n:.1},{cy:.1} Z"
-    )
+    if adj.is_empty() {
+        let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
+        let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
+        let s = h * a1 / 100_000.0 / 2.0;
+        let hw = w * a2 / 100_000.0;
+        let cy = h / 2.0;
+        let (yt, yb, xh) = (cy - s, cy + s, w - hw);
+        let n = hw * 0.5;
+        return format!(
+            "M0,{yt:.1} L{xh:.1},{yt:.1} L{xh:.1},0 L{w:.1},{cy:.1} L{xh:.1},{h:.1} L{xh:.1},{yb:.1} L0,{yb:.1} L{n:.1},{cy:.1} Z"
+        );
+    }
+
+    scale_normalized_path(notched_right_arrow_adjust_anchor(adj), w, h)
 }
 fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
@@ -4521,6 +4571,68 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "bentArrow benchmark profile ({adj1}, {adj2}, {adj3}, {adj4}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_notched_right_arrow_default_path_preserves_legacy_polygon() {
+        let path = preset_shape_svg("notchedRightArrow", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,25.0 L80.0,25.0 L80.0,0 L120.0,50.0 L80.0,100.0 L80.0,75.0 L0,75.0 L20.0,50.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_notched_right_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([
+            ("adj1".to_string(), 20_000.0),
+            ("adj2".to_string(), 50_000.0),
+        ]);
+
+        let default_path =
+            preset_shape_svg("notchedRightArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("notchedRightArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "notchedRightArrow adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_notched_right_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, anchor) in [
+            (
+                15_000.0,
+                15_000.0,
+                NOTCHED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                35_000.0,
+                NOTCHED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                20_000.0,
+                50_000.0,
+                NOTCHED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH,
+            ),
+            (
+                45_000.0,
+                20_000.0,
+                NOTCHED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("notchedRightArrow", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "notchedRightArrow benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
             );
         }
     }
