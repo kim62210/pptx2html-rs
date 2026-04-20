@@ -325,6 +325,50 @@ fn parallelogram_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const HEXAGON_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,0.500000 L 0.099888,0.000000 0.899888,0.000000 1.000000,0.500000 0.899888,1.000000 0.099888,1.000000 0.000000,0.500000 Z"#;
+const HEXAGON_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.000000,0.500000 L 0.249944,0.000000 0.749831,0.000000 1.000000,0.500000 0.749831,1.000000 0.249944,1.000000 0.000000,0.500000 Z"#;
+const HEXAGON_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.000000,0.500000 L 0.400000,0.000000 0.600000,0.000000 1.000000,0.500000 0.600000,1.000000 0.400000,1.000000 0.000000,0.500000 Z"#;
+const HEXAGON_ADJ_EXTREME_NORMALIZED_PATH: &str = r#"M 0.000000,0.500000 L 0.499888,0.000000 0.499888,0.000000 1.000000,0.500000 0.499888,1.000000 0.499888,1.000000 0.000000,0.500000 Z"#;
+
+fn hexagon_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let value = adj.get("adj").copied().unwrap_or(25_000.0);
+    let anchors = [
+        (10_000.0, HEXAGON_ADJ_LIGHT_NORMALIZED_PATH),
+        (25_000.0, HEXAGON_ADJ_DEFAULTISH_NORMALIZED_PATH),
+        (40_000.0, HEXAGON_ADJ_DEEP_NORMALIZED_PATH),
+        (55_000.0, HEXAGON_ADJ_EXTREME_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (value - *ax) / 45_000.0;
+            let dy = (value - *ay) / 45_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(HEXAGON_ADJ_DEFAULTISH_NORMALIZED_PATH)
+}
+
+fn hexagon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(hexagon_adjust_anchor(adj), w, h);
+    }
+
+    let o = w * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
+    let cy = h / 2.0;
+    format!(
+        "M{o:.1},0 L{x:.1},0 L{w:.1},{cy:.1} L{x:.1},{h:.1} L{o:.1},{h:.1} L0,{cy:.1} Z",
+        o = o,
+        x = w - o,
+        w = w,
+        cy = cy,
+        h = h
+    )
+}
+
 const TRAPEZOID_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.099888,0.000000 0.899888,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
 const TRAPEZOID_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.249944,0.000000 0.749831,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
 const TRAPEZOID_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.400000,0.000000 0.600000,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
@@ -376,18 +420,6 @@ fn pentagon_path(w: f64, h: f64) -> String {
         y1 = h * 0.382,
         x3 = w * 0.7939,
         x4 = w * 0.2061,
-        h = h
-    )
-}
-fn hexagon_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let o = w * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
-    let cy = h / 2.0;
-    format!(
-        "M{o:.1},0 L{x:.1},0 L{w:.1},{cy:.1} L{x:.1},{h:.1} L{o:.1},{h:.1} L0,{cy:.1} Z",
-        o = o,
-        x = w - o,
-        w = w,
-        cy = cy,
         h = h
     )
 }
@@ -4495,6 +4527,48 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "trapezoid benchmark profile ({adj}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_hexagon_default_path_preserves_legacy_polygon() {
+        let path = preset_shape_svg("hexagon", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M30.0,0 L90.0,0 L120.0,50.0 L90.0,100.0 L30.0,100.0 L0,50.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_hexagon_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([("adj".to_string(), 40_000.0)]);
+
+        let default_path = preset_shape_svg("hexagon", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("hexagon", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "hexagon adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_hexagon_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (10_000.0, HEXAGON_ADJ_LIGHT_NORMALIZED_PATH),
+            (25_000.0, HEXAGON_ADJ_DEFAULTISH_NORMALIZED_PATH),
+            (40_000.0, HEXAGON_ADJ_DEEP_NORMALIZED_PATH),
+            (55_000.0, HEXAGON_ADJ_EXTREME_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("hexagon", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "hexagon benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
