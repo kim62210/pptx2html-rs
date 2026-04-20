@@ -807,9 +807,24 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         } else {
             Self::resolve_shape_effects(shape, fmt_scheme, ctx.scheme, ctx.clr_map)
         };
+        let empty_svg_adj: HashMap<String, f64> = HashMap::new();
+        let svg_adj_values = effective_adjust_values.unwrap_or(&empty_svg_adj);
+        let svg_effects = if uses_svg {
+            effective_effects.as_ref().map(|effects| {
+                scale_svg_effect_blur(
+                    effects,
+                    svg_preset_shadow_blur_factor(svg_preset_name, svg_adj_values),
+                )
+            })
+        } else {
+            None
+        };
         let svg_effect_attr = effective_effects
             .as_ref()
-            .map(|effects| Self::effects_to_svg_filter_attr(effects, ctx))
+            .map(|effects| {
+                let adjusted = svg_effects.as_ref().unwrap_or(effects);
+                Self::effects_to_svg_filter_attr(adjusted, ctx)
+            })
             .unwrap_or_default();
 
         // Shape-level effects on non-SVG shapes can use CSS box-shadow directly.
@@ -4420,6 +4435,50 @@ fn svg_preset_stroke_width_factor(preset_name: Option<&str>) -> f64 {
     }
 }
 
+fn matches_svg_adjust_profile(
+    adjust_values: &HashMap<String, f64>,
+    expected: &[(&str, f64)],
+) -> bool {
+    expected.iter().all(|(name, value)| {
+        (adjust_values.get(*name).copied().unwrap_or_default() - *value).abs() < 0.5
+    })
+}
+
+fn svg_preset_shadow_blur_factor(
+    preset_name: Option<&str>,
+    adjust_values: &HashMap<String, f64>,
+) -> f64 {
+    match preset_name {
+        Some("leftUpArrow")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
+            ) =>
+        {
+            1.1
+        }
+        _ => 1.0,
+    }
+}
+
+fn scale_svg_effect_blur(effects: &ShapeEffects, factor: f64) -> ShapeEffects {
+    let factor = factor.clamp(0.0, 4.0);
+    ShapeEffects {
+        outer_shadow: effects.outer_shadow.as_ref().map(|shadow| OuterShadow {
+            blur_radius: shadow.blur_radius * factor,
+            distance: shadow.distance,
+            direction: shadow.direction,
+            color: shadow.color.clone(),
+            alpha: shadow.alpha,
+        }),
+        glow: effects.glow.as_ref().map(|glow| GlowEffect {
+            radius: glow.radius * factor,
+            color: glow.color.clone(),
+            alpha: glow.alpha,
+        }),
+    }
+}
+
 fn svg_uses_style_ref_effect_fallback(preset_name: Option<&str>) -> bool {
     !matches!(
         preset_name,
@@ -5667,6 +5726,32 @@ mod tests {
         );
         assert_eq!(svg_preset_stroke_width_factor(Some("rightArrow")), 1.0);
         assert_eq!(svg_preset_stroke_width_factor(None), 1.0);
+    }
+
+    #[test]
+    fn svg_preset_shadow_blur_factor_uses_left_up_arrow_tight_override() {
+        let tight = HashMap::from([
+            ("adj1".to_string(), 15_000.0),
+            ("adj2".to_string(), 15_000.0),
+            ("adj3".to_string(), 15_000.0),
+        ]);
+        let wide = HashMap::from([
+            ("adj1".to_string(), 35_000.0),
+            ("adj2".to_string(), 35_000.0),
+            ("adj3".to_string(), 45_000.0),
+        ]);
+        assert_eq!(
+            svg_preset_shadow_blur_factor(Some("leftUpArrow"), &tight),
+            1.1
+        );
+        assert_eq!(
+            svg_preset_shadow_blur_factor(Some("leftUpArrow"), &wide),
+            1.0
+        );
+        assert_eq!(
+            svg_preset_shadow_blur_factor(Some("rightArrow"), &tight),
+            1.0
+        );
     }
 
     #[test]
