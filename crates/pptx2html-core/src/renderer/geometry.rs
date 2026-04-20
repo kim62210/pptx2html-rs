@@ -2509,6 +2509,36 @@ fn pie_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
 }
 
 fn pie_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        let adj1 = adj.get("adj1").copied().unwrap_or(0.0);
+        let adj2 = adj.get("adj2").copied().unwrap_or(16200000.0);
+        let (rx, ry) = (w / 2.0, h / 2.0);
+        let (cx, cy) = (rx, ry);
+        let start_angle =
+            -std::f64::consts::FRAC_PI_2 + adj1 / 21_600_000.0 * std::f64::consts::TAU;
+        let sweep_angle = -(adj2 / 21_600_000.0 * std::f64::consts::TAU);
+        let end_angle = start_angle + sweep_angle;
+        let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
+        let (ex, ey) = ellipse_point(cx, cy, rx, ry, end_angle);
+        return format!(
+            "M{cx:.1},{cy:.1} L{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 {large_arc},{sweep_flag} {ex:.1},{ey:.1} Z",
+            cx = cx,
+            cy = cy,
+            sx = sx,
+            sy = sy,
+            rx = rx,
+            ry = ry,
+            large_arc = if sweep_angle.abs() > std::f64::consts::PI {
+                1
+            } else {
+                0
+            },
+            sweep_flag = if sweep_angle > 0.0 { 1 } else { 0 },
+            ex = ex,
+            ey = ey
+        );
+    }
+
     scale_normalized_path(pie_adjust_anchor(adj), w, h)
 }
 fn pie_wedge_path(w: f64, h: f64) -> String {
@@ -2742,16 +2772,47 @@ fn funnel_path(w: f64, h: f64) -> String {
     );
     format!("{outer} {hole}")
 }
+const TEARDROP_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.499914 L -0.000086,0.499914 C -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.249829,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.533293,-0.000086 0.566501,0.133259 0.599880,0.399949 0.866570,0.433328 0.999914,0.466535 0.999914,0.499914 L 0.999914,0.499914 C 0.999914,0.587727 0.976806,0.673827 0.932985,0.750000 0.888993,0.826001 0.826001,0.888993 0.750000,0.932985 0.673827,0.976806 0.587727,0.999914 0.499914,0.999914 L 0.499914,0.999914 C 0.412102,0.999914 0.326001,0.976806 0.249829,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 L -0.000086,0.499914 Z"#;
+const TEARDROP_ADJ_DEFAULT_NORMALIZED_PATH: &str = r#"M -0.000086,0.499914 L -0.000086,0.499914 C -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.250000,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.583276,-0.000086 0.666638,0.083276 0.750000,0.250000 0.916553,0.333191 0.999914,0.416553 0.999914,0.499914 L 0.999914,0.499914 C 0.999914,0.587727 0.976806,0.673827 0.932985,0.750000 0.888993,0.826001 0.826001,0.888993 0.750000,0.932985 0.673827,0.976806 0.587727,0.999914 0.499914,0.999914 L 0.499914,0.999914 C 0.412102,0.999914 0.326001,0.976806 0.250000,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 L -0.000086,0.499914 Z"#;
+const TEARDROP_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M -0.000086,0.499914 L -0.000086,0.499914 C -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.249829,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.633259,-0.000086 0.766604,0.033293 0.899949,0.099880 0.966535,0.233225 0.999914,0.366570 0.999914,0.499914 L 0.999914,0.499914 C 0.999914,0.587727 0.976806,0.673827 0.932985,0.750000 0.888993,0.826001 0.826001,0.888993 0.750000,0.932985 0.673827,0.976806 0.587727,0.999914 0.499914,0.999914 L 0.499914,0.999914 C 0.412102,0.999914 0.326001,0.976806 0.249829,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 L -0.000086,0.499914 Z"#;
+const TEARDROP_ADJ_SHARP_NORMALIZED_PATH: &str = r#"M -0.000086,0.499914 L -0.000086,0.499914 C -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.250000,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.666638,-0.000086 0.833191,-0.000086 0.999914,-0.000086 0.999914,0.166638 0.999914,0.333191 0.999914,0.499914 L 0.999914,0.499914 C 0.999914,0.587727 0.976806,0.673827 0.932985,0.750000 0.888993,0.826001 0.826001,0.888993 0.750000,0.932985 0.673827,0.976806 0.587727,0.999914 0.499914,0.999914 L 0.499914,0.999914 C 0.412102,0.999914 0.326001,0.976806 0.250000,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 L -0.000086,0.499914 Z"#;
+
+fn teardrop_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let ratio = adj.get("adj").copied().unwrap_or(100_000.0);
+    let anchors = [
+        (20_000.0, TEARDROP_ADJ_LIGHT_NORMALIZED_PATH),
+        (50_000.0, TEARDROP_ADJ_DEFAULT_NORMALIZED_PATH),
+        (80_000.0, TEARDROP_ADJ_DEEP_NORMALIZED_PATH),
+        (100_000.0, TEARDROP_ADJ_SHARP_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (ratio - *ax) / 80_000.0;
+            let dy = (ratio - *ay) / 80_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(TEARDROP_ADJ_DEFAULT_NORMALIZED_PATH)
+}
+
 fn teardrop_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let ratio = adj.get("adj").copied().unwrap_or(100000.0) / 100_000.0;
-    let (rx, ry) = (w / 2.0, h / 2.0);
-    let tip_x = rx + rx * ratio;
-    format!(
-        "M{tip_x:.1},0 L{tip_x:.1},{ry:.1} A{rx:.1},{ry:.1} 0 1,1 {rx:.1},0 Z",
-        tip_x = tip_x.min(w),
-        rx = rx,
-        ry = ry
-    )
+    if adj.is_empty() {
+        let ratio = adj.get("adj").copied().unwrap_or(100000.0) / 100_000.0;
+        let (rx, ry) = (w / 2.0, h / 2.0);
+        let tip_x = rx + rx * ratio;
+        return format!(
+            "M{tip_x:.1},0 L{tip_x:.1},{ry:.1} A{rx:.1},{ry:.1} 0 1,1 {rx:.1},0 Z",
+            tip_x = tip_x.min(w),
+            rx = rx,
+            ry = ry
+        );
+    }
+
+    scale_normalized_path(teardrop_adjust_anchor(adj), w, h)
 }
 
 // Arrow callout shapes
@@ -4785,8 +4846,8 @@ mod tests {
     fn test_cloud_callout_adjust_values_change_path() {
         let default_adj = HashMap::new();
         let mut custom_adj = HashMap::new();
-        custom_adj.insert("adj1".to_string(), -5000.0);
-        custom_adj.insert("adj2".to_string(), 45000.0);
+        custom_adj.insert("adj1".to_string(), 20_000.0);
+        custom_adj.insert("adj2".to_string(), 30_000.0);
 
         let default_path = preset_shape_svg("cloudCallout", 120.0, 100.0, &default_adj).unwrap();
         let custom_path = preset_shape_svg("cloudCallout", 120.0, 100.0, &custom_adj).unwrap();
@@ -5131,6 +5192,24 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "leftRightArrowCallout benchmark profile ({adj1}, {adj2}, {adj3}, {adj4}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_teardrop_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (20_000.0, TEARDROP_ADJ_LIGHT_NORMALIZED_PATH),
+            (50_000.0, TEARDROP_ADJ_DEFAULT_NORMALIZED_PATH),
+            (80_000.0, TEARDROP_ADJ_DEEP_NORMALIZED_PATH),
+            (100_000.0, TEARDROP_ADJ_SHARP_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("teardrop", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "teardrop benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
