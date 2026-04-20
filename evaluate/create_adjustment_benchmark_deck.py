@@ -556,6 +556,29 @@ UP_DOWN_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+HEXAGON_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "HEXAGON_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.HEXAGON,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "HEXAGON_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.HEXAGON,
+        {"adj": 25_000},
+    ),
+    ShapeVariant(
+        "HEXAGON_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.HEXAGON,
+        {"adj": 40_000},
+    ),
+    ShapeVariant(
+        "HEXAGON_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.HEXAGON,
+        {"adj": 55_000},
+    ),
+)
+
 TRAPEZOID_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "TRAPEZOID_ADJ_LIGHT",
@@ -791,6 +814,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "right-arrow": RIGHT_ARROW_VARIANTS,
     "left-right-arrow": LEFT_RIGHT_ARROW_VARIANTS,
     "up-down-arrow": UP_DOWN_ARROW_VARIANTS,
+    "hexagon": HEXAGON_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
     "snip-round-rect": SNIP_ROUND_RECT_VARIANTS,
     "non-isosceles-trapezoid": NON_ISOSCELES_TRAPEZOID_VARIANTS,
