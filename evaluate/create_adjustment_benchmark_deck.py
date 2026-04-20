@@ -625,6 +625,29 @@ OCTAGON_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+SNIP1_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "SNIP1_RECT_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.SNIP_1_RECTANGLE,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "SNIP1_RECT_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.SNIP_1_RECTANGLE,
+        {"adj": 16_667},
+    ),
+    ShapeVariant(
+        "SNIP1_RECT_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.SNIP_1_RECTANGLE,
+        {"adj": 30_000},
+    ),
+    ShapeVariant(
+        "SNIP1_RECT_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.SNIP_1_RECTANGLE,
+        {"adj": 45_000},
+    ),
+)
+
 ROUND1_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "ROUND1_RECT_ADJ_LIGHT",
@@ -932,6 +955,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "hexagon": HEXAGON_VARIANTS,
     "parallelogram": PARALLELOGRAM_VARIANTS,
     "octagon": OCTAGON_VARIANTS,
+    "snip1-rect": SNIP1_RECT_VARIANTS,
     "round1-rect": ROUND1_RECT_VARIANTS,
     "round2-same-rect": ROUND2_SAME_RECT_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
