@@ -1584,7 +1584,53 @@ fn accent_border_callout2_path(w: f64, h: f64) -> String {
 fn accent_border_callout3_path(w: f64, h: f64) -> String {
     accent_callout3_path(w, h)
 }
-fn wedge_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+const WEDGE_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.166479,0.000000 0.166479,0.000000 0.416648,0.000000 1.000000,0.000000 1.000000,0.518400 1.000000,0.518400 1.000000,0.740800 1.000000,0.889000 0.416648,0.889000 0.291564,1.000000 0.166479,0.889000 0.000000,0.889000 0.000000,0.740800 0.000000,0.518400 0.000000,0.518400 0.000000,0.000000 Z"#;
+const WEDGE_RECT_CALLOUT_ADJ_CENTER_LOW_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.166479,0.000000 0.166479,0.000000 0.416648,0.000000 1.000000,0.000000 1.000000,0.518400 1.000000,0.518400 1.000000,0.740800 1.000000,0.889000 0.416648,0.889000 0.499888,1.000000 0.166479,0.889000 0.000000,0.889000 0.000000,0.740800 0.000000,0.518400 0.000000,0.518400 0.000000,0.000000 Z"#;
+const WEDGE_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.583127,0.000000 0.583127,0.000000 0.833296,0.000000 1.000000,0.000000 1.000000,0.583127 0.708211,0.699888 1.000000,0.833296 1.000000,1.000000 0.833296,1.000000 0.583127,1.000000 0.583127,1.000000 0.000000,1.000000 0.000000,0.833296 0.000000,0.583127 0.000000,0.583127 0.000000,0.000000 Z"#;
+const WEDGE_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.166479,0.000000 0.166479,0.000000 0.416648,0.000000 1.000000,0.000000 1.000000,0.583127 1.000000,0.583127 1.000000,0.833296 1.000000,1.000000 0.416648,1.000000 0.166479,1.000000 0.166479,1.000000 0.000000,1.000000 0.000000,0.833296 0.200000,0.649944 0.000000,0.583127 0.000000,0.000000 Z"#;
+
+fn wedge_rect_callout_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(-20_833.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(62_500.0);
+    let anchors = [
+        (
+            -20_833.0,
+            62_500.0,
+            WEDGE_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH,
+        ),
+        (
+            0.0,
+            62_500.0,
+            WEDGE_RECT_CALLOUT_ADJ_CENTER_LOW_NORMALIZED_PATH,
+        ),
+        (
+            20_833.0,
+            20_000.0,
+            WEDGE_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH,
+        ),
+        (
+            -30_000.0,
+            15_000.0,
+            WEDGE_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 50_000.0;
+            let dx2 = (adj2 - *a2x) / 50_000.0;
+            let dy1 = (adj1 - *a1y) / 50_000.0;
+            let dy2 = (adj2 - *a2y) / 50_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(WEDGE_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH)
+}
+
+fn wedge_rect_callout_analytic_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
     let tt = w * (0.5 + a1);
@@ -1598,6 +1644,18 @@ fn wedge_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String
         tt = tt,
         ty = ty
     )
+}
+fn wedge_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return wedge_rect_callout_analytic_path(w, h, adj);
+    }
+
+    let adj2 = adj.get("adj2").copied().unwrap_or(62_500.0);
+    if adj2 >= 50_000.0 {
+        return wedge_rect_callout_analytic_path(w, h, adj);
+    }
+
+    scale_normalized_path(wedge_rect_callout_adjust_anchor(adj), w, h)
 }
 fn flowchart_terminator_path(w: f64, h: f64) -> String {
     let r = h / 2.0;
@@ -5181,6 +5239,68 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "cloudCallout benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_wedge_rect_callout_default_path_preserves_legacy_polygon() {
+        let path = preset_shape_svg("wedgeRectCallout", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,0 L120.0,0 L120.0,100.0 L24.0,100.0 L35.0,62.5 L12.0,100.0 L0,100.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_wedge_rect_callout_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([
+            ("adj1".to_string(), 20_833.0),
+            ("adj2".to_string(), 20_000.0),
+        ]);
+
+        let default_path =
+            preset_shape_svg("wedgeRectCallout", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("wedgeRectCallout", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "wedgeRectCallout adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_wedge_rect_callout_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2) in [(-20_833.0, 62_500.0), (0.0, 62_500.0)] {
+            let adj_values =
+                HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("wedgeRectCallout", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                wedge_rect_callout_analytic_path(120.0, 100.0, &adj_values),
+                "wedgeRectCallout low-tail profile ({adj1}, {adj2}) should stay on the analytic branch"
+            );
+        }
+
+        for ((adj1, adj2), anchor) in [
+            (
+                (20_833.0, 20_000.0),
+                WEDGE_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH,
+            ),
+            (
+                (-30_000.0, 15_000.0),
+                WEDGE_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj_values =
+                HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("wedgeRectCallout", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "wedgeRectCallout high-tail profile ({adj1}, {adj2}) should map to the tuned anchor path"
             );
         }
     }
