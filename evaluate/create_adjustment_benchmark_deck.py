@@ -119,6 +119,29 @@ QUAD_ARROW_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+LEFT_RIGHT_ARROW_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "LEFT_RIGHT_ARROW_CALLOUT_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.LEFT_RIGHT_ARROW_CALLOUT,
+        {"adj1": 15_000, "adj2": 15_000, "adj3": 15_000, "adj4": 15_000},
+    ),
+    ShapeVariant(
+        "LEFT_RIGHT_ARROW_CALLOUT_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.LEFT_RIGHT_ARROW_CALLOUT,
+        {"adj1": 35_000, "adj2": 35_000, "adj3": 35_000, "adj4": 35_000},
+    ),
+    ShapeVariant(
+        "LEFT_RIGHT_ARROW_CALLOUT_ADJ_LONG",
+        MSO_AUTO_SHAPE_TYPE.LEFT_RIGHT_ARROW_CALLOUT,
+        {"adj1": 20_000, "adj2": 50_000, "adj3": 25_000, "adj4": 50_000},
+    ),
+    ShapeVariant(
+        "LEFT_RIGHT_ARROW_CALLOUT_ADJ_THICK",
+        MSO_AUTO_SHAPE_TYPE.LEFT_RIGHT_ARROW_CALLOUT,
+        {"adj1": 45_000, "adj2": 20_000, "adj3": 45_000, "adj4": 20_000},
+    ),
+)
+
 BENT_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "BENT_ARROW_ADJ_TIGHT",
@@ -290,6 +313,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "quad-arrow": QUAD_ARROW_VARIANTS,
     "bent-arrow": BENT_ARROW_VARIANTS,
     "up-down-arrow-callout": UP_DOWN_ARROW_CALLOUT_VARIANTS,
+    "left-right-arrow-callout": LEFT_RIGHT_ARROW_CALLOUT_VARIANTS,
     "quad-arrow-callout": QUAD_ARROW_CALLOUT_VARIANTS,
 }
 
