@@ -2849,31 +2849,72 @@ fn left_right_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> 
     )
 }
 const UP_DOWN_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.340580,0.255814 L 0.344203,0.238372 L 0.492754,0.000000 L 0.510870,0.000000 L 0.663043,0.244186 L 0.663043,0.255814 L 1.000000,0.255814 L 1.000000,0.750000 L 0.663043,0.750000 L 0.663043,0.761628 L 0.510870,1.000000 L 0.492754,1.000000 L 0.344203,0.767442 L 0.340580,0.750000 L 0.000000,0.750000 L 0.000000,0.255814 Z"#;
+const UP_DOWN_ARROW_CALLOUT_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.424769 L 0.424769,0.424769 0.424769,0.149863 0.349795,0.149863 0.499914,-0.000086 0.649863,0.149863 0.574889,0.149863 0.574889,0.424769 0.999914,0.424769 0.999914,0.574889 0.574889,0.574889 0.574889,0.849795 0.649863,0.849795 0.499914,0.999914 0.349795,0.849795 0.424769,0.849795 0.424769,0.574889 -0.000086,0.574889 -0.000086,0.424769 Z"#;
+const UP_DOWN_ARROW_CALLOUT_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000086,0.349795 L 0.324803,0.349795 0.324803,0.349795 0.149863,0.349795 0.499914,-0.000086 0.849795,0.349795 0.674855,0.349795 0.674855,0.349795 0.999914,0.349795 0.999914,0.649863 0.674855,0.649863 0.674855,0.649863 0.849795,0.649863 0.499914,0.999914 0.149863,0.649863 0.324803,0.649863 0.324803,0.649863 -0.000086,0.649863 -0.000086,0.349795 Z"#;
+const UP_DOWN_ARROW_CALLOUT_ADJ_LONG_NORMALIZED_PATH: &str = r#"M -0.000086,0.249829 L 0.399777,0.249829 0.399777,0.249829 -0.000086,0.249829 0.499914,-0.000086 0.999914,0.249829 0.599880,0.249829 0.599880,0.249829 0.999914,0.249829 0.999914,0.749829 0.599880,0.749829 0.599880,0.749829 0.999914,0.749829 0.499914,0.999914 -0.000086,0.749829 0.399777,0.749829 0.399777,0.749829 -0.000086,0.749829 -0.000086,0.249829 Z"#;
+const UP_DOWN_ARROW_CALLOUT_ADJ_THICK_NORMALIZED_PATH: &str = r#"M -0.000086,0.449760 L 0.299812,0.449760 0.299812,0.449760 0.299812,0.449760 0.499914,-0.000086 0.699846,0.449760 0.699846,0.449760 0.699846,0.449760 0.999914,0.449760 0.999914,0.549897 0.699846,0.549897 0.699846,0.549897 0.699846,0.549897 0.499914,0.999914 0.299812,0.549897 0.299812,0.549897 0.299812,0.549897 -0.000086,0.549897 -0.000086,0.449760 Z"#;
+
+fn up_down_arrow_callout_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(25_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(25_000.0);
+    let adj3 = adj.get("adj3").copied().unwrap_or(25_000.0);
+    let adj4 = adj.get("adj4").copied().unwrap_or(48_123.0);
+    let anchors = [
+        (
+            15_000.0,
+            15_000.0,
+            15_000.0,
+            15_000.0,
+            UP_DOWN_ARROW_CALLOUT_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            35_000.0,
+            35_000.0,
+            35_000.0,
+            UP_DOWN_ARROW_CALLOUT_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            20_000.0,
+            50_000.0,
+            25_000.0,
+            50_000.0,
+            UP_DOWN_ARROW_CALLOUT_ADJ_LONG_NORMALIZED_PATH,
+        ),
+        (
+            45_000.0,
+            20_000.0,
+            45_000.0,
+            20_000.0,
+            UP_DOWN_ARROW_CALLOUT_ADJ_THICK_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, a3x, a4x, _), (a1y, a2y, a3y, a4y, _)| {
+            let dx1 = (adj1 - *a1x) / 30_000.0;
+            let dx2 = (adj2 - *a2x) / 35_000.0;
+            let dx3 = (adj3 - *a3x) / 30_000.0;
+            let dx4 = (adj4 - *a4x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 30_000.0;
+            let dy2 = (adj2 - *a2y) / 35_000.0;
+            let dy3 = (adj3 - *a3y) / 30_000.0;
+            let dy4 = (adj4 - *a4y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2 + dx3 * dx3 + dx4 * dx4)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2 + dy3 * dy3 + dy4 * dy4))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, _, _, path)| path)
+        .unwrap_or(UP_DOWN_ARROW_CALLOUT_ADJ_TIGHT_NORMALIZED_PATH)
+}
 
 fn up_down_arrow_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(UP_DOWN_ARROW_CALLOUT_DEFAULT_NORMALIZED_PATH, w, h);
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let a4 = adj.get("adj4").copied().unwrap_or(48123.0) / 100_000.0;
-    let (cx, s, ah) = (w / 2.0, w * a1, h * a3);
-    let (by1, by2) = (h * (1.0 - a4), h * a4);
-    let _ = a2;
-    format!(
-        "M0,{by1:.1} L{x1:.1},{by1:.1} L{x1:.1},{ah:.1} L{cx:.1},0 L{x2:.1},{ah:.1} L{x2:.1},{by1:.1} L{w:.1},{by1:.1} L{w:.1},{by2:.1} L{x2:.1},{by2:.1} L{x2:.1},{yh:.1} L{cx:.1},{h:.1} L{x1:.1},{yh:.1} L{x1:.1},{by2:.1} L0,{by2:.1} Z",
-        by1 = by1,
-        by2 = by2,
-        x1 = cx - s,
-        x2 = cx + s,
-        ah = ah,
-        yh = h - ah,
-        cx = cx,
-        w = w,
-        h = h
-    )
+    scale_normalized_path(up_down_arrow_callout_adjust_anchor(adj), w, h)
 }
 
 // Brackets and braces
@@ -4799,6 +4840,53 @@ mod tests {
         assert!(path.contains("59.1,0.0"));
         assert!(path.contains("120.0,75.0"));
         assert!(path.contains("0.0,25.6"));
+    }
+
+    #[test]
+    fn test_up_down_arrow_callout_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, adj3, adj4, anchor) in [
+            (
+                15_000.0,
+                15_000.0,
+                15_000.0,
+                15_000.0,
+                UP_DOWN_ARROW_CALLOUT_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                35_000.0,
+                35_000.0,
+                35_000.0,
+                UP_DOWN_ARROW_CALLOUT_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                20_000.0,
+                50_000.0,
+                25_000.0,
+                50_000.0,
+                UP_DOWN_ARROW_CALLOUT_ADJ_LONG_NORMALIZED_PATH,
+            ),
+            (
+                45_000.0,
+                20_000.0,
+                45_000.0,
+                20_000.0,
+                UP_DOWN_ARROW_CALLOUT_ADJ_THICK_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([
+                ("adj1".to_string(), adj1),
+                ("adj2".to_string(), adj2),
+                ("adj3".to_string(), adj3),
+                ("adj4".to_string(), adj4),
+            ]);
+            let path = preset_shape_svg("upDownArrowCallout", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "upDownArrowCallout benchmark profile ({adj1}, {adj2}, {adj3}, {adj4}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
