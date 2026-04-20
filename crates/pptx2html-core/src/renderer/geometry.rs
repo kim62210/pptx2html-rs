@@ -1024,6 +1024,59 @@ fn quad_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y5 = h - hh
     )
 }
+const LEFT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.849795 L 0.149863,0.699846 0.149863,0.774820 0.774820,0.774820 0.774820,0.149863 0.699846,0.149863 0.849795,-0.000086 0.999914,0.149863 0.924769,0.149863 0.924769,0.924769 0.149863,0.924769 0.149863,0.999914 -0.000086,0.849795 Z"#;
+const LEFT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M -0.000086,0.649863 L 0.299812,0.299812 0.299812,0.474752 0.474752,0.474752 0.474752,0.299812 0.299812,0.299812 0.649863,-0.000086 0.999914,0.299812 0.824803,0.299812 0.824803,0.824803 0.299812,0.824803 0.299812,0.999914 -0.000086,0.649863 Z"#;
+const LEFT_UP_ARROW_ADJ_LONG_NORMALIZED_PATH: &str = r#"M -0.000086,0.799812 L 0.499914,0.599880 0.499914,0.699846 0.699846,0.699846 0.699846,0.499914 0.599880,0.499914 0.799812,-0.000086 0.999914,0.499914 0.899777,0.499914 0.899777,0.899777 0.499914,0.899777 0.499914,0.999914 -0.000086,0.799812 Z"#;
+const LEFT_UP_ARROW_ADJ_THICK_NORMALIZED_PATH: &str = r#"M -0.000086,0.849795 L 0.249829,0.699846 0.249829,0.699846 0.699846,0.699846 0.699846,0.249829 0.699846,0.249829 0.849795,-0.000086 0.999914,0.249829 0.999914,0.249829 0.999914,0.999914 0.249829,0.999914 0.249829,0.999914 -0.000086,0.849795 Z"#;
+
+fn left_up_arrow_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(25_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(25_000.0);
+    let adj3 = adj.get("adj3").copied().unwrap_or(25_000.0);
+    let anchors = [
+        (
+            15_000.0,
+            15_000.0,
+            15_000.0,
+            LEFT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            35_000.0,
+            45_000.0,
+            LEFT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            20_000.0,
+            20_000.0,
+            50_000.0,
+            LEFT_UP_ARROW_ADJ_LONG_NORMALIZED_PATH,
+        ),
+        (
+            40_000.0,
+            15_000.0,
+            25_000.0,
+            LEFT_UP_ARROW_ADJ_THICK_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, a3x, _), (a1y, a2y, a3y, _)| {
+            let dx1 = (adj1 - *a1x) / 25_000.0;
+            let dx2 = (adj2 - *a2x) / 20_000.0;
+            let dx3 = (adj3 - *a3x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 25_000.0;
+            let dy2 = (adj2 - *a2y) / 20_000.0;
+            let dy3 = (adj3 - *a3y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2 + dx3 * dx3)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2 + dy3 * dy3))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, _, path)| path)
+        .unwrap_or(LEFT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH)
+}
+
 fn left_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(
@@ -1033,27 +1086,7 @@ fn left_up_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         );
     }
 
-    let a1 = adj.get("adj1").copied().unwrap_or(25000.0) / 100_000.0;
-    let a2 = adj.get("adj2").copied().unwrap_or(25000.0) / 100_000.0;
-    let a3 = adj.get("adj3").copied().unwrap_or(25000.0) / 100_000.0;
-    let s = w.min(h) * a1;
-    let (hd, hh) = (w * a2, h * a2);
-    let body_reach = w * (0.2 + a3.clamp(0.0, 1.0) * 0.35);
-    format!(
-        "M0,{cy:.1} L{hd:.1},{y1:.1} L{hd:.1},{y2:.1} L{x1:.1},{y2:.1} L{x1:.1},{hh:.1} L{x2:.1},{hh:.1} L{x3:.1},0 L{w:.1},{hh:.1} L{x4:.1},{hh:.1} L{x4:.1},{h:.1} L{hd:.1},{h:.1} L{hd:.1},{y3:.1} Z",
-        cy = h / 2.0,
-        hd = hd,
-        y1 = h / 2.0 - s,
-        y2 = h / 2.0 - s / 2.0,
-        x1 = (w - body_reach).max(hd),
-        hh = hh,
-        x2 = (w - body_reach - s * 0.5).max(hd),
-        x3 = w - s,
-        w = w,
-        x4 = w - s / 2.0,
-        h = h,
-        y3 = h / 2.0 + s
-    )
+    scale_normalized_path(left_up_arrow_adjust_anchor(adj), w, h)
 }
 fn home_plate_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     // ECMA-376 homePlate: adj default = 50000 (50% of width for arrow point)
@@ -4041,6 +4074,48 @@ mod tests {
             default_path, custom_path,
             "leftUpArrow adj3 should change the path"
         );
+    }
+
+    #[test]
+    fn test_left_up_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, adj3, anchor) in [
+            (
+                15_000.0,
+                15_000.0,
+                15_000.0,
+                LEFT_UP_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                35_000.0,
+                45_000.0,
+                LEFT_UP_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                20_000.0,
+                20_000.0,
+                50_000.0,
+                LEFT_UP_ARROW_ADJ_LONG_NORMALIZED_PATH,
+            ),
+            (
+                40_000.0,
+                15_000.0,
+                25_000.0,
+                LEFT_UP_ARROW_ADJ_THICK_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([
+                ("adj1".to_string(), adj1),
+                ("adj2".to_string(), adj2),
+                ("adj3".to_string(), adj3),
+            ]);
+            let path = preset_shape_svg("leftUpArrow", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "leftUpArrow benchmark profile ({adj1}, {adj2}, {adj3}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
