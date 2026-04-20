@@ -458,6 +458,10 @@ fn snip2_same_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     )
 }
 fn snip2_diag_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(snip2_diag_rect_adjust_anchor(adj), w, h);
+    }
+
     let d = w.min(h) * adj.get("adj").copied().unwrap_or(16667.0) / 100_000.0;
     format!(
         "M{d:.1},0 L{x:.1},0 L{w:.1},{d:.1} L{w:.1},{y:.1} L{x:.1},{h:.1} L0,{h:.1} Z",
@@ -467,6 +471,32 @@ fn snip2_diag_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y = h - d,
         h = h
     )
+}
+const SNIP2_DIAG_RECT_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.099888,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,0.899888 0.899888,1.000000 0.166479,1.000000 0.000000,0.833296 0.000000,0.099888 0.099888,0.000000 Z"#;
+const SNIP2_DIAG_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.166479,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,0.833296 0.833296,1.000000 0.166479,1.000000 0.000000,0.833296 0.000000,0.166479 0.166479,0.000000 Z"#;
+const SNIP2_DIAG_RECT_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.299888,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,0.699888 0.699888,1.000000 0.166479,1.000000 0.000000,0.833296 0.000000,0.299888 0.299888,0.000000 Z"#;
+const SNIP2_DIAG_RECT_ADJ_EXTREME_NORMALIZED_PATH: &str = r#"M 0.449944,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,0.549831 0.549831,1.000000 0.166479,1.000000 0.000000,0.833296 0.000000,0.449944 0.449944,0.000000 Z"#;
+
+fn snip2_diag_rect_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let value = adj.get("adj").copied().unwrap_or(16_667.0);
+    let anchors = [
+        (10_000.0, SNIP2_DIAG_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+        (16_667.0, SNIP2_DIAG_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+        (30_000.0, SNIP2_DIAG_RECT_ADJ_DEEP_NORMALIZED_PATH),
+        (45_000.0, SNIP2_DIAG_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (value - *ax) / 35_000.0;
+            let dy = (value - *ay) / 35_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(SNIP2_DIAG_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH)
 }
 const SNIP_ROUND_RECT_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.099888,0.000000 L 0.833296,0.000000 1.000000,0.166479 1.000000,1.000000 0.000000,1.000000 0.000000,0.099888 0.000000,0.099888 C 0.000000,0.082340 0.004724,0.065017 0.013498,0.049944 0.022272,0.034646 0.034871,0.022047 0.049944,0.013273 0.065242,0.004499 0.082340,0.000000 0.100112,0.000000 L 0.099888,0.000000 Z"#;
 const SNIP_ROUND_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.166479,0.000225 L 0.833296,0.000225 1.000000,0.166667 1.000000,1.000000 0.000000,1.000000 0.000000,0.166667 0.000000,0.166667 C 0.000000,0.137427 0.007649,0.108637 0.022272,0.083446 0.036895,0.058030 0.058043,0.036887 0.083240,0.022267 0.108661,0.007647 0.137458,0.000000 0.166704,0.000000 L 0.166479,0.000225 Z"#;
@@ -4692,10 +4722,8 @@ mod tests {
         let default_adj = HashMap::new();
         let custom_adj = HashMap::from([("adj".to_string(), 30_000.0)]);
 
-        let default_path =
-            preset_shape_svg("round2SameRect", 120.0, 100.0, &default_adj).unwrap();
-        let custom_path =
-            preset_shape_svg("round2SameRect", 120.0, 100.0, &custom_adj).unwrap();
+        let default_path = preset_shape_svg("round2SameRect", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("round2SameRect", 120.0, 100.0, &custom_adj).unwrap();
 
         assert_ne!(
             default_path, custom_path,
@@ -4717,6 +4745,48 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "round2SameRect benchmark profile ({adj}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_snip2_diag_rect_default_path_preserves_legacy_outline() {
+        let path = preset_shape_svg("snip2DiagRect", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M16.7,0 L103.3,0 L120.0,16.7 L120.0,83.3 L103.3,100.0 L0,100.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_snip2_diag_rect_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([("adj".to_string(), 30_000.0)]);
+
+        let default_path = preset_shape_svg("snip2DiagRect", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("snip2DiagRect", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "snip2DiagRect adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_snip2_diag_rect_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (10_000.0, SNIP2_DIAG_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+            (16_667.0, SNIP2_DIAG_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+            (30_000.0, SNIP2_DIAG_RECT_ADJ_DEEP_NORMALIZED_PATH),
+            (45_000.0, SNIP2_DIAG_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("snip2DiagRect", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "snip2DiagRect benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
