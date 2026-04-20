@@ -325,7 +325,38 @@ fn parallelogram_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const TRAPEZOID_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.099888,0.000000 0.899888,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
+const TRAPEZOID_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.249944,0.000000 0.749831,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
+const TRAPEZOID_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.400000,0.000000 0.600000,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
+const TRAPEZOID_ADJ_EXTREME_NORMALIZED_PATH: &str = r#"M 0.000000,1.000000 L 0.499888,0.000000 0.499888,0.000000 1.000000,1.000000 0.000000,1.000000 Z"#;
+
+fn trapezoid_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let value = adj.get("adj").copied().unwrap_or(25_000.0);
+    let anchors = [
+        (10_000.0, TRAPEZOID_ADJ_LIGHT_NORMALIZED_PATH),
+        (25_000.0, TRAPEZOID_ADJ_DEFAULTISH_NORMALIZED_PATH),
+        (40_000.0, TRAPEZOID_ADJ_DEEP_NORMALIZED_PATH),
+        (55_000.0, TRAPEZOID_ADJ_EXTREME_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (value - *ax) / 45_000.0;
+            let dy = (value - *ay) / 45_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(TRAPEZOID_ADJ_DEFAULTISH_NORMALIZED_PATH)
+}
+
 fn trapezoid_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(trapezoid_adjust_anchor(adj), w, h);
+    }
+
     let o = w * adj.get("adj").copied().unwrap_or(25000.0) / 100_000.0;
     format!(
         "M{o:.1},0 L{x:.1},0 L{w:.1},{h:.1} L0,{h:.1} Z",
@@ -4336,6 +4367,45 @@ mod tests {
             assert!(
                 preset_shape_svg(name, 100.0, 100.0, &adj).is_some(),
                 "Missing: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_trapezoid_default_path_preserves_legacy_polygon() {
+        let path = preset_shape_svg("trapezoid", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(path, "M30.0,0 L90.0,0 L120.0,100.0 L0,100.0 Z");
+    }
+
+    #[test]
+    fn test_trapezoid_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([("adj".to_string(), 40_000.0)]);
+
+        let default_path = preset_shape_svg("trapezoid", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("trapezoid", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "trapezoid adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_trapezoid_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (10_000.0, TRAPEZOID_ADJ_LIGHT_NORMALIZED_PATH),
+            (25_000.0, TRAPEZOID_ADJ_DEFAULTISH_NORMALIZED_PATH),
+            (40_000.0, TRAPEZOID_ADJ_DEEP_NORMALIZED_PATH),
+            (55_000.0, TRAPEZOID_ADJ_EXTREME_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("trapezoid", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "trapezoid benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
