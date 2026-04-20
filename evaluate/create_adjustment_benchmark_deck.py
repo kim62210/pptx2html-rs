@@ -188,6 +188,29 @@ CLOUD_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+TEARDROP_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "TEARDROP_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.TEAR,
+        {"adj": 20_000},
+    ),
+    ShapeVariant(
+        "TEARDROP_ADJ_DEFAULT",
+        MSO_AUTO_SHAPE_TYPE.TEAR,
+        {"adj": 50_000},
+    ),
+    ShapeVariant(
+        "TEARDROP_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.TEAR,
+        {"adj": 80_000},
+    ),
+    ShapeVariant(
+        "TEARDROP_ADJ_SHARP",
+        MSO_AUTO_SHAPE_TYPE.TEAR,
+        {"adj": 100_000},
+    ),
+)
+
 PIE_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "PIE_ADJ_SMALL",
@@ -452,6 +475,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "bent-arrow": BENT_ARROW_VARIANTS,
     "up-down-arrow-callout": UP_DOWN_ARROW_CALLOUT_VARIANTS,
     "cloud-callout": CLOUD_CALLOUT_VARIANTS,
+    "teardrop": TEARDROP_VARIANTS,
     "pie": PIE_VARIANTS,
     "arc": ARC_VARIANTS,
     "block-arc": BLOCK_ARC_VARIANTS,
