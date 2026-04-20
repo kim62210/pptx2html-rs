@@ -2590,28 +2590,42 @@ fn wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         y2 = h - a * 2.0
     )
 }
+const DOUBLE_WAVE_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M -0.000086,0.099880 C 0.166467,-0.233396 0.333191,0.433156 0.499914,0.099880 0.666467,-0.233396 0.833191,0.433156 0.999914,0.099880 L 0.999914,0.899777 C 0.833191,1.233225 0.666467,0.566501 0.499914,0.899777 0.333191,1.233225 0.166467,0.566501 -0.000086,0.899777 L -0.000086,0.099880 Z"#;
+const DOUBLE_WAVE_ADJ_SHIFT_NORMALIZED_PATH: &str = r#"M -0.000086,0.124872 C 0.133088,-0.291595 0.266433,0.541510 0.399777,0.124872 0.533122,-0.291595 0.666467,0.541510 0.799812,0.124872 L 0.999914,0.874786 C 0.866570,1.291424 0.733225,0.458148 0.599880,0.874786 0.466535,1.291424 0.333191,0.458148 0.199846,0.874786 L -0.000086,0.124872 Z"#;
+const DOUBLE_WAVE_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M -0.000086,0.124872 C 0.166467,-0.291595 0.333191,0.541510 0.499914,0.124872 0.666467,-0.291595 0.833191,0.541510 0.999914,0.124872 L 0.999914,0.874786 C 0.833191,1.291424 0.666467,0.458148 0.499914,0.874786 0.333191,1.291424 0.166467,0.458148 -0.000086,0.874786 L -0.000086,0.124872 Z"#;
+const DOUBLE_WAVE_ADJ_DEEP_SHIFT_NORMALIZED_PATH: &str = r#"M -0.000086,0.124872 C 0.133088,-0.291595 0.266433,0.541510 0.399777,0.124872 0.533122,-0.291595 0.666467,0.541510 0.799812,0.124872 L 0.999914,0.874786 C 0.866570,1.291424 0.733225,0.458148 0.599880,0.874786 0.466535,1.291424 0.333191,0.458148 0.199846,0.874786 L -0.000086,0.124872 Z"#;
+
+fn double_wave_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(6_250.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let anchors = [
+        (10_000.0, 0.0, DOUBLE_WAVE_ADJ_LIGHT_NORMALIZED_PATH),
+        (12_500.0, 40_000.0, DOUBLE_WAVE_ADJ_SHIFT_NORMALIZED_PATH),
+        (30_000.0, 0.0, DOUBLE_WAVE_ADJ_DEEP_NORMALIZED_PATH),
+        (
+            30_000.0,
+            40_000.0,
+            DOUBLE_WAVE_ADJ_DEEP_SHIFT_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 20_000.0;
+            let dx2 = (adj2 - *a2x) / 40_000.0;
+            let dy1 = (adj1 - *a1y) / 20_000.0;
+            let dy2 = (adj2 - *a2y) / 40_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(DOUBLE_WAVE_ADJ_LIGHT_NORMALIZED_PATH)
+}
+
 fn double_wave_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
-    let a = h * adj.get("adj1").copied().unwrap_or(6250.0) / 100_000.0;
-    let adj2 = adj.get("adj2").copied().unwrap_or(0.0) / 100_000.0;
-    let phase = w * adj2 * 0.08;
-    format!(
-        "M0,{a:.1} C{c1:.1},0 {c2:.1},{a2:.1} {cx:.1},{a:.1} C{c3:.1},0 {c4:.1},{a2:.1} {w:.1},{a:.1} L{w:.1},{y1:.1} C{c5:.1},{h:.1} {c6:.1},{y2:.1} {cx:.1},{y1:.1} C{c7:.1},{h:.1} {c8:.1},{y2:.1} 0,{y1:.1} Z",
-        a = a,
-        a2 = a * 2.0,
-        c1 = w * 0.125 + phase,
-        c2 = w * 0.375 - phase,
-        cx = w * 0.5,
-        c3 = w * 0.625 + phase,
-        c4 = w * 0.875 - phase,
-        w = w,
-        y1 = h - a,
-        y2 = h - a * 2.0,
-        c5 = w * 0.875 + phase,
-        c6 = w * 0.625 - phase,
-        c7 = w * 0.375 + phase,
-        c8 = w * 0.125 - phase,
-        h = h
-    )
+    scale_normalized_path(double_wave_adjust_anchor(adj), w, h)
 }
 fn regular_polygon_path(w: f64, h: f64, sides: u32) -> String {
     let (cx, cy) = (w / 2.0, h / 2.0);
@@ -4255,6 +4269,28 @@ mod tests {
             default_path, custom_path,
             "doubleWave adj2 should change the path"
         );
+    }
+
+    #[test]
+    fn test_double_wave_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, anchor) in [
+            (10_000.0, 0.0, DOUBLE_WAVE_ADJ_LIGHT_NORMALIZED_PATH),
+            (12_500.0, 40_000.0, DOUBLE_WAVE_ADJ_SHIFT_NORMALIZED_PATH),
+            (30_000.0, 0.0, DOUBLE_WAVE_ADJ_DEEP_NORMALIZED_PATH),
+            (
+                30_000.0,
+                40_000.0,
+                DOUBLE_WAVE_ADJ_DEEP_SHIFT_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("doubleWave", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "doubleWave benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
