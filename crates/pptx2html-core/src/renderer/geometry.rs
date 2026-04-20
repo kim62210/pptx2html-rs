@@ -748,7 +748,57 @@ fn notched_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> Strin
 
     scale_normalized_path(notched_right_arrow_adjust_anchor(adj), w, h)
 }
+const STRIPED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,0.424972 L 0.031046,0.424972 0.031046,0.574803 0.000000,0.574803 0.000000,0.424972 Z M 0.062317,0.424972 L 0.124859,0.424972 0.124859,0.574803 0.062317,0.574803 0.062317,0.424972 Z M 0.156130,0.424972 L 0.849944,0.424972 0.849944,0.000000 1.000000,0.499888 0.849944,1.000000 0.849944,0.574803 0.156130,0.574803 0.156130,0.424972 Z"#;
+const STRIPED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.000000,0.324859 L 0.031046,0.324859 0.031046,0.674916 0.000000,0.674916 0.000000,0.324859 Z M 0.062317,0.324859 L 0.124859,0.324859 0.124859,0.674916 0.062317,0.674916 0.062317,0.324859 Z M 0.156130,0.324859 L 0.649944,0.324859 0.649944,0.000000 1.000000,0.499888 0.649944,1.000000 0.649944,0.674916 0.156130,0.674916 0.156130,0.324859 Z"#;
+const STRIPED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH: &str = r#"M 0.000000,0.400000 L 0.031046,0.400000 0.031046,0.600000 0.000000,0.600000 0.000000,0.400000 Z M 0.062317,0.400000 L 0.124859,0.400000 0.124859,0.600000 0.062317,0.600000 0.062317,0.400000 Z M 0.156130,0.400000 L 0.499888,0.400000 0.499888,0.000000 1.000000,0.499888 0.499888,1.000000 0.499888,0.600000 0.156130,0.600000 0.156130,0.400000 Z"#;
+const STRIPED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH: &str = r#"M 0.000000,0.274916 L 0.031046,0.274916 0.031046,0.724859 0.000000,0.724859 0.000000,0.274916 Z M 0.062317,0.274916 L 0.124859,0.274916 0.124859,0.724859 0.062317,0.724859 0.062317,0.274916 Z M 0.156130,0.274916 L 0.800000,0.274916 0.800000,0.000000 1.000000,0.499888 0.800000,1.000000 0.800000,0.724859 0.156130,0.724859 0.156130,0.274916 Z"#;
+
+fn striped_right_arrow_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(50_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(33_333.0);
+    let anchors = [
+        (
+            15_000.0,
+            15_000.0,
+            STRIPED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+        ),
+        (
+            35_000.0,
+            35_000.0,
+            STRIPED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+        ),
+        (
+            20_000.0,
+            50_000.0,
+            STRIPED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH,
+        ),
+        (
+            45_000.0,
+            20_000.0,
+            STRIPED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 35_000.0;
+            let dx2 = (adj2 - *a2x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 35_000.0;
+            let dy2 = (adj2 - *a2y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(STRIPED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH)
+}
+
 fn striped_right_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(striped_right_arrow_adjust_anchor(adj), w, h);
+    }
+
     let a1 = adj.get("adj1").copied().unwrap_or(50000.0);
     let a2 = adj.get("adj2").copied().unwrap_or(33333.0);
     let s = h * a1 / 100_000.0 / 2.0;
@@ -4633,6 +4683,68 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "notchedRightArrow benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_striped_right_arrow_default_path_preserves_legacy_polygon_and_stripes() {
+        let path = preset_shape_svg("stripedRightArrow", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,25.0 L3.0,25.0 L3.0,75.0 L0,75.0 Z M6.0,25.0 L9.0,25.0 L9.0,75.0 L6.0,75.0 Z M12.0,25.0 L80.0,25.0 L80.0,0 L120.0,50.0 L80.0,100.0 L80.0,75.0 L12.0,75.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_striped_right_arrow_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([
+            ("adj1".to_string(), 20_000.0),
+            ("adj2".to_string(), 50_000.0),
+        ]);
+
+        let default_path =
+            preset_shape_svg("stripedRightArrow", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("stripedRightArrow", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "stripedRightArrow adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_striped_right_arrow_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, anchor) in [
+            (
+                15_000.0,
+                15_000.0,
+                STRIPED_RIGHT_ARROW_ADJ_TIGHT_NORMALIZED_PATH,
+            ),
+            (
+                35_000.0,
+                35_000.0,
+                STRIPED_RIGHT_ARROW_ADJ_WIDE_NORMALIZED_PATH,
+            ),
+            (
+                20_000.0,
+                50_000.0,
+                STRIPED_RIGHT_ARROW_ADJ_LONG_NORMALIZED_PATH,
+            ),
+            (
+                45_000.0,
+                20_000.0,
+                STRIPED_RIGHT_ARROW_ADJ_THICK_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj = HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("stripedRightArrow", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "stripedRightArrow benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
             );
         }
     }
