@@ -4440,6 +4440,14 @@ fn svg_preset_stroke_width_factor(
         {
             1.2
         }
+        Some("bentUpArrow")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
+            ) =>
+        {
+            1.3
+        }
         Some("stripedRightArrow")
             if matches_svg_adjust_profile(
                 adjust_values,
@@ -5778,6 +5786,10 @@ mod tests {
         assert_eq!(
             svg_preset_stroke_width_factor(Some("leftUpArrow"), &tight),
             1.2
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("bentUpArrow"), &tight),
+            1.3
         );
         let striped_tight = HashMap::from([
             ("adj1".to_string(), 15_000.0),
