@@ -4456,6 +4456,45 @@ fn svg_preset_stroke_width_factor(
         {
             1.3
         }
+        Some("leftRightArrowCallout")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[
+                    ("adj1", 15_000.0),
+                    ("adj2", 15_000.0),
+                    ("adj3", 15_000.0),
+                    ("adj4", 15_000.0),
+                ],
+            ) =>
+        {
+            1.2
+        }
+        Some("upDownArrowCallout")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[
+                    ("adj1", 15_000.0),
+                    ("adj2", 15_000.0),
+                    ("adj3", 15_000.0),
+                    ("adj4", 15_000.0),
+                ],
+            ) =>
+        {
+            1.3
+        }
+        Some("quadArrowCallout")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[
+                    ("adj1", 15_000.0),
+                    ("adj2", 15_000.0),
+                    ("adj3", 15_000.0),
+                    ("adj4", 15_000.0),
+                ],
+            ) =>
+        {
+            1.3
+        }
         Some("leftRightUpArrow")
             if matches_svg_adjust_profile(
                 adjust_values,
@@ -5797,6 +5836,24 @@ mod tests {
         ]);
         assert_eq!(
             svg_preset_stroke_width_factor(Some("stripedRightArrow"), &striped_tight),
+            1.3
+        );
+        let tight_callout = HashMap::from([
+            ("adj1".to_string(), 15_000.0),
+            ("adj2".to_string(), 15_000.0),
+            ("adj3".to_string(), 15_000.0),
+            ("adj4".to_string(), 15_000.0),
+        ]);
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("leftRightArrowCallout"), &tight_callout),
+            1.2
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("upDownArrowCallout"), &tight_callout),
+            1.3
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("quadArrowCallout"), &tight_callout),
             1.3
         );
         assert_eq!(
