@@ -510,6 +510,29 @@ RIGHT_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+DOUBLE_BRACKET_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "DOUBLE_BRACKET_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACKET,
+        {"adj": 5_000},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACKET_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACKET,
+        {"adj": 16_667},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACKET_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACKET,
+        {"adj": 30_000},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACKET_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACKET,
+        {"adj": 45_000},
+    ),
+)
+
 CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "CIRCULAR_ARROW_ADJ_TIGHT",
@@ -536,6 +559,7 @@ CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
 SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "curved-arrows": CURVED_ARROW_VARIANTS,
     "right-arrow": RIGHT_ARROW_VARIANTS,
+    "double-bracket": DOUBLE_BRACKET_VARIANTS,
     "circular-arrow": CIRCULAR_ARROW_VARIANTS,
     "bent-up-arrow": BENT_UP_ARROW_VARIANTS,
     "left-up-arrow": LEFT_UP_ARROW_VARIANTS,
