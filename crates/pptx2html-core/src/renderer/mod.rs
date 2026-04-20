@@ -2293,7 +2293,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let stroke_width = if is_line_shape && preset_name == "lineInv" {
                     stroke_width * 3.2
                 } else {
-                    stroke_width
+                    stroke_width * svg_preset_stroke_width_factor(Some(preset_name))
                 };
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let cap_attr = line_cap_to_svg(&resolved_border.cap);
@@ -4343,6 +4343,14 @@ fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
     }
 }
 
+fn svg_preset_stroke_width_factor(preset_name: Option<&str>) -> f64 {
+    match preset_name {
+        Some("circularArrow") => 1.9,
+        Some("curvedRightArrow" | "curvedLeftArrow" | "curvedUpArrow" | "curvedDownArrow") => 1.5,
+        _ => 1.0,
+    }
+}
+
 fn svg_uses_style_ref_effect_fallback(preset_name: Option<&str>) -> bool {
     !matches!(
         preset_name,
@@ -5550,6 +5558,20 @@ mod tests {
         assert_eq!(svg_style_effect_factor(Some("curvedUpArrow")), 0.35);
         assert_eq!(svg_style_effect_factor(Some("cloud")), 0.55);
         assert_eq!(svg_style_effect_factor(None), 0.55);
+    }
+
+    #[test]
+    fn svg_preset_stroke_width_factor_uses_arrow_overrides() {
+        assert_eq!(svg_preset_stroke_width_factor(Some("circularArrow")), 1.9);
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("curvedRightArrow")),
+            1.5
+        );
+        assert_eq!(svg_preset_stroke_width_factor(Some("curvedLeftArrow")), 1.5);
+        assert_eq!(svg_preset_stroke_width_factor(Some("curvedUpArrow")), 1.5);
+        assert_eq!(svg_preset_stroke_width_factor(Some("curvedDownArrow")), 1.5);
+        assert_eq!(svg_preset_stroke_width_factor(Some("rightArrow")), 1.0);
+        assert_eq!(svg_preset_stroke_width_factor(None), 1.0);
     }
 
     #[test]
