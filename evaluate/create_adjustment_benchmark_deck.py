@@ -602,6 +602,29 @@ PARALLELOGRAM_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+OCTAGON_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "OCTAGON_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.OCTAGON,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "OCTAGON_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.OCTAGON,
+        {"adj": 29_289},
+    ),
+    ShapeVariant(
+        "OCTAGON_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.OCTAGON,
+        {"adj": 40_000},
+    ),
+    ShapeVariant(
+        "OCTAGON_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.OCTAGON,
+        {"adj": 50_000},
+    ),
+)
+
 ROUND1_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "ROUND1_RECT_ADJ_LIGHT",
@@ -885,6 +908,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "up-down-arrow": UP_DOWN_ARROW_VARIANTS,
     "hexagon": HEXAGON_VARIANTS,
     "parallelogram": PARALLELOGRAM_VARIANTS,
+    "octagon": OCTAGON_VARIANTS,
     "round1-rect": ROUND1_RECT_VARIANTS,
     "round2-same-rect": ROUND2_SAME_RECT_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
