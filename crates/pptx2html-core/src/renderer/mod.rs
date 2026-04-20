@@ -2307,7 +2307,8 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 } else {
                     ("none".to_string(), 0.0)
                 };
-                let stroke_width = stroke_width * svg_preset_stroke_width_factor(Some(preset_name));
+                let stroke_width =
+                    stroke_width * svg_preset_stroke_width_factor(Some(preset_name), adj_values);
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let cap_attr = line_cap_to_svg(&resolved_border.cap);
                 let join_attr = line_join_to_svg(&resolved_border.join);
@@ -2370,7 +2371,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 let stroke_width = if is_line_shape && preset_name == "lineInv" {
                     stroke_width * 3.2
                 } else {
-                    stroke_width * svg_preset_stroke_width_factor(Some(preset_name))
+                    stroke_width * svg_preset_stroke_width_factor(Some(preset_name), adj_values)
                 };
                 let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
                 let cap_attr = line_cap_to_svg(&resolved_border.cap);
@@ -4425,9 +4426,20 @@ fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
     }
 }
 
-fn svg_preset_stroke_width_factor(preset_name: Option<&str>) -> f64 {
+fn svg_preset_stroke_width_factor(
+    preset_name: Option<&str>,
+    adjust_values: &HashMap<String, f64>,
+) -> f64 {
     match preset_name {
         Some("circularArrow") => 2.1,
+        Some("leftRightUpArrow")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
+            ) =>
+        {
+            1.3
+        }
         Some("curvedRightArrow" | "curvedLeftArrow") => 1.8,
         Some("curvedDownArrow") => 1.35,
         Some("curvedUpArrow") => 1.5,
@@ -4450,6 +4462,14 @@ fn svg_preset_shadow_blur_factor(
 ) -> f64 {
     match preset_name {
         Some("leftUpArrow")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
+            ) =>
+        {
+            1.1
+        }
+        Some("leftRightUpArrow")
             if matches_svg_adjust_profile(
                 adjust_values,
                 &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
@@ -5713,19 +5733,41 @@ mod tests {
 
     #[test]
     fn svg_preset_stroke_width_factor_uses_arrow_overrides() {
-        assert_eq!(svg_preset_stroke_width_factor(Some("circularArrow")), 2.1);
+        let tight = HashMap::from([
+            ("adj1".to_string(), 15_000.0),
+            ("adj2".to_string(), 15_000.0),
+            ("adj3".to_string(), 15_000.0),
+        ]);
+        let empty = HashMap::new();
         assert_eq!(
-            svg_preset_stroke_width_factor(Some("curvedRightArrow")),
+            svg_preset_stroke_width_factor(Some("circularArrow"), &empty),
+            2.1
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("curvedRightArrow"), &empty),
             1.8
         );
-        assert_eq!(svg_preset_stroke_width_factor(Some("curvedLeftArrow")), 1.8);
-        assert_eq!(svg_preset_stroke_width_factor(Some("curvedUpArrow")), 1.5);
         assert_eq!(
-            svg_preset_stroke_width_factor(Some("curvedDownArrow")),
+            svg_preset_stroke_width_factor(Some("curvedLeftArrow"), &empty),
+            1.8
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("curvedUpArrow"), &empty),
+            1.5
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("curvedDownArrow"), &empty),
             1.35
         );
-        assert_eq!(svg_preset_stroke_width_factor(Some("rightArrow")), 1.0);
-        assert_eq!(svg_preset_stroke_width_factor(None), 1.0);
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("leftRightUpArrow"), &tight),
+            1.3
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("rightArrow"), &empty),
+            1.0
+        );
+        assert_eq!(svg_preset_stroke_width_factor(None, &empty), 1.0);
     }
 
     #[test]
@@ -5747,6 +5789,10 @@ mod tests {
         assert_eq!(
             svg_preset_shadow_blur_factor(Some("leftUpArrow"), &wide),
             1.0
+        );
+        assert_eq!(
+            svg_preset_shadow_blur_factor(Some("leftRightUpArrow"), &tight),
+            1.1
         );
         assert_eq!(
             svg_preset_shadow_blur_factor(Some("rightArrow"), &tight),
