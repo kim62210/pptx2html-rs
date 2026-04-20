@@ -556,6 +556,29 @@ HALF_FRAME_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+DOUBLE_BRACE_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "DOUBLE_BRACE_ADJ_TIGHT",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACE,
+        {"adj": 5_000},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACE_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACE,
+        {"adj": 8_333},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACE_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACE,
+        {"adj": 20_000},
+    ),
+    ShapeVariant(
+        "DOUBLE_BRACE_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_BRACE,
+        {"adj": 40_000},
+    ),
+)
+
 CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "CIRCULAR_ARROW_ADJ_TIGHT",
@@ -584,6 +607,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "right-arrow": RIGHT_ARROW_VARIANTS,
     "double-bracket": DOUBLE_BRACKET_VARIANTS,
     "half-frame": HALF_FRAME_VARIANTS,
+    "double-brace": DOUBLE_BRACE_VARIANTS,
     "circular-arrow": CIRCULAR_ARROW_VARIANTS,
     "bent-up-arrow": BENT_UP_ARROW_VARIANTS,
     "left-up-arrow": LEFT_UP_ARROW_VARIANTS,
