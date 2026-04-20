@@ -1421,7 +1421,53 @@ fn home_plate_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
-fn wedge_round_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+const WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH: &str = r#"M 0.000225,0.148170 L 0.000225,0.148170 C 0.000225,0.122176 0.007872,0.096581 0.022492,0.074185 0.037112,0.051590 0.058255,0.032793 0.083446,0.019796 0.108862,0.006799 0.137652,0.000000 0.166892,0.000000 L 0.166667,0.000200 0.166667,0.000200 0.416779,0.000200 0.833333,0.000200 0.833333,0.000200 C 0.862573,0.000200 0.891363,0.006999 0.916554,0.019996 0.941970,0.032993 0.963113,0.051790 0.977733,0.074185 0.992353,0.096781 1.000000,0.122376 1.000000,0.148370 L 1.000000,0.148370 1.000000,0.518496 1.000000,0.518496 1.000000,0.740852 1.000000,0.740852 1.000000,0.740852 C 1.000000,0.766847 0.992353,0.792442 0.977733,0.814837 0.963113,0.837433 0.941970,0.856229 0.916779,0.869226 0.891363,0.882224 0.862573,0.889022 0.833333,0.889022 L 0.416779,0.889022 0.291723,1.000000 0.166667,0.889022 0.166667,0.889022 0.166667,0.889022 C 0.137427,0.889022 0.108637,0.882224 0.083446,0.869226 0.058030,0.856229 0.036887,0.837433 0.022267,0.815037 0.007647,0.792442 0.000000,0.766847 0.000000,0.740852 L 0.000225,0.740852 0.000225,0.518496 0.000225,0.518496 0.000225,0.148170 Z"#;
+const WEDGE_ROUND_RECT_CALLOUT_ADJ_CENTER_LOW_NORMALIZED_PATH: &str = r#"M 0.000225,0.148170 L 0.000225,0.148170 C 0.000225,0.122176 0.007872,0.096581 0.022492,0.074185 0.037112,0.051590 0.058255,0.032793 0.083446,0.019796 0.108862,0.006799 0.137652,0.000000 0.166892,0.000000 L 0.166667,0.000200 0.166667,0.000200 0.416779,0.000200 0.833333,0.000200 0.833333,0.000200 C 0.862573,0.000200 0.891363,0.006999 0.916554,0.019996 0.941970,0.032993 0.963113,0.051790 0.977733,0.074185 0.992353,0.096781 1.000000,0.122376 1.000000,0.148370 L 1.000000,0.148370 1.000000,0.518496 1.000000,0.518496 1.000000,0.740852 1.000000,0.740852 1.000000,0.740852 C 1.000000,0.766847 0.992353,0.792442 0.977733,0.814837 0.963113,0.837433 0.941970,0.856229 0.916779,0.869226 0.891363,0.882224 0.862573,0.889022 0.833333,0.889022 L 0.416779,0.889022 0.500000,1.000000 0.166667,0.889022 0.166667,0.889022 0.166667,0.889022 C 0.137427,0.889022 0.108637,0.882224 0.083446,0.869226 0.058030,0.856229 0.036887,0.837433 0.022267,0.815037 0.007647,0.792442 0.000000,0.766847 0.000000,0.740852 L 0.000225,0.740852 0.000225,0.518496 0.000225,0.518496 0.000225,0.148170 Z"#;
+const WEDGE_ROUND_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH: &str = r#"M 0.000225,0.166667 L 0.000225,0.166667 C 0.000225,0.137427 0.007872,0.108637 0.022492,0.083446 0.037112,0.058030 0.058255,0.036887 0.083446,0.022267 0.108862,0.007647 0.137652,0.000000 0.166892,0.000000 L 0.583221,0.000225 0.583221,0.000225 0.833333,0.000225 0.833333,0.000225 0.833333,0.000225 C 0.862573,0.000225 0.891363,0.007872 0.916554,0.022492 0.941970,0.037112 0.963113,0.058255 0.977733,0.083446 0.992353,0.108862 1.000000,0.137652 1.000000,0.166892 L 1.000000,0.166892 1.000000,0.583221 0.708277,0.699955 1.000000,0.833333 1.000000,0.833333 1.000000,0.833333 C 1.000000,0.862573 0.992353,0.891363 0.977733,0.916554 0.963113,0.941970 0.941970,0.963113 0.916779,0.977733 0.891363,0.992353 0.862573,1.000000 0.833333,1.000000 L 0.833333,1.000000 0.583221,1.000000 0.583221,1.000000 0.166667,1.000000 0.166667,1.000000 C 0.137427,1.000000 0.108637,0.992353 0.083446,0.977733 0.058030,0.963113 0.036887,0.941970 0.022267,0.916779 0.007647,0.891363 0.000000,0.862573 0.000000,0.833333 L 0.000225,0.833333 0.000225,0.583221 0.000225,0.583221 0.000225,0.166667 Z"#;
+const WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH: &str = r#"M 0.000225,0.166667 L 0.000225,0.166667 C 0.000225,0.137427 0.007872,0.108637 0.022492,0.083446 0.037112,0.058030 0.058255,0.036887 0.083446,0.022267 0.108862,0.007647 0.137652,0.000000 0.166892,0.000000 L 0.166667,0.000225 0.166667,0.000225 0.416779,0.000225 0.833333,0.000225 0.833333,0.000225 C 0.862573,0.000225 0.891363,0.007872 0.916554,0.022492 0.941970,0.037112 0.963113,0.058255 0.977733,0.083446 0.992353,0.108862 1.000000,0.137652 1.000000,0.166892 L 1.000000,0.166892 1.000000,0.583221 1.000000,0.583221 1.000000,0.833333 1.000000,0.833333 1.000000,0.833333 C 1.000000,0.862573 0.992353,0.891363 0.977733,0.916554 0.963113,0.941970 0.941970,0.963113 0.916779,0.977733 0.891363,0.992353 0.862573,1.000000 0.833333,1.000000 L 0.416779,1.000000 0.166667,1.000000 0.166667,1.000000 0.166667,1.000000 C 0.137427,1.000000 0.108637,0.992353 0.083446,0.977733 0.058030,0.963113 0.036887,0.941970 0.022267,0.916779 0.007647,0.891363 0.000000,0.862573 0.000000,0.833333 L 0.000225,0.833333 0.200180,0.650022 0.000225,0.583221 0.000225,0.166667 Z"#;
+
+fn wedge_round_rect_callout_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(-20_833.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(62_500.0);
+    let anchors = [
+        (
+            -20_833.0,
+            62_500.0,
+            WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH,
+        ),
+        (
+            0.0,
+            62_500.0,
+            WEDGE_ROUND_RECT_CALLOUT_ADJ_CENTER_LOW_NORMALIZED_PATH,
+        ),
+        (
+            20_833.0,
+            20_000.0,
+            WEDGE_ROUND_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH,
+        ),
+        (
+            -30_000.0,
+            15_000.0,
+            WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH,
+        ),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 50_000.0;
+            let dx2 = (adj2 - *a2x) / 50_000.0;
+            let dy1 = (adj1 - *a1y) / 50_000.0;
+            let dy2 = (adj2 - *a2y) / 50_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_LOW_NORMALIZED_PATH)
+}
+
+fn wedge_round_rect_callout_analytic_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
     let a2 = adj.get("adj2").copied().unwrap_or(62500.0) / 100_000.0;
     let r = w.min(h) * 0.06;
@@ -1439,6 +1485,18 @@ fn wedge_round_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> 
         tt = tt,
         ty = ty
     )
+}
+fn wedge_round_rect_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if adj.is_empty() {
+        return wedge_round_rect_callout_analytic_path(w, h, adj);
+    }
+
+    let adj2 = adj.get("adj2").copied().unwrap_or(62_500.0);
+    if adj2 >= 50_000.0 {
+        return wedge_round_rect_callout_analytic_path(w, h, adj);
+    }
+
+    scale_normalized_path(wedge_round_rect_callout_adjust_anchor(adj), w, h)
 }
 fn wedge_ellipse_callout_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     let a1 = adj.get("adj1").copied().unwrap_or(-20833.0) / 100_000.0;
@@ -5239,6 +5297,72 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "cloudCallout benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_wedge_round_rect_callout_default_path_preserves_legacy_polygon() {
+        let path =
+            preset_shape_svg("wedgeRoundRectCallout", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M6.0,0 L114.0,0 Q120.0,0 120.0,6.0 L120.0,94.0 Q120.0,100.0 114.0,100.0 L24.0,100.0 L35.0,62.5 L12.0,100.0 L6.0,100.0 Q0,100.0 0,94.0 L0,6.0 Q0,0 6.0,0 Z"
+        );
+    }
+
+    #[test]
+    fn test_wedge_round_rect_callout_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([
+            ("adj1".to_string(), 20_833.0),
+            ("adj2".to_string(), 20_000.0),
+        ]);
+
+        let default_path =
+            preset_shape_svg("wedgeRoundRectCallout", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path =
+            preset_shape_svg("wedgeRoundRectCallout", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "wedgeRoundRectCallout adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_wedge_round_rect_callout_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2) in [(-20_833.0, 62_500.0), (0.0, 62_500.0)] {
+            let adj_values =
+                HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path =
+                preset_shape_svg("wedgeRoundRectCallout", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                wedge_round_rect_callout_analytic_path(120.0, 100.0, &adj_values),
+                "wedgeRoundRectCallout low-tail profile ({adj1}, {adj2}) should stay on the analytic branch"
+            );
+        }
+
+        for ((adj1, adj2), anchor) in [
+            (
+                (20_833.0, 20_000.0),
+                WEDGE_ROUND_RECT_CALLOUT_ADJ_RIGHT_HIGH_NORMALIZED_PATH,
+            ),
+            (
+                (-30_000.0, 15_000.0),
+                WEDGE_ROUND_RECT_CALLOUT_ADJ_LEFT_HIGH_NORMALIZED_PATH,
+            ),
+        ] {
+            let adj_values =
+                HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path =
+                preset_shape_svg("wedgeRoundRectCallout", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "wedgeRoundRectCallout high-tail profile ({adj1}, {adj2}) should map to the tuned anchor path"
             );
         }
     }
