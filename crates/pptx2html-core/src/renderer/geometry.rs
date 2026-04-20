@@ -557,7 +557,41 @@ fn bracket_pair_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
 
     scale_normalized_path(bracket_pair_adjust_anchor(adj), w, h)
 }
+const HALF_FRAME_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 1.000000,0.000000 0.849944,0.149831 0.149831,0.149831 0.149831,0.849944 0.000000,1.000000 0.000000,0.000000 Z"#;
+const HALF_FRAME_ADJ_WIDE_TOP_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 1.000000,0.000000 0.849944,0.149831 0.499888,0.149831 0.499888,0.499888 0.000000,1.000000 0.000000,0.000000 Z"#;
+const HALF_FRAME_ADJ_TALL_TOP_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 1.000000,0.000000 0.499888,0.499888 0.149831,0.499888 0.149831,0.849944 0.000000,1.000000 0.000000,0.000000 Z"#;
+const HALF_FRAME_ADJ_OPEN_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 1.000000,0.000000 0.499888,0.499888 0.499888,0.499888 0.499888,0.499888 0.000000,1.000000 0.000000,0.000000 Z"#;
+
+fn half_frame_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(33_333.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(33_333.0);
+    let anchors = [
+        (15_000.0, 15_000.0, HALF_FRAME_ADJ_TIGHT_NORMALIZED_PATH),
+        (15_000.0, 50_000.0, HALF_FRAME_ADJ_WIDE_TOP_NORMALIZED_PATH),
+        (50_000.0, 15_000.0, HALF_FRAME_ADJ_TALL_TOP_NORMALIZED_PATH),
+        (50_000.0, 50_000.0, HALF_FRAME_ADJ_OPEN_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 35_000.0;
+            let dx2 = (adj2 - *a2x) / 35_000.0;
+            let dy1 = (adj1 - *a1y) / 35_000.0;
+            let dy2 = (adj2 - *a2y) / 35_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(HALF_FRAME_ADJ_TIGHT_NORMALIZED_PATH)
+}
+
 fn half_frame_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(half_frame_adjust_anchor(adj), w, h);
+    }
+
     let ty = h * adj.get("adj1").copied().unwrap_or(33333.0) / 100_000.0;
     let tx = w * adj.get("adj2").copied().unwrap_or(33333.0) / 100_000.0;
     format!(
@@ -5728,6 +5762,58 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "bracketPair benchmark profile ({adj}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_half_frame_default_path_preserves_legacy_polygon() {
+        let path = preset_shape_svg("halfFrame", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,0 L120.0,0 L120.0,33.3 L40.0,33.3 L40.0,100.0 L0,100.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_half_frame_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([
+            ("adj1".to_string(), 50_000.0),
+            ("adj2".to_string(), 50_000.0),
+        ]);
+
+        let default_path = preset_shape_svg("halfFrame", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("halfFrame", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "halfFrame adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_half_frame_adjustment_profiles_match_benchmarked_anchors() {
+        for ((adj1, adj2), anchor) in [
+            ((15_000.0, 15_000.0), HALF_FRAME_ADJ_TIGHT_NORMALIZED_PATH),
+            (
+                (15_000.0, 50_000.0),
+                HALF_FRAME_ADJ_WIDE_TOP_NORMALIZED_PATH,
+            ),
+            (
+                (50_000.0, 15_000.0),
+                HALF_FRAME_ADJ_TALL_TOP_NORMALIZED_PATH,
+            ),
+            ((50_000.0, 50_000.0), HALF_FRAME_ADJ_OPEN_NORMALIZED_PATH),
+        ] {
+            let adj_values =
+                HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("halfFrame", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "halfFrame benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
             );
         }
     }
