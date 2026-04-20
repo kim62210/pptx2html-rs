@@ -717,6 +717,29 @@ ROUND2_SAME_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+ROUND2_DIAG_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "ROUND2_DIAG_RECT_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.ROUND_2_DIAG_RECTANGLE,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "ROUND2_DIAG_RECT_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.ROUND_2_DIAG_RECTANGLE,
+        {"adj": 16_667},
+    ),
+    ShapeVariant(
+        "ROUND2_DIAG_RECT_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.ROUND_2_DIAG_RECTANGLE,
+        {"adj": 30_000},
+    ),
+    ShapeVariant(
+        "ROUND2_DIAG_RECT_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.ROUND_2_DIAG_RECTANGLE,
+        {"adj": 45_000},
+    ),
+)
+
 TRAPEZOID_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "TRAPEZOID_ADJ_LIGHT",
@@ -982,6 +1005,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "snip2-same-rect": SNIP2_SAME_RECT_VARIANTS,
     "round1-rect": ROUND1_RECT_VARIANTS,
     "round2-same-rect": ROUND2_SAME_RECT_VARIANTS,
+    "round2-diag-rect": ROUND2_DIAG_RECT_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
     "snip-round-rect": SNIP_ROUND_RECT_VARIANTS,
     "snip2-diag-rect": SNIP2_DIAG_RECT_VARIANTS,
