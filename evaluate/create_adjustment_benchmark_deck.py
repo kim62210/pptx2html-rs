@@ -96,6 +96,29 @@ UP_DOWN_ARROW_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+DOUBLE_WAVE_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "DOUBLE_WAVE_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_WAVE,
+        {"adj1": 10_000, "adj2": 0},
+    ),
+    ShapeVariant(
+        "DOUBLE_WAVE_ADJ_SHIFT",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_WAVE,
+        {"adj1": 12_500, "adj2": 40_000},
+    ),
+    ShapeVariant(
+        "DOUBLE_WAVE_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_WAVE,
+        {"adj1": 30_000, "adj2": 0},
+    ),
+    ShapeVariant(
+        "DOUBLE_WAVE_ADJ_DEEP_SHIFT",
+        MSO_AUTO_SHAPE_TYPE.DOUBLE_WAVE,
+        {"adj1": 30_000, "adj2": 40_000},
+    ),
+)
+
 QUAD_ARROW_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "QUAD_ARROW_CALLOUT_ADJ_TIGHT",
@@ -338,6 +361,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "up-down-arrow-callout": UP_DOWN_ARROW_CALLOUT_VARIANTS,
     "block-arc": BLOCK_ARC_VARIANTS,
     "left-right-arrow-callout": LEFT_RIGHT_ARROW_CALLOUT_VARIANTS,
+    "double-wave": DOUBLE_WAVE_VARIANTS,
     "quad-arrow-callout": QUAD_ARROW_CALLOUT_VARIANTS,
 }
 
