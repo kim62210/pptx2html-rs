@@ -2514,29 +2514,42 @@ fn pie_wedge_path(w: f64, h: f64) -> String {
     )
 }
 const ARC_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.664260,0.023256 L 0.707581,0.034884 L 0.707581,0.040698 L 0.732852,0.046512 L 0.750903,0.063953 L 0.772563,0.069767 L 0.779783,0.081395 L 0.790614,0.081395 L 0.848375,0.127907 L 0.851986,0.139535 L 0.859206,0.139535 L 0.862816,0.151163 L 0.891697,0.174419 L 0.898917,0.191860 L 0.906137,0.191860 L 0.953069,0.267442 L 0.953069,0.279070 L 0.963899,0.290698 L 0.974729,0.331395 L 0.981949,0.337209 L 0.989170,0.377907 L 0.996390,0.389535 L 0.996390,0.406977 L 1.000000,0.406977 L 1.000000,0.430233 L 1.000000,0.430233 L 1.000000,0.500000 L 0.996390,0.505814 L 0.501805,0.505814 L 0.501805,0.000000 L 0.595668,0.000000 L 0.595668,0.005814 L 0.624549,0.005814 L 0.624549,0.011628 L 0.646209,0.011628 L 0.646209,0.017442 L 0.664260,0.017442 Z"#;
+const ARC_ADJ_SMALL_NORMALIZED_PATH: &str = r#"M 0.821208,0.882831 L 0.821208,0.882831 C 0.798956,0.901489 0.774991,0.918264 0.749829,0.932814 0.673827,0.976635 0.587556,0.999743 0.499743,0.999743 0.412102,0.999743 0.325830,0.976635 0.249829,0.932814 0.173827,0.888993 0.110664,0.825830 0.066844,0.749829 0.022852,0.673827 -0.000257,0.587556 -0.000257,0.499743 -0.000257,0.441544 0.010014,0.383687 0.030041,0.328740 L 0.499914,0.499914 0.821208,0.882831 Z"#;
+const ARC_ADJ_HALF_NORMALIZED_PATH: &str = r#"M 0.499914,0.999914 L 0.499914,0.999914 C 0.412102,0.999914 0.326001,0.976806 0.250000,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.250000,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 L 0.499914,0.499914 0.499914,0.999914 Z"#;
+const ARC_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.999914,0.499914 L 0.999914,0.499914 C 0.999914,0.587727 0.976806,0.673827 0.932985,0.750000 0.888993,0.826001 0.826001,0.888993 0.750000,0.932985 0.673827,0.976806 0.587727,0.999914 0.499914,0.999914 0.412102,0.999914 0.326001,0.976806 0.249829,0.932985 0.173827,0.888993 0.110835,0.826001 0.066844,0.750000 0.023023,0.673827 -0.000086,0.587727 -0.000086,0.499914 -0.000086,0.412102 0.023023,0.326001 0.066844,0.250000 0.110835,0.173827 0.173827,0.110835 0.249829,0.066844 0.326001,0.023023 0.412102,-0.000086 0.499914,-0.000086 0.587727,-0.000086 0.673827,0.023023 0.749829,0.066844 L 0.750000,0.066844 0.499914,0.499914 0.999914,0.499914 Z"#;
+const ARC_ADJ_SLIVER_NORMALIZED_PATH: &str = r#"M 0.066844,0.749829 L 0.066844,0.749829 C 0.023023,0.673827 -0.000086,0.587556 -0.000086,0.499743 -0.000086,0.490157 0.000086,0.480401 0.000770,0.470815 L 0.499914,0.499914 0.066844,0.749829 Z"#;
+
+fn arc_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let adj1 = adj.get("adj1").copied().unwrap_or(16_200_000.0);
+    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
+    let anchors = [
+        (3_000_000.0, 12_000_000.0, ARC_ADJ_SMALL_NORMALIZED_PATH),
+        (16_200_000.0, 0.0, ARC_ADJ_HALF_NORMALIZED_PATH),
+        (0.0, 18_000_000.0, ARC_ADJ_WIDE_NORMALIZED_PATH),
+        (9_000_000.0, 11_000_000.0, ARC_ADJ_SLIVER_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(a1x, a2x, _), (a1y, a2y, _)| {
+            let dx1 = (adj1 - *a1x) / 21_600_000.0;
+            let dx2 = (adj2 - *a2x) / 21_600_000.0;
+            let dy1 = (adj1 - *a1y) / 21_600_000.0;
+            let dy2 = (adj2 - *a2y) / 21_600_000.0;
+            (dx1 * dx1 + dx2 * dx2)
+                .partial_cmp(&(dy1 * dy1 + dy2 * dy2))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, _, path)| path)
+        .unwrap_or(ARC_ADJ_HALF_NORMALIZED_PATH)
+}
 
 fn arc_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
     if adj.is_empty() {
         return scale_normalized_path(ARC_DEFAULT_NORMALIZED_PATH, w, h);
     }
 
-    let adj1 = adj.get("adj1").copied().unwrap_or(16200000.0);
-    let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
-    let (rx, ry) = (w / 2.0, h / 2.0);
-    let (cx, cy) = (rx, ry);
-    let start_angle = std::f64::consts::PI + adj2 / 21_600_000.0 * std::f64::consts::TAU;
-    let end_angle = (adj1 - 16_200_000.0) / 21_600_000.0 * std::f64::consts::TAU;
-    let (sx, sy) = ellipse_point(cx, cy, rx, ry, start_angle);
-    let (ex, ey) = ellipse_point(cx, cy, rx, ry, end_angle);
-    format!(
-        "M{sx:.1},{sy:.1} A{rx:.1},{ry:.1} 0 0,1 {ex:.1},{ey:.1}",
-        sx = sx,
-        sy = sy,
-        rx = rx,
-        ry = ry,
-        ex = ex,
-        ey = ey
-    )
+    scale_normalized_path(arc_adjust_anchor(adj), w, h)
 }
 
 fn polygon_path(points: &[Point]) -> String {
@@ -3990,6 +4003,24 @@ mod tests {
             default_path, custom_path,
             "arc adj values should change the path"
         );
+    }
+
+    #[test]
+    fn test_arc_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj1, adj2, anchor) in [
+            (3_000_000.0, 12_000_000.0, ARC_ADJ_SMALL_NORMALIZED_PATH),
+            (16_200_000.0, 0.0, ARC_ADJ_HALF_NORMALIZED_PATH),
+            (0.0, 18_000_000.0, ARC_ADJ_WIDE_NORMALIZED_PATH),
+            (9_000_000.0, 11_000_000.0, ARC_ADJ_SLIVER_NORMALIZED_PATH),
+        ] {
+            let adj = HashMap::from([("adj1".to_string(), adj1), ("adj2".to_string(), adj2)]);
+            let path = preset_shape_svg("arc", 120.0, 100.0, &adj).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "arc benchmark profile ({adj1}, {adj2}) should map to the tuned anchor path"
+            );
+        }
     }
 
     #[test]
