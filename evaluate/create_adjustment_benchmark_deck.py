@@ -602,6 +602,29 @@ SNIP_ROUND_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+NON_ISOSCELES_TRAPEZOID_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "NON_ISO_TRAPEZOID_ADJ_BALANCED",
+        MSO_AUTO_SHAPE_TYPE.NON_ISOSCELES_TRAPEZOID,
+        {"adj1": 10_000, "adj2": 10_000},
+    ),
+    ShapeVariant(
+        "NON_ISO_TRAPEZOID_ADJ_RIGHT_HEAVY",
+        MSO_AUTO_SHAPE_TYPE.NON_ISOSCELES_TRAPEZOID,
+        {"adj1": 25_000, "adj2": 10_000},
+    ),
+    ShapeVariant(
+        "NON_ISO_TRAPEZOID_ADJ_LEFT_HEAVY",
+        MSO_AUTO_SHAPE_TYPE.NON_ISOSCELES_TRAPEZOID,
+        {"adj1": 10_000, "adj2": 25_000},
+    ),
+    ShapeVariant(
+        "NON_ISO_TRAPEZOID_ADJ_OPEN",
+        MSO_AUTO_SHAPE_TYPE.NON_ISOSCELES_TRAPEZOID,
+        {"adj1": 35_000, "adj2": 35_000},
+    ),
+)
+
 DOUBLE_BRACKET_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "DOUBLE_BRACKET_ADJ_TIGHT",
@@ -770,6 +793,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "up-down-arrow": UP_DOWN_ARROW_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
     "snip-round-rect": SNIP_ROUND_RECT_VARIANTS,
+    "non-isosceles-trapezoid": NON_ISOSCELES_TRAPEZOID_VARIANTS,
     "double-bracket": DOUBLE_BRACKET_VARIANTS,
     "half-frame": HALF_FRAME_VARIANTS,
     "double-brace": DOUBLE_BRACE_VARIANTS,
