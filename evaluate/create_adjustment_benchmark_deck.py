@@ -671,6 +671,29 @@ WEDGE_ROUND_RECT_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+WEDGE_ELLIPSE_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "WEDGE_ELLIPSE_CALLOUT_LEFT_LOW",
+        MSO_AUTO_SHAPE_TYPE.OVAL_CALLOUT,
+        {"adj1": -20_833, "adj2": 62_500},
+    ),
+    ShapeVariant(
+        "WEDGE_ELLIPSE_CALLOUT_CENTER_LOW",
+        MSO_AUTO_SHAPE_TYPE.OVAL_CALLOUT,
+        {"adj1": 0, "adj2": 62_500},
+    ),
+    ShapeVariant(
+        "WEDGE_ELLIPSE_CALLOUT_RIGHT_HIGH",
+        MSO_AUTO_SHAPE_TYPE.OVAL_CALLOUT,
+        {"adj1": 20_833, "adj2": 20_000},
+    ),
+    ShapeVariant(
+        "WEDGE_ELLIPSE_CALLOUT_LEFT_HIGH",
+        MSO_AUTO_SHAPE_TYPE.OVAL_CALLOUT,
+        {"adj1": -30_000, "adj2": 15_000},
+    ),
+)
+
 CIRCULAR_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "CIRCULAR_ARROW_ADJ_TIGHT",
@@ -704,6 +727,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "double-brace": DOUBLE_BRACE_VARIANTS,
     "wedge-rect-callout": WEDGE_RECT_CALLOUT_VARIANTS,
     "wedge-round-rect-callout": WEDGE_ROUND_RECT_CALLOUT_VARIANTS,
+    "wedge-ellipse-callout": WEDGE_ELLIPSE_CALLOUT_VARIANTS,
     "circular-arrow": CIRCULAR_ARROW_VARIANTS,
     "bent-up-arrow": BENT_UP_ARROW_VARIANTS,
     "left-up-arrow": LEFT_UP_ARROW_VARIANTS,
