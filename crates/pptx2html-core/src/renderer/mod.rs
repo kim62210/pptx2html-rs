@@ -2271,9 +2271,71 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 None
             };
             let has_override = line_svg_override.is_some();
+            let svg_multi_opt = if is_line_shape {
+                None
+            } else {
+                geometry::preset_shape_multi_svg(preset_name, svg_w, svg_h, adj_values)
+            };
             let svg_path_opt = line_svg_override
                 .or_else(|| geometry::preset_shape_svg(preset_name, svg_w, svg_h, adj_values));
-            if let Some(svg_path) = svg_path_opt {
+            if let Some(svg_multi) = svg_multi_opt {
+                let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
+                    let c = ctx
+                        .color_to_css(&resolved_border.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    (c, resolved_border.width * 4.0 / 3.0)
+                } else if is_line_shape {
+                    let c = ctx
+                        .color_to_css(&resolved_border.color)
+                        .unwrap_or_else(|| "#000".to_string());
+                    (c, 1.0)
+                } else {
+                    ("none".to_string(), 0.0)
+                };
+                let stroke_width = stroke_width * svg_preset_stroke_width_factor(Some(preset_name));
+                let dash_attr = dash_style_to_svg(&resolved_border.dash_style, stroke_width);
+                let cap_attr = line_cap_to_svg(&resolved_border.cap);
+                let join_attr = line_join_to_svg(&resolved_border.join);
+                let miter_limit_attr = line_miter_limit_to_svg(&resolved_border);
+                let _ = write!(
+                    html,
+                    "<svg viewBox=\"0 0 {svg_w:.1} {svg_h:.1}\" class=\"shape-svg\" preserveAspectRatio=\"none\">"
+                );
+                let grad_id = ctx.next_gradient_id();
+                let mut defs_buf = String::new();
+                let gradient_fill_ref =
+                    svg_gradient_def(&resolved_fill, &grad_id, ctx, &mut defs_buf);
+                if !defs_buf.is_empty() {
+                    html.push_str("<defs>");
+                    html.push_str(&defs_buf);
+                    html.push_str("</defs>");
+                }
+                let default_fill = if let Some(ref grad_ref) = gradient_fill_ref {
+                    grad_ref.clone()
+                } else {
+                    ctx.color_to_css(&resolved_fill.color_ref())
+                        .unwrap_or_else(|| "none".to_string())
+                };
+                let base_fill = ctx.resolve_color(&resolved_fill.color_ref());
+                let _ = write!(html, "<g{svg_effect_attr}>");
+                for path_svg in &svg_multi.paths {
+                    let fill = svg_path_fill_to_css(&path_svg.fill, &default_fill, base_fill);
+                    let stroke_attr = if path_svg.stroke {
+                        format!(
+                            "stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
+                             {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}"
+                        )
+                    } else {
+                        "stroke=\"none\"".to_string()
+                    };
+                    let _ = write!(
+                        html,
+                        "<path d=\"{}\" fill=\"{fill}\" {stroke_attr}/>",
+                        path_svg.d
+                    );
+                }
+                html.push_str("</g></svg>");
+            } else if let Some(svg_path) = svg_path_opt {
                 // Convert border width from pt to px for SVG (viewBox is in px)
                 let (stroke_color, stroke_width) = if resolved_border.width > 0.0 {
                     let c = ctx
@@ -2479,15 +2541,20 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
                 ctx.color_to_css(&resolved_fill.color_ref())
                     .unwrap_or_else(|| "none".to_string())
             };
+            let base_fill = ctx.resolve_color(&resolved_fill.color_ref());
             for path_svg in &svg_geom.paths {
-                let fill = match path_svg.fill {
-                    PathFill::None => "none".to_string(),
-                    _ => default_fill.clone(),
+                let fill = svg_path_fill_to_css(&path_svg.fill, &default_fill, base_fill);
+                let stroke_attr = if path_svg.stroke {
+                    format!(
+                        "stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
+                         {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}"
+                    )
+                } else {
+                    "stroke=\"none\"".to_string()
                 };
                 let _ = write!(
                     html,
-                    "<path d=\"{}\" fill=\"{fill}\" stroke=\"{stroke_color}\" stroke-width=\"{stroke_width:.1}\"\
-                     {dash_attr}{cap_attr}{join_attr}{miter_limit_attr}{marker_start_attr}{marker_end_attr}/>",
+                    "<path d=\"{}\" fill=\"{fill}\" {stroke_attr}/>",
                     path_svg.d
                 );
             }
@@ -4392,6 +4459,29 @@ fn tint_resolved_color(color: ResolvedColor, factor: f64) -> ResolvedColor {
     let factor = factor.clamp(0.0, 1.0);
     let tint = |channel: u8| (f64::from(channel) * factor + 255.0 * (1.0 - factor)).round() as u8;
     ResolvedColor::new(tint(color.r), tint(color.g), tint(color.b))
+}
+
+fn svg_path_fill_to_css(
+    path_fill: &PathFill,
+    default_fill: &str,
+    base_fill: Option<ResolvedColor>,
+) -> String {
+    match path_fill {
+        PathFill::None => "none".to_string(),
+        PathFill::Norm => default_fill.to_string(),
+        PathFill::Darken => base_fill
+            .map(|color| shade_resolved_color(color, 0.59).to_css())
+            .unwrap_or_else(|| default_fill.to_string()),
+        PathFill::DarkenLess => base_fill
+            .map(|color| shade_resolved_color(color, 0.78).to_css())
+            .unwrap_or_else(|| default_fill.to_string()),
+        PathFill::Lighten => base_fill
+            .map(|color| tint_resolved_color(color, 0.60).to_css())
+            .unwrap_or_else(|| default_fill.to_string()),
+        PathFill::LightenLess => base_fill
+            .map(|color| tint_resolved_color(color, 0.82).to_css())
+            .unwrap_or_else(|| default_fill.to_string()),
+    }
 }
 
 fn line_inverse_path_with_overshoot(w: f64, h: f64, overshoot: f64) -> String {

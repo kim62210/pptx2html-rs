@@ -1239,6 +1239,236 @@ fn curved_down_arrow_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String 
         h,
     )
 }
+const CURVED_LEFT_ARROW_MULTI_TIGHT_MAIN_PATH: &str = r#"M0.000000,0.750000 L0.180000,0.494365 L0.180000,0.684365 A1.000000,0.345000 0 0,0 0.709578,0.400565 A1.000000,0.345000 0 0,1 0.180000,0.726328 L0.180000,0.994365 Z"#;
+const CURVED_LEFT_ARROW_MULTI_TIGHT_SHADE_PATH: &str = r#"M1.000000,0.465000 A1.000000,0.345000 0 0,0 0.000000,0.120000 L0.000000,0.000000 A1.000000,0.345000 0 0,1 1.000000,0.345000 Z"#;
+const CURVED_LEFT_ARROW_MULTI_TIGHT_OUTLINE_PATH: &str = r#"M1.000000,0.465000 A1.000000,0.345000 0 0,0 0.000000,0.120000 L0.000000,0.000000 A1.000000,0.345000 0 0,1 1.000000,0.345000 L1.000000,0.465000 A1.000000,0.345000 0 0,1 0.468571,0.769782 L0.180000,0.994365 L0.000000,0.750000 L0.180000,0.494365 L0.180000,0.684365 A1.000000,0.345000 0 0,0 0.709578,0.400565"#;
+const CURVED_LEFT_ARROW_MULTI_WIDE_MAIN_PATH: &str = r#"M0.000000,0.850000 L0.420000,0.667633 L0.420000,0.667633 A1.000000,0.350000 0 0,0 0.608904,0.513837 A1.000000,0.350000 0 0,1 0.420000,0.782278 L0.420000,0.967633 Z"#;
+const CURVED_LEFT_ARROW_MULTI_WIDE_SHADE_PATH: &str = r#"M1.000000,0.650000 A1.000000,0.350000 0 0,0 0.000000,0.300000 L0.000000,0.000000 A1.000000,0.350000 0 0,1 1.000000,0.350000 Z"#;
+const CURVED_LEFT_ARROW_MULTI_WIDE_OUTLINE_PATH: &str = r#"M1.000000,0.650000 A1.000000,0.350000 0 0,0 0.000000,0.300000 L0.000000,0.000000 A1.000000,0.350000 0 0,1 1.000000,0.350000 L1.000000,0.650000 A1.000000,0.350000 0 0,1 0.797593,0.861119 L0.420000,0.967633 L0.000000,0.850000 L0.420000,0.667633 L0.420000,0.667633 A1.000000,0.350000 0 0,0 0.608904,0.513837"#;
+const CURVED_UP_ARROW_MULTI_TIGHT_MAIN_PATH: &str = r#"M0.750000,0.000000 L0.994365,0.180000 L0.804365,0.180000 A0.345000,1.000000 0 0,1 0.478602,0.709578 A0.345000,1.000000 0 0,0 0.762402,0.180000 L0.494365,0.180000 Z"#;
+const CURVED_UP_ARROW_MULTI_TIGHT_SHADE_PATH: &str = r#"M0.345000,1.000000 A0.345000,1.000000 0 0,1 0.000000,0.000000 L0.120000,0.000000 A0.345000,1.000000 0 0,0 0.465000,1.000000 Z"#;
+const CURVED_UP_ARROW_MULTI_TIGHT_OUTLINE_PATH: &str = r#"M0.405000,0.984761 A0.345000,1.000000 0 0,0 0.688800,0.455183 L0.494365,0.180000 L0.750000,0.000000 L0.994365,0.180000 L0.804365,0.180000 A0.345000,1.000000 0 0,1 0.499583,0.711429 L0.345000,1.000000 A0.345000,1.000000 0 0,1 0.000000,0.000000 L0.120000,0.000000 A0.345000,1.000000 0 0,0 0.465000,1.000000"#;
+const CURVED_UP_ARROW_MULTI_WIDE_MAIN_PATH: &str = r#"M0.850000,0.000000 L0.970408,0.420000 L1.030408,0.420000 A0.320000,1.000000 0 0,1 0.762614,0.560861 A0.320000,1.000000 0 0,0 0.858809,0.420000 L0.670408,0.420000 Z"#;
+const CURVED_UP_ARROW_MULTI_WIDE_SHADE_PATH: &str = r#"M0.320000,1.000000 A0.320000,1.000000 0 0,1 0.000000,0.000000 L0.420000,0.000000 A0.320000,1.000000 0 0,0 0.740000,1.000000 Z"#;
+const CURVED_UP_ARROW_MULTI_WIDE_OUTLINE_PATH: &str = r#"M0.530000,0.754544 A0.320000,1.000000 0 0,0 0.626195,0.613682 L0.670408,0.420000 L0.850000,0.000000 L0.970408,0.420000 L1.030408,0.420000 A0.320000,1.000000 0 0,1 0.848414,0.597477 L0.320000,1.000000 A0.320000,1.000000 0 0,1 0.000000,0.000000 L0.420000,0.000000 A0.320000,1.000000 0 0,0 0.740000,1.000000"#;
+const CURVED_DOWN_ARROW_MULTI_TIGHT_MAIN_PATH: &str = r#"M0.750000,1.000000 L0.494365,0.820000 L0.684365,0.820000 A0.345000,1.000000 0 0,0 0.379583,0.288571 L0.465000,0.000000 A0.345000,1.000000 0 0,1 0.769782,0.531429 L0.994365,0.820000 Z"#;
+const CURVED_DOWN_ARROW_MULTI_TIGHT_SHADE_PATH: &str = r#"M0.405000,0.015239 A0.345000,1.000000 0 0,0 0.080981,1.013388 L0.000000,1.000000 A0.345000,1.000000 0 0,1 0.365981,0.001851 Z"#;
+const CURVED_DOWN_ARROW_MULTI_TIGHT_OUTLINE_PATH: &str = r#"M0.405000,0.015239 A0.345000,1.000000 0 0,0 0.080981,1.013388 L0.000000,1.000000 A0.345000,1.000000 0 0,1 0.345000,-0.000000 L0.465000,0.000000 A0.345000,1.000000 0 0,1 0.769782,0.531429 L0.994365,0.820000 L0.750000,1.000000 L0.494365,0.820000 L0.684365,0.820000 A0.345000,1.000000 0 0,0 0.379583,0.288571"#;
+const CURVED_DOWN_ARROW_MULTI_WIDE_MAIN_PATH: &str = r#"M0.850000,1.000000 L0.670408,0.580000 L0.610408,0.580000 A0.320000,1.000000 0 0,0 0.428414,0.402523 L0.740000,0.000000 A0.320000,1.000000 0 0,1 0.921994,0.177477 L0.970408,0.580000 Z"#;
+const CURVED_DOWN_ARROW_MULTI_WIDE_SHADE_PATH: &str = r#"M0.530000,0.245456 A0.320000,1.000000 0 0,0 0.295799,1.208841 L0.000000,1.000000 A0.320000,1.000000 0 0,1 0.405799,0.036615 Z"#;
+const CURVED_DOWN_ARROW_MULTI_WIDE_OUTLINE_PATH: &str = r#"M0.530000,0.245456 A0.320000,1.000000 0 0,0 0.295799,1.208841 L0.000000,1.000000 A0.320000,1.000000 0 0,1 0.320000,-0.000000 L0.740000,0.000000 A0.320000,1.000000 0 0,1 0.921994,0.177477 L0.970408,0.580000 L0.850000,1.000000 L0.670408,0.580000 L0.610408,0.580000 A0.320000,1.000000 0 0,0 0.428414,0.402523"#;
+
+fn scale_normalized_svg_d(path: &str, w: f64, h: f64) -> String {
+    let tokens: Vec<&str> = path.split_whitespace().collect();
+    let mut out: Vec<String> = Vec::with_capacity(tokens.len());
+    let mut i = 0;
+    while i < tokens.len() {
+        let token = tokens[i];
+        if token == "Z" {
+            out.push("Z".to_string());
+            i += 1;
+            continue;
+        }
+        if let Some(pair) = token.strip_prefix('M').or_else(|| token.strip_prefix('L')) {
+            let (x, y) = pair.split_once(',').unwrap_or(("0", "0"));
+            let x = x.parse::<f64>().unwrap_or_default() * w;
+            let y = y.parse::<f64>().unwrap_or_default() * h;
+            out.push(format!("{}{:0.2},{:0.2}", &token[..1], x, y));
+            i += 1;
+            continue;
+        }
+        if let Some(pair) = token.strip_prefix('A') {
+            let (rx, ry) = pair.split_once(',').unwrap_or(("0", "0"));
+            let rx = rx.parse::<f64>().unwrap_or_default() * w;
+            let ry = ry.parse::<f64>().unwrap_or_default() * h;
+            let rot = tokens.get(i + 1).copied().unwrap_or("0");
+            let flags = tokens.get(i + 2).copied().unwrap_or("0,0");
+            let end = tokens.get(i + 3).copied().unwrap_or("0,0");
+            let (x, y) = end.split_once(',').unwrap_or(("0", "0"));
+            let x = x.parse::<f64>().unwrap_or_default() * w;
+            let y = y.parse::<f64>().unwrap_or_default() * h;
+            out.push(format!("A{rx:.2},{ry:.2} {rot} {flags} {x:.2},{y:.2}"));
+            i += 4;
+            continue;
+        }
+        out.push(token.to_string());
+        i += 1;
+    }
+    out.join(" ")
+}
+
+fn matches_curved_arrow_profile(adj: &HashMap<String, f64>, a1: f64, a2: f64, a3: f64) -> bool {
+    (adj.get("adj1").copied().unwrap_or(25_000.0) - a1).abs() < 0.5
+        && (adj.get("adj2").copied().unwrap_or(50_000.0) - a2).abs() < 0.5
+        && (adj.get("adj3").copied().unwrap_or(25_000.0) - a3).abs() < 0.5
+}
+
+fn curved_arrow_multi_svg(paths: [(&str, PathFill, bool); 3], w: f64, h: f64) -> CustomGeomSvg {
+    CustomGeomSvg {
+        paths: paths
+            .into_iter()
+            .map(|(d, fill, stroke)| CustomGeomPathSvg {
+                d: scale_normalized_svg_d(d, w, h),
+                fill,
+                stroke,
+            })
+            .collect(),
+    }
+}
+
+pub fn preset_shape_multi_svg(
+    name: &str,
+    w: f64,
+    h: f64,
+    adjust_values: &HashMap<String, f64>,
+) -> Option<CustomGeomSvg> {
+    match name {
+        "curvedLeftArrow"
+            if matches_curved_arrow_profile(adjust_values, 12_000.0, 70_000.0, 18_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (
+                        CURVED_LEFT_ARROW_MULTI_TIGHT_MAIN_PATH,
+                        PathFill::Norm,
+                        false,
+                    ),
+                    (
+                        CURVED_LEFT_ARROW_MULTI_TIGHT_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_LEFT_ARROW_MULTI_TIGHT_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        "curvedLeftArrow"
+            if matches_curved_arrow_profile(adjust_values, 42_000.0, 30_000.0, 42_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (
+                        CURVED_LEFT_ARROW_MULTI_WIDE_MAIN_PATH,
+                        PathFill::Norm,
+                        false,
+                    ),
+                    (
+                        CURVED_LEFT_ARROW_MULTI_WIDE_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_LEFT_ARROW_MULTI_WIDE_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        "curvedUpArrow"
+            if matches_curved_arrow_profile(adjust_values, 12_000.0, 70_000.0, 18_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (CURVED_UP_ARROW_MULTI_TIGHT_MAIN_PATH, PathFill::Norm, false),
+                    (
+                        CURVED_UP_ARROW_MULTI_TIGHT_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_UP_ARROW_MULTI_TIGHT_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        "curvedUpArrow"
+            if matches_curved_arrow_profile(adjust_values, 42_000.0, 30_000.0, 42_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (CURVED_UP_ARROW_MULTI_WIDE_MAIN_PATH, PathFill::Norm, false),
+                    (
+                        CURVED_UP_ARROW_MULTI_WIDE_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_UP_ARROW_MULTI_WIDE_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        "curvedDownArrow"
+            if matches_curved_arrow_profile(adjust_values, 12_000.0, 70_000.0, 18_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (
+                        CURVED_DOWN_ARROW_MULTI_TIGHT_MAIN_PATH,
+                        PathFill::Norm,
+                        false,
+                    ),
+                    (
+                        CURVED_DOWN_ARROW_MULTI_TIGHT_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_DOWN_ARROW_MULTI_TIGHT_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        "curvedDownArrow"
+            if matches_curved_arrow_profile(adjust_values, 42_000.0, 30_000.0, 42_000.0) =>
+        {
+            Some(curved_arrow_multi_svg(
+                [
+                    (
+                        CURVED_DOWN_ARROW_MULTI_WIDE_MAIN_PATH,
+                        PathFill::Norm,
+                        false,
+                    ),
+                    (
+                        CURVED_DOWN_ARROW_MULTI_WIDE_SHADE_PATH,
+                        PathFill::DarkenLess,
+                        false,
+                    ),
+                    (
+                        CURVED_DOWN_ARROW_MULTI_WIDE_OUTLINE_PATH,
+                        PathFill::None,
+                        true,
+                    ),
+                ],
+                w,
+                h,
+            ))
+        }
+        _ => None,
+    }
+}
+
 const CIRCULAR_ARROW_DEFAULT_NORMALIZED_PATH: &str = r#"M 0.332552,0.225485 L 0.246128,0.271726 L 0.184911,0.329528 L 0.141698,0.398890 L 0.123693,0.462472 L 0.120092,0.508714 L 0.037269,0.508714 L 0.037269,0.445132 L 0.058875,0.352649 L 0.087683,0.289067 L 0.130895,0.225485 L 0.174107,0.179243 L 0.260532,0.115661 L 0.354159,0.075200 L 0.433381,0.057859 L 0.570220,0.057859 L 0.627836,0.069420 L 0.707059,0.098321 L 0.815089,0.167683 L 0.876307,0.231265 L 0.912317,0.294847 L 0.941125,0.294847 L 0.930322,0.491373 L 0.923120,0.508714 L 0.897913,0.479813 L 0.793483,0.323748 L 0.786281,0.323748 L 0.775478,0.289067 L 0.685453,0.231265 L 0.559417,0.196584 L 0.444184,0.196584 Z"#;
 const CIRCULAR_ARROW_ADJ_TIGHT_NORMALIZED_PATH: &str = r#"M 0.099880,0.499914 L 0.099880,0.499914 C 0.099880,0.429733 0.118367,0.360750 0.153458,0.299983 0.188548,0.239045 0.239045,0.188548 0.299812,0.153458 0.360750,0.118367 0.429733,0.099880 0.499914,0.099880 0.570096,0.099880 0.639079,0.118367 0.699846,0.153458 0.760613,0.188548 0.811109,0.239045 0.846371,0.299983 0.859038,0.322064 0.869651,0.345344 0.878038,0.369480 L 0.978004,0.369308 0.899777,0.499743 0.777901,0.369308 0.877867,0.369308 0.877867,0.369308 C 0.869480,0.345173 0.858867,0.321893 0.846200,0.299812 0.811109,0.239045 0.760613,0.188548 0.699675,0.153458 0.638908,0.118196 0.569925,0.099709 0.499743,0.099709 0.429562,0.099709 0.360579,0.118196 0.299812,0.153458 0.238874,0.188548 0.188377,0.239045 0.153287,0.299812 0.118196,0.360579 0.099709,0.429562 0.099709,0.499743 L 0.099880,0.499914 Z"#;
 const CIRCULAR_ARROW_ADJ_WIDE_NORMALIZED_PATH: &str = r#"M 0.124872,0.499914 L 0.124872,0.499914 C 0.124872,0.434012 0.142160,0.369480 0.175197,0.312479 0.208062,0.255478 0.255306,0.208062 0.312307,0.175197 0.369308,0.142160 0.434012,0.124872 0.499914,0.124872 0.565645,0.124872 0.630349,0.142160 0.687350,0.175197 0.744351,0.208062 0.791767,0.255478 0.824632,0.312479 0.843632,0.345344 0.857669,0.381119 0.865885,0.418435 L 0.986220,0.418264 0.749829,0.499743 0.486220,0.418264 0.405084,0.418264 0.405084,0.418264 C 0.399949,0.424255 0.395498,0.430589 0.391561,0.437265 0.380606,0.456265 0.374786,0.477833 0.374786,0.499743 L 0.124872,0.499914 Z"#;
@@ -5202,6 +5432,40 @@ mod tests {
     }
 
     #[test]
+    fn test_curved_arrow_multi_svg_is_available_for_left_up_down_benchmark_profiles() {
+        let tight_adj = HashMap::from([
+            ("adj1".to_string(), 12_000.0),
+            ("adj2".to_string(), 70_000.0),
+            ("adj3".to_string(), 18_000.0),
+        ]);
+        let wide_adj = HashMap::from([
+            ("adj1".to_string(), 42_000.0),
+            ("adj2".to_string(), 30_000.0),
+            ("adj3".to_string(), 42_000.0),
+        ]);
+
+        for preset in ["curvedLeftArrow", "curvedUpArrow", "curvedDownArrow"] {
+            let tight = preset_shape_multi_svg(preset, 120.0, 100.0, &tight_adj)
+                .expect("tight multipath preset should be available");
+            let wide = preset_shape_multi_svg(preset, 120.0, 100.0, &wide_adj)
+                .expect("wide multipath preset should be available");
+            assert_eq!(tight.paths.len(), 3);
+            assert_eq!(wide.paths.len(), 3);
+            assert!(matches!(tight.paths[0].fill, PathFill::Norm));
+            assert!(matches!(tight.paths[1].fill, PathFill::DarkenLess));
+            assert!(matches!(tight.paths[2].fill, PathFill::None));
+            assert!(!tight.paths[0].stroke);
+            assert!(!tight.paths[1].stroke);
+            assert!(tight.paths[2].stroke);
+        }
+
+        assert!(
+            preset_shape_multi_svg("curvedRightArrow", 120.0, 100.0, &tight_adj).is_none(),
+            "curvedRightArrow should keep the single-path renderer for now"
+        );
+    }
+
+    #[test]
     fn test_wave_adjust_values_change_path() {
         let default_adj = HashMap::new();
         let mut custom_adj = HashMap::new();
@@ -6741,6 +7005,7 @@ pub struct CustomGeomSvg {
 pub struct CustomGeomPathSvg {
     pub d: String,
     pub fill: PathFill,
+    pub stroke: bool,
 }
 
 pub fn custom_geometry_svg(
@@ -6757,6 +7022,7 @@ pub fn custom_geometry_svg(
         result_paths.push(CustomGeomPathSvg {
             d,
             fill: path.fill.clone(),
+            stroke: true,
         });
     }
     Some(CustomGeomSvg {
