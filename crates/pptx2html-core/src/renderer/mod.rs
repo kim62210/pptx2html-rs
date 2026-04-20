@@ -4345,7 +4345,7 @@ fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
 
 fn svg_preset_stroke_width_factor(preset_name: Option<&str>) -> f64 {
     match preset_name {
-        Some("circularArrow") => 1.9,
+        Some("circularArrow") => 2.1,
         Some("curvedRightArrow" | "curvedLeftArrow" | "curvedUpArrow" | "curvedDownArrow") => 1.5,
         _ => 1.0,
     }
@@ -5562,7 +5562,7 @@ mod tests {
 
     #[test]
     fn svg_preset_stroke_width_factor_uses_arrow_overrides() {
-        assert_eq!(svg_preset_stroke_width_factor(Some("circularArrow")), 1.9);
+        assert_eq!(svg_preset_stroke_width_factor(Some("circularArrow")), 2.1);
         assert_eq!(
             svg_preset_stroke_width_factor(Some("curvedRightArrow")),
             1.5
