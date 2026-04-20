@@ -3134,7 +3134,7 @@ fn arc_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
     let adj2 = adj.get("adj2").copied().unwrap_or(0.0);
     let anchors = [
         (3_000_000.0, 12_000_000.0, ARC_ADJ_SMALL_NORMALIZED_PATH),
-        (16_200_000.0, 0.0, ARC_ADJ_HALF_NORMALIZED_PATH),
+        (5_400_000.0, 16_200_000.0, ARC_ADJ_HALF_NORMALIZED_PATH),
         (0.0, 18_000_000.0, ARC_ADJ_WIDE_NORMALIZED_PATH),
         (9_000_000.0, 11_000_000.0, ARC_ADJ_SLIVER_NORMALIZED_PATH),
     ];
@@ -4917,7 +4917,7 @@ mod tests {
     fn test_arc_adjustment_profiles_match_benchmarked_anchors() {
         for (adj1, adj2, anchor) in [
             (3_000_000.0, 12_000_000.0, ARC_ADJ_SMALL_NORMALIZED_PATH),
-            (16_200_000.0, 0.0, ARC_ADJ_HALF_NORMALIZED_PATH),
+            (5_400_000.0, 16_200_000.0, ARC_ADJ_HALF_NORMALIZED_PATH),
             (0.0, 18_000_000.0, ARC_ADJ_WIDE_NORMALIZED_PATH),
             (9_000_000.0, 11_000_000.0, ARC_ADJ_SLIVER_NORMALIZED_PATH),
         ] {
