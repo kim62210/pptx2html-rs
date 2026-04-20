@@ -4432,6 +4432,14 @@ fn svg_preset_stroke_width_factor(
 ) -> f64 {
     match preset_name {
         Some("circularArrow") => 2.1,
+        Some("leftUpArrow")
+            if matches_svg_adjust_profile(
+                adjust_values,
+                &[("adj1", 15_000.0), ("adj2", 15_000.0), ("adj3", 15_000.0)],
+            ) =>
+        {
+            1.2
+        }
         Some("leftRightUpArrow")
             if matches_svg_adjust_profile(
                 adjust_values,
@@ -5758,6 +5766,10 @@ mod tests {
         assert_eq!(
             svg_preset_stroke_width_factor(Some("curvedDownArrow"), &empty),
             1.35
+        );
+        assert_eq!(
+            svg_preset_stroke_width_factor(Some("leftUpArrow"), &tight),
+            1.2
         );
         assert_eq!(
             svg_preset_stroke_width_factor(Some("leftRightUpArrow"), &tight),
