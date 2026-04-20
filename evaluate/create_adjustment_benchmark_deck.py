@@ -602,6 +602,29 @@ PARALLELOGRAM_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+ROUND1_RECT_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "ROUND1_RECT_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.ROUND_1_RECTANGLE,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "ROUND1_RECT_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.ROUND_1_RECTANGLE,
+        {"adj": 16_667},
+    ),
+    ShapeVariant(
+        "ROUND1_RECT_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.ROUND_1_RECTANGLE,
+        {"adj": 30_000},
+    ),
+    ShapeVariant(
+        "ROUND1_RECT_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.ROUND_1_RECTANGLE,
+        {"adj": 45_000},
+    ),
+)
+
 TRAPEZOID_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "TRAPEZOID_ADJ_LIGHT",
@@ -839,6 +862,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "up-down-arrow": UP_DOWN_ARROW_VARIANTS,
     "hexagon": HEXAGON_VARIANTS,
     "parallelogram": PARALLELOGRAM_VARIANTS,
+    "round1-rect": ROUND1_RECT_VARIANTS,
     "trapezoid": TRAPEZOID_VARIANTS,
     "snip-round-rect": SNIP_ROUND_RECT_VARIANTS,
     "non-isosceles-trapezoid": NON_ISOSCELES_TRAPEZOID_VARIANTS,
