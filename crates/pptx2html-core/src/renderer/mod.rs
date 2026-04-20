@@ -4480,7 +4480,7 @@ fn svg_preset_stroke_width_factor(
                 ],
             ) =>
         {
-            1.2
+            1.26
         }
         Some("upDownArrowCallout")
             if matches_svg_adjust_profile(
@@ -5869,7 +5869,7 @@ mod tests {
         ]);
         assert_eq!(
             svg_preset_stroke_width_factor(Some("leftRightArrowCallout"), &tight_callout),
-            1.2
+            1.26
         );
         assert_eq!(
             svg_preset_stroke_width_factor(Some("upDownArrowCallout"), &tight_callout),
