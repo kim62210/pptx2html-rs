@@ -188,6 +188,29 @@ CLOUD_CALLOUT_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+ARC_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "ARC_ADJ_SMALL",
+        MSO_AUTO_SHAPE_TYPE.ARC,
+        {"adj1": 3_000_000, "adj2": 12_000_000},
+    ),
+    ShapeVariant(
+        "ARC_ADJ_HALF",
+        MSO_AUTO_SHAPE_TYPE.ARC,
+        {"adj1": 5_400_000, "adj2": 16_200_000},
+    ),
+    ShapeVariant(
+        "ARC_ADJ_WIDE",
+        MSO_AUTO_SHAPE_TYPE.ARC,
+        {"adj1": 0, "adj2": 18_000_000},
+    ),
+    ShapeVariant(
+        "ARC_ADJ_SLIVER",
+        MSO_AUTO_SHAPE_TYPE.ARC,
+        {"adj1": 9_000_000, "adj2": 11_000_000},
+    ),
+)
+
 BLOCK_ARC_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "BLOCK_ARC_ADJ_NARROW",
@@ -406,6 +429,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "bent-arrow": BENT_ARROW_VARIANTS,
     "up-down-arrow-callout": UP_DOWN_ARROW_CALLOUT_VARIANTS,
     "cloud-callout": CLOUD_CALLOUT_VARIANTS,
+    "arc": ARC_VARIANTS,
     "block-arc": BLOCK_ARC_VARIANTS,
     "left-right-arrow-callout": LEFT_RIGHT_ARROW_CALLOUT_VARIANTS,
     "wave": WAVE_VARIANTS,
