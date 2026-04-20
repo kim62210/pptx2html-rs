@@ -511,7 +511,38 @@ fn snip_round_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
         h = h
     )
 }
+const ROUND1_RECT_ADJ_LIGHT_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.899888,0.000000 0.899888,0.000000 C 0.917435,0.000000 0.934758,0.004724 0.949831,0.013498 0.965129,0.022272 0.977728,0.034871 0.986502,0.049944 0.995276,0.065242 1.000000,0.082340 1.000000,0.100112 L 1.000000,0.100112 1.000000,1.000000 0.000000,1.000000 0.000000,0.000000 Z"#;
+const ROUND1_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.833296,0.000000 0.833296,0.000000 C 0.862542,0.000000 0.891339,0.007649 0.916535,0.022272 0.941957,0.036895 0.963105,0.058043 0.977728,0.083240 0.992351,0.108661 1.000000,0.137458 1.000000,0.166704 L 1.000000,0.166704 1.000000,1.000000 0.000000,1.000000 0.000000,0.000000 Z"#;
+const ROUND1_RECT_ADJ_DEEP_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.699888,0.000000 0.699888,0.000000 C 0.752531,0.000000 0.804274,0.013948 0.849944,0.040270 0.895388,0.066592 0.933408,0.104387 0.959730,0.150056 0.986052,0.195501 1.000000,0.247244 1.000000,0.300112 L 1.000000,0.300112 1.000000,1.000000 0.000000,1.000000 0.000000,0.000000 Z"#;
+const ROUND1_RECT_ADJ_EXTREME_NORMALIZED_PATH: &str = r#"M 0.000000,0.000000 L 0.549831,0.000000 0.549831,0.000000 C 0.628796,0.000000 0.706412,0.020697 0.774803,0.060292 0.843195,0.099888 0.900112,0.156580 0.939483,0.224972 0.979078,0.293363 0.999775,0.370979 0.999775,0.449944 L 0.999775,0.449944 1.000000,1.000000 0.000000,1.000000 0.000000,0.000000 Z"#;
+
+fn round1_rect_adjust_anchor(adj: &HashMap<String, f64>) -> &'static str {
+    let value = adj.get("adj").copied().unwrap_or(16_667.0);
+    let anchors = [
+        (10_000.0, ROUND1_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+        (16_667.0, ROUND1_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+        (30_000.0, ROUND1_RECT_ADJ_DEEP_NORMALIZED_PATH),
+        (45_000.0, ROUND1_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+    ];
+
+    anchors
+        .into_iter()
+        .min_by(|(ax, _), (ay, _)| {
+            let dx = (value - *ax) / 35_000.0;
+            let dy = (value - *ay) / 35_000.0;
+            (dx * dx)
+                .partial_cmp(&(dy * dy))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(_, path)| path)
+        .unwrap_or(ROUND1_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH)
+}
+
 fn round1_rect_path(w: f64, h: f64, adj: &HashMap<String, f64>) -> String {
+    if !adj.is_empty() {
+        return scale_normalized_path(round1_rect_adjust_anchor(adj), w, h);
+    }
+
     let m = w.min(h);
     let r = (m * adj.get("adj").copied().unwrap_or(16667.0) / 100_000.0).min(m / 2.0);
     format!(
@@ -4569,6 +4600,48 @@ mod tests {
                 path,
                 scale_normalized_path(anchor, 120.0, 100.0),
                 "hexagon benchmark profile ({adj}) should map to the tuned anchor path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_round1_rect_default_path_preserves_legacy_outline() {
+        let path = preset_shape_svg("round1Rect", 120.0, 100.0, &HashMap::new()).unwrap();
+
+        assert_eq!(
+            path,
+            "M0,0 L103.3,0 Q120.0,0 120.0,16.7 L120.0,100.0 L0,100.0 Z"
+        );
+    }
+
+    #[test]
+    fn test_round1_rect_adjust_values_change_path() {
+        let default_adj = HashMap::new();
+        let custom_adj = HashMap::from([("adj".to_string(), 30_000.0)]);
+
+        let default_path = preset_shape_svg("round1Rect", 120.0, 100.0, &default_adj).unwrap();
+        let custom_path = preset_shape_svg("round1Rect", 120.0, 100.0, &custom_adj).unwrap();
+
+        assert_ne!(
+            default_path, custom_path,
+            "round1Rect adjustment profiles should change the path"
+        );
+    }
+
+    #[test]
+    fn test_round1_rect_adjustment_profiles_match_benchmarked_anchors() {
+        for (adj, anchor) in [
+            (10_000.0, ROUND1_RECT_ADJ_LIGHT_NORMALIZED_PATH),
+            (16_667.0, ROUND1_RECT_ADJ_DEFAULTISH_NORMALIZED_PATH),
+            (30_000.0, ROUND1_RECT_ADJ_DEEP_NORMALIZED_PATH),
+            (45_000.0, ROUND1_RECT_ADJ_EXTREME_NORMALIZED_PATH),
+        ] {
+            let adj_values = HashMap::from([("adj".to_string(), adj)]);
+            let path = preset_shape_svg("round1Rect", 120.0, 100.0, &adj_values).unwrap();
+            assert_eq!(
+                path,
+                scale_normalized_path(anchor, 120.0, 100.0),
+                "round1Rect benchmark profile ({adj}) should map to the tuned anchor path"
             );
         }
     }
