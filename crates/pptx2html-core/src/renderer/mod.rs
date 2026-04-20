@@ -4333,6 +4333,7 @@ fn dash_style_to_css(style: &DashStyle) -> &'static str {
 fn svg_style_effect_factor(preset_name: Option<&str>) -> f64 {
     match preset_name {
         Some("sun") => 0.65,
+        Some("rightArrow" | "upDownArrow") => 0.63,
         Some("cornerTabs") => 0.35,
         Some("curvedRightArrow" | "curvedUpArrow") => 0.35,
         _ => 0.55,
@@ -5535,6 +5536,8 @@ mod tests {
     #[test]
     fn svg_style_effect_factor_uses_sun_override() {
         assert_eq!(svg_style_effect_factor(Some("sun")), 0.65);
+        assert_eq!(svg_style_effect_factor(Some("rightArrow")), 0.63);
+        assert_eq!(svg_style_effect_factor(Some("upDownArrow")), 0.63);
         assert_eq!(svg_style_effect_factor(Some("cornerTabs")), 0.35);
         assert_eq!(svg_style_effect_factor(Some("curvedRightArrow")), 0.35);
         assert_eq!(svg_style_effect_factor(Some("curvedUpArrow")), 0.35);
