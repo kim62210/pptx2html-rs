@@ -4467,7 +4467,7 @@ fn svg_preset_stroke_width_factor(
                 &[("adj1", 15_000.0), ("adj2", 15_000.0)],
             ) =>
         {
-            1.3
+            1.5
         }
         Some("leftRightArrowCallout")
             if matches_svg_adjust_profile(
@@ -5859,7 +5859,7 @@ mod tests {
         ]);
         assert_eq!(
             svg_preset_stroke_width_factor(Some("stripedRightArrow"), &striped_tight),
-            1.3
+            1.5
         );
         let tight_callout = HashMap::from([
             ("adj1".to_string(), 15_000.0),
