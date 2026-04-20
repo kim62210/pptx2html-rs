@@ -533,6 +533,29 @@ LEFT_RIGHT_ARROW_VARIANTS: tuple[ShapeVariant, ...] = (
     ),
 )
 
+TRAPEZOID_VARIANTS: tuple[ShapeVariant, ...] = (
+    ShapeVariant(
+        "TRAPEZOID_ADJ_LIGHT",
+        MSO_AUTO_SHAPE_TYPE.TRAPEZOID,
+        {"adj": 10_000},
+    ),
+    ShapeVariant(
+        "TRAPEZOID_ADJ_DEFAULTISH",
+        MSO_AUTO_SHAPE_TYPE.TRAPEZOID,
+        {"adj": 25_000},
+    ),
+    ShapeVariant(
+        "TRAPEZOID_ADJ_DEEP",
+        MSO_AUTO_SHAPE_TYPE.TRAPEZOID,
+        {"adj": 40_000},
+    ),
+    ShapeVariant(
+        "TRAPEZOID_ADJ_EXTREME",
+        MSO_AUTO_SHAPE_TYPE.TRAPEZOID,
+        {"adj": 55_000},
+    ),
+)
+
 DOUBLE_BRACKET_VARIANTS: tuple[ShapeVariant, ...] = (
     ShapeVariant(
         "DOUBLE_BRACKET_ADJ_TIGHT",
@@ -675,6 +698,7 @@ SCENARIOS: dict[str, tuple[ShapeVariant, ...]] = {
     "curved-arrows": CURVED_ARROW_VARIANTS,
     "right-arrow": RIGHT_ARROW_VARIANTS,
     "left-right-arrow": LEFT_RIGHT_ARROW_VARIANTS,
+    "trapezoid": TRAPEZOID_VARIANTS,
     "double-bracket": DOUBLE_BRACKET_VARIANTS,
     "half-frame": HALF_FRAME_VARIANTS,
     "double-brace": DOUBLE_BRACE_VARIANTS,
