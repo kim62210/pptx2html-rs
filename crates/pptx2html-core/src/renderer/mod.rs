@@ -429,9 +429,7 @@ img.shape-image {{ width: 100%; height: 100%; object-fit: cover; display: block;
         layout_match: Option<&'a Shape>,
         master_match: Option<&'a Shape>,
     ) -> Option<&'a Shape> {
-        if shape.placeholder.is_none() {
-            return None;
-        }
+        shape.placeholder.as_ref()?;
 
         [layout_match, master_match]
             .into_iter()
