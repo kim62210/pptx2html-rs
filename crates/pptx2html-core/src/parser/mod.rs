@@ -527,10 +527,8 @@ impl PptxParser {
 
         loop {
             match reader.read_event() {
-                Ok(Event::Start(ref e)) => {
-                    if xml_utils::local_name(e.name().as_ref()) == "title" {
-                        in_title = true;
-                    }
+                Ok(Event::Start(ref e)) if xml_utils::local_name(e.name().as_ref()) == "title" => {
+                    in_title = true;
                 }
                 Ok(Event::Text(ref e)) if in_title => {
                     let text = match e.unescape() {
@@ -542,10 +540,8 @@ impl PptxParser {
                     }
                     return Some(text);
                 }
-                Ok(Event::End(ref e)) => {
-                    if xml_utils::local_name(e.name().as_ref()) == "title" {
-                        in_title = false;
-                    }
+                Ok(Event::End(ref e)) if xml_utils::local_name(e.name().as_ref()) == "title" => {
+                    in_title = false;
                 }
                 Ok(Event::Eof) => return None,
                 Err(_) => return None,

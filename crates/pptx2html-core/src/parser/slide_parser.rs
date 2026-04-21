@@ -2321,16 +2321,16 @@ pub fn parse_slide<R: Read + Seek>(
                         }
                     }
                     // End of style ref children
-                    "lnRef" | "fillRef" | "effectRef" | "fontRef" if in_p_style => {
+                    "lnRef" | "fillRef" | "effectRef" | "fontRef"
+                        if in_p_style && p_style_current_ref.is_some() =>
+                    {
                         // If no child color was found, still record the idx
-                        if p_style_current_ref.is_some() {
-                            if let Some(idx_val) = p_style_idx.take() {
-                                // Only create if builder doesn't already have this ref set
-                                // (it's already set if a color child was processed)
-                                ensure_style_ref(&local, &idx_val, &mut p_style_builder);
-                            }
-                            p_style_current_ref = None;
+                        if let Some(idx_val) = p_style_idx.take() {
+                            // Only create if builder doesn't already have this ref set
+                            // (it's already set if a color child was processed)
+                            ensure_style_ref(&local, &idx_val, &mut p_style_builder);
                         }
+                        p_style_current_ref = None;
                     }
                     // End of <p:style>
                     "style" if in_p_style => {
@@ -2636,155 +2636,76 @@ pub(crate) fn parse_guide_formula_value(fmla: &str, guides: &HashMap<String, f64
 
     let resolve = |token: &str| resolve_custom_geom_value(token, guides);
 
-    match tokens[0] {
-        "val" => tokens.get(1).map(|v| resolve(v)).unwrap_or(0.0),
-        "+-" => {
-            if tokens.len() >= 4 {
-                resolve(tokens[1]) + resolve(tokens[2]) - resolve(tokens[3])
-            } else {
+    match tokens.as_slice() {
+        ["val", value, ..] => resolve(value),
+        ["+-", x, y, z, ..] => resolve(x) + resolve(y) - resolve(z),
+        ["*/", x, y, z, ..] => {
+            let numerator = resolve(x) * resolve(y);
+            let denominator = resolve(z);
+            if denominator.abs() < f64::EPSILON {
                 0.0
+            } else {
+                numerator / denominator
             }
         }
-        "*/" => {
-            if tokens.len() >= 4 {
-                let numerator = resolve(tokens[1]) * resolve(tokens[2]);
-                let denominator = resolve(tokens[3]);
-                if denominator.abs() < f64::EPSILON {
-                    0.0
-                } else {
-                    numerator / denominator
-                }
-            } else {
+        ["+/", x, y, z, ..] => {
+            let numerator = resolve(x) + resolve(y);
+            let denominator = resolve(z);
+            if denominator.abs() < f64::EPSILON {
                 0.0
+            } else {
+                numerator / denominator
             }
         }
-        "+/" => {
-            if tokens.len() >= 4 {
-                let numerator = resolve(tokens[1]) + resolve(tokens[2]);
-                let denominator = resolve(tokens[3]);
-                if denominator.abs() < f64::EPSILON {
-                    0.0
-                } else {
-                    numerator / denominator
-                }
+        ["pin", low, value, high, ..] => resolve(value).max(resolve(low)).min(resolve(high)),
+        ["min", x, y, ..] => resolve(x).min(resolve(y)),
+        ["max", x, y, ..] => resolve(x).max(resolve(y)),
+        ["?:", condition, when_true, when_false, ..] => {
+            if resolve(condition).abs() >= f64::EPSILON {
+                resolve(when_true)
             } else {
-                0.0
+                resolve(when_false)
             }
         }
-        "pin" => {
-            if tokens.len() >= 4 {
-                let low = resolve(tokens[1]);
-                let value = resolve(tokens[2]);
-                let high = resolve(tokens[3]);
-                value.max(low).min(high)
-            } else {
-                0.0
-            }
+        ["abs", value, ..] => resolve(value).abs(),
+        ["sqrt", value, ..] => resolve(value).max(0.0).sqrt(),
+        ["mod", x, y, z, ..] => {
+            let x = resolve(x);
+            let y = resolve(y);
+            let z = resolve(z);
+            (x * x + y * y + z * z).sqrt()
         }
-        "min" => {
-            if tokens.len() >= 3 {
-                resolve(tokens[1]).min(resolve(tokens[2]))
-            } else {
-                0.0
-            }
+        ["sin", scale, angle, ..] => {
+            let scale = resolve(scale);
+            let angle = ooxml_angle_to_radians(resolve(angle));
+            scale * angle.sin()
         }
-        "max" => {
-            if tokens.len() >= 3 {
-                resolve(tokens[1]).max(resolve(tokens[2]))
-            } else {
-                0.0
-            }
+        ["cos", scale, angle, ..] => {
+            let scale = resolve(scale);
+            let angle = ooxml_angle_to_radians(resolve(angle));
+            scale * angle.cos()
         }
-        "?:" => {
-            if tokens.len() >= 4 {
-                if resolve(tokens[1]).abs() >= f64::EPSILON {
-                    resolve(tokens[2])
-                } else {
-                    resolve(tokens[3])
-                }
-            } else {
-                0.0
-            }
+        ["cat2", scale, y, z, ..] => {
+            let scale = resolve(scale);
+            let y = resolve(y);
+            let z = resolve(z);
+            scale * z.atan2(y).cos()
         }
-        "abs" => {
-            if tokens.len() >= 2 {
-                resolve(tokens[1]).abs()
-            } else {
-                0.0
-            }
+        ["sat2", scale, y, z, ..] => {
+            let scale = resolve(scale);
+            let y = resolve(y);
+            let z = resolve(z);
+            scale * z.atan2(y).sin()
         }
-        "sqrt" => {
-            if tokens.len() >= 2 {
-                resolve(tokens[1]).max(0.0).sqrt()
-            } else {
-                0.0
-            }
+        ["at2", x, y, ..] => {
+            let x = resolve(x);
+            let y = resolve(y);
+            y.atan2(x).to_degrees() * 60_000.0
         }
-        "mod" => {
-            if tokens.len() >= 4 {
-                let x = resolve(tokens[1]);
-                let y = resolve(tokens[2]);
-                let z = resolve(tokens[3]);
-                (x * x + y * y + z * z).sqrt()
-            } else {
-                0.0
-            }
-        }
-        "sin" => {
-            if tokens.len() >= 3 {
-                let scale = resolve(tokens[1]);
-                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
-                scale * angle.sin()
-            } else {
-                0.0
-            }
-        }
-        "cos" => {
-            if tokens.len() >= 3 {
-                let scale = resolve(tokens[1]);
-                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
-                scale * angle.cos()
-            } else {
-                0.0
-            }
-        }
-        "cat2" => {
-            if tokens.len() >= 4 {
-                let scale = resolve(tokens[1]);
-                let y = resolve(tokens[2]);
-                let z = resolve(tokens[3]);
-                scale * z.atan2(y).cos()
-            } else {
-                0.0
-            }
-        }
-        "sat2" => {
-            if tokens.len() >= 4 {
-                let scale = resolve(tokens[1]);
-                let y = resolve(tokens[2]);
-                let z = resolve(tokens[3]);
-                scale * z.atan2(y).sin()
-            } else {
-                0.0
-            }
-        }
-        "at2" => {
-            if tokens.len() >= 3 {
-                let x = resolve(tokens[1]);
-                let y = resolve(tokens[2]);
-                y.atan2(x).to_degrees() * 60_000.0
-            } else {
-                0.0
-            }
-        }
-        "tan" => {
-            if tokens.len() >= 3 {
-                let scale = resolve(tokens[1]);
-                let angle = ooxml_angle_to_radians(resolve(tokens[2]));
-                scale * angle.tan()
-            } else {
-                0.0
-            }
+        ["tan", scale, angle, ..] => {
+            let scale = resolve(scale);
+            let angle = ooxml_angle_to_radians(resolve(angle));
+            scale * angle.tan()
         }
         _ => 0.0,
     }
